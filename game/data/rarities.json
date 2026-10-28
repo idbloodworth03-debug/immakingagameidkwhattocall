@@ -1,0 +1,6 @@
+[
+  {"id": "common", "name": "Common", "color": "#c9d3df", "start_level": 1, "conservation": "Least Concern"},
+  {"id": "rare", "name": "Rare", "color": "#ffa63d", "start_level": 3, "conservation": "Near Threatened or Vulnerable"},
+  {"id": "epic", "name": "Epic", "color": "#c36bff", "start_level": 6, "conservation": "Endangered"},
+  {"id": "legendary", "name": "Legendary", "color": "#41f0d8", "start_level": 9, "conservation": "Critically Endangered"}
+]

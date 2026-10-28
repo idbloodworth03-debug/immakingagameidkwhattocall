@@ -1,0 +1,36 @@
+{
+  "_note": "Tuning numbers for progression. Arrays marked 'by target level' are indexed by the level you are upgrading TO.",
+  "starting_gold": 500,
+  "starting_gems": 100,
+  "deck_size": 8,
+  "cage_slots": 4,
+
+  "card_max_level": 14,
+  "stat_growth_per_level": 0.10,
+  "copies_to_level": {
+    "common":    [0, 0, 2, 4, 10, 20, 50, 100, 200, 400, 800, 1000, 1500, 3000, 5000],
+    "rare":      [0, 0, 0, 0, 2, 4, 10, 20, 50, 100, 200, 400, 500, 750, 1250],
+    "epic":      [0, 0, 0, 0, 0, 0, 0, 2, 4, 10, 20, 40, 50, 100, 200],
+    "legendary": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 4, 6, 10, 20]
+  },
+  "gold_to_level": [0, 0, 5, 20, 50, 150, 400, 1000, 2000, 4000, 8000, 15000, 35000, 75000, 100000],
+  "xp_for_upgrade": [0, 0, 4, 5, 6, 10, 25, 50, 100, 200, 400, 600, 800, 1600, 2000],
+
+  "ranger_max_level": 20,
+  "ranger_xp_to_next_level": [0, 20, 50, 100, 200, 400, 800, 1600, 3000, 5000, 7500, 10000, 13000, 16000, 20000, 25000, 30000, 36000, 43000, 50000],
+  "xp_per_win": 10,
+  "xp_per_loss": 4,
+
+  "trophies": {"base": 30, "min_change": 20, "max_change": 40, "difference_divisor": 25},
+
+  "win_cage_cycle": ["twig", "twig", "iron", "twig", "twig", "golden", "twig", "iron", "twig", "twig",
+                     "twig", "iron", "twig", "golden", "twig", "twig", "crystal", "twig", "iron", "twig"],
+
+  "daily_offer_amounts": {"common": 20, "rare": 5, "epic": 1},
+  "daily_offer_gold_per_card": {"common": 10, "rare": 100, "epic": 1000},
+  "gold_packs": [
+    {"gems": 60, "gold": 1000},
+    {"gems": 500, "gold": 10000},
+    {"gems": 4500, "gold": 100000}
+  ]
+}

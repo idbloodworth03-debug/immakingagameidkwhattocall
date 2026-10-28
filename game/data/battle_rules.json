@@ -1,0 +1,9 @@
+{
+  "_note": "Placeholder numbers for the battle sandbox. We will design the real battle rules next.",
+  "match_seconds": 180,
+  "energy_max": 10,
+  "energy_start": 5,
+  "energy_regen_seconds": 2.8,
+  "hand_size": 4,
+  "speed_values": {"slow": 45, "medium": 60, "fast": 90, "very_fast": 120}
+}

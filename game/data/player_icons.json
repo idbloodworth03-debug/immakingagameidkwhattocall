@@ -1,0 +1,16 @@
+[
+  {"id": "paw", "name": "Paw Print", "text": "PAW", "color": "#8a5a3c", "unlock": {"type": "default"}},
+  {"id": "raccoon", "name": "Raccoon", "text": "RA", "color": "#6f7480", "unlock": {"type": "default"}},
+  {"id": "fox", "name": "Fox", "text": "FX", "color": "#d9622b", "unlock": {"type": "default"}},
+  {"id": "pigeon", "name": "Pigeon", "text": "PG", "color": "#7f8ea3", "unlock": {"type": "default"}},
+  {"id": "owl", "name": "Owl", "text": "OW", "color": "#c8a070", "unlock": {"type": "animal", "animal": "barn_owl"}},
+  {"id": "wolf", "name": "Wolf", "text": "WF", "color": "#5a6070", "unlock": {"type": "animal", "animal": "wolf_pack"}},
+  {"id": "lion", "name": "Lion", "text": "LI", "color": "#d4a03a", "unlock": {"type": "animal", "animal": "lion"}},
+  {"id": "panda", "name": "Panda", "text": "PA", "color": "#2b2b2b", "unlock": {"type": "animal", "animal": "giant_panda"}},
+  {"id": "red_panda", "name": "Red Panda", "text": "RP", "color": "#b5442a", "unlock": {"type": "animal", "animal": "red_panda"}},
+  {"id": "tiger", "name": "Tiger", "text": "TI", "color": "#e07b22", "unlock": {"type": "animal", "animal": "tiger"}},
+  {"id": "axolotl", "name": "Axolotl", "text": "AX", "color": "#f29bb8", "unlock": {"type": "animal", "animal": "axolotl"}},
+  {"id": "penguin", "name": "Penguin", "text": "PN", "color": "#1d2230", "unlock": {"type": "animal", "animal": "african_penguins"}},
+  {"id": "eagle", "name": "Eagle", "text": "EA", "color": "#6b4a2e", "unlock": {"type": "ranger_level", "level": 8}},
+  {"id": "ranger_star", "name": "Ranger Star", "text": "RS", "color": "#2f8f5a", "unlock": {"type": "ranger_level", "level": 12}}
+]

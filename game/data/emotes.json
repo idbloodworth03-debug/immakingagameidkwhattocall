@@ -1,0 +1,14 @@
+[
+  {"id": "happy_otter", "name": "Happy Otter", "color": "#7a5230", "caption": "Yay!", "unlock": {"type": "default"}},
+  {"id": "laughing_hyena", "name": "Laughing Hyena", "color": "#c9a24a", "caption": "Hee-hee-hee!", "unlock": {"type": "default"}},
+  {"id": "crocodile_tears", "name": "Crocodile Tears", "color": "#4f8a4a", "caption": "Boo-hoo...", "unlock": {"type": "default"}},
+  {"id": "furious_bison", "name": "Furious Bison", "color": "#6b4a2e", "caption": "Hmph!", "unlock": {"type": "default"}},
+  {"id": "thumbs_up_raccoon", "name": "Thumbs-Up Raccoon", "color": "#6f7480", "caption": "Nice!", "unlock": {"type": "ranger_level", "level": 3}},
+  {"id": "dancing_crane", "name": "Dancing Crane", "color": "#e8e8e8", "caption": "*happy dance*", "unlock": {"type": "arena", "arena": "misty_marsh"}},
+  {"id": "sleepy_sloth", "name": "Sleepy Sloth", "color": "#8a7a5c", "caption": "Zzz...", "unlock": {"type": "arena", "arena": "emerald_jungle"}},
+  {"id": "howling_wolf", "name": "Howling Wolf", "color": "#5a6070", "caption": "Awooo!", "unlock": {"type": "ranger_level", "level": 6}},
+  {"id": "facepalm_gorilla", "name": "Facepalm Gorilla", "color": "#3a3a3a", "caption": "Ugh.", "unlock": {"type": "arena", "arena": "cloudpeak_mountains"}},
+  {"id": "shocked_owl", "name": "Shocked Owl", "color": "#c8a070", "caption": "Whooo?!", "unlock": {"type": "shop", "gems": 250}},
+  {"id": "penguin_slide", "name": "Penguin Slide", "color": "#2a2a35", "caption": "Wheee!", "unlock": {"type": "shop", "gems": 250}},
+  {"id": "smug_leopard", "name": "Smug Snow Leopard", "color": "#b8bcc4", "caption": "Heh.", "unlock": {"type": "shop", "gems": 250}}
+]

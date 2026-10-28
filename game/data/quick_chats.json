@@ -1,0 +1,10 @@
+[
+  {"id": "good_luck", "text": "Good luck!"},
+  {"id": "well_played", "text": "Well played!"},
+  {"id": "wow", "text": "Wow!"},
+  {"id": "thanks", "text": "Thanks!"},
+  {"id": "good_game", "text": "Good game!"},
+  {"id": "oops", "text": "Oops!"},
+  {"id": "nice_one", "text": "Nice one!"},
+  {"id": "free_them", "text": "Free the animals!"}
+]

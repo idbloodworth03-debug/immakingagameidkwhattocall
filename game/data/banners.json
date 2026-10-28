@@ -1,0 +1,14 @@
+[
+  {"id": "meadow", "name": "Meadow", "colors": ["#3f8f3a", "#a7d86d"], "unlock": {"type": "default"}},
+  {"id": "river", "name": "River", "colors": ["#1f6fb2", "#7fd3f7"], "unlock": {"type": "default"}},
+  {"id": "ember", "name": "Ember", "colors": ["#a8321e", "#ffb347"], "unlock": {"type": "ranger_level", "level": 5}},
+  {"id": "prairie_dusk", "name": "Prairie Dusk", "colors": ["#7a4e8c", "#f4c06a"], "unlock": {"type": "arena", "arena": "prairie_fields"}},
+  {"id": "marsh_fog", "name": "Marsh Fog", "colors": ["#2c5a52", "#a9d3c4"], "unlock": {"type": "arena", "arena": "misty_marsh"}},
+  {"id": "savanna_sunset", "name": "Savanna Sunset", "colors": ["#d35400", "#f9d56e"], "unlock": {"type": "arena", "arena": "sunbaked_savanna"}},
+  {"id": "aurora", "name": "Aurora", "colors": ["#14304f", "#5ef0b4"], "unlock": {"type": "arena", "arena": "frozen_tundra"}},
+  {"id": "jungle_canopy", "name": "Jungle Canopy", "colors": ["#0f4d2c", "#5ccf6b"], "unlock": {"type": "arena", "arena": "emerald_jungle"}},
+  {"id": "royal", "name": "Royal", "colors": ["#3b2a80", "#d4b0ff"], "unlock": {"type": "ranger_level", "level": 10}},
+  {"id": "coral_reef", "name": "Coral Reef", "colors": ["#e0566f", "#62d2e0"], "unlock": {"type": "arena", "arena": "coral_coast"}},
+  {"id": "sanctuary_gold", "name": "Sanctuary Gold", "colors": ["#8a6a10", "#ffe28a"], "unlock": {"type": "arena", "arena": "last_sanctuary"}},
+  {"id": "midnight", "name": "Midnight", "colors": ["#0b0f2a", "#4a5bd1"], "unlock": {"type": "shop", "gems": 300}}
+]

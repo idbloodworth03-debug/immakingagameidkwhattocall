@@ -451,20 +451,25 @@ func _check_end() -> void:
 		# End of regular time, or a tower falls in sudden-death overtime.
 		outcome = 0 if crowns_0 > crowns_1 else 1
 	elif tick >= match_ticks + overtime_ticks:
-		# Still tied after overtime: the side whose weakest tower is healthier wins.
-		var weakest := [_weakest_tower_hp(0), _weakest_tower_hp(1)]
-		if weakest[0] == weakest[1]:
-			outcome = DRAW
-		else:
-			outcome = 0 if weakest[0] > weakest[1] else 1
+		# Still tied after overtime: the side whose weakest tower is healthier
+		# wins. If those are level, compare the next weakest, and so on.
+		var hp_0 := _tower_hps(0)
+		var hp_1 := _tower_hps(1)
+		outcome = DRAW
+		for i in mini(hp_0.size(), hp_1.size()):
+			if hp_0[i] != hp_1[i]:
+				outcome = 0 if hp_0[i] > hp_1[i] else 1
+				break
 
 
-func _weakest_tower_hp(team: int) -> int:
-	var lowest := 1 << 30
+## Hitpoints of a team's standing towers, weakest first.
+func _tower_hps(team: int) -> Array:
+	var hps := []
 	for f in towers(team):
 		if f.alive:
-			lowest = mini(lowest, f.hp)
-	return lowest
+			hps.append(f.hp)
+	hps.sort()
+	return hps
 
 
 # --- Targeting and movement ------------------------------------------------

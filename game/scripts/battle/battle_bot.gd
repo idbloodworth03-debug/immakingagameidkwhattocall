@@ -7,12 +7,14 @@ extends RefCounted
 ##   1. uses a Ranger tool if there's a good target (a group of enemies, or
 ##      hurt allies for the Medkit),
 ##   2. defends when enemy animals come over to its side,
-##   3. otherwise builds energy and pushes a lane.
+##   3. backs up its own animals that are heading for the enemy, so a push
+##      arrives as a group,
+##   4. otherwise builds energy and starts a push, tough animals from the back.
 ## It also waits a little between decisions so it feels human and beatable.
 ##
 ## `difficulty` (0 = first arena, 1 = top arena) sets how quickly it reacts,
-## how reliably it defends, how readily it uses tools and how patiently it
-## saves up energy before attacking.
+## how reliably it defends and backs up its pushes, how readily it uses tools
+## and how patiently it saves up energy before attacking.
 
 var sim: BattleSim
 var team := 1
@@ -25,6 +27,7 @@ var _think_max := 0
 var _defend_chance := 100
 var _cluster_needed := 3
 var _push_energy := 8.5
+var _support_chance := 60
 
 
 func _init(battle: BattleSim, bot_team: int, seed_value: int, bot_difficulty := 0.5) -> void:
@@ -37,6 +40,7 @@ func _init(battle: BattleSim, bot_team: int, seed_value: int, bot_difficulty := 
 	_defend_chance = roundi(lerpf(60.0, 100.0, difficulty))
 	_cluster_needed = 4 if difficulty < 0.34 else (3 if difficulty < 0.67 else 2)
 	_push_energy = lerpf(9.8, 7.5, difficulty)
+	_support_chance = roundi(lerpf(35.0, 90.0, difficulty))
 	_wait = rng.randi_range(2 * sim.tps, 4 * sim.tps)
 
 
@@ -57,15 +61,50 @@ static func make_deck(arena_index: int, level_offset: int, rng_source: RandomNum
 	_shuffle(tools, rng_source)
 	var deck_size := int(GameData.progression.deck_size)
 	var deck: Array = tools.slice(0, mini(2, tools.size()))
+	var spare: Array = []
 	for id in animals:
-		if deck.size() >= deck_size:
+		if deck.size() < deck_size:
+			deck.append(id)
+		else:
+			spare.append(id)
+	# Like a person would, swap out animals whose partner requirement
+	# ("needs an allied Canine") nothing else in the deck can meet. A swap
+	# can take away another card's partner, so go round until it settles.
+	for _round in 4:
+		var swapped := false
+		for i in deck.size():
+			if not _partner_missing(deck[i], deck):
+				continue
+			for j in spare.size():
+				var trial := deck.duplicate()
+				trial[i] = spare[j]
+				if not _partner_missing(spare[j], trial):
+					var dropped: String = deck[i]
+					deck[i] = spare[j]
+					spare[j] = dropped
+					swapped = true
+					break
+		if not swapped:
 			break
-		deck.append(id)
 	var levels := {}
 	var max_level := int(GameData.progression.card_max_level)
 	for id in deck:
 		levels[id] = mini(max_level, GameData.start_level(GameData.cards[id].rarity) + level_offset)
 	return {"deck": deck, "levels": levels}
+
+
+## True if `id` needs allies with a tag that too few other cards in `deck` have.
+static func _partner_missing(id: String, deck: Array) -> bool:
+	for req in GameData.get_card(id).get("prerequisites", []):
+		if req.type != "allies_with_tag":
+			continue
+		var partners := 0
+		for other in deck:
+			if other != id and GameData.get_card(other).get("tags", []).has(req.tag):
+				partners += 1
+		if partners < int(req.get("count", 1)):
+			return true
+	return false
 
 
 static func _shuffle(list: Array, rng_source: RandomNumberGenerator) -> void:
@@ -88,6 +127,8 @@ func update() -> void:
 		return
 	var threats := _threats()
 	if not threats.is_empty() and rng.randi_range(1, 100) <= _defend_chance and _defend(threats):
+		return
+	if _support():
 		return
 	var energy := sim.energy(team)
 	if energy >= _push_energy or (energy >= _push_energy - 2.5 and rng.randi_range(1, 100) <= 25):
@@ -204,6 +245,47 @@ func _defend(threats: Array) -> bool:
 	return false
 
 
+## Our toughest animal heading into the enemy's half (near the river or
+## already across), or null. That's the push worth backing up.
+func _push_leader() -> BattleSim.Fighter:
+	var leader: BattleSim.Fighter = null
+	for f in sim.units(team):
+		var behind_river: int = f.y - BattleSim.RIVER_BOTTOM if team == 0 else BattleSim.RIVER_TOP - f.y
+		if behind_river > 7 * BattleSim.TILE or f.hp < 300:
+			continue
+		if leader == null or f.hp > leader.hp:
+			leader = f
+	return leader
+
+
+## Releases a cheaper animal just behind the push leader so they arrive
+## together. Returns true if it released something.
+func _support() -> bool:
+	var leader := _push_leader()
+	if leader == null or rng.randi_range(1, 100) > _support_chance:
+		return false
+	var escorts := 0
+	for f in sim.units(team):
+		if BattleSim.dist(f, leader) <= 5 * BattleSim.TILE:
+			escorts += 1
+	if escorts >= 4:
+		return false
+	var hand := sim.hand(team)
+	var order := range(hand.size())
+	order.sort_custom(func(a, b): return GameData.get_card(hand[a]).cost < GameData.get_card(hand[b]).cost)
+	var behind := roundi(2.5 * BattleSim.TILE) * (1 if team == 0 else -1)
+	var lane: int = BattleSim.nearest_bridge(leader.x)
+	for i in order:
+		var card := GameData.get_card(hand[i])
+		# Keep a little energy back for defending.
+		if card.kind == "tool" or sim.energy(team) < float(card.cost) + 1.0:
+			continue
+		for spot in [Vector2i(leader.x, leader.y + behind), Vector2i(lane, own_y(1.0)), Vector2i(lane, own_y(3.0))]:
+			if sim.release_problems(team, i, spot.x, spot.y).is_empty():
+				return _try_release(i, spot.x, spot.y)
+	return false
+
+
 ## Returns true if it released something.
 func _push() -> bool:
 	var hand := sim.hand(team)
@@ -216,6 +298,10 @@ func _push() -> bool:
 		if card.kind == "tool":
 			continue
 		var spots := [Vector2i(lane, own_y(1.0)), Vector2i(lane, (BattleSim.RIVER_TOP + BattleSim.RIVER_BOTTOM) / 2), Vector2i(BattleSim.WIDTH / 2, own_y(9.0))]
+		# Tough animals start at the back, so there's time to add support
+		# before they reach the bridge.
+		if float(card.stats.get("hp", 0)) >= 1000.0:
+			spots.push_front(Vector2i(lane, own_y(7.0)))
 		# Smarter bots drop straight into a lane whose den they've already destroyed.
 		if difficulty >= 0.3:
 			for pocket in sim.pocket_rects(team):

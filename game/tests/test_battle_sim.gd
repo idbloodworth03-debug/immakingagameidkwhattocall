@@ -118,6 +118,18 @@ func test_tiebreak_by_weakest_tower() -> void:
 	check_eq(sim.outcome, 0, "team 1's weakest tower is lower")
 
 
+func test_tiebreak_moves_on_to_the_next_weakest_tower() -> void:
+	var sim := _sim()
+	# One side den each, then the main dens decide.
+	sim.deal_damage(_tower(sim, 0, "side", -1), 999999, null)
+	sim.deal_damage(_tower(sim, 1, "side", -1), 999999, null)
+	sim.deal_damage(_tower(sim, 0, "main"), 500, null)
+	sim.deal_damage(_tower(sim, 1, "main"), 400, null)
+	sim.tick = sim.match_ticks + sim.overtime_ticks - 1
+	sim.step()
+	check_eq(sim.outcome, 1, "same weakest den, team 0's main den is lower")
+
+
 func test_flyers_cross_the_river_anywhere_walkers_use_bridges() -> void:
 	var sim := _sim()
 	var bird: BattleSim.Fighter = sim.spawn(0, "peregrine_falcon", 9 * T, 18 * T)[0]
@@ -188,6 +200,16 @@ func test_swap_only_when_stuck() -> void:
 	var normal := _sim()
 	check(not normal.can_swap(0), "no swapping when something is playable")
 	check(not normal.swap(0, 0), "swap refused")
+
+
+func test_bot_decks_bring_partners_for_picky_animals() -> void:
+	for seed_value in 40:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = seed_value
+		var deck: Array = BattleBot.make_deck(GameData.arenas.size() - 1, 0, rng).deck
+		check_eq(deck.size(), int(GameData.progression.deck_size), "full deck")
+		for id in deck:
+			check(not BattleBot._partner_missing(id, deck), "%s has its partner in deck %d" % [id, seed_value])
 
 
 func test_bot_gets_sharper_with_difficulty() -> void:

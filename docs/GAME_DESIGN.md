@@ -226,7 +226,7 @@ enemy animals. The main den is tougher and hits harder:
 1. Destroy the enemy's **main den** and you win at once (its side dens fall with it, so that's a 3-0).
 2. Otherwise, after **3 minutes**, whoever destroyed more dens wins.
 3. Still tied: **1 minute of sudden-death overtime**. The first den to fall decides it.
-4. Still tied after overtime: the player whose weakest den has more hitpoints wins. If those are exactly equal, it's a draw (no trophies change, no cage).
+4. Still tied after overtime: the player whose weakest standing den has more hitpoints wins. If those are equal, the next weakest decides, and so on. Only if every den matches exactly is it a draw (no trophies change, no cage).
 
 **Energy:** start with 5, maximum 10, +1 every 2.8 seconds, and **twice as
 fast** in the last minute and in overtime.
@@ -276,8 +276,10 @@ start with the Net and Air Horn in their deck.
 The bot plays by the same rules: same energy, same requirements, same
 release checks. It defends when your animals cross the river, uses tools on
 groups of enemies (or the Medkit on its hurt animals), and pushes a lane when
-it has energy to spare. It gets a deck from your arena at about your card
-levels. The same bot can later fill online matchmaking when few players are
+it has energy to spare: tough animals start at the back, and it adds support
+behind them so the push arrives as a group. It gets a deck from your arena at
+about your card levels, and like a person it makes sure picky animals have
+their partners in the deck (a Lion comes with another Savanna animal). The same bot can later fill online matchmaking when few players are
 on.
 
 **Difficulty grows with your arena.** In the first arena the bot is slow to

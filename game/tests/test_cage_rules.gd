@@ -29,8 +29,8 @@ func test_only_unlocked_animals_drop() -> void:
 	for seed_value in 30:
 		var rewards := CageRules.roll(cage, 0, GameData.cage_pools(0), GameData.rarity_order, _rng(seed_value))
 		for stack in rewards.cards:
-			check_eq(int(GameData.animals[stack.animal].unlock_arena_index), 0, "%s isn't unlocked in arena 1" % stack.animal)
-			check_eq(GameData.animals[stack.animal].rarity, stack.rarity, "stack rarity matches animal")
+			check_eq(int(GameData.cards[stack.animal].unlock_arena_index), 0, "%s isn't unlocked in arena 1" % stack.animal)
+			check_eq(GameData.cards[stack.animal].rarity, stack.rarity, "stack rarity matches animal")
 
 
 func test_odds_add_up_and_skip_locked_rarities() -> void:

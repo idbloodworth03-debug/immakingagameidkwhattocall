@@ -31,13 +31,16 @@ static func blocking_reasons(animal: Dictionary, state: Dictionary) -> Array:
 	return reasons
 
 
-## Where this animal may be released. Normally only your own side, aquatic
-## animals may also swim in from the river, and some must use the river.
-static func allowed_zones(animal: Dictionary) -> Array:
-	for req in animal.get("prerequisites", []):
+## Where this card may be played. Animals normally go on your own side,
+## aquatic animals may also swim in from the river, and some must use the
+## river. Ranger tools can be used anywhere unless they say otherwise.
+static func allowed_zones(card: Dictionary) -> Array:
+	for req in card.get("prerequisites", []):
 		if req.type == "zone":
 			return [req.zone]
-	if animal.get("tags", []).has("aquatic"):
+	if card.get("kind", "animal") == "tool":
+		return ["own_side", "river", "enemy_side"]
+	if card.get("tags", []).has("aquatic"):
 		return ["own_side", "river"]
 	return ["own_side"]
 
@@ -95,7 +98,11 @@ static func describe(req: Dictionary) -> String:
 		"unique":
 			return "Only one on the field at a time"
 		"zone":
-			return "Must be released in the river" if req.zone == "river" else "Must be released in: %s" % req.zone
+			if req.zone == "river":
+				return "Must be released in the river"
+			if req.zone == "own_side":
+				return "Only on your side of the field"
+			return "Only in: %s" % req.zone
 	return "Unknown requirement"
 
 
@@ -103,6 +110,8 @@ static func _zone_reason(animal: Dictionary, zone: String) -> String:
 	var allowed := allowed_zones(animal)
 	if allowed == ["river"]:
 		return "Must be released in the river"
+	if allowed == ["own_side"] and card_is_tool(animal):
+		return "Only on your side of the field"
 	if zone == "river":
 		return "Only Aquatic animals can be released in the river"
 	return "Release animals on your side of the field"
@@ -110,3 +119,7 @@ static func _zone_reason(animal: Dictionary, zone: String) -> String:
 
 static func _clock(seconds: float) -> String:
 	return "%d:%02d" % [floori(seconds / 60.0), int(seconds) % 60]
+
+
+static func card_is_tool(card: Dictionary) -> bool:
+	return card.get("kind", "animal") == "tool"

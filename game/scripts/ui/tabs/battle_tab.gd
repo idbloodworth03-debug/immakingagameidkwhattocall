@@ -2,7 +2,7 @@ extends Control
 ## Battle tab (the home screen): current arena, the Battle button and the
 ## four cage slots.
 
-const BATTLE_SCENE := "res://scenes/battle_sandbox.tscn"
+const BATTLE_SCENE := "res://scenes/battle.tscn"
 
 var _arena_holder: PanelContainer
 var _slots_row: HBoxContainer
@@ -31,7 +31,7 @@ func _ready() -> void:
 	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	battle.pressed.connect(func() -> void: get_tree().change_scene_to_file(BATTLE_SCENE))
 	column.add_child(battle)
-	column.add_child(UIKit.label("Battle sandbox for now. Real rules and online matches come next.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(UIKit.label("Practice against a computer opponent. Online matches come later.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_slots_row = UIKit.hbox(10)
 	column.add_child(_slots_row)

@@ -34,6 +34,7 @@ const HABITAT_COLORS := {
 	"mountain": Color("#7f88a0"),
 	"marine": Color("#2f6fb5"),
 	"island": Color("#3fa7a0"),
+	"tool": Color("#a0703a"),
 }
 
 

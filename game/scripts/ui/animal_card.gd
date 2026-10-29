@@ -32,7 +32,7 @@ static func create(id: String, small_card := false) -> AnimalCard:
 
 func _build() -> void:
 	custom_minimum_size = SIZE_SMALL if small else SIZE_NORMAL
-	var animal := GameData.get_animal(animal_id)
+	var animal := GameData.get_card(animal_id)
 
 	var column := UIKit.vbox(2 if small else 4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -79,7 +79,7 @@ func _build() -> void:
 
 ## Re-reads the profile and updates the card. Call after the profile changes.
 func refresh() -> void:
-	var animal := GameData.get_animal(animal_id)
+	var animal := GameData.get_card(animal_id)
 	var owned := Profile.has_card(animal_id)
 	var reachable := int(animal.unlock_arena_index) <= Profile.highest_arena()
 
@@ -111,7 +111,7 @@ func refresh() -> void:
 
 
 func _restyle() -> void:
-	var animal := GameData.get_animal(animal_id)
+	var animal := GameData.get_card(animal_id)
 	var owned := Profile.has_card(animal_id)
 	var frame := UIKit.box(UIKit.PANEL_DARK if owned else Color(0.08, 0.12, 0.2), 14, 6 if small else 8)
 	frame.set_border_width_all(5 if highlighted else 3)

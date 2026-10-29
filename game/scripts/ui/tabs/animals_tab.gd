@@ -54,7 +54,7 @@ func _rebuild() -> void:
 	if _swap_id != "":
 		var swap_row := UIKit.hbox(10)
 		deck_box.add_child(swap_row)
-		var hint := UIKit.paragraph("Tap a card in your deck to swap in the %s." % GameData.get_animal(_swap_id).name, 22, UIKit.YELLOW)
+		var hint := UIKit.paragraph("Tap a card in your deck to swap in the %s." % GameData.get_card(_swap_id).name, 22, UIKit.YELLOW)
 		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		swap_row.add_child(hint)
 		var cancel := UIKit.button("Cancel", UIKit.GREY, 22, Vector2(130, 60))
@@ -81,12 +81,12 @@ func _rebuild() -> void:
 			continue
 		if Profile.has_card(id):
 			found.append(id)
-		elif int(GameData.animals[id].unlock_arena_index) <= Profile.highest_arena():
+		elif int(GameData.cards[id].unlock_arena_index) <= Profile.highest_arena():
 			not_found.append(id)
 		else:
 			locked.append(id)
 
-	_content.add_child(UIKit.heading("Collection  %d/%d" % [Profile.found_count(), GameData.animal_order.size()]))
+	_content.add_child(UIKit.heading("Collection  %d/%d" % [Profile.found_count(), GameData.card_order.size()]))
 	_add_card_grid(found)
 	if not not_found.is_empty():
 		_content.add_child(UIKit.heading("Not found yet"))
@@ -116,10 +116,10 @@ func _grid() -> GridContainer:
 
 ## Rarest first, then cheapest first - the usual collection order.
 func _sorted_animals() -> Array:
-	var ids := GameData.animal_order.duplicate()
+	var ids := GameData.card_order.duplicate()
 	ids.sort_custom(func(a: String, b: String) -> bool:
-		var animal_a: Dictionary = GameData.animals[a]
-		var animal_b: Dictionary = GameData.animals[b]
+		var animal_a: Dictionary = GameData.cards[a]
+		var animal_b: Dictionary = GameData.cards[b]
 		var rank_a := GameData.rarity_order.find(animal_a.rarity)
 		var rank_b := GameData.rarity_order.find(animal_b.rarity)
 		if rank_a != rank_b:

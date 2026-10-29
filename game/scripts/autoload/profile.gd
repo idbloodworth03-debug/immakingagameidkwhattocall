@@ -72,6 +72,7 @@ func _new_profile() -> Dictionary:
 		"highest_arena": 0,
 		"wins": 0,
 		"losses": 0,
+		"draws": 0,
 		"collection": {},
 		"deck": [],
 		"cage_slots": [],
@@ -84,11 +85,11 @@ func _new_profile() -> Dictionary:
 	}
 	for i in int(prog.cage_slots):
 		profile.cage_slots.append(null)
-	# Starter animals: everything from the first arena, already in the deck.
-	var starters := GameData.animals_in_arena(0)
-	for id in starters:
-		profile.collection[id] = {"level": GameData.start_level(GameData.animals[id].rarity), "copies": 0, "new": false}
-	profile.deck = starters.slice(0, int(prog.deck_size))
+	# Starter cards: everything from the first arena. The deck comes from
+	# "starter_deck" in progression.json.
+	for id in GameData.cards_in_arena(0):
+		profile.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": false}
+	profile.deck = prog.starter_deck.duplicate()
 	# A first cage so new players can try freeing animals right away.
 	profile.cage_slots[0] = {"cage_id": "twig", "arena": 0, "unlock_at": 0.0}
 	return profile
@@ -104,11 +105,15 @@ func _repair() -> void:
 	data.version = SAVE_VERSION
 
 	for id in data.collection.keys():
-		if not GameData.animals.has(id):
+		if not GameData.cards.has(id):
 			data.collection.erase(id)
+	# Starter cards added in an update are free for everyone.
+	for id in GameData.cards_in_arena(0):
+		if not data.collection.has(id):
+			data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": true}
 
 	var deck: Array = data.deck.filter(func(id): return data.collection.has(id))
-	for id in GameData.animal_order:
+	for id in GameData.card_order:
 		if deck.size() >= int(GameData.progression.deck_size):
 			break
 		if data.collection.has(id) and not deck.has(id):
@@ -225,7 +230,7 @@ func has_card(id: String) -> bool:
 func card_level(id: String) -> int:
 	if has_card(id):
 		return int(data.collection[id].level)
-	return GameData.start_level(GameData.get_animal(id).get("rarity", "common"))
+	return GameData.start_level(GameData.get_card(id).get("rarity", "common"))
 
 
 func card_copies(id: String) -> int:
@@ -253,18 +258,18 @@ func upgrade_cost(id: String) -> Dictionary:
 	if CardRules.is_max_level(level, prog):
 		return {}
 	return {
-		"copies": CardRules.copies_to_upgrade(GameData.animals[id].rarity, level, prog),
+		"copies": CardRules.copies_to_upgrade(GameData.cards[id].rarity, level, prog),
 		"gold": CardRules.gold_to_upgrade(level, prog),
 	}
 
 
 func can_upgrade(id: String) -> bool:
-	return has_card(id) and CardRules.can_upgrade(GameData.animals[id].rarity, card_level(id), card_copies(id), get_gold(), GameData.progression)
+	return has_card(id) and CardRules.can_upgrade(GameData.cards[id].rarity, card_level(id), card_copies(id), get_gold(), GameData.progression)
 
 
 ## True when the card has enough copies to upgrade, even if gold is short.
 func has_copies_for_upgrade(id: String) -> bool:
-	return has_card(id) and CardRules.has_copies_for_upgrade(GameData.animals[id].rarity, card_level(id), card_copies(id), GameData.progression)
+	return has_card(id) and CardRules.has_copies_for_upgrade(GameData.cards[id].rarity, card_level(id), card_copies(id), GameData.progression)
 
 
 func upgrade_card(id: String) -> bool:
@@ -287,7 +292,7 @@ func _add_cards(id: String, count: int) -> bool:
 		data.collection[id].copies = card_copies(id) + count
 		return false
 	data.collection[id] = {
-		"level": GameData.start_level(GameData.animals[id].rarity),
+		"level": GameData.start_level(GameData.cards[id].rarity),
 		"copies": count - 1,
 		"new": true,
 	}
@@ -321,32 +326,40 @@ func average_deck_cost() -> float:
 		return 0.0
 	var total := 0.0
 	for id in deck:
-		total += float(GameData.animals[id].cost)
+		total += float(GameData.cards[id].cost)
 	return total / deck.size()
 
 
 # --- Battles ---------------------------------------------------------------
 
-## Updates trophies, stats and rewards after a battle.
+## Updates trophies, stats and rewards after a battle. `outcome` is "win",
+## "loss" or "draw" (draws change no trophies and give no cage).
 ## Returns a summary for the results screen.
-func record_match(won: bool, opponent_trophies: int) -> Dictionary:
+func record_match(outcome: String, opponent_trophies: int) -> Dictionary:
 	var prog := GameData.progression
+	var won := outcome == "win"
 	var before := get_trophies()
 	var highest_before := highest_arena()
-	var after := TrophyRules.trophies_after_match(before, opponent_trophies, won, prog.trophies, GameData.arenas)
+	var after := before
+	if outcome != "draw":
+		after = TrophyRules.trophies_after_match(before, opponent_trophies, won, prog.trophies, GameData.arenas)
 
 	data.trophies = after
 	data.best_trophies = maxi(int(data.best_trophies), after)
 	data.highest_arena = maxi(highest_before, arena_index())
-	if won:
-		data.wins = int(data.wins) + 1
-	else:
-		data.losses = int(data.losses) + 1
+	match outcome:
+		"win":
+			data.wins = int(data.wins) + 1
+		"loss":
+			data.losses = int(data.losses) + 1
+		_:
+			data.draws = int(data.get("draws", 0)) + 1
 	data.xp = int(data.xp) + int(prog.xp_per_win if won else prog.xp_per_loss)
 
 	var cage_id := _award_win_cage() if won else ""
 	_changed()
 	return {
+		"outcome": outcome,
 		"won": won,
 		"trophy_change": after - before,
 		"trophies": after,
@@ -489,7 +502,7 @@ func daily_offers() -> Array:
 	rng.seed = hash(today + String(data.player_id))
 	var offers := []
 	for rarity in ["common", "rare", "epic"]:
-		var owned := GameData.animal_order.filter(func(id): return has_card(id) and GameData.animals[id].rarity == rarity)
+		var owned := GameData.card_order.filter(func(id): return has_card(id) and GameData.cards[id].rarity == rarity)
 		if owned.is_empty():
 			continue
 		var amount := int(prog.daily_offer_amounts[rarity])
@@ -552,7 +565,7 @@ func unlock_hint(item: Dictionary) -> String:
 		"arena":
 			return "Reach %s" % GameData.get_arena(GameData.arena_index_by_id.get(unlock.arena, 0)).name
 		"animal":
-			return "Find the %s" % GameData.get_animal(unlock.animal).get("name", "?")
+			return "Find the %s" % GameData.get_card(unlock.animal).get("name", "?")
 		"shop":
 			return "%d gems" % int(unlock.gems)
 	return ""
@@ -605,6 +618,6 @@ func dev_skip_time(seconds: float) -> void:
 
 
 func dev_unlock_all_animals() -> void:
-	for id in GameData.animal_order:
+	for id in GameData.card_order:
 		_add_cards(id, 1)
 	_changed()

@@ -136,8 +136,12 @@ func _apply_safe_area(margin: MarginContainer) -> void:
 
 func _show_match_result(result: Dictionary) -> void:
 	var box := UIKit.vbox(14)
-	var won: bool = result.won
-	box.add_child(UIKit.label("Victory!" if won else "Defeat", 52, UIKit.YELLOW if won else UIKit.RED, HORIZONTAL_ALIGNMENT_CENTER))
+	var outcome: String = result.get("outcome", "win" if result.won else "loss")
+	var titles := {"win": "Victory!", "loss": "Defeat", "draw": "Draw"}
+	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
+	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
+	if result.has("towers"):
+		box.add_child(UIKit.label("Towers destroyed  %d - %d" % [result.towers[0], result.towers[1]], 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	var change := int(result.trophy_change)
 	box.add_child(UIKit.label("%+d trophies" % change, 34, UIKit.TROPHY, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("Total: %s" % UIKit.format_number(int(result.trophies)), 24, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
@@ -150,8 +154,8 @@ func _show_match_result(result: Dictionary) -> void:
 		arena_panel.add_child(arena_box)
 		arena_box.add_child(UIKit.label("New arena: %s!" % arena.name, 28, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
 		var names := []
-		for id in GameData.animals_in_arena(int(result.arena_index)):
-			names.append(GameData.get_animal(id).name)
+		for id in GameData.cards_in_arena(int(result.arena_index)):
+			names.append(GameData.get_card(id).name)
 		var unlocked := UIKit.paragraph("New animals can now be found: " + ", ".join(names), 21, UIKit.TEXT)
 		unlocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		arena_box.add_child(unlocked)

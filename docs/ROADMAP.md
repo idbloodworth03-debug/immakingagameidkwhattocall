@@ -9,16 +9,17 @@
 - [x] Menus in the usual mobile card game layout: Shop, Animals, Battle, Clan and Events tabs; profile; Trophy Road; cage opening
 - [x] Battle sandbox: energy, 4-card hand rotation, release requirements, emotes, quick chat and mute
 
-## Phase 1: Battle rules (next)
+## Phase 1: Battle rules (mostly done)
 
-The heart of the game, and the most work. Built offline against a bot first.
-
-- [ ] Decide the rules (see the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md))
-- [ ] Battle simulation: movement along lanes, targeting, attacks, towers, win and lose, overtime
-- [ ] Make the simulation **deterministic**: a fixed tick rate and no frame-rate-dependent randomness, so the same inputs always give the same battle. Online play relies on this.
-- [ ] Implement the 38 ability types and connect release requirements to real battle state
-- [ ] A simple bot opponent, also used later to fill matchmaking
-- [ ] Balance pass on costs and stats
+- [x] Decide the rules: 3 towers, 3 minutes plus overtime, Ranger tools, same map everywhere
+- [x] Battle engine: movement and bridges, targeting, attacks, towers that shoot, win/lose/draw, overtime, double energy
+- [x] **Deterministic** engine (whole numbers, fixed 20 ticks per second), tested to give identical battles from identical inputs
+- [x] All 38 ability types and 6 Ranger tools, with release requirements checked against the real battle
+- [x] Computer opponent that plays by the same rules
+- [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
+- [ ] Playtest a lot and balance costs and stats
+- [ ] Bot difficulty that scales with trophies
+- [ ] Drag-to-play cards (right now it's tap the card, then tap the field)
 
 ## Phase 2: Look and feel
 
@@ -70,7 +71,7 @@ game server with an official Godot 4 client. It already has most of what we need
 
 1. **Install Godot 4.7** (Standard, not .NET) and **GitHub Desktop**, then run the project (see the [README](../README.md)).
 2. **Play with it and react.** Change anything you like: animal names, which animals are in the game, rarities, arena names, cage names and prices. It's all in `game/data/`, or just tell me.
-3. **Think about the battle rules.** The open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md) are what we'll decide next session.
+3. **Play battles and tell me how they feel.** Too easy or too hard? Which animals feel too strong or useless? Is it fun to watch? And answer the remaining questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md).
 4. **Tell me what devices you have:**
    - **Mac?** Building for iPhone needs a Mac with Xcode. Without one, we can build iOS in the cloud (for example GitHub Actions' macOS machines or Codemagic) or launch on Android first.
    - **Android phone?** It's the easiest way to try the game on a real device early, over a USB cable.

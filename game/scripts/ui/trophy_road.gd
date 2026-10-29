@@ -40,8 +40,8 @@ func _build() -> void:
 		flow.add_theme_constant_override("h_separation", 8)
 		flow.add_theme_constant_override("v_separation", 6)
 		column.add_child(flow)
-		for id in GameData.animals_in_arena(i):
-			var animal := GameData.get_animal(id)
+		for id in GameData.cards_in_arena(i):
+			var animal := GameData.get_card(id)
 			var chip := UIKit.panel(Color(0, 0, 0, 0.35), 6, 10)
 			chip.add_child(UIKit.label(animal.name, 18, GameData.rarity_color(animal.rarity)))
 			flow.add_child(chip)

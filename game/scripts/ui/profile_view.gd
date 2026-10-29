@@ -65,8 +65,8 @@ func _build() -> void:
 		["Trophies", UIKit.format_number(Profile.get_trophies())],
 		["Best trophies", UIKit.format_number(int(Profile.data.best_trophies))],
 		["Arena", "%d: %s" % [Profile.arena_index() + 1, arena.name]],
-		["Wins / Losses", "%d / %d" % [int(Profile.data.wins), int(Profile.data.losses)]],
-		["Animals found", "%d / %d" % [Profile.found_count(), GameData.animal_order.size()]],
+		["Wins / Losses / Draws", "%d / %d / %d" % [int(Profile.data.wins), int(Profile.data.losses), int(Profile.data.get("draws", 0))]],
+		["Animals found", "%d / %d" % [Profile.found_count(), GameData.card_order.size()]],
 	]:
 		stats.add_child(UIKit.label(pair[0], 21, UIKit.TEXT_DIM))
 		stats.add_child(UIKit.label(pair[1], 22))

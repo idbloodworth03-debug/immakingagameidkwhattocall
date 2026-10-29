@@ -3,6 +3,7 @@
   "starting_gold": 500,
   "starting_gems": 100,
   "deck_size": 8,
+  "starter_deck": ["pigeon_flock", "sewer_rats", "raccoon", "red_fox", "platypus", "cheetah", "net", "air_horn"],
   "cage_slots": 4,
 
   "card_max_level": 14,

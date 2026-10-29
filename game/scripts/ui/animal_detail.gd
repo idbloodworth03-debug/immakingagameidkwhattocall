@@ -1,8 +1,8 @@
 class_name AnimalDetail
 extends VBoxContainer
-## Everything about one animal: stats at its current level, ability, release
-## requirements and conservation status, plus Upgrade and Use buttons.
-## Shown inside a Modal.
+## Everything about one card: stats at its current level, ability, release
+## requirements and (for animals) conservation status, plus Upgrade and Use
+## buttons. Works for Ranger tools too. Shown inside a Modal.
 
 signal use_pressed(animal_id: String)
 
@@ -31,7 +31,7 @@ func _build() -> void:
 		remove_child(child)
 		child.queue_free()
 
-	var animal := GameData.get_animal(animal_id)
+	var animal := GameData.get_card(animal_id)
 	var rarity: String = animal.rarity
 	var owned := Profile.has_card(animal_id)
 	var level := Profile.card_level(animal_id)
@@ -53,7 +53,11 @@ func _build() -> void:
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(title)
 	info.add_child(UIKit.label(GameData.rarity_name(rarity), 26, GameData.rarity_color(rarity)))
-	info.add_child(UIKit.paragraph("Real-world status: %s" % GameData.status_name(animal.status), 20))
+	var is_tool: bool = animal.kind == "tool"
+	if is_tool:
+		info.add_child(UIKit.paragraph("Ranger tool", 20))
+	else:
+		info.add_child(UIKit.paragraph("Real-world status: %s" % GameData.status_name(animal.status), 20))
 	if owned:
 		info.add_child(UIKit.label("Level %d" % level, 24, UIKit.YELLOW))
 		var cost := Profile.upgrade_cost(animal_id)
@@ -78,21 +82,32 @@ func _build() -> void:
 	var start := GameData.start_level(rarity)
 	var stats: Dictionary = animal.stats
 	_add_stat(grid, "Energy cost", str(int(animal.cost)))
-	_add_stat(grid, "Hitpoints", UIKit.format_number(CardRules.stat_at_level(stats.hp, level, start, growth)))
-	_add_stat(grid, "Damage", UIKit.format_number(CardRules.stat_at_level(stats.damage, level, start, growth)))
-	_add_stat(grid, "Hit speed", "%.1fs" % float(stats.hit_speed))
-	_add_stat(grid, "Speed", SPEED_NAMES.get(stats.speed, stats.speed))
-	_add_stat(grid, "Range", "Melee" if float(stats.range) <= 1.0 else "%s tiles" % str(stats.range))
-	_add_stat(grid, "Targets", TARGET_NAMES.get(stats.targets, stats.targets))
-	if int(animal.count) > 1:
-		_add_stat(grid, "Count", "x%d" % int(animal.count))
+	if is_tool:
+		_add_stat(grid, "Area", "%s tiles" % str(stats.get("radius", 0)))
+		for key in ["damage", "heal", "hp"]:
+			if stats.has(key):
+				var label: String = {"damage": "Damage", "heal": "Healing", "hp": "Bait hitpoints"}[key]
+				_add_stat(grid, label, UIKit.format_number(CardRules.stat_at_level(stats[key], level, start, growth)))
+		if int(stats.get("tower_damage_pct", 0)) > 0:
+			_add_stat(grid, "Tower damage", "%d%%" % int(stats.tower_damage_pct))
+		if stats.has("duration"):
+			_add_stat(grid, "Lasts", "%ss" % str(stats.duration))
+	else:
+		_add_stat(grid, "Hitpoints", UIKit.format_number(CardRules.stat_at_level(stats.hp, level, start, growth)))
+		_add_stat(grid, "Damage", UIKit.format_number(CardRules.stat_at_level(stats.damage, level, start, growth)))
+		_add_stat(grid, "Hit speed", "%.1fs" % float(stats.hit_speed))
+		_add_stat(grid, "Speed", SPEED_NAMES.get(stats.speed, stats.speed))
+		_add_stat(grid, "Range", "Melee" if float(stats.range) <= 1.0 else "%s tiles" % str(stats.range))
+		_add_stat(grid, "Targets", TARGET_NAMES.get(stats.targets, stats.targets))
+		if int(animal.count) > 1:
+			_add_stat(grid, "Count", "x%d" % int(animal.count))
 
 	# Ability
 	var ability_panel := UIKit.panel(UIKit.PANEL_DARK, 14)
 	add_child(ability_panel)
 	var ability_box := UIKit.vbox(4)
 	ability_panel.add_child(ability_box)
-	ability_box.add_child(UIKit.label("Ability: " + String(animal.ability.name), 24, UIKit.YELLOW))
+	ability_box.add_child(UIKit.label(("Effect: " if is_tool else "Ability: ") + String(animal.ability.name), 24, UIKit.YELLOW))
 	ability_box.add_child(UIKit.paragraph(animal.ability.text, 21, UIKit.TEXT))
 
 	# Release requirements
@@ -100,20 +115,24 @@ func _build() -> void:
 	add_child(req_panel)
 	var req_box := UIKit.vbox(4)
 	req_panel.add_child(req_box)
-	req_box.add_child(UIKit.label("Release requirements", 24, UIKit.YELLOW))
+	req_box.add_child(UIKit.label("How to play it" if is_tool else "Release requirements", 24, UIKit.YELLOW))
 	var lines := ["Costs %d energy" % int(animal.cost)]
 	for req in animal.prerequisites:
 		lines.append(PlacementRules.describe(req))
-	if PlacementRules.allowed_zones(animal) == ["own_side", "river"]:
+	var zones := PlacementRules.allowed_zones(animal)
+	if zones.size() == 3:
+		lines.append("Use it anywhere on the field")
+	elif zones == ["own_side", "river"]:
 		lines.append("Can also be released in the river")
 	for line in lines:
 		req_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
 
 	# Tags
-	var tag_names := []
-	for tag in animal.tags:
-		tag_names.append(GameData.tag_name(tag))
-	add_child(UIKit.paragraph("Traits: " + ", ".join(tag_names), 19))
+	if not is_tool:
+		var tag_names := []
+		for tag in animal.tags:
+			tag_names.append(GameData.tag_name(tag))
+		add_child(UIKit.paragraph("Traits: " + ", ".join(tag_names), 19))
 
 	# Buttons
 	if owned:
@@ -141,7 +160,7 @@ func _add_stat(grid: GridContainer, stat_name: String, value: String) -> void:
 
 func _on_upgrade() -> void:
 	if Profile.upgrade_card(animal_id):
-		UIKit.toast("%s is now Level %d!" % [GameData.get_animal(animal_id).name, Profile.card_level(animal_id)], UIKit.GREEN.darkened(0.3))
+		UIKit.toast("%s is now Level %d!" % [GameData.get_card(animal_id).name, Profile.card_level(animal_id)], UIKit.GREEN.darkened(0.3))
 		_build()
 	else:
 		UIKit.toast("Not enough gold or copies yet")

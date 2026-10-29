@@ -2,8 +2,7 @@
 
 The working design for every system. Numbers are starting points for
 balancing and live in `game/data/*.json`, so they can change without code.
-The **battle rules** (how animals move and fight, towers, win conditions)
-are not designed yet. They're the next step (see [ROADMAP.md](ROADMAP.md)).
+Battle tuning (towers, timing, energy) is in `game/data/battle_rules.json`.
 
 ## The big idea
 
@@ -51,7 +50,8 @@ There are 57 to start: 22 Common, 14 Rare, 10 Epic and 11 Legendary. Each has:
 | River only | Hippo, Sea Otter, Axolotl must be released in the river |
 
 All **Aquatic** animals may also be released in the river; everyone else uses
-their own side. The battle sandbox already checks all of these.
+their own side. Ranger tools can be used anywhere (except Food Bait, which
+goes on your side).
 
 ### Animals with requirements
 
@@ -204,12 +204,74 @@ with a big **NEW ANIMAL FREED!** for first finds, and a summary at the end.
 - **Friendly battles** with clanmates and friends, which don't change trophies.
 - **Clan Wars** (proposal): a weekly event where each member gets a few war battles a day. Wins earn points for the clan. Clans are matched in groups of about 5, and the final ranking gives Clan Cages to everyone who took part.
 
-## Battle rules: open questions for the next session
+## Battle rules
 
-1. **Towers:** keep the classic layout of 2 side towers and 1 main tower per player? And what are they called in our theme: Dens? Ranger Stations?
-2. **Winning:** destroy the main tower for an instant win, otherwise whoever destroyed more towers wins when time runs out?
-3. **Match length:** 3 minutes plus overtime? Energy that refills faster in the last minute?
-4. **Energy:** 10 max, 1 per 2.8 seconds (what the sandbox uses)? And does it need a better name, like Stamina or Instinct?
-5. **Non-animal cards:** only animals, or also "ranger tools" (nets, bait, medicine) as spell-like cards?
-6. **Map:** one river with two bridges, or arena-specific terrain (marsh puddles, jungle trees)?
-7. **Towers leveling** with Ranger Level, or fixed so only animal levels matter?
+Hands-off, real-time battles. You choose what to play and where; the
+animals walk, pick targets and fight on their own.
+
+**The field:** 18 tiles wide and 30 tall, with a river across the middle and
+two bridges. You play from the bottom. Every arena uses the same layout;
+only the look changes.
+
+**Towers:** each player has 2 side towers and 1 main tower. All three shoot
+at enemy animals. The main tower is tougher and hits harder:
+
+| Tower | Hitpoints | Damage | Hit speed | Range |
+|---|---|---|---|---|
+| Side | 1,400 | 50 | 0.8s | 7 tiles |
+| Main | 2,400 | 80 | 1.0s | 7.5 tiles |
+
+**Winning:**
+1. Destroy the enemy's **main tower** and you win at once (its side towers fall with it, so that's a 3-0).
+2. Otherwise, after **3 minutes**, whoever destroyed more towers wins.
+3. Still tied: **1 minute of sudden-death overtime**. The first tower to fall decides it.
+4. Still tied after overtime: the player whose weakest tower has more hitpoints wins. If those are exactly equal, it's a draw (no trophies change, no cage).
+
+**Energy:** start with 5, maximum 10, +1 every 2.8 seconds, and **twice as
+fast** in the last minute and in overtime.
+
+**Your hand:** 4 cards from your 8-card deck, plus a preview of the next one.
+A played card goes to the back of the deck.
+
+**Swapping:** if *none* of your 4 cards can be played because of their
+requirements (not counting energy), the Swap button sends one to the back of
+the deck for free. This stops a hand full of picky cards from getting stuck.
+
+**How animals behave:**
+- Animals take 1 second to deploy, then walk toward the nearest enemy. They attack anything they can reach within 5.5 tiles, otherwise they head for the nearest enemy tower.
+- Walkers cross the river on the bridges. Flyers, Aquatic animals and the Mountain Goat cross anywhere.
+- "Towers only" animals (Bison, Elephant, Rhino) ignore everything but towers and Food Bait.
+- Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
+
+## Ranger tools
+
+Spell-like cards that can be used anywhere on the field (Food Bait only on your side):
+
+| Tool | Rarity | Cost | Unlocks | What it does |
+|---|---|---|---|---|
+| Net | Common | 2 | Arena 1 | Enemies in a 2-tile area are stuck for 2.5s and take 40 damage |
+| Air Horn | Common | 2 | Arena 1 | 180 damage in 2.5 tiles and knocks enemies back. Towers take 30% |
+| Food Bait | Rare | 2 | Arena 2 | A snack that enemy ground animals within 5 tiles go for, for up to 7s |
+| Medkit | Rare | 3 | Arena 3 | Heals your animals in 3 tiles for 350 |
+| Tranquilizer Dart | Epic | 3 | Arena 5 | Puts the closest enemy animal to sleep for 4s (Fearless ones are only slowed) |
+| Signal Flare | Epic | 4 | Arena 6 | 340 damage in 2.5 tiles, reveals hidden animals. Towers take 35% |
+
+Tools level up like animals (+10% damage or healing per level). New players
+start with the Net and Air Horn in their deck.
+
+## Computer opponent
+
+The bot plays by the same rules: same energy, same requirements, same
+release checks. It defends when your animals cross the river, uses tools on
+groups of enemies (or the Medkit on its hurt animals), and pushes a lane when
+it has energy to spare. It gets a deck from your arena at about your card
+levels. The same bot can later fill online matchmaking when few players are
+on.
+
+## Still open
+
+1. **Names:** what do we call the towers (Dens? Ranger Stations?) and energy (Stamina? Instinct?)?
+2. **Tower levels:** should towers get stronger with Ranger Level, or stay fixed so only animal levels matter?
+3. **Bonus placement:** in Clash Royale, destroying a side tower lets you deploy deeper on the enemy's side. Do we want that?
+4. **Bot difficulty:** easier at low trophies, harder higher up?
+5. **Balance:** all stats are first guesses. Playing a lot is the only way to tune them.

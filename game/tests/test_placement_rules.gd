@@ -11,7 +11,7 @@ func _state(overrides := {}) -> Dictionary:
 
 
 func _allowed(id: String, overrides := {}) -> bool:
-	return PlacementRules.blocking_reasons(GameData.animals[id], _state(overrides)).is_empty()
+	return PlacementRules.blocking_reasons(GameData.cards[id], _state(overrides)).is_empty()
 
 
 func test_energy() -> void:
@@ -30,15 +30,15 @@ func test_zones() -> void:
 
 func test_allies_with_tag() -> void:
 	check(not _allowed("lion"), "lion needs a savanna ally")
-	check(_allowed("lion", {"allies": [GameData.animals.cheetah]}), "cheetah is a savanna animal")
+	check(_allowed("lion", {"allies": [GameData.cards.cheetah]}), "cheetah is a savanna animal")
 
 
 func test_unique_and_no_allies() -> void:
-	var wolf: Dictionary = GameData.animals.red_wolf
-	var fox: Dictionary = GameData.animals.red_fox
+	var wolf: Dictionary = GameData.cards.red_wolf
+	var fox: Dictionary = GameData.cards.red_fox
 	check(_allowed("red_wolf", {"allies": [fox]}), "red wolf with a canine ally")
 	check(not _allowed("red_wolf", {"allies": [fox, wolf]}), "only one red wolf at a time")
-	check(not _allowed("amur_leopard", {"allies": [GameData.animals.cheetah]}), "amur leopard won't share with big cats")
+	check(not _allowed("amur_leopard", {"allies": [GameData.cards.cheetah]}), "amur leopard won't share with big cats")
 	check(_allowed("amur_leopard", {"allies": [fox]}), "amur leopard alone is fine")
 
 
@@ -50,6 +50,13 @@ func test_timing_and_history() -> void:
 	check(not _allowed("asian_elephant"), "elephant needs a damaged tower")
 	check(_allowed("asian_elephant", {"own_tower_damaged": true}), "elephant after tower damage")
 	check(_allowed("california_condor", {"allies_defeated": 2}), "condor after two defeats")
+
+
+func test_tools_go_anywhere() -> void:
+	check(_allowed("net", {"zone": "enemy_side"}), "net on the enemy side")
+	check(_allowed("net", {"zone": "river"}), "net on the river")
+	check(not _allowed("food_bait", {"zone": "enemy_side"}), "bait only on your side")
+	check(_allowed("food_bait"), "bait on your side")
 
 
 func test_descriptions_read_well() -> void:

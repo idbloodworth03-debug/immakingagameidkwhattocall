@@ -1,0 +1,80 @@
+[
+  {
+    "id": "net",
+    "name": "Net",
+    "kind": "tool",
+    "rarity": "common",
+    "unlock_arena": "rescue_center",
+    "cost": 2,
+    "count": 1,
+    "tags": ["tool"],
+    "stats": {"radius": 2.0, "damage": 40, "tower_damage_pct": 0},
+    "ability": {"id": "net", "name": "Tangle", "text": "Throw it anywhere. Enemy animals underneath are stuck for 2.5 seconds and take 40 damage.", "params": {"stun": 2.5}},
+    "prerequisites": []
+  },
+  {
+    "id": "air_horn",
+    "name": "Air Horn",
+    "kind": "tool",
+    "rarity": "common",
+    "unlock_arena": "rescue_center",
+    "cost": 2,
+    "count": 1,
+    "tags": ["tool"],
+    "stats": {"radius": 2.5, "damage": 180, "tower_damage_pct": 30},
+    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 180 damage to enemies in the area and knocks them back 1.5 tiles. Towers take 30%.", "params": {"knockback": 1.5}},
+    "prerequisites": []
+  },
+  {
+    "id": "food_bait",
+    "name": "Food Bait",
+    "kind": "tool",
+    "rarity": "rare",
+    "unlock_arena": "city_park",
+    "cost": 2,
+    "count": 1,
+    "tags": ["tool"],
+    "stats": {"radius": 5.0, "hp": 450, "duration": 7},
+    "ability": {"id": "bait", "name": "Irresistible", "text": "Drop a snack on your side. Enemy ground animals within 5 tiles go for it until it's eaten or 7 seconds pass.", "params": {}},
+    "prerequisites": [{"type": "zone", "zone": "own_side"}]
+  },
+  {
+    "id": "medkit",
+    "name": "Medkit",
+    "kind": "tool",
+    "rarity": "rare",
+    "unlock_arena": "prairie_fields",
+    "cost": 3,
+    "count": 1,
+    "tags": ["tool"],
+    "stats": {"radius": 3.0, "heal": 350},
+    "ability": {"id": "medkit", "name": "Patch Up", "text": "Heals your animals in the area for 350.", "params": {}},
+    "prerequisites": []
+  },
+  {
+    "id": "tranq_dart",
+    "name": "Tranquilizer Dart",
+    "kind": "tool",
+    "rarity": "epic",
+    "unlock_arena": "misty_marsh",
+    "cost": 3,
+    "count": 1,
+    "tags": ["tool"],
+    "stats": {"radius": 1.5, "duration": 4},
+    "ability": {"id": "tranq_dart", "name": "Sleepy Time", "text": "Puts the enemy animal closest to where you aim to sleep for 4 seconds. Fearless animals are only slowed.", "params": {}},
+    "prerequisites": []
+  },
+  {
+    "id": "signal_flare",
+    "name": "Signal Flare",
+    "kind": "tool",
+    "rarity": "epic",
+    "unlock_arena": "sunbaked_savanna",
+    "cost": 4,
+    "count": 1,
+    "tags": ["tool"],
+    "stats": {"radius": 2.5, "damage": 340, "tower_damage_pct": 35},
+    "ability": {"id": "flare", "name": "Blaze", "text": "340 damage in the area, and hidden animals there are revealed for 5 seconds. Towers take 35%.", "params": {"reveal": 5}},
+    "prerequisites": []
+  }
+]

@@ -14,14 +14,14 @@ func cleanup() -> void:
 
 
 func test_new_profile() -> void:
-	check_eq(profile.get_deck().size(), 8, "full starting deck")
-	check_eq(profile.found_count(), 8, "eight starter animals")
+	check_eq(profile.get_deck(), GameData.progression.starter_deck, "starter deck")
+	check_eq(profile.found_count(), GameData.cards_in_arena(0).size(), "owns every first-arena card")
 	check_eq(profile.get_trophies(), 0, "no trophies yet")
 	check_eq(profile.cage_slot_state(0), "locked", "starter cage waiting")
 
 
 func test_win_gives_trophies_and_cage() -> void:
-	var result: Dictionary = profile.record_match(true, 0)
+	var result: Dictionary = profile.record_match("win", 0)
 	check_eq(result.trophy_change, 30, "even win")
 	check(result.cage_id != "", "got a cage")
 	check_eq(profile.cage_slot_state(1), "locked", "cage went to the next free slot")
@@ -29,15 +29,30 @@ func test_win_gives_trophies_and_cage() -> void:
 
 func test_full_slots_give_no_cage() -> void:
 	for i in 3:
-		profile.record_match(true, 0)
-	var result: Dictionary = profile.record_match(true, 0)
+		profile.record_match("win", 0)
+	var result: Dictionary = profile.record_match("win", 0)
 	check_eq(result.cage_id, "", "no room left")
 	check(result.slots_full, "slots_full flag set")
 
 
+func test_draw_changes_nothing() -> void:
+	profile.data.trophies = 500
+	var result: Dictionary = profile.record_match("draw", 500)
+	check_eq(result.trophy_change, 0, "no trophies for a draw")
+	check_eq(result.cage_id, "", "no cage for a draw")
+	check_eq(int(profile.data.draws), 1, "draw counted")
+
+
+func test_repair_adds_new_starter_cards() -> void:
+	profile.data.collection.erase("net")
+	profile._repair()
+	check(profile.has_card("net"), "starter card restored")
+	check(profile.is_card_new("net"), "flagged as new")
+
+
 func test_reaching_a_new_arena() -> void:
 	profile.data.trophies = 290
-	var result: Dictionary = profile.record_match(true, 290)
+	var result: Dictionary = profile.record_match("win", 290)
 	check(result.new_arena, "crossed 300 trophies")
 	check_eq(profile.highest_arena(), 1, "highest arena updated")
 
@@ -45,7 +60,7 @@ func test_reaching_a_new_arena() -> void:
 func test_cage_unlock_flow() -> void:
 	check(profile.start_cage_unlock(0), "start unlocking")
 	check_eq(profile.cage_slot_state(0), "unlocking", "now unlocking")
-	profile.record_match(true, 0)
+	profile.record_match("win", 0)
 	check(not profile.start_cage_unlock(1), "only one cage unlocks at a time")
 	profile.time_offset = 3 * 3600 + 1
 	check_eq(profile.cage_slot_state(0), "ready", "ready after three hours")
@@ -68,7 +83,7 @@ func test_skip_with_gems() -> void:
 func test_upgrade_card() -> void:
 	var id: String = profile.get_deck()[0]
 	check(not profile.can_upgrade(id), "no spare copies yet")
-	profile.grant_rewards({"cards": [{"animal": id, "rarity": GameData.animals[id].rarity, "count": 50}]})
+	profile.grant_rewards({"cards": [{"animal": id, "rarity": GameData.cards[id].rarity, "count": 50}]})
 	var level: int = profile.card_level(id)
 	var gold: int = profile.get_gold()
 	var cost: Dictionary = profile.upgrade_cost(id)

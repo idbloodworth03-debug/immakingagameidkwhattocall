@@ -1,6 +1,6 @@
 extends Node
 ## All the fixed game content, loaded from the JSON files in res://data/:
-## animals, arenas, cages, cosmetics and tuning numbers.
+## cards (animals and Ranger tools), arenas, cages, cosmetics and tuning numbers.
 ##
 ## Nothing here changes while you play. To add an animal or rebalance a cage,
 ## edit the JSON file, not this script. The game server will read the same
@@ -27,8 +27,8 @@ const UNLOCK_TYPES := ["default", "ranger_level", "arena", "animal", "shop"]
 var rarities: Dictionary = {}        # rarity id -> rarity info
 var rarity_order: Array = []         # rarity ids, most common first
 var tags: Dictionary = {}            # tag id -> display name
-var animals: Dictionary = {}         # animal id -> animal info
-var animal_order: Array = []         # animal ids in the order of animals.json
+var cards: Dictionary = {}           # card id -> card info (animals and tools)
+var card_order: Array = []           # animals.json order, then tools.json
 var arenas: Array = []               # arena infos, lowest trophies first
 var arena_index_by_id: Dictionary = {}
 var cages: Dictionary = {}           # cage id -> cage info
@@ -60,12 +60,15 @@ func reload() -> void:
 	for i in arenas.size():
 		arena_index_by_id[arenas[i].id] = i
 
-	animals.clear()
-	animal_order.clear()
-	for animal in _load("animals.json"):
-		animal["unlock_arena_index"] = arena_index_by_id.get(animal.unlock_arena, -1)
-		animals[animal.id] = animal
-		animal_order.append(animal.id)
+	cards.clear()
+	card_order.clear()
+	for file_name in ["animals.json", "tools.json"]:
+		for card in _load(file_name):
+			if not card.has("kind"):
+				card["kind"] = "animal"
+			card["unlock_arena_index"] = arena_index_by_id.get(card.unlock_arena, -1)
+			cards[card.id] = card
+			card_order.append(card.id)
 
 	cages.clear()
 	cage_order.clear()
@@ -94,26 +97,30 @@ func _load(file_name: String) -> Variant:
 	return parsed
 
 
-# --- Animals ---------------------------------------------------------------
+# --- Cards -----------------------------------------------------------------
 
-func get_animal(id: String) -> Dictionary:
-	return animals.get(id, {})
-
-
-func animals_in_arena(arena_index: int) -> Array:
-	return animal_order.filter(func(id): return animals[id].unlock_arena_index == arena_index)
+func get_card(id: String) -> Dictionary:
+	return cards.get(id, {})
 
 
-## Animal ids that can drop from cages once the player has reached `arena_index`,
+func is_tool(id: String) -> bool:
+	return cards.get(id, {}).get("kind", "") == "tool"
+
+
+func cards_in_arena(arena_index: int) -> Array:
+	return card_order.filter(func(id): return cards[id].unlock_arena_index == arena_index)
+
+
+## Card ids that can drop from cages once the player has reached `arena_index`,
 ## grouped by rarity: { "common": [...], "rare": [...], ... }
 func cage_pools(arena_index: int) -> Dictionary:
 	var pools := {}
 	for rarity in rarity_order:
 		pools[rarity] = []
-	for id in animal_order:
-		var animal: Dictionary = animals[id]
-		if animal.unlock_arena_index <= arena_index:
-			pools[animal.rarity].append(id)
+	for id in card_order:
+		var card: Dictionary = cards[id]
+		if card.unlock_arena_index <= arena_index:
+			pools[card.rarity].append(id)
 	return pools
 
 
@@ -167,20 +174,34 @@ func validate() -> Array:
 	var problems := []
 	var deck_size := int(progression.get("deck_size", 8))
 
-	if animals_in_arena(0).size() < deck_size:
-		problems.append("The first arena must unlock at least %d animals for the starting deck" % deck_size)
+	if cards_in_arena(0).size() < deck_size:
+		problems.append("The first arena must unlock at least %d cards for the starting deck" % deck_size)
+	var starter: Array = progression.get("starter_deck", [])
+	if starter.size() != deck_size:
+		problems.append("starter_deck must have exactly %d cards" % deck_size)
+	for id in starter:
+		if not cards.has(id) or cards[id].unlock_arena_index != 0:
+			problems.append("starter_deck: '%s' isn't a card from the first arena" % id)
+		elif starter.count(id) > 1:
+			problems.append("starter_deck: '%s' is listed twice" % id)
 
-	for id in animal_order:
-		var a: Dictionary = animals[id]
-		for field in ["name", "rarity", "status", "cost", "count", "tags", "stats", "ability", "prerequisites"]:
+	for id in card_order:
+		var a: Dictionary = cards[id]
+		for field in ["name", "rarity", "cost", "count", "tags", "stats", "ability", "prerequisites"]:
 			if not a.has(field):
 				problems.append("%s: missing '%s'" % [id, field])
+		if not ["animal", "tool"].has(a.kind):
+			problems.append("%s: kind must be 'animal' or 'tool'" % id)
 		if not rarities.has(a.get("rarity", "")):
 			problems.append("%s: unknown rarity '%s'" % [id, a.get("rarity")])
 		if a.unlock_arena_index < 0:
 			problems.append("%s: unknown arena '%s'" % [id, a.get("unlock_arena")])
-		if not STATUS_NAMES.has(a.get("status", "")):
+		if a.kind == "animal" and not STATUS_NAMES.has(a.get("status", "")):
 			problems.append("%s: unknown conservation status '%s'" % [id, a.get("status")])
+		if a.kind == "animal" and not BattleAbilities.KNOWN.has(a.get("ability", {}).get("id", "")):
+			problems.append("%s: the battle engine doesn't know ability '%s'" % [id, a.get("ability", {}).get("id")])
+		if a.kind == "tool" and not ToolEffects.KNOWN.has(a.get("ability", {}).get("id", "")):
+			problems.append("%s: the battle engine doesn't know tool effect '%s'" % [id, a.get("ability", {}).get("id")])
 		for tag in a.get("tags", []):
 			if not tags.has(tag):
 				problems.append("%s: unknown tag '%s' (add it to tags.json)" % [id, tag])
@@ -215,7 +236,7 @@ func validate() -> Array:
 				problems.append("%s %s: unknown unlock type '%s'" % [list_name, item.id, kind])
 			elif kind == "arena" and not arena_index_by_id.has(unlock.get("arena", "")):
 				problems.append("%s %s: unknown arena '%s'" % [list_name, item.id, unlock.get("arena")])
-			elif kind == "animal" and not animals.has(unlock.get("animal", "")):
+			elif kind == "animal" and not cards.has(unlock.get("animal", "")):
 				problems.append("%s %s: unknown animal '%s'" % [list_name, item.id, unlock.get("animal")])
 
 	return problems

@@ -125,7 +125,7 @@ func _big_reward(icon_text: String, color: Color, text: String, text_color: Colo
 
 
 func _card_reward(stack: Dictionary) -> Control:
-	var animal := GameData.get_animal(stack.animal)
+	var animal := GameData.get_card(stack.animal)
 	var box := UIKit.vbox(14)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if stack.get("is_new", false):

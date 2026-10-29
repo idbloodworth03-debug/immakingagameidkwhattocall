@@ -65,7 +65,9 @@
     "tranq_dart": "sbed/syringe",
     "signal_flare": "lorc/firework-rocket"
   },
-  "flipped": ["sea_otter"],
+  "flipped": [
+    "sea_otter"
+  ],
   "emotes": {
     "happy_otter": "delapouite/beaver",
     "laughing_hyena": "caro-asercion/hyena-head",
@@ -97,18 +99,66 @@
     "ranger_star": "delapouite/watchtower"
   },
   "arenas": {
-    "rescue_center": ["delapouite/bird-house", "delapouite/dog-house", "lorc/flat-paw-print"],
-    "city_park": ["delapouite/street-light", "delapouite/park-bench", "lorc/pine-tree"],
-    "prairie_fields": ["delapouite/high-grass", "lorc/wheat", "delapouite/sunrise"],
-    "whispering_woods": ["delapouite/forest", "lorc/pine-tree", "lorc/pine-tree"],
-    "misty_marsh": ["delapouite/swamp", "delapouite/reed", "delapouite/high-grass"],
-    "sunbaked_savanna": ["delapouite/sunrise", "delapouite/high-grass", "delapouite/high-grass"],
-    "red_rock_canyon": ["delapouite/desert", "delapouite/cactus", "delapouite/cactus"],
-    "frozen_tundra": ["delapouite/iceberg", "lorc/snowflake-1", "delapouite/iceberg"],
-    "emerald_jungle": ["delapouite/jungle", "delapouite/bamboo", "delapouite/palm-tree"],
-    "cloudpeak_mountains": ["lorc/mountains", "lorc/mountaintop", "lorc/pine-tree"],
-    "coral_coast": ["delapouite/island", "delapouite/palm-tree", "lorc/waves"],
-    "last_sanctuary": ["delapouite/laurels-trophy", "lorc/paw-print", "delapouite/forest"]
+    "rescue_center": [
+      "delapouite/bird-house",
+      "delapouite/dog-house",
+      "lorc/flat-paw-print"
+    ],
+    "city_park": [
+      "delapouite/street-light",
+      "delapouite/park-bench",
+      "lorc/pine-tree"
+    ],
+    "prairie_fields": [
+      "delapouite/high-grass",
+      "lorc/wheat",
+      "delapouite/sunrise"
+    ],
+    "whispering_woods": [
+      "delapouite/forest",
+      "lorc/pine-tree",
+      "lorc/pine-tree"
+    ],
+    "misty_marsh": [
+      "delapouite/swamp",
+      "delapouite/reed",
+      "delapouite/high-grass"
+    ],
+    "sunbaked_savanna": [
+      "delapouite/sunrise",
+      "delapouite/high-grass",
+      "delapouite/high-grass"
+    ],
+    "red_rock_canyon": [
+      "delapouite/desert",
+      "delapouite/cactus",
+      "delapouite/cactus"
+    ],
+    "frozen_tundra": [
+      "delapouite/iceberg",
+      "lorc/snowflake-1",
+      "delapouite/iceberg"
+    ],
+    "emerald_jungle": [
+      "delapouite/jungle",
+      "delapouite/bamboo",
+      "delapouite/palm-tree"
+    ],
+    "cloudpeak_mountains": [
+      "lorc/mountains",
+      "lorc/mountaintop",
+      "lorc/pine-tree"
+    ],
+    "coral_coast": [
+      "delapouite/island",
+      "delapouite/palm-tree",
+      "lorc/waves"
+    ],
+    "last_sanctuary": [
+      "delapouite/laurels-trophy",
+      "lorc/paw-print",
+      "delapouite/forest"
+    ]
   },
   "ui": {
     "gold": "delapouite/two-coins",
@@ -116,10 +166,15 @@
     "trophy": "delapouite/trophy-cup",
     "energy": "delapouite/bolt-drop",
     "cage": "delapouite/bird-cage",
-    "side_tower": "delapouite/watchtower",
-    "main_tower": "delapouite/tower-flag",
+    "side_tower": "delapouite/tree-door",
+    "main_tower": "delapouite/hut",
     "bait": "lorc/meat",
     "paw": "lorc/flat-paw-print",
     "locked": "lorc/padlock"
+  },
+  "logo": {
+    "wolf": "lorc/wolf-head",
+    "lion": "lorc/lion",
+    "claws": "lorc/triple-scratches"
   }
 }

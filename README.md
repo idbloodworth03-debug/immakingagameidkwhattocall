@@ -1,11 +1,11 @@
-# Animal Arena (working title)
+# Den Duel
 
-A real-time animal card battler for iOS and Android, made with Godot 4.
+![Den Duel](game/art/logo/logo.png)
+
+Den Duel is a real-time animal card battler for iOS and Android, made with Godot 4.
 You free animals from cages, build an 8-animal deck and battle other players
 to climb through arenas. The rarer the card, the rarer the animal in real life:
 Commons are Least Concern species, Legendaries are Critically Endangered.
-
-The name and logo are placeholders until we pick real ones.
 
 ## What works today
 
@@ -18,9 +18,9 @@ Everything runs offline on your computer, saved on the device:
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
 - **Ranger level:** an account level, plus player banners, icons and emotes to unlock
 - **Shop:** daily animal offers, cages, gold packs and cosmetics
-- **Battles** against a computer opponent: animals walk and fight on their own, use their abilities, and attack towers that shoot back. Matches last 3 minutes, with double energy in the last minute and sudden-death overtime. Emotes and quick chat work.
+- **Battles** against a computer opponent: animals walk and fight on their own, use their abilities, and attack the enemy's dens, which fight back. Matches last 3 minutes, with double energy in the last minute and sudden-death overtime. Emotes and quick chat work.
 - **Look and feel:**
-  - an icon for every animal and tool, arena scenery and watchtower towers
+  - an icon for every animal and tool, arena scenery, and dens (side dens and a main den)
   - chunky mobile-game fonts
   - animations: walking, attacks, screen shake and bouncy buttons
   - sound effects and music, which players can switch off
@@ -87,7 +87,7 @@ files in `game/data/`:
 
 - **New animal:** copy an entry in `animals.json` and change it. Its `unlock_arena` must be an arena id from `arenas.json`, and its tags must exist in `tags.json`. The ability `id` must be one of the types the battle engine knows (listed in `scripts/battle/battle_abilities.gd`).
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
-- **Battle tuning** (towers, match length, energy): `battle_rules.json`
+- **Battle tuning** (dens, match length, energy): `battle_rules.json`
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`
 - **Emotes, quick chats, banners and icons:** their own files

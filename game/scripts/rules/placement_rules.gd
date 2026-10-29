@@ -92,7 +92,7 @@ static func describe(req: Dictionary) -> String:
 		"match_time":
 			return "Available after %s of battle" % _clock(float(req.seconds))
 		"own_tower_damaged":
-			return "Only after one of your towers takes damage"
+			return "Only after one of your dens takes damage"
 		"allies_defeated":
 			return "Only after %d of your animals are defeated" % int(req.count)
 		"unique":

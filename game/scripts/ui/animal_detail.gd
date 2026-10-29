@@ -6,7 +6,7 @@ extends VBoxContainer
 
 signal use_pressed(animal_id: String)
 
-const TARGET_NAMES := {"ground": "Ground", "air_ground": "Air & Ground", "buildings": "Towers only"}
+const TARGET_NAMES := {"ground": "Ground", "air_ground": "Air & Ground", "buildings": "Dens only"}
 const SPEED_NAMES := {"slow": "Slow", "medium": "Medium", "fast": "Fast", "very_fast": "Very fast"}
 
 var animal_id := ""
@@ -86,7 +86,7 @@ func _build() -> void:
 				var label: String = {"damage": "Damage", "heal": "Healing", "hp": "Bait hitpoints"}[key]
 				_add_stat(grid, label, UIKit.format_number(CardRules.stat_at_level(stats[key], level, start, growth)))
 		if int(stats.get("tower_damage_pct", 0)) > 0:
-			_add_stat(grid, "Tower damage", "%d%%" % int(stats.tower_damage_pct))
+			_add_stat(grid, "Den damage", "%d%%" % int(stats.tower_damage_pct))
 		if stats.has("duration"):
 			_add_stat(grid, "Lasts", "%ss" % str(stats.duration))
 	else:

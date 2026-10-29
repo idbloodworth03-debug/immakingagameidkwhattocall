@@ -20,6 +20,14 @@ func _ready() -> void:
 	var column := UIKit.vbox(18)
 	margin.add_child(column)
 
+	var logo := TextureRect.new()
+	logo.texture = load("res://art/logo/logo.png")
+	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	logo.custom_minimum_size = Vector2(0, 150)
+	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(logo)
+
 	_arena_holder = PanelContainer.new()
 	_arena_holder.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 	_arena_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL

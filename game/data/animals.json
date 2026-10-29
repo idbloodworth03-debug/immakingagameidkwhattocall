@@ -334,7 +334,7 @@
     "count": 1,
     "tags": ["mammal", "prairie", "herd"],
     "stats": {"hp": 1600, "damage": 200, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "buildings"},
-    "ability": {"id": "knockback", "name": "Stampede", "text": "Only targets towers. Knocks back anything in its path.", "params": {"distance": 1}},
+    "ability": {"id": "knockback", "name": "Stampede", "text": "Only targets dens. Knocks back anything in its path.", "params": {"distance": 1}},
     "prerequisites": []
   },
   {
@@ -529,7 +529,7 @@
     "count": 1,
     "tags": ["mammal", "jungle", "herd"],
     "stats": {"hp": 3800, "damage": 300, "hit_speed": 1.8, "speed": "slow", "range": 1, "targets": "buildings"},
-    "ability": {"id": "trample", "name": "Trample", "text": "Only targets towers. Damages ground enemies it walks through for 80 per second.", "params": {"dps": 80}},
+    "ability": {"id": "trample", "name": "Trample", "text": "Only targets dens. Damages ground enemies it walks through for 80 per second.", "params": {"dps": 80}},
     "prerequisites": [{"type": "own_tower_damaged"}]
   },
   {
@@ -633,7 +633,7 @@
     "count": 1,
     "tags": ["mammal", "savanna", "armored"],
     "stats": {"hp": 3000, "damage": 420, "hit_speed": 1.8, "speed": "medium", "range": 1, "targets": "buildings"},
-    "ability": {"id": "charge", "name": "Thunder Charge", "text": "Only targets towers. After running 2 tiles it charges, stunning anything it slams for 1 second.", "params": {"distance": 2, "damage_mult": 2, "stun": 1}},
+    "ability": {"id": "charge", "name": "Thunder Charge", "text": "Only targets dens. After running 2 tiles it charges, stunning anything it slams for 1 second.", "params": {"distance": 2, "damage_mult": 2, "stun": 1}},
     "prerequisites": [{"type": "unique"}, {"type": "match_time", "seconds": 60}]
   },
   {

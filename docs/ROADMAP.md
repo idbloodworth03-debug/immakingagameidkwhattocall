@@ -11,8 +11,8 @@
 
 ## Phase 1: Battle rules (mostly done)
 
-- [x] Decide the rules: 3 towers, 3 minutes plus overtime, Ranger tools, same map everywhere
-- [x] Battle engine: movement and bridges, targeting, attacks, towers that shoot, win/lose/draw, overtime, double energy
+- [x] Decide the rules: 3 dens each, 3 minutes plus overtime, Ranger tools, same map everywhere
+- [x] Battle engine: movement and bridges, targeting, attacks, dens that fight back, win/lose/draw, overtime, double energy
 - [x] **Deterministic** engine (whole numbers, fixed 20 ticks per second), tested to give identical battles from identical inputs
 - [x] All 38 ability types and 6 Ranger tools, with release requirements checked against the real battle
 - [x] Computer opponent that plays by the same rules
@@ -28,8 +28,9 @@
 - [x] Sound effects, menu and battle music, and Sound/Music settings
 - [x] Animations: walking hops, attack lunges, screen shake, damage numbers, bouncy buttons, card reveal glow
 - [x] Credits screen and [ART_DIRECTION.md](ART_DIRECTION.md) with the plan for final art
-- [ ] Pick the **name and logo** (ideas in [ART_DIRECTION.md](ART_DIRECTION.md)), then check app stores and trademarks
-- [ ] Choose a final art style and commission the art (start with the starter cards, arena and towers)
+- [x] Name: **Den Duel**, with a logo, app icon and splash screen
+- [ ] Before launch: USPTO trademark check, website domain and social handles
+- [ ] Choose a final art style and commission the art (start with the starter cards, arena and dens)
 
 ## Phase 3: Online play
 

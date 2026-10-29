@@ -94,7 +94,7 @@ func _build() -> void:
 	var middle := UIKit.vbox(0)
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(middle)
-	middle.add_child(UIKit.label("Towers destroyed", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	middle.add_child(UIKit.label("Dens destroyed", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	_towers_label = UIKit.label("0 - 0", 30, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	middle.add_child(_towers_label)
 	var clock := UIKit.vbox(0)
@@ -168,7 +168,7 @@ func _update_hud() -> void:
 	if sim.in_overtime() and not _was_overtime:
 		_was_overtime = true
 		Sound.play("alert")
-		UIKit.toast("Overtime! Next tower wins!", UIKit.RED.darkened(0.2))
+		UIKit.toast("Overtime! Next den wins!", UIKit.RED.darkened(0.2))
 	if sim.in_overtime():
 		_mode_label.text = "OVERTIME"
 		_mode_label.add_theme_color_override("font_color", UIKit.RED.lightened(0.3))
@@ -330,7 +330,7 @@ func _end_battle() -> void:
 	var titles := {"win": "Victory!", "loss": "Defeat", "draw": "Draw"}
 	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
 	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
-	box.add_child(UIKit.label("Towers destroyed  %d - %d" % [sim.teams[0].towers_destroyed, sim.teams[1].towers_destroyed], 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	box.add_child(UIKit.label("Dens destroyed  %d - %d" % [sim.teams[0].towers_destroyed, sim.teams[1].towers_destroyed], 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	var ok := UIKit.button("OK", UIKit.GREEN, 28, Vector2(220, 84))
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(_back_to_menu)

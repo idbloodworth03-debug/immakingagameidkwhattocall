@@ -22,7 +22,7 @@
     "count": 1,
     "tags": ["tool"],
     "stats": {"radius": 2.5, "damage": 180, "tower_damage_pct": 30},
-    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 180 damage to enemies in the area and knocks them back 1.5 tiles. Towers take 30%.", "params": {"knockback": 1.5}},
+    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 180 damage to enemies in the area and knocks them back 1.5 tiles. Dens take 30%.", "params": {"knockback": 1.5}},
     "prerequisites": []
   },
   {
@@ -74,7 +74,7 @@
     "count": 1,
     "tags": ["tool"],
     "stats": {"radius": 2.5, "damage": 340, "tower_damage_pct": 35},
-    "ability": {"id": "flare", "name": "Blaze", "text": "340 damage in the area, and hidden animals there are revealed for 5 seconds. Towers take 35%.", "params": {"reveal": 5}},
+    "ability": {"id": "flare", "name": "Blaze", "text": "340 damage in the area, and hidden animals there are revealed for 5 seconds. Dens take 35%.", "params": {"reveal": 5}},
     "prerequisites": []
   }
 ]

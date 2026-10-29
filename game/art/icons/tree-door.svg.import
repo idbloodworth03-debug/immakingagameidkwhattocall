@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bjycpj86qx365"
-path="res://.godot/imported/tower-flag.svg-4de34e30e5c92f2dd576fb4fd3c4409b.ctex"
+uid="uid://b18prebt68ut3"
+path="res://.godot/imported/tree-door.svg-1f37d3ed79c221075f605b85f7163624.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://art/icons/tower-flag.svg"
-dest_files=["res://.godot/imported/tower-flag.svg-4de34e30e5c92f2dd576fb4fd3c4409b.ctex"]
+source_file="res://art/icons/tree-door.svg"
+dest_files=["res://.godot/imported/tree-door.svg-1f37d3ed79c221075f605b85f7163624.ctex"]
 
 [params]
 

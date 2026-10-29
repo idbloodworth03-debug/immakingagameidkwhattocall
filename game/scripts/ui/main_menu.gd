@@ -146,7 +146,7 @@ func _show_match_result(result: Dictionary) -> void:
 	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
 	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
 	if result.has("towers"):
-		box.add_child(UIKit.label("Towers destroyed  %d - %d" % [result.towers[0], result.towers[1]], 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+		box.add_child(UIKit.label("Dens destroyed  %d - %d" % [result.towers[0], result.towers[1]], 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	var change := int(result.trophy_change)
 	box.add_child(UIKit.label("%+d trophies" % change, 34, UIKit.TROPHY, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("Total: %s" % UIKit.format_number(int(result.trophies)), 24, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))

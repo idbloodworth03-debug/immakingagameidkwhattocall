@@ -1,0 +1,67 @@
+# Builds the web version of Den Duel on every push, runs the tests, and
+# publishes it to Netlify so the home-screen app on the iPhone updates by
+# itself. Publishing needs two repository secrets (see README, "Play on your
+# iPhone"); without them the build still runs and can be downloaded from the
+# workflow run's "Artifacts".
+name: Web version
+
+on:
+  push:
+    branches: [main, "claude/**"]
+  workflow_dispatch:
+
+concurrency:
+  group: web-version
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      GODOT_VERSION: "4.7.2"
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reuse Godot from earlier runs
+        id: godot-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/godot
+            ~/.local/share/godot/export_templates
+          key: godot-${{ env.GODOT_VERSION }}-web
+
+      - name: Download Godot
+        if: steps.godot-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/godot
+          curl -sSL -o /tmp/godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot.zip -d ~/godot
+
+      - name: Test and build
+        run: GODOT=~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 tools/build_web.sh build/web
+
+      - name: Keep the build as a download
+        uses: actions/upload-artifact@v4
+        with:
+          name: den-duel-web
+          path: build/web
+          retention-days: 14
+
+      - name: Publish to Netlify
+        if: env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
+        run: |
+          cd build/web && zip -qr ../site.zip .
+          curl --fail -sS \
+            -H "Content-Type: application/zip" \
+            -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
+            --data-binary "@../site.zip" \
+            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/deploys" > ../deploy.json
+          python3 -c "import json; d = json.load(open('../deploy.json')); print('Published', d.get('ssl_url') or d.get('url'), '(' + str(d.get('state')) + ')')"
+
+      - name: Remind about Netlify setup
+        if: env.NETLIFY_AUTH_TOKEN == '' || env.NETLIFY_SITE_ID == ''
+        run: echo "::notice::Built and tested, but not published. Add the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID secrets to publish automatically (see README)."

@@ -49,27 +49,40 @@ unlocking every animal and resetting your save.
 
 ## Play on your iPhone (web version)
 
-The `web-build/` folder is the whole game as a website. It runs in Safari, and
-you can add it to your home screen so it opens full-screen like an app.
+Den Duel also runs as a website in Safari, and you can add it to your iPhone's
+home screen so it opens full-screen like an app. Every time new work is pushed
+to GitHub, the **Web version** workflow (`.github/workflows/web.yml`) runs the
+tests, builds the web version and publishes it to your Netlify site.
 
-1. Put it online for free with **Netlify Drop**: on your PC, open
-   https://app.netlify.com/drop, sign up (free; "Sign up with GitHub" is
-   easiest) and drag the whole `web-build` folder onto the page. You get a
-   link like `https://something-random.netlify.app`.
-2. Open that link in **Safari** on your iPhone. The game loads in a few seconds.
-3. Tap the **Share** button, then **Add to Home Screen**. Den Duel gets its own
-   icon and opens full-screen.
+**One-time setup**
+
+1. **Create the site** (if you haven't): open https://app.netlify.com/drop,
+   sign up free ("Sign up with GitHub" is easiest) and drag in any web build.
+   Your site gets a link like `https://something-random.netlify.app`.
+2. **Copy the Site ID:** in Netlify, open your site, then *Site configuration*.
+   Under *Site details*, copy the **Site ID** (letters and numbers with dashes).
+3. **Make an access token:** click your avatar (top right), then *User
+   settings*, *Applications*, *Personal access tokens*, *New access token*.
+   Name it "GitHub", pick the longest expiration, and copy the token. It's
+   only shown once.
+4. **Give both to GitHub:** on github.com, open this repository, then
+   *Settings*, *Secrets and variables*, *Actions*, *New repository secret*.
+   Add two secrets:
+   - `NETLIFY_AUTH_TOKEN`: the token from step 3
+   - `NETLIFY_SITE_ID`: the Site ID from step 2
+5. **Publish now:** open the *Actions* tab, click the latest *Web version*
+   run, then *Re-run all jobs*. From then on, every push publishes by itself.
+
+**On the iPhone:** open your Netlify link in **Safari**, tap **Share**, then
+**Add to Home Screen**. To get an update, close the app completely (swipe it
+away) and open it again.
 
 Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Updating:** to put a new version online, open your site in Netlify, go to **Deploys**, and drag the new `web-build` folder there. Close and reopen the home-screen app to get it.
-
-**Rebuilding `web-build` yourself** (or just ask Claude): in Godot, open
-*Editor > Manage Export Templates* and click *Download and Install* (one time).
-Then *Project > Export*, pick the **Web** preset, click *Export Project* and
-choose the `web-build` folder, file name `index.html`.
+- **Without the secrets**, each workflow run still builds and tests the game. The finished web version is under *Artifacts* on the run's page (`den-duel-web`), ready to drag into Netlify by hand.
+- **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 
 ## Run the tests
 
@@ -94,7 +107,7 @@ game/
     ui/                Menu screens, popups, cards, the cage opening
     battle/            Battle engine, abilities, tools, the bot and the battle screen
   tests/               Automated tests for the rules
-web-build/             The game exported as a website (see "Play on your iPhone")
+.github/workflows/     web.yml: tests, builds and publishes the web version on every push
 docs/
   GAME_DESIGN.md       How every system works and why
   ROADMAP.md           What's next, and what you need to do
@@ -102,6 +115,8 @@ docs/
 tools/
   import_icons.py      Copies the icons listed in art.json into the game
   make_sounds.py       Regenerates every sound effect and music loop
+  build_web.sh         Tests and exports the web version (used by the workflow)
+  fetch_web_templates.py  Downloads just Godot's web export templates
 CREDITS.md             Who made the icons and fonts (required by their licenses)
 ```
 

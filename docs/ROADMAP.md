@@ -30,7 +30,8 @@
 - [x] Credits screen and [ART_DIRECTION.md](ART_DIRECTION.md) with the plan for final art
 - [x] Name: **Den Duel**, with a logo, app icon and splash screen
 - [ ] Before launch: USPTO trademark check, website domain and social handles
-- [x] Web version that runs in Safari and installs to the iPhone home screen (`web-build/`)
+- [x] Web version that runs in Safari and installs to the iPhone home screen
+- [x] Automatic publishing: every push runs the tests, builds the web version and updates the Netlify site
 - [ ] Choose a final art style and commission the art (start with the starter cards, arena and dens)
 
 ## Phase 3: Online play

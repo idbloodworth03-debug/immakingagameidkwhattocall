@@ -20,6 +20,9 @@ var grass := Color("#5f9e4f")
 ## How far we are between the last tick and the next (0-1), for smooth motion.
 var blend := 0.0
 var highlight_zones: Array = []
+## The card being dragged, drawn where it would land:
+## {"card": Dictionary, "at": Vector2i, "valid": bool}. Empty when none.
+var preview: Dictionary = {}
 var effects: Array = []
 
 var _time := 0.0
@@ -74,7 +77,7 @@ func _gui_input(event: InputEvent) -> void:
 			_pressed = false
 			if event.position.distance_to(_press_at) < 24.0:
 				var at := to_field(event.position)
-				tapped.emit(at, sim.zone_for(0, at.y))
+				tapped.emit(at, sim.zone_for(0, at.x, at.y))
 
 
 # --- Effects ---------------------------------------------------------------
@@ -183,6 +186,7 @@ func _draw() -> void:
 			if f.is_unit() and f.alive and f.is_flying() == flying:
 				_draw_unit(f, s)
 
+	_draw_preview(s)
 	for fx in effects:
 		_draw_effect(fx, s)
 
@@ -197,9 +201,55 @@ func _draw_highlight(field: Rect2, river_top: float, river_bottom: float) -> voi
 		areas.append(Rect2(field.position.x, river_top, field.size.x, river_bottom - river_top))
 	if highlight_zones.has("own_side"):
 		areas.append(Rect2(field.position.x, river_bottom, field.size.x, field.end.y - river_bottom))
+		for pocket in sim.pocket_rects(0):
+			var top_left := to_screen(pocket.position.x, pocket.position.y)
+			areas.append(Rect2(top_left, to_screen(pocket.end.x, pocket.end.y) - top_left))
 	for area in areas:
 		draw_rect(area, glow)
 		draw_rect(area.grow(-2), edge, false, 3.0)
+
+
+## A see-through copy of the card where it would land: the tile, the
+## animals in their group formation (or a tool's area), and the attack range.
+## White when it can be released there, red when it can't.
+func _draw_preview(s: float) -> void:
+	if preview.is_empty():
+		return
+	var card: Dictionary = preview.card
+	var at: Vector2i = preview.at
+	var color := Color.WHITE if preview.valid else UIKit.RED.lightened(0.15)
+	var pulse := 0.5 + 0.5 * sin(_time * 8.0)
+	var tile := BattleSim.TILE * s
+	var center := to_screen(at.x, at.y)
+	var icon := UIKit.icon(GameData.card_icon(card.id))
+	if card.kind == "tool":
+		var radius := maxf(float(card.stats.get("radius", 1.0)), 0.6) * BattleSim.TILE * s
+		draw_circle(center, radius, Color(color, 0.18 + 0.08 * pulse))
+		draw_arc(center, radius, 0, TAU, 48, Color(color, 0.9), 4.0)
+		if icon != null:
+			var side := clampf(radius * 1.2, tile * 1.5, tile * 2.5)
+			draw_texture_rect(icon, Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 0.75))
+		return
+	# A glowing spot on the ground, bigger than the animals so it shows
+	# around a fingertip.
+	var spot := tile * 1.6
+	draw_circle(center, spot, Color(color, 0.2 + 0.1 * pulse))
+	draw_arc(center, spot, 0, TAU, 40, Color(color, 0.9), 3.0)
+	var range_tiles := float(card.stats.get("range", 1))
+	if range_tiles > 1.0:
+		draw_arc(center, range_tiles * tile, 0, TAU, 48, Color(color, 0.4), 2.0)
+	var count := int(card.get("count", 1))
+	var r := maxf(10.0, BattleSim.unit_radius(card) * s * 1.6)
+	var ring := OWN_COLOR if preview.valid else UIKit.RED
+	var fill := UIKit.habitat_color(card) if preview.valid else UIKit.RED.darkened(0.3)
+	for i in count:
+		var offset := BattleSim.formation(i, count)
+		var p := to_screen(at.x + offset.x, at.y + offset.y)
+		draw_circle(p, r + 3, Color(ring, 0.8))
+		draw_circle(p, r, Color(fill, 0.8))
+		if icon != null:
+			var side := r * 1.45
+			draw_texture_rect(icon, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.9))
 
 
 func _position(f: BattleSim.Fighter) -> Vector2:

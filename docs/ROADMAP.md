@@ -17,9 +17,12 @@
 - [x] All 38 ability types and 6 Ranger tools, with release requirements checked against the real battle
 - [x] Computer opponent that plays by the same rules
 - [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
+- [x] Bot difficulty that scales with your arena
+- [x] Drag-to-play cards with a placement preview (tap the card, then the field, still works)
+- [x] Deeper placement after destroying a side den
+- [x] Segmented energy bar, and hand cards that fill up as energy comes in
+- [x] Balance report: hundreds of bot-vs-bot battles, win rate and play rate per card
 - [ ] Playtest a lot and balance costs and stats
-- [ ] Bot difficulty that scales with trophies
-- [ ] Drag-to-play cards (right now it's tap the card, then tap the field)
 
 ## Phase 2: Look and feel (first pass done)
 

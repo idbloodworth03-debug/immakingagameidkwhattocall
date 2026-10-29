@@ -167,6 +167,17 @@ func test_bots_can_finish_a_battle() -> void:
 		check(released > 10, "bots played cards in battle %d (%d)" % [seed_value, released])
 
 
+func test_destroyed_side_den_opens_deeper_placement() -> void:
+	var sim := _sim(["raccoon", "raccoon", "raccoon", "raccoon", "raccoon", "raccoon", "raccoon", "raccoon"])
+	var deep := Vector2i(4 * T, 10 * T)
+	check_eq(sim.zone_for(0, deep.x, deep.y), "enemy_side", "enemy side before any den falls")
+	sim.deal_damage(_tower(sim, 1, "side", -1), 999999, null)
+	check_eq(sim.zone_for(0, deep.x, deep.y), "own_side", "left lane opens after the left den falls")
+	check_eq(sim.zone_for(0, 14 * T, 10 * T), "enemy_side", "the right lane stays closed")
+	check_eq(sim.zone_for(0, 4 * T, 5 * T), "enemy_side", "only near the river")
+	check(sim.release(0, 0, deep.x, deep.y), "can release a raccoon there now")
+
+
 func test_swap_only_when_stuck() -> void:
 	var picky := ["california_condor", "asian_elephant", "lion", "black_footed_ferret", "california_condor", "asian_elephant", "lion", "black_footed_ferret"]
 	var sim := _sim(picky)
@@ -177,6 +188,15 @@ func test_swap_only_when_stuck() -> void:
 	var normal := _sim()
 	check(not normal.can_swap(0), "no swapping when something is playable")
 	check(not normal.swap(0, 0), "swap refused")
+
+
+func test_bot_gets_sharper_with_difficulty() -> void:
+	var sim := _sim()
+	var easy := BattleBot.new(sim, 1, 1, 0.0)
+	var hard := BattleBot.new(sim, 1, 1, 1.0)
+	check(easy._think_min > hard._think_min, "hard bot reacts faster")
+	check(easy._defend_chance < hard._defend_chance, "hard bot always defends")
+	check(easy._push_energy > hard._push_energy, "hard bot attacks sooner")
 
 
 # --- Abilities -------------------------------------------------------------

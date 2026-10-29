@@ -25,9 +25,9 @@ set +e
 STATUS=$?
 set -e
 grep -E "FAIL|tests,|SCRIPT ERROR|^\s+- " "$LOG" || true
-if [ "$STATUS" -ne 0 ]; then
-  echo "Tests failed, so nothing was exported."
-  exit "$STATUS"
+if [ "$STATUS" -ne 0 ] || grep -q "SCRIPT ERROR" "$LOG"; then
+  echo "Tests failed or a script has errors, so nothing was exported."
+  exit 1
 fi
 
 echo "== Exporting the web build to $OUT"

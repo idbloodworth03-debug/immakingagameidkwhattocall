@@ -234,6 +234,17 @@ fast** in the last minute and in overtime.
 **Your hand:** 4 cards from your 8-card deck, plus a preview of the next one.
 A played card goes to the back of the deck.
 
+**Playing a card:** drag it onto the field, or tap it and then tap the field.
+While you drag, the spot under your finger shows the animals (or the tool's
+area) in white where they can go and in red where they can't, with the reason
+underneath. Cards snap to the middle of a tile. Cards you can't afford yet are
+shaded, and the shade drains as your energy fills up.
+
+**Where you can play:** animals go on your own side (Aquatic animals also in
+the river), tools anywhere. **Deeper placement:** once you destroy one of the
+enemy's side dens, the 6 rows of their side nearest the river in that lane
+count as your side too, so you can release animals right where the den stood.
+
 **Swapping:** if *none* of your 4 cards can be played because of their
 requirements (not counting energy), the Swap button sends one to the back of
 the deck for free. This stops a hand full of picky cards from getting stuck.
@@ -269,10 +280,23 @@ it has energy to spare. It gets a deck from your arena at about your card
 levels. The same bot can later fill online matchmaking when few players are
 on.
 
+**Difficulty grows with your arena.** In the first arena the bot is slow to
+react (about 1-2 seconds between moves), skips some defending, only uses a
+tool on 4 or more enemies and waits for almost full energy before attacking.
+In the top arena it reacts in well under a second, always defends, uses tools
+on groups of 2 and attacks sooner, using the deeper placement when it has
+taken a side den.
+
+**Balance report.** `tests/balance_report.tscn` plays hundreds of
+bot-vs-bot battles with random decks and prints each card's win rate and how
+often it gets played (see the instructions at the top of
+`tests/balance_report.gd`). Bots aren't people, so it's a guide for spotting
+outliers, not a verdict.
+
 ## Still open
 
 1. **Energy name:** keep "energy", or something like Stamina or Instinct?
 2. **Den levels:** should dens get stronger with Ranger Level, or stay fixed so only animal levels matter?
-3. **Bonus placement:** in Clash Royale, destroying a side tower lets you deploy deeper on the enemy's side. Do we want that?
-4. **Bot difficulty:** easier at low trophies, harder higher up?
-5. **Balance:** all stats are first guesses. Playing a lot is the only way to tune them.
+3. **Balance:** all stats are first guesses. The balance report spots outliers, but playing a lot is the only way to really tune them.
+
+Settled: deeper placement after taking a side den (yes), and a bot that gets harder as you climb (yes).

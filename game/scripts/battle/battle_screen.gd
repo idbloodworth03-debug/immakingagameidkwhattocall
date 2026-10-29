@@ -6,6 +6,8 @@ extends Control
 const MENU_SCENE := "res://scenes/main.tscn"
 const OPPONENT_NAMES := ["MossyFox", "RiverOtter42", "SilentOwl", "BadgerBoss", "TundraTom", "ZebraZoe", "CanopyKid", "DuneRunner"]
 const OPPONENT_CHATS := ["good_luck", "well_played", "wow", "good_game", "oops"]
+## How far a finger must move on a card before it counts as a drag.
+const DRAG_START := 18.0
 
 var sim: BattleSim
 var bot: BattleBot
@@ -25,10 +27,17 @@ var _mode_label: Label
 var _towers_label: Label
 var _status: Label
 var _hand_row: HBoxContainer
-var _energy_bar: ProgressBar
+var _hand_cards: Array = []
+var _hand_shades: Array = []
+var _hand_ready: Array = []
+var _energy_bar: EnergyBar
 var _swap_button: Button
 var _emote_panel: PanelContainer
 var _bubbles := {}
+## The hand card under the finger: {"index", "from", "at", "was_selected",
+## "dragging"}. Empty when no card is held.
+var _held := {}
+var _ghost: IconArt
 
 
 func _ready() -> void:
@@ -44,11 +53,13 @@ func _ready() -> void:
 		offset_total += Profile.card_level(id) - GameData.start_level(GameData.get_card(id).rarity)
 	var bot_deck := BattleBot.make_deck(Profile.arena_index(), roundi(float(offset_total) / deck.size()), rng)
 	sim = BattleSim.new([deck, bot_deck.deck], [levels, bot_deck.levels], rng.randi())
-	bot = BattleBot.new(sim, 1, rng.randi())
+	# The opponent gets sharper the higher the arena.
+	var difficulty := float(Profile.arena_index()) / maxf(1.0, GameData.arenas.size() - 1)
+	bot = BattleBot.new(sim, 1, rng.randi(), difficulty)
 	_make_opponent(rng)
 	_build()
 	Sound.play_music("battle")
-	_set_status("Tap a card, then tap the glowing area to play it.")
+	_set_status("Drag a card onto the glowing area to play it.")
 	if rng.randf() < 0.5:
 		get_tree().create_timer(1.5).timeout.connect(func() -> void: _opponent_says("good_luck"))
 
@@ -125,8 +136,9 @@ func _build() -> void:
 	var emote := UIKit.button("Emote", UIKit.BLUE, 20, Vector2(110, 64))
 	emote.pressed.connect(func() -> void: _emote_panel.visible = not _emote_panel.visible)
 	bottom.add_child(emote)
-	_energy_bar = UIKit.progress(0.0, "Energy", UIKit.ENERGY, 40)
-	_energy_bar.max_value = float(sim.rules.energy_max)
+	_energy_bar = EnergyBar.new()
+	_energy_bar.max_value = int(sim.rules.energy_max)
+	_energy_bar.custom_minimum_size = Vector2(0, 52)
 	_energy_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_energy_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(_energy_bar)
@@ -140,6 +152,15 @@ func _build() -> void:
 	_emote_panel = _build_emote_panel()
 	_emote_panel.visible = false
 	add_child(_emote_panel)
+
+	_ghost = IconArt.new()
+	_ghost.shape = IconArt.Shape.ROUNDED
+	_ghost.custom_minimum_size = Vector2(120, 120)
+	_ghost.size = Vector2(120, 120)
+	_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ghost.modulate = Color(1, 1, 1, 0.9)
+	_ghost.visible = false
+	add_child(_ghost)
 	_update_hud()
 
 
@@ -177,20 +198,40 @@ func _update_hud() -> void:
 		_mode_label.add_theme_color_override("font_color", UIKit.ENERGY.lightened(0.3))
 	_towers_label.text = "%d - %d" % [sim.teams[0].towers_destroyed, sim.teams[1].towers_destroyed]
 	_energy_bar.value = sim.energy(0)
-	_energy_bar.get_child(0).text = "Energy %d" % floori(sim.energy(0))
+	_energy_bar.double_speed = sim.is_double_energy()
 	_swap_button.disabled = not sim.can_swap(0)
 	if _hand_signature != _make_hand_signature():
 		_refresh_hand()
+	_update_card_fill()
+	if _held.get("dragging", false):
+		_update_drag()
 
 
-## Changes whenever the hand or which cards are playable changes.
+## Changes whenever the hand or which cards' requirements are met changes.
 func _make_hand_signature() -> String:
-	var parts := [str(selected)]
+	var parts := []
 	for i in sim.hand(0).size():
-		var playable := sim.requirement_problems(0, i).is_empty() and sim.energy(0) >= float(GameData.get_card(sim.hand(0)[i]).cost)
-		parts.append("%s:%s" % [sim.hand(0)[i], playable])
+		parts.append("%s:%s" % [sim.hand(0)[i], sim.requirement_problems(0, i).is_empty()])
 	parts.append(sim.next_card(0))
 	return ",".join(parts)
+
+
+## Cards you can't afford yet are shaded from the top, and the shade drains
+## as energy comes in. A card pops when it becomes affordable.
+func _update_card_fill() -> void:
+	var energy := sim.energy(0)
+	for i in _hand_cards.size():
+		var cost := float(GameData.get_card(sim.hand(0)[i]).cost)
+		var missing := clampf(1.0 - energy / maxf(cost, 0.01), 0.0, 1.0)
+		_hand_shades[i].anchor_bottom = missing
+		var affordable := missing <= 0.0
+		if affordable and not _hand_ready[i]:
+			var card: Control = _hand_cards[i]
+			card.pivot_offset = card.size / 2.0
+			var tween := card.create_tween()
+			tween.tween_property(card, "scale", Vector2(1.08, 1.08), 0.08)
+			tween.tween_property(card, "scale", Vector2.ONE, 0.12)
+		_hand_ready[i] = affordable
 
 
 func _refresh_hand() -> void:
@@ -198,19 +239,34 @@ func _refresh_hand() -> void:
 	for child in _hand_row.get_children():
 		_hand_row.remove_child(child)
 		child.queue_free()
+	_hand_cards.clear()
+	_hand_shades.clear()
+	_hand_ready.clear()
 	var hand := sim.hand(0)
 	for i in hand.size():
 		var card := AnimalCard.create(hand[i], true)
 		card.highlighted = i == selected
-		var card_info := GameData.get_card(hand[i])
-		if not sim.requirement_problems(0, i).is_empty() or sim.energy(0) < float(card_info.cost):
+		if not sim.requirement_problems(0, i).is_empty():
 			card.modulate = Color(0.55, 0.55, 0.6)
+		if _held.get("dragging", false) and _held.index == i:
+			card.modulate.a = 0.35
 		card.mouse_filter = Control.MOUSE_FILTER_STOP
 		card.gui_input.connect(func(event: InputEvent) -> void:
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-				_select(i)
+				_on_card_pressed(i, event.global_position)
 		)
+		var shade_holder := Control.new()
+		shade_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		card.add_child(shade_holder)
+		var shade := ColorRect.new()
+		shade.color = Color(0.03, 0.04, 0.12, 0.62)
+		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		shade.anchor_right = 1.0
+		shade_holder.add_child(shade)
 		_hand_row.add_child(card)
+		_hand_cards.append(card)
+		_hand_shades.append(shade)
+		_hand_ready.append(sim.energy(0) >= float(GameData.get_card(hand[i]).cost))
 	var next_box := UIKit.vbox(2)
 	next_box.add_child(UIKit.label("Next", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	var next_card := AnimalCard.create(sim.next_card(0), true)
@@ -258,29 +314,122 @@ func _play_event_sounds(events: Array) -> void:
 
 
 # --- Playing cards ---------------------------------------------------------
+# Two ways to play: drag a card onto the field, or tap a card and then tap
+# the field. Pressing a card picks it; letting go without moving keeps it
+# picked (or unpicks it if it was already picked).
+
+func _on_card_pressed(index: int, at: Vector2) -> void:
+	_emote_panel.visible = false
+	if sim.is_over():
+		return
+	_held = {"index": index, "from": at, "at": at, "was_selected": selected == index, "dragging": false}
+	if selected != index:
+		_select(index)
+
+
+## Follows the finger after it pressed a hand card, wherever it goes.
+func _input(event: InputEvent) -> void:
+	if _held.is_empty():
+		return
+	if event is InputEventMouseMotion:
+		_held.at = event.global_position
+		if not _held.dragging and _held.at.distance_to(_held.from) > DRAG_START:
+			_held.dragging = true
+			_hand_cards[_held.index].modulate.a = 0.35
+			var id: String = sim.hand(0)[_held.index]
+			_ghost.icon = UIKit.icon(GameData.card_icon(id))
+			_ghost.flip_icon = GameData.card_icon_flipped(id)
+			_ghost.color = UIKit.habitat_color(GameData.get_card(id))
+		if _held.dragging:
+			_update_drag()
+	elif event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and not event.pressed:
+		var held := _held
+		_end_drag()
+		get_viewport().set_input_as_handled()
+		if held.dragging:
+			_drop(held.at)
+		elif held.was_selected:
+			_deselect()
+
+
+func _over_field(at: Vector2) -> bool:
+	return _field.get_global_rect().has_point(at)
+
+
+## The tile under a screen position, in field coordinates.
+func _field_point(at: Vector2) -> Vector2i:
+	var p := _field.to_field(at - _field.global_position)
+	return BattleSim.tile_center(p.x, p.y)
+
+
+## Moves the ghost card, or the preview on the field, to the finger.
+func _update_drag() -> void:
+	var at: Vector2 = _held.at
+	var card := GameData.get_card(sim.hand(0)[_held.index])
+	if not _over_field(at):
+		_ghost.visible = true
+		_ghost.position = at - _ghost.size / 2.0
+		_field.preview = {}
+		return
+	_ghost.visible = false
+	var spot := _field_point(at)
+	var problems := sim.release_problems(0, _held.index, spot.x, spot.y)
+	_field.preview = {"card": card, "at": spot, "valid": problems.is_empty()}
+	if problems.is_empty():
+		_set_status("Let go to %s %s." % ["use" if card.kind == "tool" else "release", card.name])
+	else:
+		_set_status(". ".join(problems), UIKit.RED.lightened(0.3))
+
+
+func _end_drag() -> void:
+	if _held.get("dragging", false) and _held.index < _hand_cards.size():
+		_hand_cards[_held.index].modulate.a = 1.0
+	_held = {}
+	_ghost.visible = false
+	_field.preview = {}
+
+
+func _drop(at: Vector2) -> void:
+	if not _over_field(at):
+		# Dragged back to the hand: put the card back.
+		_deselect()
+		return
+	_try_release(_field_point(at))
+
 
 func _select(index: int) -> void:
 	Sound.play("select")
-	selected = -1 if selected == index else index
-	if selected == -1:
-		_field.highlight_zones = []
-		_set_status("")
+	selected = index
+	for i in _hand_cards.size():
+		_hand_cards[i].highlighted = i == selected
+	var card := GameData.get_card(sim.hand(0)[selected])
+	_field.highlight_zones = PlacementRules.allowed_zones(card)
+	var problems := sim.requirement_problems(0, selected)
+	if problems.is_empty():
+		var verb := "use" if card.kind == "tool" else "release"
+		_set_status("%s: drag or tap the glowing area to %s it." % [card.name, verb])
 	else:
-		var card := GameData.get_card(sim.hand(0)[selected])
-		_field.highlight_zones = PlacementRules.allowed_zones(card)
-		var problems := sim.requirement_problems(0, selected)
-		if problems.is_empty():
-			var verb := "use" if card.kind == "tool" else "release"
-			_set_status("%s: tap the glowing area to %s it." % [card.name, verb])
-		else:
-			_set_status("%s: %s" % [card.name, ". ".join(problems)], UIKit.YELLOW)
-	_refresh_hand()
+		_set_status("%s: %s" % [card.name, ". ".join(problems)], UIKit.YELLOW)
+
+
+func _deselect() -> void:
+	selected = -1
+	for card in _hand_cards:
+		card.highlighted = false
+	_field.highlight_zones = []
+	_set_status("")
 
 
 func _on_field_tapped(at: Vector2i, _zone: String) -> void:
 	_emote_panel.visible = false
 	if selected == -1:
 		_set_status("Pick a card first.")
+		return
+	_try_release(BattleSim.tile_center(at.x, at.y))
+
+
+func _try_release(at: Vector2i) -> void:
+	if selected == -1 or sim.is_over():
 		return
 	var card := GameData.get_card(sim.hand(0)[selected])
 	var problems := sim.release_problems(0, selected, at.x, at.y)
@@ -290,17 +439,14 @@ func _on_field_tapped(at: Vector2i, _zone: String) -> void:
 		return
 	sim.release(0, selected, at.x, at.y)
 	_handle_events(sim.take_events())
-	selected = -1
-	_field.highlight_zones = []
-	_set_status("")
+	_deselect()
 	_refresh_hand()
 
 
 func _on_swap() -> void:
 	var index := selected if selected >= 0 else 0
 	if sim.swap(0, index):
-		selected = -1
-		_field.highlight_zones = []
+		_deselect()
 		_set_status("Swapped a card to the back of your deck.")
 		sim.take_events()
 		_refresh_hand()
@@ -320,7 +466,8 @@ func _end_battle() -> void:
 	elif sim.outcome == 1:
 		outcome = "loss"
 	_result = _record(outcome)
-	_field.highlight_zones = []
+	_end_drag()
+	_deselect()
 	Sound.stop_music()
 	Sound.play({"win": "victory", "loss": "defeat", "draw": "reveal"}[outcome])
 	if not opponent_muted and randf() < 0.6:

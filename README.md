@@ -18,13 +18,13 @@ Everything runs offline on your computer, saved on the device:
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
 - **Ranger level:** an account level, plus player banners, icons and emotes to unlock
 - **Shop:** daily animal offers, cages, gold packs and cosmetics
-- **Battles** against a computer opponent: animals walk and fight on their own, use their abilities, and attack the enemy's dens, which fight back. Matches last 3 minutes, with double energy in the last minute and sudden-death overtime. Emotes and quick chat work.
+- **Battles** against a computer opponent that gets tougher as you climb: drag a card onto the field (or tap it, then tap the field) and the animals walk and fight on their own, use their abilities, and attack the enemy's dens, which fight back. Matches last 3 minutes, with double energy in the last minute and sudden-death overtime. Take a side den and you can release animals deeper on the enemy's side. Emotes and quick chat work.
 - **Look and feel:**
   - an icon for every animal and tool, arena scenery, and dens (side dens and a main den)
   - chunky mobile-game fonts
   - animations: walking, attacks, screen shake and bouncy buttons
   - sound effects and music, which players can switch off
-- **Tests:** 70 automated tests for the rules and the battle engine
+- **Tests:** 72 automated tests for the rules and the battle engine, plus a balance report that plays hundreds of bot-vs-bot battles
 
 Not built yet:
 
@@ -54,8 +54,8 @@ home screen so it opens full-screen like an app. Every time new work is pushed
 to GitHub, the **Web version** workflow (`.github/workflows/web.yml`) runs the
 tests, builds the web version and publishes it to your Netlify site.
 
-The site is the Netlify project `legendary-clafoutis-121344`. Its Project ID
-is in `.github/workflows/web.yml`; to publish somewhere else, change it there.
+The site is https://denduel.netlify.app. Its Netlify Project ID is in
+`.github/workflows/web.yml`; to publish somewhere else, change it there.
 
 **One-time setup**
 
@@ -91,6 +91,13 @@ From the repository root (with `godot` on your PATH):
 godot --headless --path game res://tests/test_runner.tscn
 ```
 
+To see how every card does in a few hundred bot-vs-bot battles (takes a few
+minutes):
+
+```bash
+godot --headless --path game res://tests/balance_report.tscn -- 400
+```
+
 ## Where things are
 
 ```
@@ -105,7 +112,7 @@ game/
     rules/             Pure game rules: trophies, leveling, cages, release requirements
     ui/                Menu screens, popups, cards, the cage opening
     battle/            Battle engine, abilities, tools, the bot and the battle screen
-  tests/               Automated tests for the rules
+  tests/               Automated tests for the rules, and the balance report
 .github/workflows/     web.yml: tests, builds and publishes the web version on every push
 docs/
   GAME_DESIGN.md       How every system works and why

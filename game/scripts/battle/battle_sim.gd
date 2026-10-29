@@ -25,6 +25,9 @@ const TOWER_SPOTS := [
 	{"kind": "side", "x": 14000, "y": 25500},
 	{"kind": "main", "x": 9000, "y": 28200},
 ]
+## How far past the river you may release animals in a lane whose enemy
+## side den you've destroyed.
+const POCKET_DEPTH := 6 * TILE
 ## Energy is stored in millionths so refilling stays exact in whole numbers.
 const ENERGY_UNIT := 1000000
 const DRAW := -1
@@ -208,11 +211,31 @@ func units(team: int) -> Array:
 
 
 ## "own_side", "river" or "enemy_side", from `team`'s point of view.
-func zone_for(team: int, y: int) -> String:
+## Once a team destroys an enemy side den, the near part of that lane on the
+## enemy's side counts as its own side too (deeper placement).
+func zone_for(team: int, x: int, y: int) -> String:
 	if y > RIVER_TOP and y < RIVER_BOTTOM:
 		return "river"
 	var bottom := y >= RIVER_BOTTOM
-	return "own_side" if bottom == (team == 0) else "enemy_side"
+	if bottom == (team == 0):
+		return "own_side"
+	for pocket in pocket_rects(team):
+		if pocket.has_point(Vector2i(x, y)):
+			return "own_side"
+	return "enemy_side"
+
+
+## The enemy-side areas `team` has unlocked by destroying side dens.
+func pocket_rects(team: int) -> Array:
+	var pockets := []
+	for den in towers(1 - team):
+		if den.tower_kind != "side" or den.alive:
+			continue
+		var left: bool = den.x < WIDTH / 2
+		var x := 0 if left else WIDTH / 2
+		var y := RIVER_TOP - POCKET_DEPTH if team == 0 else RIVER_BOTTOM
+		pockets.append(Rect2i(x, y, WIDTH / 2, POCKET_DEPTH))
+	return pockets
 
 
 ## Battle state in the form PlacementRules expects.
@@ -233,13 +256,13 @@ func placement_state(team: int, zone: String) -> Dictionary:
 
 
 ## Why the card in `hand_index` can't be played at (x, y). Empty means it can.
-func release_problems(team: int, hand_index: int, _x: int, y: int) -> Array:
+func release_problems(team: int, hand_index: int, x: int, y: int) -> Array:
 	if is_over():
 		return ["The battle is over"]
 	if hand_index < 0 or hand_index >= teams[team].hand.size():
 		return ["No card there"]
 	var card := GameData.get_card(teams[team].hand[hand_index])
-	return PlacementRules.blocking_reasons(card, placement_state(team, zone_for(team, y)))
+	return PlacementRules.blocking_reasons(card, placement_state(team, zone_for(team, x, y)))
 
 
 ## Plays a card from the hand. Returns false (and changes nothing) if it
@@ -761,7 +784,7 @@ func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	_next_group += 1
 	var made := []
 	for i in count:
-		var offset := _formation(i, count)
+		var offset := formation(i, count)
 		var f := _make_unit(team, card, level_of(team, card_id), x + offset.x, y + offset.y)
 		f.memory.group = group
 		f.memory.group_size = count
@@ -793,12 +816,7 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 	f.speed = int(rules.speed_values.get(stats.speed, 60)) * TILE / (60 * tps)
 	f.flying = card.tags.has("flying")
 	f.targets = stats.targets
-	if int(card.count) > 1:
-		f.radius = 320
-	elif float(stats.hp) >= 1500:
-		f.radius = 700
-	else:
-		f.radius = 450
+	f.radius = unit_radius(card)
 	f.deploy_ticks = deploy_ticks
 	f.x = clampi(x, f.radius, WIDTH - f.radius)
 	f.y = clampi(y, f.radius, HEIGHT - f.radius)
@@ -854,7 +872,18 @@ func add_zone(zone: Dictionary) -> void:
 	zones.append(zone)
 
 
-func _formation(index: int, count: int) -> Vector2i:
+## How big an animal is on the field: swarm members are small, the
+## toughest animals are big.
+static func unit_radius(card: Dictionary) -> int:
+	if int(card.get("count", 1)) > 1:
+		return 320
+	if float(card.stats.hp) >= 1500:
+		return 700
+	return 450
+
+
+## Where each animal of a group stands, relative to the release point.
+static func formation(index: int, count: int) -> Vector2i:
 	match count:
 		2:
 			return [Vector2i(-400, 0), Vector2i(400, 0)][index]
@@ -874,6 +903,13 @@ func _shuffle(list: Array) -> void:
 
 
 # --- Geometry --------------------------------------------------------------
+
+## The middle of the tile under a point. The player's releases snap to it.
+static func tile_center(x: int, y: int) -> Vector2i:
+	var col := clampi(x / TILE, 0, WIDTH / TILE - 1)
+	var row := clampi(y / TILE, 0, HEIGHT / TILE - 1)
+	return Vector2i(col * TILE + TILE / 2, row * TILE + TILE / 2)
+
 
 ## 1 = bottom bank, -1 = top bank, 0 = in the river band.
 static func bank(y: int) -> int:

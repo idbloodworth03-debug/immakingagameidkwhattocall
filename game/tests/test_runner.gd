@@ -14,6 +14,12 @@ func _ready() -> void:
 		if not (file_name.begins_with("test_") and file_name.ends_with(".gd")) or file_name == "test_runner.gd" or file_name == "test_case.gd":
 			continue
 		var script: GDScript = load(TEST_DIR + file_name)
+		if script == null or not script.can_instantiate():
+			# The test file (or a script it uses) doesn't compile.
+			total += 1
+			failed += 1
+			print("  FAIL  %s doesn't compile (see SCRIPT ERROR above)" % file_name)
+			continue
 		for method in script.get_script_method_list():
 			if not String(method.name).begins_with("test_"):
 				continue

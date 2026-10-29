@@ -262,7 +262,7 @@ Spell-like cards that can be used anywhere on the field (Food Bait only on your 
 | Tool | Rarity | Cost | Unlocks | What it does |
 |---|---|---|---|---|
 | Net | Common | 2 | Arena 1 | Enemies in a 2-tile area are stuck for 2.5s and take 40 damage |
-| Air Horn | Common | 2 | Arena 1 | 160 damage in 2.5 tiles and knocks enemies back. Dens take 30% |
+| Air Horn | Common | 2 | Arena 1 | 145 damage in 2.5 tiles and knocks enemies back. Dens take 30% |
 | Food Bait | Rare | 2 | Arena 2 | A snack that enemy ground animals within 5 tiles go for, for up to 7s |
 | Medkit | Rare | 3 | Arena 3 | Heals your animals in 3 tiles for 400 |
 | Tranquilizer Dart | Epic | 3 | Arena 5 | Puts the closest enemy animal to sleep for 4s (Fearless ones are only slowed) |

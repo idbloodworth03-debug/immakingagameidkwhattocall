@@ -8,7 +8,7 @@
     "cost": 2,
     "count": 3,
     "tags": ["bird", "flying", "urban", "flock"],
-    "stats": {"hp": 78, "damage": 40, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "air_ground"},
+    "stats": {"hp": 78, "damage": 34, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "air_ground"},
     "ability": {"id": "dodge", "name": "Scatter", "text": "Each pigeon has a 25% chance to dodge an attack.", "params": {"chance": 25}},
     "prerequisites": []
   },
@@ -294,7 +294,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "wetland", "aquatic", "venomous"],
-    "stats": {"hp": 470, "damage": 100, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 500, "damage": 100, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "poison", "name": "Venom Spur", "text": "Hits poison the target for 25 damage per second for 3 seconds.", "params": {"dps": 25, "duration": 3}},
     "prerequisites": []
   },
@@ -372,7 +372,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["reptile", "desert", "venomous"],
-    "stats": {"hp": 580, "damage": 92, "hit_speed": 1.0, "speed": "slow", "range": 1, "targets": "ground"},
+    "stats": {"hp": 580, "damage": 92, "hit_speed": 1.0, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "slow_on_hit", "name": "Lockjaw", "text": "Its bite clamps on, slowing the target by 50%.", "params": {"pct": 50}},
     "prerequisites": []
   },
@@ -411,7 +411,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["mammal", "jungle", "predator", "big_cat"],
-    "stats": {"hp": 700, "damage": 210, "hit_speed": 1.1, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 760, "damage": 225, "hit_speed": 1.1, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "bonus_vs_tag", "name": "Shell Cracker", "text": "Deals double damage to Shelled enemies.", "params": {"tag": "shelled", "damage_pct": 100}},
     "prerequisites": []
   },
@@ -424,7 +424,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["reptile", "jungle", "venomous"],
-    "stats": {"hp": 580, "damage": 120, "hit_speed": 1.2, "speed": "medium", "range": 2, "targets": "ground"},
+    "stats": {"hp": 580, "damage": 130, "hit_speed": 1.2, "speed": "medium", "range": 2, "targets": "ground"},
     "ability": {"id": "poison", "name": "Hood Flare", "text": "Strikes from 2 tiles away. Venom deals 40 damage per second for 4 seconds.", "params": {"dps": 40, "duration": 4}},
     "prerequisites": []
   },
@@ -515,7 +515,7 @@
     "cost": 6,
     "count": 1,
     "tags": ["mammal", "jungle", "predator", "big_cat"],
-    "stats": {"hp": 1400, "damage": 290, "hit_speed": 1.2, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 1300, "damage": 290, "hit_speed": 1.2, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "pounce", "name": "Apex Pounce", "text": "Leaps onto the toughest enemy within 4 tiles for double damage.", "params": {"range": 4, "damage_mult": 2, "target": "highest_hp"}},
     "prerequisites": [{"type": "match_time", "seconds": 60}]
   },
@@ -645,7 +645,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["bird", "flying", "desert", "mountain"],
-    "stats": {"hp": 900, "damage": 145, "hit_speed": 1.3, "speed": "medium", "range": 1, "targets": "air_ground"},
+    "stats": {"hp": 820, "damage": 130, "hit_speed": 1.3, "speed": "medium", "range": 1, "targets": "air_ground"},
     "ability": {"id": "heal_on_kill", "name": "Sky Scavenger", "text": "Heals 220 HP whenever any animal is defeated nearby.", "params": {"amount": 220, "radius": 4, "any_side": true}},
     "prerequisites": [{"type": "unique"}, {"type": "allies_defeated", "count": 2}]
   },
@@ -658,7 +658,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["mammal", "forest", "tundra", "predator", "big_cat"],
-    "stats": {"hp": 840, "damage": 245, "hit_speed": 1.0, "speed": "very_fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 840, "damage": 225, "hit_speed": 1.0, "speed": "very_fast", "range": 1, "targets": "ground"},
     "ability": {"id": "stealth", "name": "Phantom", "text": "Invisible until it attacks, and vanishes again after each takedown.", "params": {"restealth_on_kill": true}},
     "prerequisites": [{"type": "unique"}, {"type": "no_allies_with_tag", "tag": "big_cat"}]
   },

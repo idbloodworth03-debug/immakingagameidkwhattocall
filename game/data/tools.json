@@ -21,8 +21,8 @@
     "cost": 2,
     "count": 1,
     "tags": ["tool"],
-    "stats": {"radius": 2.5, "damage": 160, "tower_damage_pct": 30},
-    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 160 damage to enemies in the area and knocks them back 1.5 tiles. Dens take 30%.", "params": {"knockback": 1.5}},
+    "stats": {"radius": 2.5, "damage": 145, "tower_damage_pct": 30},
+    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 145 damage to enemies in the area and knocks them back 1.5 tiles. Dens take 30%.", "params": {"knockback": 1.5}},
     "prerequisites": []
   },
   {

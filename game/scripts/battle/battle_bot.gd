@@ -229,7 +229,8 @@ func _defend(threats: Array) -> bool:
 	order.sort_custom(func(a, b): return GameData.get_card(hand[a]).cost < GameData.get_card(hand[b]).cost)
 	for i in order:
 		var card := GameData.get_card(hand[i])
-		if card.kind == "tool":
+		# Den-only animals would walk straight past the attackers.
+		if card.kind == "tool" or card.stats.targets == "buildings":
 			continue
 		var spots := [
 			Vector2i(threat.x, own_y(3.5)),

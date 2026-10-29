@@ -1,8 +1,8 @@
 # Builds the web version of Den Duel on every push, runs the tests, and
 # publishes it to Netlify so the home-screen app on the iPhone updates by
-# itself. Publishing needs two repository secrets (see README, "Play on your
-# iPhone"); without them the build still runs and can be downloaded from the
-# workflow run's "Artifacts".
+# itself. Publishing needs the NETLIFY_AUTH_TOKEN repository secret (see
+# README, "Play on your iPhone"); without it the build still runs and can be
+# downloaded from the workflow run's "Artifacts".
 name: Web version
 
 on:
@@ -21,7 +21,8 @@ jobs:
     env:
       GODOT_VERSION: "4.7.2"
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+      # The Netlify project to publish to (its Project ID). Not a secret.
+      NETLIFY_SITE_ID: ec65fb06-1a53-4651-890b-e011fac4b66f
     steps:
       - uses: actions/checkout@v4
 
@@ -52,7 +53,7 @@ jobs:
           retention-days: 14
 
       - name: Publish to Netlify
-        if: env.NETLIFY_AUTH_TOKEN != '' && env.NETLIFY_SITE_ID != ''
+        if: env.NETLIFY_AUTH_TOKEN != ''
         run: |
           cd build/web && zip -qr ../site.zip .
           curl --fail -sS \
@@ -63,5 +64,5 @@ jobs:
           python3 -c "import json; d = json.load(open('../deploy.json')); print('Published', d.get('ssl_url') or d.get('url'), '(' + str(d.get('state')) + ')')"
 
       - name: Remind about Netlify setup
-        if: env.NETLIFY_AUTH_TOKEN == '' || env.NETLIFY_SITE_ID == ''
-        run: echo "::notice::Built and tested, but not published. Add the NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID secrets to publish automatically (see README)."
+        if: env.NETLIFY_AUTH_TOKEN == ''
+        run: echo "::notice::Built and tested, but not published. Add the NETLIFY_AUTH_TOKEN secret to publish automatically (see README)."

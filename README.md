@@ -54,23 +54,22 @@ home screen so it opens full-screen like an app. Every time new work is pushed
 to GitHub, the **Web version** workflow (`.github/workflows/web.yml`) runs the
 tests, builds the web version and publishes it to your Netlify site.
 
+The site is the Netlify project `legendary-clafoutis-121344`. Its Project ID
+is in `.github/workflows/web.yml`; to publish somewhere else, change it there.
+
 **One-time setup**
 
-1. **Create the site** (if you haven't): open https://app.netlify.com/drop,
-   sign up free ("Sign up with GitHub" is easiest) and drag in any web build.
-   Your site gets a link like `https://something-random.netlify.app`.
-2. **Copy the Site ID:** in Netlify, open your site, then *Site configuration*.
-   Under *Site details*, copy the **Site ID** (letters and numbers with dashes).
-3. **Make an access token:** click your avatar (top right), then *User
+1. **Make the project public:** in Netlify, open the project and click
+   *Make public*. Otherwise Safari asks you to log in to Netlify.
+2. **Make an access token:** click your avatar (top right), then *User
    settings*, *Applications*, *Personal access tokens*, *New access token*.
    Name it "GitHub", pick the longest expiration, and copy the token. It's
-   only shown once.
-4. **Give both to GitHub:** on github.com, open this repository, then
+   only shown once, and it works like a password, so never paste it into a
+   file in this repository.
+3. **Give it to GitHub:** on github.com, open this repository, then
    *Settings*, *Secrets and variables*, *Actions*, *New repository secret*.
-   Add two secrets:
-   - `NETLIFY_AUTH_TOKEN`: the token from step 3
-   - `NETLIFY_SITE_ID`: the Site ID from step 2
-5. **Publish now:** open the *Actions* tab, click the latest *Web version*
+   Name it `NETLIFY_AUTH_TOKEN` and paste the token as the value.
+4. **Publish now:** open the *Actions* tab, click the latest *Web version*
    run, then *Re-run all jobs*. From then on, every push publishes by itself.
 
 **On the iPhone:** open your Netlify link in **Safari**, tap **Share**, then
@@ -81,7 +80,7 @@ Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Without the secrets**, each workflow run still builds and tests the game. The finished web version is under *Artifacts* on the run's page (`den-duel-web`), ready to drag into Netlify by hand.
+- **Without the token**, each workflow run still builds and tests the game. The finished web version is under *Artifacts* on the run's page (`den-duel-web`), ready to drag into Netlify by hand.
 - **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 
 ## Run the tests

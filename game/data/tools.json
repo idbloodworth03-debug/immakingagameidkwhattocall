@@ -21,8 +21,8 @@
     "cost": 2,
     "count": 1,
     "tags": ["tool"],
-    "stats": {"radius": 2.5, "damage": 180, "tower_damage_pct": 30},
-    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 180 damage to enemies in the area and knocks them back 1.5 tiles. Dens take 30%.", "params": {"knockback": 1.5}},
+    "stats": {"radius": 2.5, "damage": 160, "tower_damage_pct": 30},
+    "ability": {"id": "air_horn", "name": "Startle", "text": "A deafening blast: 160 damage to enemies in the area and knocks them back 1.5 tiles. Dens take 30%.", "params": {"knockback": 1.5}},
     "prerequisites": []
   },
   {
@@ -34,7 +34,7 @@
     "cost": 2,
     "count": 1,
     "tags": ["tool"],
-    "stats": {"radius": 5.0, "hp": 450, "duration": 7},
+    "stats": {"radius": 5.0, "hp": 520, "duration": 7},
     "ability": {"id": "bait", "name": "Irresistible", "text": "Drop a snack on your side. Enemy ground animals within 5 tiles go for it until it's eaten or 7 seconds pass.", "params": {}},
     "prerequisites": [{"type": "zone", "zone": "own_side"}]
   },
@@ -47,8 +47,8 @@
     "cost": 3,
     "count": 1,
     "tags": ["tool"],
-    "stats": {"radius": 3.0, "heal": 350},
-    "ability": {"id": "medkit", "name": "Patch Up", "text": "Heals your animals in the area for 350.", "params": {}},
+    "stats": {"radius": 3.0, "heal": 400},
+    "ability": {"id": "medkit", "name": "Patch Up", "text": "Heals your animals in the area for 400.", "params": {}},
     "prerequisites": []
   },
   {

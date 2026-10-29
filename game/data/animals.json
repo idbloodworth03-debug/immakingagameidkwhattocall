@@ -8,7 +8,7 @@
     "cost": 2,
     "count": 3,
     "tags": ["bird", "flying", "urban", "flock"],
-    "stats": {"hp": 90, "damage": 40, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "air_ground"},
+    "stats": {"hp": 78, "damage": 40, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "air_ground"},
     "ability": {"id": "dodge", "name": "Scatter", "text": "Each pigeon has a 25% chance to dodge an attack.", "params": {"chance": 25}},
     "prerequisites": []
   },
@@ -34,7 +34,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "urban", "nocturnal"],
-    "stats": {"hp": 420, "damage": 95, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 445, "damage": 95, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "energy_steal", "name": "Trash Panda", "text": "Steals 1 energy from your opponent when released.", "params": {"amount": 1}},
     "prerequisites": []
   },
@@ -60,7 +60,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "urban", "nocturnal"],
-    "stats": {"hp": 480, "damage": 75, "hit_speed": 1.2, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 505, "damage": 75, "hit_speed": 1.2, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "revive_once", "name": "Play Dead", "text": "The first time it would be defeated, it plays dead and gets back up with 40% HP after 2 seconds.", "params": {"hp_pct": 40, "delay": 2}},
     "prerequisites": []
   },
@@ -73,7 +73,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "canine", "forest", "urban"],
-    "stats": {"hp": 380, "damage": 110, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 405, "damage": 110, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "pounce", "name": "Pounce", "text": "Leaps onto its first target from 3 tiles away, dealing double damage.", "params": {"range": 3, "damage_mult": 2}},
     "prerequisites": []
   },
@@ -99,7 +99,7 @@
     "cost": 2,
     "count": 1,
     "tags": ["mammal", "urban", "forest", "nocturnal"],
-    "stats": {"hp": 300, "damage": 60, "hit_speed": 1.2, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 350, "damage": 68, "hit_speed": 1.2, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "death_cloud", "name": "Stink Cloud", "text": "When defeated, leaves a stink cloud that slows enemies by 35% for 4 seconds.", "params": {"radius": 2.5, "slow_pct": 35, "duration": 4}},
     "prerequisites": []
   },
@@ -242,7 +242,7 @@
     "cost": 2,
     "count": 1,
     "tags": ["reptile", "desert", "venomous"],
-    "stats": {"hp": 260, "damage": 50, "hit_speed": 1.0, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 300, "damage": 56, "hit_speed": 1.0, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "poison", "name": "Venom", "text": "Bites poison the target for 30 damage per second for 4 seconds.", "params": {"dps": 30, "duration": 4}},
     "prerequisites": []
   },
@@ -255,7 +255,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["mammal", "tundra", "forest", "herd"],
-    "stats": {"hp": 1500, "damage": 180, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 1580, "damage": 180, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "knockback", "name": "Antler Shove", "text": "Hits knock enemies back 1 tile.", "params": {"distance": 1}},
     "prerequisites": []
   },
@@ -268,7 +268,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "mountain", "herd"],
-    "stats": {"hp": 600, "damage": 110, "hit_speed": 1.2, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 660, "damage": 120, "hit_speed": 1.2, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "jump_river", "name": "Cliff Leaper", "text": "Leaps straight across the river instead of walking to a bridge.", "params": {}},
     "prerequisites": []
   },
@@ -281,7 +281,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "marine", "aquatic"],
-    "stats": {"hp": 480, "damage": 90, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 540, "damage": 90, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "water_speed", "name": "Slippery", "text": "Moves 60% faster through water.", "params": {"pct": 60}},
     "prerequisites": []
   },
@@ -294,7 +294,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "wetland", "aquatic", "venomous"],
-    "stats": {"hp": 420, "damage": 100, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 470, "damage": 100, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "poison", "name": "Venom Spur", "text": "Hits poison the target for 25 damage per second for 3 seconds.", "params": {"dps": 25, "duration": 3}},
     "prerequisites": []
   },
@@ -333,7 +333,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["mammal", "prairie", "herd"],
-    "stats": {"hp": 1600, "damage": 200, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "buildings"},
+    "stats": {"hp": 1850, "damage": 200, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "buildings"},
     "ability": {"id": "knockback", "name": "Stampede", "text": "Only targets dens. Knocks back anything in its path.", "params": {"distance": 1}},
     "prerequisites": []
   },
@@ -372,7 +372,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["reptile", "desert", "venomous"],
-    "stats": {"hp": 500, "damage": 80, "hit_speed": 1.0, "speed": "slow", "range": 1, "targets": "ground"},
+    "stats": {"hp": 580, "damage": 92, "hit_speed": 1.0, "speed": "slow", "range": 1, "targets": "ground"},
     "ability": {"id": "slow_on_hit", "name": "Lockjaw", "text": "Its bite clamps on, slowing the target by 50%.", "params": {"pct": 50}},
     "prerequisites": []
   },
@@ -385,7 +385,7 @@
     "cost": 6,
     "count": 1,
     "tags": ["mammal", "tundra", "aquatic", "predator"],
-    "stats": {"hp": 1900, "damage": 260, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 1750, "damage": 240, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "damage_reduction", "name": "Thick Fur", "text": "Takes 25% less damage from ranged attacks.", "params": {"pct": 25, "vs": "ranged"}},
     "prerequisites": []
   },
@@ -411,7 +411,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["mammal", "jungle", "predator", "big_cat"],
-    "stats": {"hp": 650, "damage": 210, "hit_speed": 1.1, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 700, "damage": 210, "hit_speed": 1.1, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "bonus_vs_tag", "name": "Shell Cracker", "text": "Deals double damage to Shelled enemies.", "params": {"tag": "shelled", "damage_pct": 100}},
     "prerequisites": []
   },
@@ -424,7 +424,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["reptile", "jungle", "venomous"],
-    "stats": {"hp": 520, "damage": 120, "hit_speed": 1.2, "speed": "medium", "range": 2, "targets": "ground"},
+    "stats": {"hp": 580, "damage": 120, "hit_speed": 1.2, "speed": "medium", "range": 2, "targets": "ground"},
     "ability": {"id": "poison", "name": "Hood Flare", "text": "Strikes from 2 tiles away. Venom deals 40 damage per second for 4 seconds.", "params": {"dps": 40, "duration": 4}},
     "prerequisites": []
   },
@@ -476,7 +476,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "prairie", "burrower", "predator"],
-    "stats": {"hp": 400, "damage": 130, "hit_speed": 0.9, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 430, "damage": 130, "hit_speed": 0.9, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "burrow", "name": "Tunnel", "text": "Travels underground and pops up right next to its target.", "params": {}},
     "prerequisites": [{"type": "deployed_count", "count": 2}]
   },
@@ -515,7 +515,7 @@
     "cost": 6,
     "count": 1,
     "tags": ["mammal", "jungle", "predator", "big_cat"],
-    "stats": {"hp": 1400, "damage": 320, "hit_speed": 1.2, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 1400, "damage": 290, "hit_speed": 1.2, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "pounce", "name": "Apex Pounce", "text": "Leaps onto the toughest enemy within 4 tiles for double damage.", "params": {"range": 4, "damage_mult": 2, "target": "highest_hp"}},
     "prerequisites": [{"type": "match_time", "seconds": 60}]
   },
@@ -541,7 +541,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["mammal", "jungle", "primate"],
-    "stats": {"hp": 650, "damage": 120, "hit_speed": 1.2, "speed": "medium", "range": 4.5, "targets": "air_ground"},
+    "stats": {"hp": 650, "damage": 108, "hit_speed": 1.2, "speed": "medium", "range": 4.5, "targets": "air_ground"},
     "ability": {"id": "stun_hits", "name": "Tool User", "text": "Throws rocks. Every fourth throw stuns for 1 second.", "params": {"every": 4, "duration": 1}},
     "prerequisites": [{"type": "deployed_count", "count": 1}]
   },
@@ -554,7 +554,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "mountain", "forest"],
-    "stats": {"hp": 480, "damage": 110, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 530, "damage": 110, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "slow_burst", "name": "Stand Tall", "text": "When released, rears up and scares nearby enemies, slowing them 40% for 3 seconds.", "params": {"pct": 40, "duration": 3, "radius": 3}},
     "prerequisites": []
   },
@@ -567,7 +567,7 @@
     "cost": 7,
     "count": 1,
     "tags": ["mammal", "mountain", "jungle", "primate"],
-    "stats": {"hp": 2600, "damage": 280, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 2450, "damage": 280, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "pulse_stun", "name": "Chest Beat", "text": "Every 8 seconds, stuns nearby enemies for 1 second.", "params": {"interval": 8, "radius": 2.5, "duration": 1}},
     "prerequisites": [{"type": "deployed_count", "count": 3}]
   },
@@ -580,7 +580,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "marine", "aquatic"],
-    "stats": {"hp": 500, "damage": 100, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 560, "damage": 100, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "heal_aura", "name": "Raft Up", "text": "Heals nearby allied Aquatic animals for 30 HP per second.", "params": {"hps": 30, "radius": 3, "tag": "aquatic"}},
     "prerequisites": [{"type": "zone", "zone": "river"}]
   },
@@ -593,7 +593,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["reptile", "island", "venomous", "predator"],
-    "stats": {"hp": 1300, "damage": 180, "hit_speed": 1.3, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 1300, "damage": 170, "hit_speed": 1.3, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "poison", "name": "Venomous Bite", "text": "Venom deals 50 damage per second for 5 seconds and halves healing on the target.", "params": {"dps": 50, "duration": 5, "anti_heal_pct": 50}},
     "prerequisites": [{"type": "match_time", "seconds": 30}]
   },
@@ -619,7 +619,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["amphibian", "wetland", "aquatic"],
-    "stats": {"hp": 500, "damage": 110, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 580, "damage": 122, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "regenerate", "name": "Regrowth", "text": "Regenerates 6% of max HP every second, even while fighting.", "params": {"pct_per_second": 6}},
     "prerequisites": [{"type": "unique"}, {"type": "zone", "zone": "river"}]
   },
@@ -632,7 +632,7 @@
     "cost": 7,
     "count": 1,
     "tags": ["mammal", "savanna", "armored"],
-    "stats": {"hp": 3000, "damage": 420, "hit_speed": 1.8, "speed": "medium", "range": 1, "targets": "buildings"},
+    "stats": {"hp": 3000, "damage": 390, "hit_speed": 1.8, "speed": "medium", "range": 1, "targets": "buildings"},
     "ability": {"id": "charge", "name": "Thunder Charge", "text": "Only targets dens. After running 2 tiles it charges, stunning anything it slams for 1 second.", "params": {"distance": 2, "damage_mult": 2, "stun": 1}},
     "prerequisites": [{"type": "unique"}, {"type": "match_time", "seconds": 60}]
   },
@@ -645,8 +645,8 @@
     "cost": 5,
     "count": 1,
     "tags": ["bird", "flying", "desert", "mountain"],
-    "stats": {"hp": 1000, "damage": 160, "hit_speed": 1.3, "speed": "medium", "range": 1, "targets": "air_ground"},
-    "ability": {"id": "heal_on_kill", "name": "Sky Scavenger", "text": "Heals 300 HP whenever any animal is defeated nearby.", "params": {"amount": 300, "radius": 4, "any_side": true}},
+    "stats": {"hp": 900, "damage": 145, "hit_speed": 1.3, "speed": "medium", "range": 1, "targets": "air_ground"},
+    "ability": {"id": "heal_on_kill", "name": "Sky Scavenger", "text": "Heals 220 HP whenever any animal is defeated nearby.", "params": {"amount": 220, "radius": 4, "any_side": true}},
     "prerequisites": [{"type": "unique"}, {"type": "allies_defeated", "count": 2}]
   },
   {
@@ -658,7 +658,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["mammal", "forest", "tundra", "predator", "big_cat"],
-    "stats": {"hp": 900, "damage": 280, "hit_speed": 1.0, "speed": "very_fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 840, "damage": 245, "hit_speed": 1.0, "speed": "very_fast", "range": 1, "targets": "ground"},
     "ability": {"id": "stealth", "name": "Phantom", "text": "Invisible until it attacks, and vanishes again after each takedown.", "params": {"restealth_on_kill": true}},
     "prerequisites": [{"type": "unique"}, {"type": "no_allies_with_tag", "tag": "big_cat"}]
   },

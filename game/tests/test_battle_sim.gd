@@ -326,7 +326,8 @@ func test_medkit_heals_allies() -> void:
 	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 9 * T, 22 * T)[0]
 	bear.hp = 100
 	sim.release(0, 0, 9 * T, 22 * T)
-	check_eq(bear.hp, 450, "healed by 350")
+	var heal := int(GameData.get_card("medkit").stats.heal)
+	check_eq(bear.hp, 100 + heal, "healed by the Medkit's amount")
 
 
 func test_food_bait_lures_enemies() -> void:

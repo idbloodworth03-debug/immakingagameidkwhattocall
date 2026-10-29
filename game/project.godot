@@ -1,5 +1,10 @@
 ; Engine configuration file.
-; Most of these settings can be changed in Godot under Project > Project Settings.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
 
 config_version=5
 
@@ -15,6 +20,10 @@ config/icon="res://icon.svg"
 
 GameData="*res://scripts/autoload/game_data.gd"
 Profile="*res://scripts/autoload/profile.gd"
+
+[debug]
+
+gdscript/warnings/integer_division=0
 
 [display]
 
@@ -35,8 +44,3 @@ pointing/emulate_touch_from_mouse=true
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
-
-[debug]
-
-; The battle engine uses whole-number math on purpose (see battle_sim.gd).
-gdscript/warnings/integer_division=0

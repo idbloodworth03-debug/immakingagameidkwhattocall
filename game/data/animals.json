@@ -294,7 +294,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["mammal", "wetland", "aquatic", "venomous"],
-    "stats": {"hp": 500, "damage": 100, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 525, "damage": 105, "hit_speed": 1.1, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "poison", "name": "Venom Spur", "text": "Hits poison the target for 25 damage per second for 3 seconds.", "params": {"dps": 25, "duration": 3}},
     "prerequisites": []
   },
@@ -307,7 +307,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["mammal", "savanna", "predator", "big_cat"],
-    "stats": {"hp": 520, "damage": 150, "hit_speed": 1.0, "speed": "very_fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 545, "damage": 160, "hit_speed": 1.0, "speed": "very_fast", "range": 1, "targets": "ground"},
     "ability": {"id": "deploy_haste", "name": "Sprint", "text": "Runs at double speed for the first 3 seconds.", "params": {"speed_pct": 100, "duration": 3}},
     "prerequisites": []
   },
@@ -320,7 +320,7 @@
     "cost": 2,
     "count": 1,
     "tags": ["reptile", "forest", "urban", "shelled"],
-    "stats": {"hp": 650, "damage": 40, "hit_speed": 1.3, "speed": "slow", "range": 1, "targets": "ground"},
+    "stats": {"hp": 680, "damage": 40, "hit_speed": 1.3, "speed": "slow", "range": 1, "targets": "ground"},
     "ability": {"id": "damage_reduction", "name": "Hinged Shell", "text": "Takes 50% less damage while below half health.", "params": {"pct": 50, "below_hp_pct": 50}},
     "prerequisites": []
   },
@@ -333,7 +333,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["mammal", "prairie", "herd"],
-    "stats": {"hp": 1850, "damage": 200, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "buildings"},
+    "stats": {"hp": 1940, "damage": 210, "hit_speed": 1.5, "speed": "medium", "range": 1, "targets": "buildings"},
     "ability": {"id": "knockback", "name": "Stampede", "text": "Only targets dens. Knocks back anything in its path.", "params": {"distance": 1}},
     "prerequisites": []
   },
@@ -372,7 +372,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["reptile", "desert", "venomous"],
-    "stats": {"hp": 580, "damage": 92, "hit_speed": 1.0, "speed": "medium", "range": 1, "targets": "ground"},
+    "stats": {"hp": 610, "damage": 95, "hit_speed": 1.0, "speed": "medium", "range": 1, "targets": "ground"},
     "ability": {"id": "slow_on_hit", "name": "Lockjaw", "text": "Its bite clamps on, slowing the target by 50%.", "params": {"pct": 50}},
     "prerequisites": []
   },
@@ -411,7 +411,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["mammal", "jungle", "predator", "big_cat"],
-    "stats": {"hp": 760, "damage": 225, "hit_speed": 1.1, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 800, "damage": 235, "hit_speed": 1.1, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "bonus_vs_tag", "name": "Shell Cracker", "text": "Deals double damage to Shelled enemies.", "params": {"tag": "shelled", "damage_pct": 100}},
     "prerequisites": []
   },
@@ -424,7 +424,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["reptile", "jungle", "venomous"],
-    "stats": {"hp": 580, "damage": 130, "hit_speed": 1.2, "speed": "medium", "range": 2, "targets": "ground"},
+    "stats": {"hp": 610, "damage": 135, "hit_speed": 1.2, "speed": "medium", "range": 2, "targets": "ground"},
     "ability": {"id": "poison", "name": "Hood Flare", "text": "Strikes from 2 tiles away. Venom deals 40 damage per second for 4 seconds.", "params": {"dps": 40, "duration": 4}},
     "prerequisites": []
   },
@@ -437,7 +437,7 @@
     "cost": 4,
     "count": 1,
     "tags": ["mammal", "mountain", "predator", "big_cat"],
-    "stats": {"hp": 600, "damage": 190, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
+    "stats": {"hp": 630, "damage": 200, "hit_speed": 1.0, "speed": "fast", "range": 1, "targets": "ground"},
     "ability": {"id": "stealth", "name": "Ghost of the Mountains", "text": "Invisible to enemies until its first attack.", "params": {}},
     "prerequisites": []
   },
@@ -450,7 +450,7 @@
     "cost": 5,
     "count": 1,
     "tags": ["mammal", "mountain", "forest"],
-    "stats": {"hp": 1500, "damage": 150, "hit_speed": 1.4, "speed": "slow", "range": 1, "targets": "ground"},
+    "stats": {"hp": 1575, "damage": 160, "hit_speed": 1.4, "speed": "slow", "range": 1, "targets": "ground"},
     "ability": {"id": "regenerate", "name": "Bamboo Snack", "text": "Heals 4% of max HP per second while not fighting.", "params": {"pct_per_second": 4, "only_idle": true}},
     "prerequisites": []
   },
@@ -463,7 +463,7 @@
     "cost": 3,
     "count": 1,
     "tags": ["reptile", "marine", "aquatic", "shelled"],
-    "stats": {"hp": 700, "damage": 90, "hit_speed": 1.3, "speed": "slow", "range": 1, "targets": "ground"},
+    "stats": {"hp": 735, "damage": 95, "hit_speed": 1.3, "speed": "slow", "range": 1, "targets": "ground"},
     "ability": {"id": "shield", "name": "Shell", "text": "Its shell absorbs the first 250 damage it takes.", "params": {"amount": 250}},
     "prerequisites": []
   },

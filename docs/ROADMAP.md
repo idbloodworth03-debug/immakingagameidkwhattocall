@@ -22,7 +22,8 @@
 - [x] Deeper placement after destroying a side den
 - [x] Segmented energy bar, and hand cards that fill up as energy comes in
 - [x] Balance report: hundreds of bot-vs-bot battles, win rate and play rate per card
-- [ ] Playtest a lot and balance costs and stats
+- [x] First balance pass from bot-vs-bot battles (see "Computer opponent" in [GAME_DESIGN.md](GAME_DESIGN.md))
+- [ ] Playtest a lot with real people and keep balancing
 
 ## Phase 2: Look and feel (first pass done)
 

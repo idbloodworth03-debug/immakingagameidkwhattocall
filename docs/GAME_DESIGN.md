@@ -264,7 +264,7 @@ Spell-like cards that can be used anywhere on the field (Food Bait only on your 
 | Net | Common | 2 | Arena 1 | Enemies in a 2-tile area are stuck for 2.5s and take 40 damage |
 | Air Horn | Common | 2 | Arena 1 | 145 damage in 2.5 tiles and knocks enemies back. Dens take 30% |
 | Food Bait | Rare | 2 | Arena 2 | A snack that enemy ground animals within 5 tiles go for, for up to 7s |
-| Medkit | Rare | 3 | Arena 3 | Heals your animals in 3 tiles for 400 |
+| Medkit | Rare | 3 | Arena 3 | Heals your animals in 3 tiles for 440 |
 | Tranquilizer Dart | Epic | 3 | Arena 5 | Puts the closest enemy animal to sleep for 4s (Fearless ones are only slowed) |
 | Signal Flare | Epic | 4 | Arena 6 | 340 damage in 2.5 tiles, reveals hidden animals. Dens take 35% |
 
@@ -294,6 +294,12 @@ bot-vs-bot battles with random decks and prints each card's win rate and how
 often it gets played (see the instructions at the top of
 `tests/balance_report.gd`). Bots aren't people, so it's a guide for spotting
 outliers, not a verdict.
+
+**First balance pass.** Tuned from about 7,000 bot battles:
+- **Toned down:** California Condor (it also heals 220 instead of 300), Amur Leopard, Polar Bear, Tiger, Pigeon Flock, Air Horn, Chimpanzee, Mountain Gorilla, Black Rhino and Komodo Dragon.
+- **Boosted:** American Bison, Striped Skunk, Gila Monster (now walks at medium speed), Axolotl, Platypus, Rattlesnake, King Cobra, Jaguar, Mountain Goat, Harbor Seal, Sea Otter, Red Panda, Black-footed Ferret, Moose, Raccoon, Red Fox, Opossum, Medkit and Food Bait.
+- **Rares:** they were winning less often than Commons, so every Rare animal got +5% hitpoints and damage. The Polar Bear, Hippo, Walrus and Lion were left out because they were already strong.
+- **Left alone on purpose:** Legendaries still win somewhat more often than other cards, because rarer animals are meant to be stronger. Animals that need a partner on the field (Lion, Red Wolf, African Wild Dogs) are hard for the bot to judge, so they wait for real playtesting.
 
 ## Still open
 

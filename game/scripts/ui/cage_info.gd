@@ -21,8 +21,8 @@ static func summary(cage_id: String, arena_index: int) -> String:
 static func details(cage_id: String, arena_index: int) -> VBoxContainer:
 	var cage: Dictionary = GameData.cages[cage_id]
 	var box := UIKit.vbox(12)
-	var art := ArtPlaceholder.new()
-	art.shape = ArtPlaceholder.Shape.CAGE
+	var art := IconArt.new()
+	art.shape = IconArt.Shape.CAGE
 	art.color = Color(cage.color)
 	art.custom_minimum_size = Vector2(200, 180)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER

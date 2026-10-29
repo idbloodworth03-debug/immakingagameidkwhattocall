@@ -16,6 +16,8 @@ var emote_cooldown := 0.0
 
 var _accumulator := 0.0
 var _hand_signature := ""
+var _last_whole_second := -1
+var _was_overtime := false
 var _result: Dictionary = {}
 var _field: BattleField
 var _timer_label: Label
@@ -45,6 +47,7 @@ func _ready() -> void:
 	bot = BattleBot.new(sim, 1, rng.randi())
 	_make_opponent(rng)
 	_build()
+	Sound.play_music("battle")
 	_set_status("Tap a card, then tap the glowing area to play it.")
 	if rng.randf() < 0.5:
 		get_tree().create_timer(1.5).timeout.connect(func() -> void: _opponent_says("good_luck"))
@@ -157,6 +160,15 @@ func _make_opponent(rng: RandomNumberGenerator) -> void:
 func _update_hud() -> void:
 	var left := sim.seconds_left()
 	_timer_label.text = "%d:%02d" % [floori(left / 60.0), int(left) % 60]
+	var whole_second := ceili(left)
+	if whole_second != _last_whole_second:
+		_last_whole_second = whole_second
+		if whole_second <= 10 and whole_second > 0:
+			Sound.play("tick")
+	if sim.in_overtime() and not _was_overtime:
+		_was_overtime = true
+		Sound.play("alert")
+		UIKit.toast("Overtime! Next tower wins!", UIKit.RED.darkened(0.2))
 	if sim.in_overtime():
 		_mode_label.text = "OVERTIME"
 		_mode_label.add_theme_color_override("font_color", UIKit.RED.lightened(0.3))
@@ -210,6 +222,7 @@ func _refresh_hand() -> void:
 
 func _handle_events(events: Array) -> void:
 	_field.add_events(events)
+	_play_event_sounds(events)
 	for e in events:
 		if e.type == "death" and e.kind == "tower":
 			if e.team == 0 and randf() < 0.5:
@@ -218,9 +231,36 @@ func _handle_events(events: Array) -> void:
 				_opponent_emote("crocodile_tears", 0.8)
 
 
+func _play_event_sounds(events: Array) -> void:
+	for e in events:
+		match e.type:
+			"release":
+				if GameData.is_tool(e.card):
+					Sound.play("horn" if e.card == "air_horn" else "tool")
+				else:
+					Sound.play("release", -2.0, 0.08)
+			"hit":
+				if e.from_kind == "tower":
+					Sound.play("zap", -10.0, 0.1)
+				elif e.to_kind == "tower":
+					Sound.play("tower_hit", -4.0, 0.1)
+				else:
+					Sound.play("hit", -7.0, 0.2)
+			"death":
+				if e.kind == "tower":
+					Sound.play("boom")
+				else:
+					Sound.play("death", -6.0, 0.15)
+			"heal", "tree":
+				Sound.play("heal", -4.0)
+			"dodge", "play_dead", "pounce", "emerge", "sleep", "steal":
+				Sound.play("pop", -6.0, 0.2)
+
+
 # --- Playing cards ---------------------------------------------------------
 
 func _select(index: int) -> void:
+	Sound.play("select")
 	selected = -1 if selected == index else index
 	if selected == -1:
 		_field.highlight_zones = []
@@ -246,9 +286,10 @@ func _on_field_tapped(at: Vector2i, _zone: String) -> void:
 	var problems := sim.release_problems(0, selected, at.x, at.y)
 	if not problems.is_empty():
 		_set_status("Can't play %s: %s" % [card.name, ". ".join(problems)], UIKit.RED.lightened(0.3))
+		Sound.play("error")
 		return
 	sim.release(0, selected, at.x, at.y)
-	_field.add_events(sim.take_events())
+	_handle_events(sim.take_events())
 	selected = -1
 	_field.highlight_zones = []
 	_set_status("")
@@ -280,6 +321,8 @@ func _end_battle() -> void:
 		outcome = "loss"
 	_result = _record(outcome)
 	_field.highlight_zones = []
+	Sound.stop_music()
+	Sound.play({"win": "victory", "loss": "defeat", "draw": "reveal"}[outcome])
 	if not opponent_muted and randf() < 0.6:
 		_opponent_says("good_game")
 
@@ -349,10 +392,7 @@ func _build_emote_panel() -> PanelContainer:
 		var cell_box := UIKit.vbox(2)
 		cell_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		cell.add_child(cell_box)
-		var art := ArtPlaceholder.new()
-		art.text = UIKit.initials(emote.name)
-		art.color = Color(emote.color)
-		art.custom_minimum_size = Vector2(64, 64)
+		var art := IconArt.make(GameData.emote_icon(emote.id), Color(emote.color), IconArt.Shape.CIRCLE, Vector2(64, 64))
 		art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		cell_box.add_child(art)
 		var caption := UIKit.label(emote.caption, 16, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
@@ -386,6 +426,7 @@ func _send(message: Dictionary) -> void:
 	if emote_cooldown > 0.0:
 		return
 	emote_cooldown = 2.0
+	Sound.play("pop")
 	_show_bubble(true, message)
 	if randf() < 0.4:
 		var reply_id: String = OPPONENT_CHATS.pick_random()
@@ -419,10 +460,7 @@ func _show_bubble(own: bool, message: Dictionary) -> void:
 	bubble.add_child(row)
 	var text: String = message.get("text", "")
 	if message.has("emote"):
-		var art := ArtPlaceholder.new()
-		art.text = UIKit.initials(message.emote.name)
-		art.color = Color(message.emote.color)
-		art.custom_minimum_size = Vector2(56, 56)
+		var art := IconArt.make(GameData.emote_icon(message.emote.id), Color(message.emote.color), IconArt.Shape.CIRCLE, Vector2(56, 56))
 		row.add_child(art)
 		text = message.emote.caption
 	var l := UIKit.label(text, 24, Color("#1a2340"))
@@ -430,6 +468,8 @@ func _show_bubble(own: bool, message: Dictionary) -> void:
 	row.add_child(l)
 	_field.add_child(bubble)
 	_bubbles[own] = bubble
+	if not own:
+		Sound.play("pop", -3.0)
 
 	var anchor := _field.tower_screen_position(0 if own else 1, "main")
 	var place := func() -> void:

@@ -65,6 +65,7 @@ func _ready() -> void:
 	Profile.changed.connect(_update_badges)
 	_update_badges()
 	select_tab(BATTLE_TAB)
+	Sound.play_music("menu")
 
 	if OS.is_debug_build():
 		for problem in GameData.validate():
@@ -81,6 +82,10 @@ func select_tab(index: int) -> void:
 	_current = index
 	for i in _pages.size():
 		_pages[i].visible = i == index
+		if i == index:
+			# Fade the new tab in.
+			_pages[i].modulate.a = 0.0
+			_pages[i].create_tween().tween_property(_pages[i], "modulate:a", 1.0, 0.15)
 		var selected: bool = i == index
 		var button: Button = _nav_buttons[i]
 		UIKit.color_button(button, UIKit.PANEL_LIGHT.lightened(0.15) if selected else UIKit.PANEL_DARK)

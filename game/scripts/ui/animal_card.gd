@@ -13,11 +13,11 @@ var highlighted := false:
 		highlighted = value
 		_restyle()
 
-var _art: ArtPlaceholder
+var _art: IconArt
 var _name_label: Label
 var _level_label: Label
 var _bar_holder: Control
-var _cost: ArtPlaceholder
+var _cost: IconArt
 var _badge: Label
 
 
@@ -38,10 +38,7 @@ func _build() -> void:
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(column)
 
-	_art = ArtPlaceholder.new()
-	_art.shape = ArtPlaceholder.Shape.ROUNDED
-	_art.text = UIKit.initials(animal.get("name", "?"))
-	_art.color = UIKit.habitat_color(animal)
+	_art = UIKit.card_art(animal_id)
 	_art.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_art)
 
@@ -61,7 +58,7 @@ func _build() -> void:
 	column.add_child(_bar_holder)
 
 	# Energy cost bubble in the top-left corner, drawn over the art.
-	_cost = ArtPlaceholder.new()
+	_cost = IconArt.new()
 	_cost.color = UIKit.ENERGY
 	_cost.text = str(int(animal.get("cost", 0)))
 	var bubble := 34 if small else 42
@@ -115,5 +112,10 @@ func _restyle() -> void:
 	var owned := Profile.has_card(animal_id)
 	var frame := UIKit.box(UIKit.PANEL_DARK if owned else Color(0.08, 0.12, 0.2), 14, 6 if small else 8)
 	frame.set_border_width_all(5 if highlighted else 3)
-	frame.border_color = UIKit.YELLOW if highlighted else GameData.rarity_color(animal.get("rarity", "common")).darkened(0.0 if owned else 0.5)
+	var rarity_color := GameData.rarity_color(animal.get("rarity", "common"))
+	frame.border_color = UIKit.YELLOW if highlighted else rarity_color.darkened(0.0 if owned else 0.5)
+	if owned and animal.get("rarity", "") in ["epic", "legendary"]:
+		# Rarer cards glow a little.
+		frame.shadow_color = Color(rarity_color, 0.45)
+		frame.shadow_size = 6
 	add_theme_stylebox_override("panel", frame)

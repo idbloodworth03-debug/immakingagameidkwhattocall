@@ -76,6 +76,28 @@ func _build() -> void:
 	add_child(UIKit.heading("Icons"))
 	add_child(_picker(GameData.player_icons, Profile.data.icon, _icon_swatch, Profile.set_icon))
 
+	add_child(UIKit.heading("Settings"))
+	var settings_row := UIKit.hbox(10)
+	add_child(settings_row)
+	var sound_button := UIKit.button("Sound: " + ("On" if Sound.sound_on() else "Off"), UIKit.BLUE if Sound.sound_on() else UIKit.GREY, 22, Vector2(0, 64))
+	sound_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sound_button.pressed.connect(func() -> void:
+		Sound.set_sound(not Sound.sound_on())
+		_build.call_deferred()
+	)
+	settings_row.add_child(sound_button)
+	var music_button := UIKit.button("Music: " + ("On" if Sound.music_on() else "Off"), UIKit.BLUE if Sound.music_on() else UIKit.GREY, 22, Vector2(0, 64))
+	music_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	music_button.pressed.connect(func() -> void:
+		Sound.set_music(not Sound.music_on())
+		_build.call_deferred()
+	)
+	settings_row.add_child(music_button)
+	var credits := UIKit.button("Credits", UIKit.GREY, 22, Vector2(0, 64))
+	credits.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	credits.pressed.connect(_show_credits)
+	settings_row.add_child(credits)
+
 	if OS.is_debug_build():
 		add_child(_dev_tools())
 
@@ -122,9 +144,8 @@ func _banner_swatch(item: Dictionary, unlocked: bool) -> Control:
 
 
 func _icon_swatch(item: Dictionary, unlocked: bool) -> Control:
-	var art := ArtPlaceholder.new()
+	var art := IconArt.make(GameData.player_icon(item.id), Color(item.color))
 	art.text = item.text
-	art.color = Color(item.color)
 	art.dimmed = not unlocked
 	art.custom_minimum_size = Vector2(70, 70)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -137,7 +158,9 @@ func _on_cosmetic_tapped(item: Dictionary, equip: Callable) -> void:
 	elif item.unlock.type == "shop":
 		Modal.confirm("Buy %s for %d gems?" % [item.name, int(item.unlock.gems)], "Buy", func() -> void:
 			if not Profile.buy_cosmetic(item):
-				UIKit.toast("Not enough gems")
+				UIKit.error_toast("Not enough gems")
+			else:
+				Sound.play("coin")
 		)
 	else:
 		UIKit.toast("Locked: " + Profile.unlock_hint(item))
@@ -172,3 +195,15 @@ func _dev_tools() -> Control:
 
 func _confirm_reset() -> void:
 	Modal.confirm("Erase this profile and start over?", "Reset", Profile.reset, UIKit.RED)
+
+
+func _show_credits() -> void:
+	var box := UIKit.vbox(12)
+	for line in [
+		"Icons: game-icons.net by Lorc, Delapouite, Caro Asercion, Skoll, Cathelineau and Sbed, under Creative Commons BY 3.0.",
+		"Fonts: Lilita One by Juan Montoreano, and Nunito by Vernon Adams, Cyreal and Jacques Le Bailly, under the SIL Open Font License.",
+		"Sound effects and music: made for this game.",
+		"Animal statuses: the IUCN Red List of Threatened Species.",
+	]:
+		box.add_child(UIKit.paragraph(line, 21, UIKit.TEXT))
+	Modal.open(box, "Credits", 600)

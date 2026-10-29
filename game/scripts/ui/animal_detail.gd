@@ -39,10 +39,7 @@ func _build() -> void:
 	# Header: art, name, rarity, conservation status
 	var header := UIKit.hbox(16)
 	add_child(header)
-	var art := ArtPlaceholder.new()
-	art.shape = ArtPlaceholder.Shape.ROUNDED
-	art.text = UIKit.initials(animal.name)
-	art.color = UIKit.habitat_color(animal)
+	var art := UIKit.card_art(animal_id)
 	art.dimmed = not owned
 	art.custom_minimum_size = Vector2(150, 170)
 	header.add_child(art)
@@ -160,7 +157,8 @@ func _add_stat(grid: GridContainer, stat_name: String, value: String) -> void:
 
 func _on_upgrade() -> void:
 	if Profile.upgrade_card(animal_id):
+		Sound.play("upgrade")
 		UIKit.toast("%s is now Level %d!" % [GameData.get_card(animal_id).name, Profile.card_level(animal_id)], UIKit.GREEN.darkened(0.3))
 		_build()
 	else:
-		UIKit.toast("Not enough gold or copies yet")
+		UIKit.error_toast("Not enough gold or copies yet")

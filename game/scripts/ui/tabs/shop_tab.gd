@@ -62,7 +62,9 @@ func _add_daily_offers() -> void:
 		buy.disabled = offer.bought
 		buy.pressed.connect(func() -> void:
 			if not Profile.buy_daily_offer(offer.index):
-				UIKit.toast("Not enough gold")
+				UIKit.error_toast("Not enough gold")
+			else:
+				Sound.play("coin")
 		)
 		column.add_child(buy)
 
@@ -79,8 +81,8 @@ func _add_cages() -> void:
 		_content.add_child(row_panel)
 		var row := UIKit.hbox(14)
 		row_panel.add_child(row)
-		var art := ArtPlaceholder.new()
-		art.shape = ArtPlaceholder.Shape.CAGE
+		var art := IconArt.new()
+		art.shape = IconArt.Shape.CAGE
 		art.color = Color(cage.color)
 		art.custom_minimum_size = Vector2(120, 110)
 		row.add_child(art)
@@ -107,7 +109,7 @@ func _confirm_cage(cage_id: String) -> void:
 	Modal.confirm("Buy a %s for %s gems?" % [cage.name, UIKit.format_number(int(cage.shop_gems))], "Buy", func() -> void:
 		var rewards := Profile.buy_cage(cage_id)
 		if rewards.is_empty():
-			UIKit.toast("Not enough gems")
+			UIKit.error_toast("Not enough gems")
 		else:
 			CageOpening.play(rewards)
 	)
@@ -125,10 +127,7 @@ func _add_gold_packs() -> void:
 		row.add_child(cell)
 		var column := UIKit.vbox(8)
 		cell.add_child(column)
-		var icon := ArtPlaceholder.new()
-		icon.text = "G"
-		icon.color = UIKit.GOLD
-		icon.custom_minimum_size = Vector2(70 + i * 15, 70 + i * 15)
+		var icon := UIKit.icon_rect(GameData.ui_icon("gold"), UIKit.GOLD, 64 + i * 16)
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		column.add_child(icon)
 		column.add_child(UIKit.label(UIKit.format_number(int(pack.gold)), 26, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
@@ -136,7 +135,9 @@ func _add_gold_packs() -> void:
 		buy.pressed.connect(func() -> void:
 			Modal.confirm("Trade %s gems for %s gold?" % [UIKit.format_number(int(pack.gems)), UIKit.format_number(int(pack.gold))], "Buy", func() -> void:
 				if not Profile.buy_gold_pack(i):
-					UIKit.toast("Not enough gems")
+					UIKit.error_toast("Not enough gems")
+				else:
+					Sound.play("coin")
 			)
 		)
 		column.add_child(buy)
@@ -157,10 +158,12 @@ func _add_cosmetics() -> void:
 		var row := UIKit.hbox(14)
 		row_panel.add_child(row)
 		var is_emote: bool = item.has("caption")
-		var preview := ArtPlaceholder.new()
-		preview.shape = ArtPlaceholder.Shape.CIRCLE if is_emote else ArtPlaceholder.Shape.ROUNDED
+		var preview := IconArt.new()
+		preview.shape = IconArt.Shape.CIRCLE if is_emote else IconArt.Shape.ROUNDED
 		preview.color = Color(item.color if is_emote else item.colors[0])
 		preview.text = UIKit.initials(item.name) if is_emote else ""
+		if is_emote:
+			preview.icon = UIKit.icon(GameData.emote_icon(item.id))
 		preview.custom_minimum_size = Vector2(80, 80)
 		row.add_child(preview)
 		var info := UIKit.vbox(2)
@@ -174,7 +177,9 @@ func _add_cosmetics() -> void:
 		buy.pressed.connect(func() -> void:
 			Modal.confirm("Buy %s for %d gems?" % [item.name, int(item.unlock.gems)], "Buy", func() -> void:
 				if not Profile.buy_cosmetic(item):
-					UIKit.toast("Not enough gems")
+					UIKit.error_toast("Not enough gems")
+				else:
+					Sound.play("coin")
 			)
 		)
 		row.add_child(buy)

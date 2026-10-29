@@ -82,6 +82,7 @@ func _new_profile() -> Dictionary:
 		"owned_cosmetics": [],
 		"shop_day": "",
 		"shop_bought": [],
+		"settings": {"sound": true, "music": true},
 	}
 	for i in int(prog.cage_slots):
 		profile.cage_slots.append(null)

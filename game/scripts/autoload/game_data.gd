@@ -39,6 +39,7 @@ var banners: Array = []
 var player_icons: Array = []
 var progression: Dictionary = {}
 var battle_rules: Dictionary = {}
+var art: Dictionary = {}
 
 
 func _init() -> void:
@@ -82,6 +83,7 @@ func reload() -> void:
 	player_icons = _load("player_icons.json")
 	progression = _load("progression.json")
 	battle_rules = _load("battle_rules.json")
+	art = _load("art.json")
 
 
 func _load(file_name: String) -> Variant:
@@ -156,6 +158,38 @@ func get_arena(index: int) -> Dictionary:
 	return arenas[clampi(index, 0, arenas.size() - 1)]
 
 
+# --- Art -------------------------------------------------------------------
+# Icon names refer to files in res://art/icons/ (see data/art.json).
+
+func card_icon(card_id: String) -> String:
+	return _icon_name(art.get("cards", {}).get(card_id, ""))
+
+
+func card_icon_flipped(card_id: String) -> bool:
+	return art.get("flipped", []).has(card_id)
+
+
+func emote_icon(emote_id: String) -> String:
+	return _icon_name(art.get("emotes", {}).get(emote_id, ""))
+
+
+func player_icon(icon_id: String) -> String:
+	return _icon_name(art.get("player_icons", {}).get(icon_id, ""))
+
+
+func arena_icons(arena_id: String) -> Array:
+	return art.get("arenas", {}).get(arena_id, []).map(func(ref): return _icon_name(ref))
+
+
+func ui_icon(key: String) -> String:
+	return _icon_name(art.get("ui", {}).get(key, ""))
+
+
+## "author/name" -> "name"
+func _icon_name(ref: String) -> String:
+	return ref.get_file()
+
+
 # --- Cosmetics -------------------------------------------------------------
 
 func find_by_id(list: Array, id: String) -> Dictionary:
@@ -227,6 +261,16 @@ func validate() -> Array:
 		if not cages.has(cage_id):
 			problems.append("win_cage_cycle: unknown cage '%s'" % cage_id)
 
+	for section in ["cards", "emotes", "player_icons"]:
+		var source: Dictionary = {"cards": cards, "emotes": _ids(emotes), "player_icons": _ids(player_icons)}[section]
+		for id in source:
+			var icon_name: String = _icon_name(art.get(section, {}).get(id, ""))
+			if icon_name == "" or not ResourceLoader.exists("res://art/icons/%s.svg" % icon_name):
+				problems.append("art.json: %s '%s' has no icon file" % [section, id])
+	for arena in arenas:
+		if arena_icons(arena.id).is_empty():
+			problems.append("art.json: arena '%s' has no icons" % arena.id)
+
 	for list_name in ["emotes", "banners", "player_icons"]:
 		var list: Array = get(list_name)
 		for item in list:
@@ -240,3 +284,10 @@ func validate() -> Array:
 				problems.append("%s %s: unknown animal '%s'" % [list_name, item.id, unlock.get("animal")])
 
 	return problems
+
+
+func _ids(list: Array) -> Dictionary:
+	var ids := {}
+	for item in list:
+		ids[item.id] = true
+	return ids

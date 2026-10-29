@@ -60,11 +60,12 @@ func _ready() -> void:
 
 	_show_closed_cage(cage)
 	UIKit.on_tap(self, _next)
+	Sound.play("rattle")
 
 
 func _show_closed_cage(cage: Dictionary) -> void:
-	var art := ArtPlaceholder.new()
-	art.shape = ArtPlaceholder.Shape.CAGE
+	var art := IconArt.new()
+	art.shape = IconArt.Shape.CAGE
 	art.color = Color(cage.get("color", "#a27447"))
 	art.custom_minimum_size = Vector2(320, 300)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -101,23 +102,23 @@ func _show_step(step: Dictionary) -> void:
 	var item: Control
 	match step.kind:
 		"gold":
-			item = _big_reward("G", UIKit.GOLD, "+%s Gold" % UIKit.format_number(int(rewards.gold)), UIKit.GOLD)
+			item = _big_reward(GameData.ui_icon("gold"), UIKit.GOLD, "+%s Gold" % UIKit.format_number(int(rewards.gold)), UIKit.GOLD)
+			Sound.play("coin")
 		"gems":
-			item = _big_reward("Gm", UIKit.GEMS, "+%d Gems" % int(rewards.gems), UIKit.GEMS)
+			item = _big_reward(GameData.ui_icon("gems"), UIKit.GEMS, "+%d Gems" % int(rewards.gems), UIKit.GEMS)
+			Sound.play("coin")
 		"card":
 			item = _card_reward(step.stack)
+			Sound.play("new_card" if step.stack.get("is_new", false) else "reveal")
 	_stage.add_child(item)
 	_counter.text = "%d left" % (_steps.size() - _step - 1)
 	_pop_in(item)
 
 
-func _big_reward(icon_text: String, color: Color, text: String, text_color: Color) -> Control:
+func _big_reward(icon_name: String, color: Color, text: String, text_color: Color) -> Control:
 	var box := UIKit.vbox(16)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon := ArtPlaceholder.new()
-	icon.text = icon_text
-	icon.color = color
-	icon.custom_minimum_size = Vector2(200, 200)
+	var icon := UIKit.icon_rect(icon_name, color, 200)
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_child(icon)
 	box.add_child(UIKit.label(text, 44, text_color, HORIZONTAL_ALIGNMENT_CENTER))
@@ -130,13 +131,18 @@ func _card_reward(stack: Dictionary) -> Control:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if stack.get("is_new", false):
 		box.add_child(UIKit.label("NEW ANIMAL FREED!", 34, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-	var art := ArtPlaceholder.new()
-	art.shape = ArtPlaceholder.Shape.ROUNDED
-	art.text = UIKit.initials(animal.name)
-	art.color = UIKit.habitat_color(animal)
+	# The card glows in its rarity color.
+	var glow := PanelContainer.new()
+	var glow_style := UIKit.box(Color(0, 0, 0, 0), 30)
+	glow_style.shadow_color = Color(GameData.rarity_color(stack.rarity), 0.7)
+	glow_style.shadow_size = 40
+	glow.add_theme_stylebox_override("panel", glow_style)
+	glow.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(glow)
+	var art := UIKit.card_art(stack.animal)
 	art.custom_minimum_size = Vector2(260, 300)
-	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	box.add_child(art)
+	glow.add_child(art)
 	box.add_child(UIKit.label(animal.name, 40, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label(GameData.rarity_name(stack.rarity), 30, GameData.rarity_color(stack.rarity), HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("x%d" % int(stack.count), 48, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
@@ -152,9 +158,9 @@ func _show_summary() -> void:
 	totals.alignment = BoxContainer.ALIGNMENT_CENTER
 	summary.add_child(totals)
 	if int(rewards.get("gold", 0)) > 0:
-		totals.add_child(UIKit.pill("G", UIKit.GOLD, UIKit.format_number(int(rewards.gold))))
+		totals.add_child(UIKit.pill(GameData.ui_icon("gold"), UIKit.GOLD, UIKit.format_number(int(rewards.gold))))
 	if int(rewards.get("gems", 0)) > 0:
-		totals.add_child(UIKit.pill("Gm", UIKit.GEMS, str(int(rewards.gems))))
+		totals.add_child(UIKit.pill(GameData.ui_icon("gems"), UIKit.GEMS, str(int(rewards.gems))))
 	var grid := GridContainer.new()
 	grid.columns = 4
 	grid.add_theme_constant_override("h_separation", 12)

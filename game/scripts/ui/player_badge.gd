@@ -38,9 +38,8 @@ func _build() -> void:
 	add_child(row)
 
 	var icon := GameData.find_by_id(GameData.player_icons, icon_id)
-	var art := ArtPlaceholder.new()
+	var art := IconArt.make(GameData.player_icon(icon_id), Color(icon.get("color", "#888888")))
 	art.text = icon.get("text", "?")
-	art.color = Color(icon.get("color", "#888888"))
 	var art_size := 56 if compact else 84
 	art.custom_minimum_size = Vector2(art_size, art_size)
 	row.add_child(art)

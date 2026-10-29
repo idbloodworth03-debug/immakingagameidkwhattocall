@@ -22,6 +22,11 @@ var blend := 0.0
 var highlight_zones: Array = []
 var effects: Array = []
 
+var _time := 0.0
+var _shake := 0.0
+var _lunges := {}          # attacker uid -> {"age", "dir"}
+var _shake_offset := Vector2.ZERO
+
 var _press_at := Vector2.ZERO
 var _pressed := false
 
@@ -80,12 +85,19 @@ func add_events(events: Array) -> void:
 		match e.type:
 			"tool":
 				_effect("ring", e.x, e.y, maxi(e.radius, 600), EFFECT_COLORS.get(e.effect, Color.WHITE), 0.6)
+				_effect("icon", e.x, e.y, maxi(e.radius, 900), EFFECT_COLORS.get(e.effect, Color.WHITE), 0.7, GameData.card_icon(e.card))
 			"release":
 				_effect("ring", e.x, e.y, 900, OWN_COLOR if e.team == 0 else ENEMY_COLOR, 0.35)
 			"hit":
 				_effect("flash", e.x, e.y, 260, Color(1, 1, 1, 0.9), 0.12)
+				if e.from_kind == "unit":
+					_lunges[e.from] = {"age": 0.0, "dir": Vector2(e.x - e.fx, e.y - e.fy).normalized()}
+				if e.to_kind == "tower":
+					_effect("number", e.x + randi_range(-400, 400), e.y - 600, 0, Color("#ffd166"), 0.7, str(e.amount))
 			"death":
 				_effect("ring", e.x, e.y, 1600 if e.kind == "tower" else 700, Color(0.2, 0.2, 0.2), 0.5 if e.kind == "tower" else 0.35)
+				if e.kind == "tower":
+					_shake = 0.45
 			"heal", "cloud", "scare", "stun_pulse", "rage":
 				_effect("ring", e.x, e.y, mini(e.radius, BattleSim.WIDTH), EFFECT_COLORS[e.type], 0.6)
 			"tree":
@@ -106,9 +118,15 @@ func _effect(kind: String, x: int, y: int, radius: int, color: Color, life: floa
 
 
 func _process(delta: float) -> void:
+	_time += delta
+	_shake = maxf(0.0, _shake - delta)
 	for fx in effects:
 		fx.age += delta
 	effects = effects.filter(func(fx): return fx.age < fx.life)
+	for uid in _lunges.keys():
+		_lunges[uid].age += delta
+		if _lunges[uid].age > 0.16:
+			_lunges.erase(uid)
 	queue_redraw()
 
 
@@ -124,6 +142,12 @@ func _draw() -> void:
 	var river_bottom := to_screen(0, BattleSim.RIVER_BOTTOM).y
 
 	draw_rect(Rect2(Vector2.ZERO, size), Color("#13240f"))
+	_shake_offset = Vector2.ZERO
+	if _shake > 0.0:
+		# A destroyed tower shakes the whole field for a moment.
+		var strength := 10.0 * _shake / 0.45
+		_shake_offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
+	draw_set_transform(_shake_offset)
 	draw_rect(Rect2(field.position, Vector2(field.size.x, river_top - field.position.y)), grass.darkened(0.1))
 	draw_rect(Rect2(Vector2(field.position.x, river_bottom), Vector2(field.size.x, field.end.y - river_bottom)), grass)
 	var tile := BattleSim.TILE * s
@@ -196,8 +220,10 @@ func _draw_tower(t: BattleSim.Fighter, s: float) -> void:
 	style.border_color = color.darkened(0.45)
 	draw_style_box(style, rect)
 	draw_style_box(UIKit.box(color.lightened(0.25), int(half * 0.2)), rect.grow(-half * 0.3))
-	if t.tower_kind == "main":
-		_draw_text(center, "MAIN", int(half * 0.45), Color.WHITE)
+	var tower_icon := UIKit.icon(GameData.ui_icon("main_tower" if t.tower_kind == "main" else "side_tower"))
+	if tower_icon != null:
+		var side := half * 1.3
+		draw_texture_rect(tower_icon, Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.92))
 	if t.target != null and t.target.alive:
 		var aim := _position(t.target)
 		draw_line(center, center.lerp(aim, 0.25), Color(1, 1, 1, 0.35), 2.0)
@@ -209,13 +235,23 @@ func _draw_bait(f: BattleSim.Fighter, s: float) -> void:
 	var r := f.radius * s
 	draw_circle(p, r + 2, Color("#5a3a1a"))
 	draw_circle(p, r, Color("#c98b4a"))
-	_draw_text(p, "BAIT", int(r * 0.7), Color.WHITE)
+	var bait_icon := UIKit.icon(GameData.ui_icon("bait"))
+	if bait_icon != null:
+		draw_texture_rect(bait_icon, Rect2(p - Vector2(r, r) * 0.75, Vector2(r, r) * 1.5), false, Color.WHITE)
 	_draw_bar(p + Vector2(0, -r - 8), r * 2.0, 6.0, float(f.hp) / f.max_hp, Color("#ffcf40"))
 
 
 func _draw_unit(f: BattleSim.Fighter, s: float) -> void:
 	var p := _position(f)
 	var r := maxf(7.0, f.radius * s * 1.25)
+	# Little hops while walking, a pop-in while deploying, a lunge when attacking.
+	if f.prev_x != f.x or f.prev_y != f.y:
+		p.y -= absf(sin(_time * 11.0 + f.uid)) * r * 0.22
+	if f.deploy_ticks > 0:
+		r *= lerpf(1.0, 0.6, float(f.deploy_ticks) / maxf(1.0, sim.deploy_ticks))
+	if _lunges.has(f.uid):
+		var lunge: Dictionary = _lunges[f.uid]
+		p += lunge.dir * r * 0.45 * sin(PI * clampf(lunge.age / 0.16, 0.0, 1.0))
 	var team_color := OWN_COLOR if f.team == 0 else ENEMY_COLOR
 	var alpha := 1.0
 	if f.deploy_ticks > 0:
@@ -235,7 +271,17 @@ func _draw_unit(f: BattleSim.Fighter, s: float) -> void:
 		fill = Color("#777777")
 	draw_circle(p, r + 3, Color(team_color, alpha))
 	draw_circle(p, r, Color(fill, alpha))
-	if r >= 11:
+	var icon := UIKit.icon(GameData.card_icon(f.card.id))
+	if icon != null:
+		var side := r * 1.45
+		var icon_rect := Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side))
+		if GameData.card_icon_flipped(f.card.id):
+			draw_set_transform(_shake_offset + Vector2(icon_rect.end.x, icon_rect.position.y), 0.0, Vector2(-1, 1))
+			draw_texture_rect(icon, Rect2(Vector2.ZERO, icon_rect.size), false, Color(1, 1, 1, alpha))
+			draw_set_transform(_shake_offset)
+		else:
+			draw_texture_rect(icon, icon_rect, false, Color(1, 1, 1, alpha))
+	elif r >= 11:
 		_draw_text(p, UIKit.initials(f.card.name), int(r * 0.85), Color(1, 1, 1, alpha))
 
 	# Effect rings
@@ -273,6 +319,13 @@ func _draw_effect(fx: Dictionary, s: float) -> void:
 			draw_circle(p, fx.radius * s * (1.0 - t), Color(color, 0.8 * (1.0 - t)))
 		"text":
 			_draw_text(p + Vector2(0, -30 - 30 * t), fx.text, 20, Color(1, 1, 1, 1.0 - t))
+		"number":
+			_draw_text(p + Vector2(0, -24 * t), fx.text, 18, Color(color, 1.0 - t * t))
+		"icon":
+			var texture := UIKit.icon(fx.text)
+			if texture != null:
+				var side: float = fx.radius * s * (0.7 + 0.3 * t)
+				draw_texture_rect(texture, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 0.85 * (1.0 - t)))
 
 
 func _draw_bar(center: Vector2, width: float, height: float, ratio: float, color: Color, label := "") -> void:

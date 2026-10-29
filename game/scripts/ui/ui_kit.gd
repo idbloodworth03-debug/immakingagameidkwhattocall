@@ -21,7 +21,10 @@ const RED := Color("#e5484d")
 const GREY := Color("#7d8796")
 const TROPHY := Color("#ffb627")
 
-## Placeholder art color for each habitat until real animal art exists.
+const DISPLAY_FONT := preload("res://art/fonts/LilitaOne-Regular.ttf")
+const BODY_FONT := preload("res://art/fonts/Nunito.ttf")
+
+## Background color behind each card's icon, by habitat.
 const HABITAT_COLORS := {
 	"urban": Color("#7a8494"),
 	"forest": Color("#3d7a3a"),
@@ -38,8 +41,13 @@ const HABITAT_COLORS := {
 }
 
 
+static var _icons := {}
+static var _body_font: FontVariation
+
+
 static func build_theme() -> Theme:
 	var theme := Theme.new()
+	theme.default_font = DISPLAY_FONT
 	theme.default_font_size = 24
 
 	# Chunky outlined text, like most mobile card games.
@@ -92,13 +100,22 @@ static func chunky(color: Color, pressed := false) -> StyleBoxFlat:
 	return style
 
 
+## A chunky button that squashes a little when pressed and clicks.
 static func button(text: String, color := BLUE, font_size := 26, min_size := Vector2(0, 72)) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = min_size
 	b.add_theme_font_size_override("font_size", font_size)
 	color_button(b, color)
+	b.resized.connect(func() -> void: b.pivot_offset = b.size / 2.0)
+	b.button_down.connect(func() -> void: _squash(b, 0.93))
+	b.button_up.connect(func() -> void: _squash(b, 1.0))
+	b.pressed.connect(func() -> void: Sound.play("tap"))
 	return b
+
+
+static func _squash(control: Control, amount: float) -> void:
+	control.create_tween().tween_property(control, "scale", Vector2(amount, amount), 0.07)
 
 
 static func color_button(b: Button, color: Color) -> void:
@@ -120,6 +137,7 @@ static func label(text: String, font_size := 24, color := TEXT, align := HORIZON
 static func paragraph(text: String, font_size := 22, color := TEXT_DIM) -> Label:
 	var l := label(text, font_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.add_theme_font_override("font", body_font())
 	l.add_theme_constant_override("outline_size", 0)
 	l.custom_minimum_size.x = 100
 	return l
@@ -166,15 +184,12 @@ static func heading(text: String) -> Control:
 
 
 ## A dark pill showing an amount, like the gold and gem counters.
-static func pill(icon_text: String, icon_color: Color, amount_text: String) -> PanelContainer:
+## `icon_name` is a file in res://art/icons/ (see GameData.ui_icon).
+static func pill(icon_name: String, icon_color: Color, amount_text: String) -> PanelContainer:
 	var p := panel(Color(0, 0, 0, 0.35), 6, 22)
 	var row := hbox(8)
 	p.add_child(row)
-	var icon := ArtPlaceholder.new()
-	icon.custom_minimum_size = Vector2(34, 34)
-	icon.color = icon_color
-	icon.text = icon_text
-	row.add_child(icon)
+	row.add_child(icon_rect(icon_name, icon_color, 36))
 	var l := label(amount_text, 24)
 	l.name = "Amount"
 	row.add_child(l)
@@ -211,8 +226,49 @@ static func on_tap(control: Control, callback: Callable) -> void:
 			elif press.down:
 				press.down = false
 				if event.global_position.distance_to(press.position) < 24.0:
+					Sound.play("select")
 					callback.call()
 	)
+
+
+## A tinted icon from res://art/icons/ as a plain control.
+static func icon_rect(icon_name: String, tint: Color, side: int) -> TextureRect:
+	var rect := TextureRect.new()
+	rect.texture = icon(icon_name)
+	rect.modulate = tint
+	rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	rect.custom_minimum_size = Vector2(side, side)
+	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return rect
+
+
+## Loads (once) an icon from res://art/icons/.
+static func icon(icon_name: String) -> Texture2D:
+	if icon_name == "":
+		return null
+	if not _icons.has(icon_name):
+		var path := "res://art/icons/%s.svg" % icon_name
+		_icons[icon_name] = load(path) if ResourceLoader.exists(path) else null
+	return _icons[icon_name]
+
+
+## The rounded body font (Nunito, bold) used for longer text.
+static func body_font() -> Font:
+	if _body_font == null:
+		_body_font = FontVariation.new()
+		_body_font.base_font = BODY_FONT
+		_body_font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): 750}
+	return _body_font
+
+
+## Card art for an animal or tool: its icon on a habitat-colored background.
+static func card_art(card_id: String, art_shape := IconArt.Shape.ROUNDED) -> IconArt:
+	var card := GameData.get_card(card_id)
+	var art := IconArt.make(GameData.card_icon(card_id), habitat_color(card), art_shape)
+	art.flip_icon = GameData.card_icon_flipped(card_id)
+	art.text = initials(card.get("name", "?"))
+	return art
 
 
 ## Two or three letters standing in for animal art: "Red Fox" -> "RF".
@@ -250,6 +306,12 @@ static func format_duration(seconds: float) -> String:
 	if minutes > 0:
 		return "%dm %ds" % [minutes, secs]
 	return "%ds" % secs
+
+
+## A toast for "can't do that" moments, with an error sound.
+static func error_toast(text: String) -> void:
+	Sound.play("error")
+	toast(text, RED.darkened(0.35))
 
 
 ## A short message that floats at the top of the screen, then fades.

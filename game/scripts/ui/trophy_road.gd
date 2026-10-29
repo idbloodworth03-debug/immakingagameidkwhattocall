@@ -30,6 +30,9 @@ func _build() -> void:
 		row.add_child(column)
 		var top := UIKit.hbox(8)
 		column.add_child(top)
+		var icons := GameData.arena_icons(arena.id)
+		if not icons.is_empty():
+			top.add_child(UIKit.icon_rect(icons[0], color.lightened(0.5), 34))
 		var title := UIKit.label("Arena %d: %s" % [i + 1, arena.name], 26)
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		top.add_child(title)

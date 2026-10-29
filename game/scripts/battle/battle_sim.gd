@@ -652,7 +652,10 @@ func _attack(f: Fighter, t: Fighter) -> void:
 	f.stealthed = false
 	f.memory.attacked = true
 	f.memory.last_combat = tick
-	events.append({"type": "hit", "from": f.uid, "to": t.uid, "x": t.x, "y": t.y, "ranged": f.attack_range > 1500})
+	events.append({
+		"type": "hit", "from": f.uid, "from_kind": f.kind, "to": t.uid, "to_kind": t.kind,
+		"x": t.x, "y": t.y, "fx": f.x, "fy": f.y, "amount": amount, "ranged": f.attack_range > 1500,
+	})
 	deal_damage(t, amount, f)
 	BattleAbilities.after_hit(self, f, t, amount)
 	f.memory.run = 0

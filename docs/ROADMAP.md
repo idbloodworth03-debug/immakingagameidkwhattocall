@@ -21,12 +21,15 @@
 - [ ] Bot difficulty that scales with trophies
 - [ ] Drag-to-play cards (right now it's tap the card, then tap the field)
 
-## Phase 2: Look and feel
+## Phase 2: Look and feel (first pass done)
 
-- [ ] Pick the **name and logo**, and check the name is free on both app stores and has no trademark conflict
-- [ ] Art direction: animal portraits, battlefield, towers, cages, UI frames. Placeholder art is drawn in code, so it swaps out cleanly.
-- [ ] Sound effects and music
-- [ ] Animations: cage shaking and opening, card upgrades, battle hits
+- [x] Icons for every animal, tool, emote, player icon and arena (game-icons.net), with habitat-colored cards and rarity glow
+- [x] Mobile-game fonts (Lilita One and Nunito)
+- [x] Sound effects, menu and battle music, and Sound/Music settings
+- [x] Animations: walking hops, attack lunges, screen shake, damage numbers, bouncy buttons, card reveal glow
+- [x] Credits screen and [ART_DIRECTION.md](ART_DIRECTION.md) with the plan for final art
+- [ ] Pick the **name and logo** (ideas in [ART_DIRECTION.md](ART_DIRECTION.md)), then check app stores and trademarks
+- [ ] Choose a final art style and commission the art (start with the starter cards, arena and towers)
 
 ## Phase 3: Online play
 

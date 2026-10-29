@@ -31,6 +31,10 @@ func _ready() -> void:
 	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	battle.pressed.connect(func() -> void: get_tree().change_scene_to_file(BATTLE_SCENE))
 	column.add_child(battle)
+	# A gentle pulse so the Battle button invites a tap.
+	var pulse := battle.create_tween().set_loops()
+	pulse.tween_property(battle, "scale", Vector2(1.04, 1.04), 0.8).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(battle, "scale", Vector2.ONE, 0.8).set_trans(Tween.TRANS_SINE)
 	column.add_child(UIKit.label("Practice against a computer opponent. Online matches come later.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_slots_row = UIKit.hbox(10)
@@ -65,10 +69,8 @@ func _build_arena() -> void:
 	column.add_child(UIKit.label("Arena %d" % (index + 1), 24, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	column.add_child(UIKit.label(arena.name, 44, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 
-	var art := ArtPlaceholder.new()
-	art.shape = ArtPlaceholder.Shape.ROUNDED
-	art.color = Color(arena.color)
-	art.text = UIKit.initials(arena.name)
+	var art := ArenaArt.new()
+	art.arena_id = arena.id
 	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	art.custom_minimum_size = Vector2(0, 200)
 	column.add_child(art)
@@ -77,7 +79,7 @@ func _build_arena() -> void:
 	trophy_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	trophy_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(trophy_row)
-	trophy_row.add_child(UIKit.pill("T", UIKit.TROPHY, UIKit.format_number(trophies)))
+	trophy_row.add_child(UIKit.pill(GameData.ui_icon("trophy"), UIKit.TROPHY, UIKit.format_number(trophies)))
 	if index + 1 < GameData.arenas.size():
 		var next_at := int(GameData.arenas[index + 1].min_trophies)
 		var start_at := int(arena.min_trophies)
@@ -128,8 +130,8 @@ func _slot_view(slot: int) -> Control:
 	var column := UIKit.vbox(4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.add_child(column)
-	var art := ArtPlaceholder.new()
-	art.shape = ArtPlaceholder.Shape.CAGE
+	var art := IconArt.new()
+	art.shape = IconArt.Shape.CAGE
 	art.custom_minimum_size = Vector2(0, 80)
 	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(art)
@@ -202,6 +204,6 @@ func _on_slot_tapped(slot: int) -> void:
 			modal.close()
 			CageOpening.play(Profile.open_cage_slot(slot))
 		else:
-			UIKit.toast("Not enough gems")
+			UIKit.error_toast("Not enough gems")
 	)
 	row.add_child(skip)

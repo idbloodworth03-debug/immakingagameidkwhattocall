@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 
 GameData="*res://scripts/autoload/game_data.gd"
 Profile="*res://scripts/autoload/profile.gd"
+Sound="*res://scripts/autoload/sound.gd"
 
 [debug]
 
@@ -35,12 +36,19 @@ window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 window/handheld/orientation=1
 
+[importer_defaults]
+
+texture={
+"mipmaps/generate": true
+}
+
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=3
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true

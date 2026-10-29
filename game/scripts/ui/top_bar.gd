@@ -22,8 +22,8 @@ func _ready() -> void:
 	var currencies := UIKit.vbox(6)
 	currencies.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(currencies)
-	_gold = UIKit.pill("G", UIKit.GOLD, "0")
-	_gems = UIKit.pill("Gm", UIKit.GEMS, "0")
+	_gold = UIKit.pill(GameData.ui_icon("gold"), UIKit.GOLD, "0")
+	_gems = UIKit.pill(GameData.ui_icon("gems"), UIKit.GEMS, "0")
 	for pill in [_gold, _gems]:
 		pill.custom_minimum_size = Vector2(170, 0)
 		currencies.add_child(pill)

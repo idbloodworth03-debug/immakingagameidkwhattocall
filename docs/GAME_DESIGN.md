@@ -298,8 +298,9 @@ outliers, not a verdict.
 **First balance pass.** Tuned from about 7,000 bot battles:
 - **Toned down:** California Condor (it also heals 220 instead of 300), Amur Leopard, Polar Bear, Tiger, Pigeon Flock, Air Horn, Chimpanzee, Mountain Gorilla, Black Rhino and Komodo Dragon.
 - **Boosted:** American Bison, Striped Skunk, Gila Monster (now walks at medium speed), Axolotl, Platypus, Rattlesnake, King Cobra, Jaguar, Mountain Goat, Harbor Seal, Sea Otter, Red Panda, Black-footed Ferret, Moose, Raccoon, Red Fox, Opossum, Medkit and Food Bait.
-- **Rares:** they were winning less often than Commons, so every Rare animal got +5% hitpoints and damage. The Polar Bear, Hippo, Walrus and Lion were left out because they were already strong.
-- **Left alone on purpose:** Legendaries still win somewhat more often than other cards, because rarer animals are meant to be stronger. Animals that need a partner on the field (Lion, Red Wolf, African Wild Dogs) are hard for the bot to judge, so they wait for real playtesting.
+- **Rares:** they were winning less often than Commons (47% against 50%), so every Rare animal got +5% hitpoints and damage. The Polar Bear, Hippo, Walrus and Lion were left out because they were already strong. That barely moved the Rare average: most of the gap comes from cheap Rares the bot sends in one at a time (Platypus, Gila Monster), so check them in real play.
+- **Left alone on purpose:** Legendaries still win more often (about 57%), because rarer animals are meant to be stronger. Animals that need a partner on the field (Lion, Red Wolf, African Wild Dogs) are hard for the bot to judge, so they wait for real playtesting.
+- **Result:** the spread of win rates shrank from 8.1 to 6.9 points, and cards outside 43-57% (with 100+ battles) went from 16 to 12. Still out of line: California Condor and Amur Leopard (strong), and cheap melee animals such as the Opossum, Rattlesnake and Mountain Goat (weak).
 
 ## Still open
 

@@ -59,8 +59,8 @@ COLORS = {
     "tawny": "#ad7a3c",
     "back": "#8f6230",
     "pale": "#dcc59c",
-    "mane": "#8a5e2c",
-    "mane_dark": "#3f2814",
+    "mane": "#6e4019",
+    "mane_dark": "#3a200c",
     "black": "#1a1310",
 }
 
@@ -113,4 +113,5 @@ def make():
     c.fur = {"variation": 0.1, "sheen": 0.3, "bump": 0.25, "length": 0.03, "density": 13000, "hair_gamma": 2.1,
              "lengths": {"mane": 5.5, "cheek": 1.4, "tail_tip": 3.0, "neck": 1.3}, "clump": 0.55, "frizz": 0.006}
     c.motion = {"gait": "walk", "attack": "pounce_bite", "stride": 1.0, "gape": 0.8}
+    c.cartoon = {"face_mane": True}
     return c

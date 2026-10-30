@@ -22,8 +22,8 @@ from sdf import surface_point
 HEAD = 1.9        # head size
 MUZZLE = 0.62     # muzzle length (before the head grows)
 EYES = 2.5        # eye size, on top of the head's growth
-EARS = 1.2        # ear size on top of the head's growth (thicker and rounder too)
-LEGS = 0.6        # leg length; thickness stays, so they get stubby
+EARS = 1.1        # ear size on top of the head's growth (thicker and rounder too)
+LEGS = 0.75       # leg length; thickness stays, so they get stubby
 LENGTH = 0.72     # body length
 BELLY = 1.1       # torso thickness
 LIMBS = 1.35      # leg thickness
@@ -40,11 +40,12 @@ def load(species, style="cartoon"):
 
 def cartoonify(c):
     """A species can tune its cartoon by setting c.cartoon, e.g.
-    {"head": 1.3} for an animal whose head is already big."""
+    {"head": 1.3} for an animal whose head is already big, or
+    {"face_mane": True} for a mane that frames the face and so grows with it."""
     global HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS
     defaults = dict(HEAD=HEAD, MUZZLE=MUZZLE, EYES=EYES, EARS=EARS, LEGS=LEGS, LENGTH=LENGTH, BELLY=BELLY,
                     LIMBS=LIMBS)
-    tuned = {k.upper(): v for k, v in (getattr(c, "cartoon", None) or {}).items()}
+    tuned = {k.upper(): v for k, v in (getattr(c, "cartoon", None) or {}).items() if k != "face_mane"}
     HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS = (tuned.get(k, v) for k, v in defaults.items())
     try:
         _cartoonify(c)
@@ -108,8 +109,9 @@ def _cartoonify(c):
         joints = {j for b in c.bones if b.name in chain for j in (b.head, b.tail)} - core_joints
         chains.append((chain, joints, head_move(start) - start))
     _warp(c, head_move, bones=core, joints=core_joints - {_bone(c, "head").head})
+    face_mane = (getattr(c, "cartoon", None) or {}).get("face_mane", False)
     for s in c.shapes:
-        if s.region == "mane" and s.bone not in core:
+        if face_mane and s.region == "mane" and s.bone not in core:
             s.a = grow(s.a)
             if s.kind in ("cone", "plate"):
                 s.b = grow(s.b)
@@ -143,13 +145,13 @@ def _cartoonify(c):
                         for key in ("a", "b", "radii") if s.kind == "plate" else ("a", "b"):
                             if getattr(s, key) is not None:
                                 setattr(s, key, base + (np.asarray(getattr(s, key)) - base) * EARS)
-                        s.ra *= 1.5
+                        s.ra *= 2.5
                         s.rb *= 1.8
             for s in c.shapes:
                 if s.bone == b.name and s.kind == "plate":
                     for key in ("a", "b", "radii"):
                         setattr(s, key, base + (np.asarray(getattr(s, key)) - base) * EARS)
-                    s.ra *= 1.5
+                    s.ra *= 2.5
                     s.rb *= 1.8
             c.joints[b.tail] = tuple(base + (c.joint(b.tail) - base) * EARS)
     c.eyes = [(p, r * HEAD) for p, r in c.eyes]

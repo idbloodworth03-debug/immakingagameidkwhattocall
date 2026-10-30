@@ -50,6 +50,8 @@ const TURN_SPEED := 600.0     # degrees per second
 const SWARM_SCALE := 0.8
 const HURT_TIME := 0.16
 const THROW_FLIGHT := 0.28    # seconds an acorn is in the air
+const CORPSE_REST := 0.6      # seconds a fallen animal lies still before fading
+const CORPSE_FADE := 0.8
 
 
 func _ready() -> void:
@@ -161,7 +163,7 @@ func _process(delta: float) -> void:
 			_lunges.erase(uid)
 	if sim != null:
 		_update_views(delta)
-	_corpses = _corpses.filter(func(c): return _time - c.at < UnitSprites.duration(c.id, "death") + 0.9)
+	_corpses = _corpses.filter(func(c): return _time - c.at < UnitSprites.duration(c.id, "death") + CORPSE_REST + CORPSE_FADE)
 	_projectiles = _projectiles.filter(func(pr): return _time < pr.land)
 	queue_redraw()
 
@@ -558,7 +560,7 @@ func _draw_corpse(corpse: Dictionary, s: float) -> void:
 	var age := _time - float(corpse.at)
 	var info_anim := UnitSprites.animation(id, "death")
 	var frame := int(age * float(info_anim.get("fps", 10)))
-	var fade := clampf(1.0 - (age - UnitSprites.duration(id, "death")) / 0.9, 0.0, 1.0)
+	var fade := clampf(1.0 - (age - UnitSprites.duration(id, "death") - CORPSE_REST) / CORPSE_FADE, 0.0, 1.0)
 	var p := to_screen(corpse.pos.x, corpse.pos.y)
 	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
 	if int(GameData.get_card(id).get("count", 1)) > 1:

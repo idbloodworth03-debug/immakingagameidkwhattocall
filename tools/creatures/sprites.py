@@ -197,6 +197,46 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     print(f"sheet {sheet.size[0]}x{sheet.size[1]}, cell {meta['cell'][0]}x{meta['cell'][1]}")
 
 
+def _scene_points():
+    """World positions of every posed mesh vertex in the scene (body, ears,
+    eyes, horns...), leaving out the ground."""
+    deps = bpy.context.evaluated_depsgraph_get()
+    points = []
+    for obj in bpy.context.scene.objects:
+        if obj.type != "MESH" or obj.name == "ground":
+            continue
+        evaluated = obj.evaluated_get(deps)
+        me = evaluated.to_mesh()
+        co = np.empty(len(me.vertices) * 3)
+        me.vertices.foreach_get("co", co)
+        evaluated.to_mesh_clear()
+        m = np.array(obj.matrix_world)
+        points.append(co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3])
+    return np.concatenate(points)
+
+
+def _fit_camera(cam, points, fill=0.88):
+    """Pans and dollies a perspective camera, keeping its direction, until
+    `points` are centered and span `fill` of the square frame. The head is
+    nearest the camera and looks biggest, so aiming at the middle of the
+    bounding box alone would push it out of the picture."""
+    half = math.tan(cam.data.angle / 2)
+    for _ in range(6):
+        bpy.context.view_layer.update()
+        view = np.array(cam.matrix_world.inverted())
+        p = points @ view[:3, :3].T + view[:3, 3]           # camera space, looking down -Z
+        depth = -p[:, 2]
+        ndc = p[:, :2] / depth[:, None] / half
+        lo, hi = ndc.min(axis=0), ndc.max(axis=0)
+        center = (lo + hi) / 2
+        extent = float(max(hi - lo)) / 2
+        dist = float(depth.mean())
+        axes = np.array(cam.matrix_world)[:3, :3]           # right, up, back
+        shift = axes[:, 0] * center[0] * half * dist + axes[:, 1] * center[1] * half * dist
+        shift += axes[:, 2] * dist * (extent / fill - 1)
+        cam.location = tuple(np.array(cam.location) + shift)
+
+
 def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
     """The whole animal from a three-quarter front view, for its card."""
     sc = S.reset()
@@ -210,9 +250,10 @@ def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
     radius = float(np.linalg.norm(hi - lo)) / 2
     d = np.array(creature.motion.get("portrait_view", (-0.75, 1.0, 0.55)), float)
     d /= np.linalg.norm(d)
-    S.perspective_camera(tuple(center + d * radius * 3.1), tuple(center), lens=85)
+    cam = S.perspective_camera(tuple(center + d * radius * 3.1), tuple(center), lens=85)
     sc.render.resolution_x = size
     sc.render.resolution_y = size
+    _fit_camera(cam, _scene_points())
     import tempfile
     path = os.path.join(tempfile.gettempdir(), f"_{creature.name}_portrait.png")
     sc.render.filepath = path

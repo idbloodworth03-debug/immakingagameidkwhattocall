@@ -27,13 +27,48 @@ re-check them before launch.
 
 ## Animals
 
-There are 57 to start: 22 Common, 14 Rare, 10 Epic and 11 Legendary. Each has:
+The game starts with **20 animals**: 8 Common, 5 Rare, 4 Epic and 3
+Legendary. Each one is modeled, painted, furred and animated (see
+[ART_DIRECTION.md](ART_DIRECTION.md)), and the plan is to get these 20 right
+before adding more. Another 37 are already designed (stats, abilities,
+requirements) and wait in `game/data/animals_later.json`, which the game
+doesn't load.
 
-- **Energy cost** (1 to 8) and **count** (swarms like Sewer Rats release several)
+Each animal has:
+
+- **Energy cost** (2 to 8) and **count** (packs like the Wolf Pack release several)
 - **Stats** at its starting level: hitpoints, damage, hit speed, speed, range and what it targets (ground, air & ground, or dens only)
-- **Tags** like Canine, Big Cat, Aquatic or Jungle animal, used by abilities and requirements
-- **One ability**, e.g. *Play Dead*, *Pack Hunters*, *Stink Cloud* or *Alpha Howl*. Abilities are built from 38 reusable types (pounce, poison, stealth, shield...), so the battle code implements each type once and many animals share it.
-- **Release requirements** (the prerequisites). Commons mostly have none. Rarer animals are stronger but harder to release.
+- **Tags** like Canine, Big Cat, Aquatic or Savanna animal, used by abilities and requirements
+- **One ability**, e.g. *Pounce*, *Pack Hunters*, *Trash Panda* or *Apex Pounce*. Abilities are built from 38 reusable types (pounce, poison, stealth, shield...), so the battle code implements each type once and many animals share it.
+- **Release requirements** (the prerequisites). Commons have none. Rarer animals are stronger but harder to release.
+
+### The roster
+
+| Animal | Rarity | Cost | Ability | Unlocks in | Requirements |
+|---|---|---|---|---|---|
+| Sewer Rats | Common | 2 | Scurry | 1. Rescue Center | - |
+| Raccoon | Common | 3 | Trash Panda | 1. Rescue Center | - |
+| Gray Squirrel | Common | 3 | Hidden Stash | 1. Rescue Center | - |
+| Red Fox | Common | 3 | Pounce | 1. Rescue Center | - |
+| Peregrine Falcon | Common | 3 | Stoop Dive | 1. Rescue Center | - |
+| Wild Boar | Common | 4 | Charge | 2. City Park | - |
+| Wolf Pack | Common | 5 | Pack Hunters | 4. Whispering Woods | - |
+| Brown Bear | Common | 6 | Maul | 4. Whispering Woods | - |
+| Cheetah | Rare | 4 | Sprint | 1. Rescue Center | - |
+| American Bison | Rare | 5 | Stampede | 3. Prairie Fields | - |
+| Hippopotamus | Rare | 6 | Territorial | 5. Misty Marsh | River only |
+| Lion | Rare | 5 | Roar | 6. Sunbaked Savanna | 1 allied Savanna animal |
+| Polar Bear | Rare | 6 | Thick Fur | 11. Coral Coast | - |
+| African Wild Dogs | Epic | 5 | Relentless | 6. Sunbaked Savanna | 1 allied Pack animal |
+| Tiger | Epic | 6 | Apex Pounce | 9. Emerald Jungle | after 1:00 |
+| Asian Elephant | Epic | 8 | Trample | 9. Emerald Jungle | your den damaged |
+| Red Panda | Epic | 3 | Stand Tall | 10. Cloudpeak Mountains | - |
+| California Condor | Legendary | 5 | Sky Scavenger | 7. Red Rock Canyon | Unique; 2 allies defeated |
+| Amur Leopard | Legendary | 5 | Phantom | 8. Frozen Tundra | Unique; no allied Big Cats |
+| Black Rhino | Legendary | 7 | Thunder Charge | 12. Last Sanctuary | Unique; after 1:00 |
+
+Every arena unlocks at least one animal; the six in the Rescue Center plus the
+Net and Air Horn are the starter deck.
 
 ### Release requirement types
 
@@ -41,44 +76,17 @@ There are 57 to start: 22 Common, 14 Rare, 10 Epic and 11 Legendary. Each has:
 |---|---|
 | Energy | Every animal costs energy |
 | Allies with a tag | Lion: "Needs 1 allied Savanna animal on the field" |
-| No allies with a tag | Kakapo: "Can't be released while you have a Predator on the field" |
-| Releases so far | Black-footed Ferret: "Release 2 other animals first" |
+| No allies with a tag | Amur Leopard: "Can't be released while you have a Big Cat on the field" |
+| Releases so far | Black-footed Ferret (coming later): "Release 2 other animals first" |
 | Battle time | Tiger: "Available after 1:00 of battle" |
 | Your den took damage | Asian Elephant (protective): "Only after one of your dens takes damage" |
 | Allies defeated | California Condor (a scavenger): "Only after 2 of your animals are defeated" |
 | Only one at a time | Every Legendary |
-| River only | Hippo, Sea Otter, Axolotl must be released in the river |
+| River only | Hippopotamus must be released in the river |
 
 All **Aquatic** animals may also be released in the river; everyone else uses
 their own side. Ranger tools can be used anywhere (except Food Bait, which
 goes on your side).
-
-### Animals with requirements
-
-| Animal | Rarity | Cost | Ability | Requirements |
-|---|---|---|---|---|
-| Hippopotamus | Rare | 6 | Territorial | River only |
-| Lion | Rare | 5 | Roar | 1 allied Savanna animal |
-| Black-footed Ferret | Epic | 3 | Tunnel | 2 releases first |
-| Whooping Crane | Epic | 4 | Courtship Dance | 1 allied Wetland animal |
-| African Wild Dogs | Epic | 5 | Relentless | 1 allied Pack animal |
-| Tiger | Epic | 6 | Apex Pounce | After 1:00 |
-| Asian Elephant | Epic | 8 | Trample | Your tower damaged |
-| Chimpanzee | Epic | 4 | Tool User | 1 release first |
-| Mountain Gorilla | Epic | 7 | Chest Beat | 3 releases first |
-| Sea Otter | Epic | 3 | Raft Up | River only |
-| Komodo Dragon | Epic | 5 | Venomous Bite | After 0:30 |
-| Red Wolf | Legendary | 4 | Alpha Howl | Unique; 1 allied Canine |
-| Axolotl | Legendary | 3 | Regrowth | Unique; river only |
-| Black Rhino | Legendary | 7 | Thunder Charge | Unique; after 1:00 |
-| California Condor | Legendary | 5 | Sky Scavenger | Unique; 2 allies defeated |
-| Amur Leopard | Legendary | 5 | Phantom | Unique; no allied Big Cats |
-| Sunda Pangolin | Legendary | 4 | Roll Up | Unique; 3 releases first |
-| Saola | Legendary | 6 | Asian Unicorn | Unique; after 2:00 |
-| African Penguins | Legendary | 4 | Colony | Unique; 1 allied Aquatic animal |
-| Kakapo | Legendary | 2 | Booming Call | Unique; no allied Predators |
-| Philippine Eagle | Legendary | 6 | Sky Snatch | Unique; after 1:30 |
-| Sumatran Orangutan | Legendary | 6 | Forest Gardener | Unique; 2 allied Jungle animals |
 
 ## Arenas and trophies
 

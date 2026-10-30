@@ -200,6 +200,7 @@ func _confirm_reset() -> void:
 func _show_credits() -> void:
 	var box := UIKit.vbox(12)
 	for line in [
+		"Animals: modeled, animated and rendered for this game with Blender.",
 		"Icons: game-icons.net by Lorc, Delapouite, Caro Asercion, Skoll, Cathelineau and Sbed, under Creative Commons BY 3.0.",
 		"Fonts: Lilita One by Juan Montoreano, and Nunito by Vernon Adams, Cyreal and Jacques Le Bailly, under the SIL Open Font License.",
 		"Sound effects and music: made for this game.",

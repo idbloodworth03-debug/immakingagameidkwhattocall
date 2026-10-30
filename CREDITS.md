@@ -1,8 +1,15 @@
 # Credits
 
+## Animals
+
+The animal sprites and card portraits are original 3D renders made for Den
+Duel by `tools/creatures/` with [Blender](https://www.blender.org) (used as
+a tool; Blender's GPL license doesn't apply to what it renders). No outside
+models or textures are used.
+
 ## Icons
 
-Animal, tool and interface icons are from **[game-icons.net](https://game-icons.net)**,
+Tool, emote and interface icons (and stand-in animal icons) are from **[game-icons.net](https://game-icons.net)**,
 licensed under [Creative Commons BY 3.0](https://creativecommons.org/licenses/by/3.0/).
 The game shows this credit on its Credits screen. Icons were recolored (white
 on a transparent background).

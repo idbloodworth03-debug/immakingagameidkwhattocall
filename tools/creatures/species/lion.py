@@ -21,8 +21,8 @@ J = {
     "snout_tip": (0, 1.04, 0.96),
     "jaw_hinge": (0, 0.84, 0.96),
     "chin": (0, 0.98, 0.89),
-    "ear_base": (-0.09, 0.8, 1.15),
-    "ear_tip": (-0.11, 0.78, 1.22),
+    "ear_base": (-0.1, 0.8, 1.17),
+    "ear_tip": (-0.125, 0.785, 1.27),
     "shoulder": (-0.14, 0.52, 0.82),
     "elbow": (-0.15, 0.4, 0.56),
     "wrist": (-0.14, 0.45, 0.13),
@@ -42,13 +42,13 @@ R = {
     "chest": (0.22, 0.33, 0.28), "chest_back": 0.08, "chest_drop": 0.25,
     "torso_blend": 0.16,
     "neck_base": 0.21, "neck_top": 0.16, "neck_blend": 0.13,
-    "skull": (0.13, 0.14, 0.125), "skull_pitch": -0.05, "head_blend": 0.07,
-    "snout_root": (0, 0.1, -0.045), "snout_base": 0.09, "snout_end": 0.068, "snout_blend": 0.05,
-    "jaw_base": 0.064, "jaw_end": 0.04, "jaw_blend": 0.025,
-    "ear_width": 0.08, "ear_thick": 0.008, "ear_round": 0.026, "ear_yaw": 0.45, "ear_sink": 0.03,
+    "skull": (0.15, 0.155, 0.14), "skull_pitch": -0.05, "head_blend": 0.07,
+    "snout_root": (0, 0.1, -0.045), "snout_base": 0.1, "snout_end": 0.076, "snout_blend": 0.05,
+    "jaw_base": 0.07, "jaw_end": 0.046, "jaw_blend": 0.025,
+    "ear_width": 0.09, "ear_thick": 0.008, "ear_round": 0.032, "ear_yaw": 0.45, "ear_sink": 0.03,
     "ear_voxel": 0.003, "ear_fur": 0.012,
     "scapula": (0.1, 0.15, 0.21), "scapula_up": 0.13, "scapula_pitch": 0.3,
-    "upper_arm": (0.13, 0.09), "forearm": (0.08, 0.062), "front_paw": (0.066, 0.062),
+    "upper_arm": (0.15, 0.105), "forearm": (0.095, 0.074), "front_paw": (0.076, 0.07),
     "thigh": (0.17, 0.26, 0.27), "thigh_drop": 0.12, "thigh_pitch": -0.25,
     "upper_leg": (0.15, 0.09), "shin": (0.075, 0.058), "hind_paw": (0.064, 0.062),
     "limb_blend": 0.12, "joint_blend": 0.04,
@@ -94,14 +94,16 @@ def make():
     c.voxel = 0.007
     for side in (1, -1):
         c.shapes.append(ellipsoid((side * 0.09, 0.86, 0.96), (0.07, 0.08, 0.075), "cheek", "head", blend=0.05))
-    # The mane: a big ruff around the head and down the neck and chest.
-    c.shapes.append(ellipsoid((0, 0.735, 1.04), (0.23, 0.1, 0.24), "mane", "neck", blend=0.07, pitch=0.25))
-    c.shapes.append(ellipsoid((0, 0.6, 0.97), (0.21, 0.19, 0.25), "mane", "neck", blend=0.09, pitch=0.5))
-    c.shapes.append(ellipsoid((0, 0.62, 0.76), (0.16, 0.12, 0.16), "mane", "chest", blend=0.08))
+    # The mane: a big ruff framing the face, a beard under the chin, and a
+    # shaggy mass down the neck to the chest.
+    c.shapes.append(ellipsoid((0, 0.72, 1.02), (0.28, 0.11, 0.25), "mane", "neck", blend=0.08, pitch=0.25))
+    c.shapes.append(ellipsoid((0, 0.6, 0.98), (0.24, 0.2, 0.28), "mane", "neck", blend=0.09, pitch=0.5))
+    c.shapes.append(ellipsoid((0, 0.63, 0.75), (0.18, 0.14, 0.18), "mane", "chest", blend=0.08))
+    c.shapes.append(ellipsoid((0, 0.85, 0.85), (0.11, 0.09, 0.09), "mane", "head", blend=0.05))
     add_face(c, eye_dir=(-0.45, 0.84, 0.3), eye_radius=0.017, eye_sink=0.01, nose_radius=0.025, nose_sink=0.01,
              iris="#b8822e", pupil="round")
     c.extras[-1].color = "#7a4a3a"
     c.fur = {"variation": 0.1, "sheen": 0.3, "bump": 0.25, "length": 0.03, "density": 13000, "hair_gamma": 2.1,
-             "lengths": {"mane": 4.0, "cheek": 1.3, "tail_tip": 3.0, "neck": 1.2}, "clump": 0.45, "frizz": 0.004}
+             "lengths": {"mane": 5.5, "cheek": 1.4, "tail_tip": 3.0, "neck": 1.3}, "clump": 0.55, "frizz": 0.006}
     c.motion = {"gait": "walk", "attack": "pounce_bite", "stride": 1.0}
     return c

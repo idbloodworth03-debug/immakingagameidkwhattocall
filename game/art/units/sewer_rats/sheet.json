@@ -2,13 +2,13 @@
  "version": 2,
  "cell": [
   52,
-  52
+  53
  ],
  "padding": 3,
  "columns": 13,
  "anchor": [
-  33.5,
-  27.2
+  32.0,
+  28.4
  ],
  "pixels_per_tile": 56,
  "directions": [
@@ -70,6 +70,6 @@
   }
  },
  "walk_cycle_tiles": 0.637,
- "top": 15.8,
+ "top": 20.4,
  "attack_style": "bite"
 }

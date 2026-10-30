@@ -1,14 +1,14 @@
 {
  "version": 2,
  "cell": [
-  96,
-  88
+  90,
+  87
  ],
  "padding": 3,
  "columns": 13,
  "anchor": [
   48.0,
-  51.0
+  53.4
  ],
  "pixels_per_tile": 56,
  "directions": [
@@ -70,6 +70,6 @@
   }
  },
  "walk_cycle_tiles": 0.75,
- "top": 30.8,
+ "top": 38.4,
  "attack_style": "throw"
 }

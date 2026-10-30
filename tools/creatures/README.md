@@ -9,7 +9,9 @@ cartoon of itself** (`cartoon.py`): shorter legs and body, a rounder torso,
 a shorter muzzle and a much bigger head, big googly eyes, solid puffy ears,
 smooth skin in brighter colors instead of hair, and a dark outline. It is
 still modeled, lit and shaded in 3D. The coat is painted as on the real
-animal, so markings stay where they belong. A species can tune its cartoon
+animal, so markings stay where they belong. Paint noise is dropped so
+color areas stay clean, unless it draws the markings
+(`p.noise(..., markings=True)`, like the wild dogs' patches). A species can tune its cartoon
 with `c.cartoon` (the elephant's and hippo's heads grow less; the lion's
 mane grows with its face).
 

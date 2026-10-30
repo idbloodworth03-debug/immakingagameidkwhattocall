@@ -108,4 +108,5 @@ def make():
              # Long wool in front, short sleek hair behind the ribs.
              "weight_fn": lambda m: 0.35 + 0.65 * np.clip((m.verts[:, 1] + 0.35) / 0.4, 0, 1)}
     c.motion = {"gait": "walk", "attack": "charge", "stride": 0.85, "charge_reach": 0.3}
+    c.cartoon = {"head": 1.5}
     return c

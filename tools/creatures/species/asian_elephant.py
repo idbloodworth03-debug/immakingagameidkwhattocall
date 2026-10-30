@@ -118,4 +118,5 @@ def make():
              "streak_x": 40.0, "streak_y": 40.0, "streak_z": 40.0}
     c.motion = {"gait": "walk", "attack": "stomp", "rear": 0.2, "stride": 0.75}
     c.palette = {"eye_line": "#3a3430", "eye_line_size": 1.6}
+    c.cartoon = {"head": 1.3}
     return c

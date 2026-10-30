@@ -352,7 +352,57 @@ def _eye_material(extra):
     return mat
 
 
+def _cartoon_eye_material():
+    """A big white eye with a round black pupil and a white highlight up
+    and to one side, glossy on top."""
+    mat = bpy.data.materials.new("cartoon_eye")
+    mat.use_nodes = True
+    nt = mat.node_tree
+    nodes, links = nt.nodes, nt.links
+    bsdf = nodes["Principled BSDF"]
+    coord = nodes.new("ShaderNodeTexCoord")
+    sep = nodes.new("ShaderNodeSeparateXYZ")
+    links.new(coord.outputs["Object"], sep.inputs[0])
+
+    def disc(cx, cy, r):
+        """1 inside a circle on the front of the eye (local +Z faces out, +Y up)."""
+        dx = nodes.new("ShaderNodeMath"); dx.operation = "SUBTRACT"
+        links.new(sep.outputs["X"], dx.inputs[0]); dx.inputs[1].default_value = cx
+        dy = nodes.new("ShaderNodeMath"); dy.operation = "SUBTRACT"
+        links.new(sep.outputs["Y"], dy.inputs[0]); dy.inputs[1].default_value = cy
+        vec = nodes.new("ShaderNodeCombineXYZ")
+        links.new(dx.outputs[0], vec.inputs[0]); links.new(dy.outputs[0], vec.inputs[1])
+        length = nodes.new("ShaderNodeVectorMath"); length.operation = "LENGTH"
+        links.new(vec.outputs[0], length.inputs[0])
+        inside = nodes.new("ShaderNodeMath"); inside.operation = "LESS_THAN"
+        links.new(length.outputs["Value"], inside.inputs[0]); inside.inputs[1].default_value = r
+        front = nodes.new("ShaderNodeMath"); front.operation = "GREATER_THAN"
+        links.new(sep.outputs["Z"], front.inputs[0]); front.inputs[1].default_value = 0.0
+        both = nodes.new("ShaderNodeMath"); both.operation = "MULTIPLY"
+        links.new(inside.outputs[0], both.inputs[0]); links.new(front.outputs[0], both.inputs[1])
+        return both.outputs[0]
+
+    pupil = nodes.new("ShaderNodeMix"); pupil.data_type = "RGBA"
+    pupil.inputs[6].default_value = (0.95, 0.95, 0.93, 1)
+    pupil.inputs[7].default_value = (0.012, 0.01, 0.01, 1)
+    links.new(disc(0.0, -0.04, 0.5), pupil.inputs["Factor"])
+    shine = nodes.new("ShaderNodeMix"); shine.data_type = "RGBA"
+    links.new(pupil.outputs[2], shine.inputs[6])
+    shine.inputs[7].default_value = (1, 1, 1, 1)
+    glint = disc(0.17, 0.2, 0.16)
+    links.new(glint, shine.inputs["Factor"])
+    links.new(shine.outputs[2], bsdf.inputs["Base Color"])
+    links.new(glint, bsdf.inputs["Emission Strength"])
+    bsdf.inputs["Emission Color"].default_value = (1, 1, 1, 1)
+    bsdf.inputs["Roughness"].default_value = 0.3
+    bsdf.inputs["Coat Weight"].default_value = 1.0
+    bsdf.inputs["Coat Roughness"].default_value = 0.05
+    return mat
+
+
 def _extra_material(extra):
+    if extra.material == "eye" and getattr(extra, "pupil", "") == "cartoon":
+        return _cartoon_eye_material()
     if extra.material == "eye":
         return _eye_material(extra)
     look = dict(EXTRA_LOOKS.get(extra.material, {"color": "#808080", "roughness": 0.5, "specular": 0.5}))
@@ -396,7 +446,42 @@ def shadow_catcher(size=4.0):
     plane = bpy.context.object
     plane.name = "ground"
     plane.is_shadow_catcher = True
+    # Kept apart so outlines skip it.
+    ground = bpy.data.collections.new("no_outline")
+    bpy.context.scene.collection.children.link(ground)
+    for col in plane.users_collection:
+        col.objects.unlink(plane)
+    ground.objects.link(plane)
     return plane
+
+
+def outline(thickness, color=(0.07, 0.045, 0.035)):
+    """Dark cartoon outlines (Freestyle) around the animal and wherever one
+    part of it passes in front of another, `thickness` pixels wide."""
+    sc = bpy.context.scene
+    sc.render.use_freestyle = True
+    sc.render.line_thickness_mode = "ABSOLUTE"
+    settings = sc.view_layers[0].freestyle_settings
+    settings.crease_angle = math.radians(120)
+    lineset = settings.linesets[0] if len(settings.linesets) else settings.linesets.new("outline")
+    lineset.select_by_visibility = True
+    lineset.visibility = "VISIBLE"
+    lineset.select_by_edge_types = True
+    lineset.select_silhouette = True
+    lineset.select_border = True
+    lineset.select_crease = False
+    lineset.select_external_contour = True
+    ground = bpy.data.collections.get("no_outline")
+    if ground is not None:
+        lineset.select_by_collection = True
+        lineset.collection = ground
+        lineset.collection_negation = "EXCLUSIVE"
+    style = lineset.linestyle or bpy.data.linestyles.new("outline")
+    lineset.linestyle = style
+    style.color = color
+    style.thickness = thickness
+    style.thickness_position = "INSIDE"
+    style.alpha = 1.0
 
 
 def ortho_camera(elevation_deg, ortho_scale, target=(0, 0, 0.2), distance=10.0):

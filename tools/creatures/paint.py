@@ -9,6 +9,9 @@ from scene import hex_color
 
 
 class Painter:
+    # Cartoon coats: no speckle or noise, so color areas stay clean.
+    clean = False
+
     def __init__(self, mesh, colors):
         self.mesh = mesh
         self.v = mesh.verts
@@ -46,16 +49,22 @@ class Painter:
         self.blend(name, self.mesh.region_weight(region) * self.smooth(-self.n[:, 2], -below, soft) * strength)
 
     def top_darken(self, name, start=0.4, strength=0.5):
+        if Painter.clean:
+            strength *= 0.5
         self.blend(name, self.smooth(self.n[:, 2], start, 0.4) * strength)
 
     def speckle(self, amount):
         """Small random brightness changes so big areas don't look flat."""
+        if Painter.clean:
+            return
         noise = 1.0 + (self.rng.random(len(self.v)) - 0.5) * amount
         self.colors *= noise[:, None]
 
     def noise(self, scale, seed=0):
         """Smooth random values from -1 to 1 over the body (a sum of waves
         in random directions), `scale` waves per meter."""
+        if Painter.clean:
+            return np.zeros(len(self.v))
         rng = np.random.default_rng(seed)
         total = np.zeros(len(self.v))
         for _ in range(6):

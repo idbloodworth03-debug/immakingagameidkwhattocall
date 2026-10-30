@@ -15,17 +15,20 @@ import bpy
 from PIL import Image
 
 import motion
+import cartoon
 import scene as S
 
 
 def main(species, anim, out, size=220):
-    creature = importlib.import_module(species).make()
+    creature = cartoon.load(species, style=os.environ.get("STYLE", "cartoon"))
     sc = S.reset()
     sc.cycles.samples = 24
     arm, body, mesh = S.build(creature)
     facing = bpy.data.objects["facing"]
     S.lights()
     S.shadow_catcher(8)
+    if getattr(creature, "style", "") == "cartoon":
+        S.outline(1.5)
     span = float(max(mesh.verts.max(axis=0) - mesh.verts.min(axis=0))) * 1.3
     sc.render.resolution_x = size
     sc.render.resolution_y = size

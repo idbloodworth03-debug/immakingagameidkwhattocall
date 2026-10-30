@@ -27,6 +27,7 @@ import numpy as np
 from PIL import Image
 
 import motion
+import cartoon
 import scene as S
 
 ELEVATION = 50.0
@@ -137,6 +138,8 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     facing = bpy.data.objects["facing"]
     S.lights()
     S.shadow_catcher(20)
+    if getattr(creature, "style", "") == "cartoon":
+        S.outline(1.4)
 
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     # tiles_long is the animal's biggest size: nose to tail, or a bird's wingspan.
@@ -245,6 +248,8 @@ def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
     motion.apply(arm, motion.idle(creature, 0.0))
     S.lights(1.1)
     S.shadow_catcher(8)
+    if getattr(creature, "style", "") == "cartoon":
+        S.outline(3.0)
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     center = (lo + hi) / 2 + np.array(arm["rest_offset"])
     radius = float(np.linalg.norm(hi - lo)) / 2
@@ -270,10 +275,12 @@ def main():
     parser.add_argument("--samples", type=int, default=20)
     parser.add_argument("--only", choices=["sprites", "portrait"])
     parser.add_argument("--bare", action="store_true", help="no fur strands (much faster, for testing)")
+    parser.add_argument("--style", choices=["cartoon", "real"], default="cartoon",
+                        help="cartoon (big head and eyes, outlined) or real proportions with fur")
     parser.add_argument("--anims", help="comma-separated animations to render again, keeping the others "
                         "from the existing sheet (e.g. --anims death --only sprites)")
     args = parser.parse_args()
-    creature = importlib.import_module(args.species).make()
+    creature = cartoon.load(args.species, style=args.style)
     out_dir = os.path.join(args.out, args.species)
     os.makedirs(out_dir, exist_ok=True)
     if args.only != "portrait":

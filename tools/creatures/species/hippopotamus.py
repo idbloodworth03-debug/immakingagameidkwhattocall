@@ -107,4 +107,5 @@ def make():
     c.motion = {"gait": "walk", "attack": "bite", "stride": 0.8, "gape": 1.15}
     c.palette = {"mouth": "#b5606a"}
     c.palette = {"eye_line": "#5a3a34", "eye_line_size": 1.5}
+    c.cartoon = {"head": 1.45}
     return c

@@ -15,11 +15,12 @@ import bpy
 from mathutils import Vector
 from PIL import Image
 
+import cartoon
 import scene as S
 
 
 def main(species, out, pose=None, size=480):
-    creature = importlib.import_module(species).make()
+    creature = cartoon.load(species, style=os.environ.get("STYLE", "cartoon"))
     sc = S.reset()
     sc.cycles.samples = 64
     arm, body, mesh = S.build(creature)
@@ -28,6 +29,8 @@ def main(species, out, pose=None, size=480):
         motion.preview_pose(arm, creature, pose)
     S.lights()
     S.shadow_catcher(8)
+    if getattr(creature, "style", "") == "cartoon":
+        S.outline(2.5)
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     center = (lo + hi) / 2
     span = float(max(hi - lo)) * 1.25

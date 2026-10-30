@@ -1,8 +1,8 @@
 class_name IconArt
 extends Control
 ## Card and button art: a colored shape (circle, rounded square or cage) with
-## a white icon from game-icons.net on top. Without an icon it shows a few
-## letters instead. Real illustrated art can replace this later.
+## either a rendered portrait of the animal, a white icon from
+## game-icons.net, or (with neither) a few letters.
 
 enum Shape { CIRCLE, ROUNDED, CAGE }
 
@@ -31,6 +31,11 @@ var flip_icon := false:
 		flip_icon = value
 		queue_redraw()
 var icon_color := Color.WHITE
+## A rendered picture of the animal (see UnitSprites.portrait). Wins over the icon.
+var portrait: Texture2D:
+	set(value):
+		portrait = value
+		queue_redraw()
 ## How much of the shape the icon fills.
 var icon_scale := 0.68
 
@@ -78,6 +83,15 @@ func _draw() -> void:
 			if icon == null:
 				icon = UIKit.icon(GameData.ui_icon("cage"))
 			icon_color = fill.lightened(0.35)
+
+	if portrait != null:
+		# The animal stands in the frame, a little bigger than the shape so
+		# it pops out of it; its own transparent background shows the color.
+		var side := short_side * 1.12
+		var at := center - Vector2(side, side) / 2.0 + Vector2(0, -short_side * 0.04)
+		var tint := Color(0.45, 0.45, 0.5, 0.8) if dimmed else Color.WHITE
+		draw_texture_rect(portrait, Rect2(at, Vector2(side, side)), false, tint)
+		return
 
 	if icon != null:
 		var side := short_side * icon_scale

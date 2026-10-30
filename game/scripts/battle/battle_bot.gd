@@ -35,12 +35,14 @@ func _init(battle: BattleSim, bot_team: int, seed_value: int, bot_difficulty := 
 	team = bot_team
 	rng.seed = seed_value
 	difficulty = clampf(bot_difficulty, 0.0, 1.0)
-	_think_min = roundi(lerpf(0.9, 0.25, difficulty) * sim.tps)
-	_think_max = roundi(lerpf(1.7, 0.6, difficulty) * sim.tps)
-	_defend_chance = roundi(lerpf(60.0, 100.0, difficulty))
+	# The first arenas are for learning: a slow, forgetful opponent that only
+	# attacks on full energy. It sharpens steadily toward the top arena.
+	_think_min = roundi(lerpf(1.3, 0.25, difficulty) * sim.tps)
+	_think_max = roundi(lerpf(2.3, 0.6, difficulty) * sim.tps)
+	_defend_chance = roundi(lerpf(45.0, 100.0, difficulty))
 	_cluster_needed = 4 if difficulty < 0.34 else (3 if difficulty < 0.67 else 2)
-	_push_energy = lerpf(9.8, 7.5, difficulty)
-	_support_chance = roundi(lerpf(35.0, 90.0, difficulty))
+	_push_energy = lerpf(10.0, 7.5, difficulty)
+	_support_chance = roundi(lerpf(15.0, 90.0, difficulty))
 	_wait = rng.randi_range(2 * sim.tps, 4 * sim.tps)
 
 

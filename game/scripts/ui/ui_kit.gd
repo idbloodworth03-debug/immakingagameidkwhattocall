@@ -268,6 +268,7 @@ static func card_art(card_id: String, art_shape := IconArt.Shape.ROUNDED) -> Ico
 	var art := IconArt.make(GameData.card_icon(card_id), habitat_color(card), art_shape)
 	art.flip_icon = GameData.card_icon_flipped(card_id)
 	art.text = initials(card.get("name", "?"))
+	art.portrait = UnitSprites.portrait(card_id)
 	return art
 
 

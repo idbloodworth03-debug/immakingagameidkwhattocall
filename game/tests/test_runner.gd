@@ -42,6 +42,7 @@ func _ready() -> void:
 			var errors_before := error_counter.errors
 			test.call(method.name)
 			test.cleanup()
+			test.return_borrowed()
 			if error_counter.errors > errors_before:
 				test.failures.append("error while running: " + error_counter.last)
 			total += 1

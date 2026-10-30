@@ -6,7 +6,7 @@ const T := BattleSim.TILE
 
 
 func _sim(deck_a: Array = [], deck_b: Array = [], seed_value := 1) -> BattleSim:
-	var filler := ["raccoon", "red_fox", "net", "air_horn", "brown_bear", "rattlesnake", "lion", "tiger"]
+	var filler := ["raccoon", "red_fox", "net", "air_horn", "brown_bear", "peregrine_falcon", "lion", "tiger"]
 	var a := deck_a if not deck_a.is_empty() else filler
 	var b := deck_b if not deck_b.is_empty() else filler
 	return BattleSim.new([a, b], [{}, {}], seed_value)
@@ -52,7 +52,7 @@ func test_double_energy_in_last_minute() -> void:
 
 
 func test_release_rules_and_card_cycle() -> void:
-	var sim := _sim(["raccoon", "red_fox", "opossum", "gray_squirrel", "pigeon_flock", "sewer_rats", "platypus", "cheetah"])
+	var sim := _sim(["raccoon", "red_fox", "wild_boar", "gray_squirrel", "peregrine_falcon", "sewer_rats", "red_panda", "cheetah"])
 	var first: String = sim.hand(0)[0]
 	var next := sim.next_card(0)
 	check(not sim.release(0, 0, 9 * T, 5 * T), "can't release animals on the enemy side")
@@ -191,7 +191,7 @@ func test_destroyed_side_den_opens_deeper_placement() -> void:
 
 
 func test_swap_only_when_stuck() -> void:
-	var picky := ["california_condor", "asian_elephant", "lion", "black_footed_ferret", "california_condor", "asian_elephant", "lion", "black_footed_ferret"]
+	var picky := ["california_condor", "asian_elephant", "lion", "tiger", "california_condor", "asian_elephant", "lion", "tiger"]
 	var sim := _sim(picky)
 	check(sim.can_swap(0), "every card waits on a requirement")
 	var first: String = sim.hand(0)[0]
@@ -224,6 +224,7 @@ func test_bot_gets_sharper_with_difficulty() -> void:
 # --- Abilities -------------------------------------------------------------
 
 func test_shield_absorbs_damage() -> void:
+	borrow_later_animals()
 	var sim := _sim()
 	var turtle: BattleSim.Fighter = sim.spawn(0, "snapping_turtle", 9 * T, 22 * T)[0]
 	sim.deal_damage(turtle, 200, null)
@@ -233,6 +234,7 @@ func test_shield_absorbs_damage() -> void:
 
 
 func test_poison_keeps_hurting() -> void:
+	borrow_later_animals()
 	var sim := _sim()
 	var snake: BattleSim.Fighter = sim.spawn(0, "rattlesnake", 9 * T, 20 * T)[0]
 	var rat: BattleSim.Fighter = sim.spawn(1, "honey_badger", 9 * T, 20 * T + 900)[0]
@@ -247,6 +249,7 @@ func test_poison_keeps_hurting() -> void:
 
 
 func test_opossum_plays_dead() -> void:
+	borrow_later_animals()
 	var sim := _sim()
 	var possum: BattleSim.Fighter = sim.spawn(0, "opossum", 9 * T, 22 * T)[0]
 	sim.deal_damage(possum, 99999, null)
@@ -260,6 +263,7 @@ func test_opossum_plays_dead() -> void:
 
 
 func test_pack_hunters_hit_harder_together() -> void:
+	borrow_later_animals()
 	var sim := _sim()
 	var wolves := sim.spawn(0, "wolf_pack", 9 * T, 22 * T)
 	var dummy: BattleSim.Fighter = sim.spawn(1, "brown_bear", 9 * T, 8 * T)[0]
@@ -272,6 +276,7 @@ func test_pack_hunters_hit_harder_together() -> void:
 
 
 func test_stealth_until_first_attack() -> void:
+	borrow_later_animals()
 	var sim := _sim()
 	var owl: BattleSim.Fighter = sim.spawn(0, "barn_owl", 9 * T, 22 * T)[0]
 	var tower := _tower(sim, 1, "main")
@@ -287,6 +292,7 @@ func test_raccoon_steals_energy() -> void:
 
 
 func test_burrower_is_untargetable_then_emerges() -> void:
+	borrow_later_animals()
 	var sim := _sim()
 	var ferret: BattleSim.Fighter = sim.spawn(0, "black_footed_ferret", 4 * T, 22 * T)[0]
 	check(not sim.can_target(_tower(sim, 1, "side", -1), ferret), "underground")
@@ -340,6 +346,7 @@ func test_food_bait_lures_enemies() -> void:
 
 
 func test_tranq_dart_puts_the_closest_to_sleep() -> void:
+	borrow_later_animals()
 	var sim := _tool_sim("tranq_dart")
 	var near: BattleSim.Fighter = sim.spawn(1, "brown_bear", 9 * T, 10 * T)[0]
 	var far: BattleSim.Fighter = sim.spawn(1, "moose", 12 * T, 10 * T)[0]

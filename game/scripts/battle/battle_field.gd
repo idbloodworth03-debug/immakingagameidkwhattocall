@@ -33,6 +33,18 @@ var _shake_offset := Vector2.ZERO
 var _press_at := Vector2.ZERO
 var _pressed := false
 
+## How each animal looks right now, for the rendered sprites:
+## uid -> {"id", "pos" (field position), "facing" (degrees clockwise from up),
+## "walk" (cycles walked), "moving" (seconds left of walking pose),
+## "attack_at" (when the attack animation started)}
+var _views := {}
+## Animals that just died, playing their death animation.
+var _corpses: Array = []
+
+## Sprites are drawn this much bigger than true size, to read on a phone.
+const SPRITE_SCALE := 1.6
+const TURN_SPEED := 600.0     # degrees per second
+
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
@@ -95,10 +107,14 @@ func add_events(events: Array) -> void:
 				_effect("flash", e.x, e.y, 260, Color(1, 1, 1, 0.9), 0.12)
 				if e.from_kind == "unit":
 					_lunges[e.from] = {"age": 0.0, "dir": Vector2(e.x - e.fx, e.y - e.fy).normalized()}
+					_on_unit_hit(e.from)
 				if e.to_kind == "tower":
 					_effect("number", e.x + randi_range(-400, 400), e.y - 600, 0, Color("#ffd166"), 0.7, str(e.amount))
 			"death":
-				_effect("ring", e.x, e.y, 1600 if e.kind == "tower" else 700, Color(0.2, 0.2, 0.2), 0.5 if e.kind == "tower" else 0.35)
+				if _views.has(e.uid):
+					_add_corpse(e.uid)
+				else:
+					_effect("ring", e.x, e.y, 1600 if e.kind == "tower" else 700, Color(0.2, 0.2, 0.2), 0.5 if e.kind == "tower" else 0.35)
 				if e.kind == "tower":
 					_shake = 0.45
 			"heal", "cloud", "scare", "stun_pulse", "rage":
@@ -130,7 +146,73 @@ func _process(delta: float) -> void:
 		_lunges[uid].age += delta
 		if _lunges[uid].age > 0.16:
 			_lunges.erase(uid)
+	if sim != null:
+		_update_views(delta)
+	_corpses = _corpses.filter(func(c): return _time - c.at < UnitSprites.duration(c.id, "death") + 0.9)
 	queue_redraw()
+
+
+# --- Sprite animation state ---------------------------------------------------
+
+func _update_views(delta: float) -> void:
+	var seen := {}
+	for f in sim.fighters:
+		if not f.alive or not f.is_unit() or not UnitSprites.has(f.card.id):
+			continue
+		seen[f.uid] = true
+		var pos := Vector2(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
+		var v: Dictionary = _views.get(f.uid, {})
+		if v.is_empty():
+			v = {"id": f.card.id, "pos": pos, "facing": 0.0 if f.team == 0 else 180.0,
+				"walk": randf(), "moving": 0.0, "attack_at": -100.0, "team": f.team, "flying": f.is_flying()}
+			_views[f.uid] = v
+		var moved: Vector2 = pos - v.pos
+		v.pos = pos
+		if moved.length() > 1.0:
+			v.moving = 0.12
+			_turn(v, moved, delta)
+			v.walk += moved.length() / 1000.0 / UnitSprites.walk_cycle_tiles(v.id)
+		else:
+			v.moving = maxf(0.0, v.moving - delta)
+			if f.target != null and f.target.alive:
+				_turn(v, Vector2(f.target.x - f.x, f.target.y - f.y), delta)
+		# Start the attack early enough that the bite lands on the hit.
+		if f.target != null and f.target.alive and f.deploy_ticks <= 0 and sim.in_range(f, f.target) and not _attacking(v):
+			var windup := _windup(v.id)
+			var to_hit := (float(f.cooldown) / 100.0 - blend) / float(sim.tps)
+			if to_hit >= 0.0 and to_hit <= windup:
+				v.attack_at = _time - (windup - to_hit)
+	for uid in _views.keys():
+		if not seen.has(uid):
+			_views.erase(uid)
+
+
+func _turn(v: Dictionary, toward: Vector2, delta: float) -> void:
+	if toward.length() < 1.0:
+		return
+	var goal := rad_to_deg(atan2(toward.x, -toward.y))
+	var diff := wrapf(goal - float(v.facing), -180.0, 180.0)
+	v.facing = float(v.facing) + clampf(diff, -TURN_SPEED * delta, TURN_SPEED * delta)
+
+
+func _windup(id: String) -> float:
+	return float(UnitSprites.animation(id, "attack").get("hit", 0.45)) * UnitSprites.duration(id, "attack")
+
+
+func _attacking(v: Dictionary) -> bool:
+	return _time - float(v.attack_at) < UnitSprites.duration(v.id, "attack")
+
+
+func _on_unit_hit(uid: int) -> void:
+	# A hit with no attack showing (the first one, often): jump to the strike.
+	if _views.has(uid) and not _attacking(_views[uid]):
+		_views[uid].attack_at = _time - _windup(_views[uid].id)
+
+
+func _add_corpse(uid: int) -> void:
+	var v: Dictionary = _views[uid]
+	_corpses.append({"id": v.id, "pos": v.pos, "facing": v.facing, "team": v.team, "at": _time})
+	_views.erase(uid)
 
 
 # --- Drawing ---------------------------------------------------------------
@@ -181,10 +263,14 @@ func _draw() -> void:
 	for f in sim.fighters:
 		if f.kind == "bait" and f.alive:
 			_draw_bait(f, s)
+	for corpse in _corpses:
+		_draw_corpse(corpse, s)
 	for flying in [false, true]:
-		for f in sim.fighters:
-			if f.is_unit() and f.alive and f.is_flying() == flying:
-				_draw_unit(f, s)
+		var row: Array = sim.fighters.filter(func(f): return f.is_unit() and f.alive and f.is_flying() == flying)
+		# Farther animals first, so nearer ones overlap them.
+		row.sort_custom(func(a, b): return a.y < b.y)
+		for f in row:
+			_draw_unit(f, s)
 
 	_draw_preview(s)
 	for fx in effects:
@@ -292,6 +378,9 @@ func _draw_bait(f: BattleSim.Fighter, s: float) -> void:
 
 
 func _draw_unit(f: BattleSim.Fighter, s: float) -> void:
+	if _views.has(f.uid):
+		_draw_sprite_unit(f, s)
+		return
 	var p := _position(f)
 	var r := maxf(7.0, f.radius * s * 1.25)
 	# Little hops while walking, a pop-in while deploying, a lunge when attacking.
@@ -350,6 +439,91 @@ func _draw_unit(f: BattleSim.Fighter, s: float) -> void:
 
 	if f.hp < f.max_hp:
 		_draw_bar(p + Vector2(0, -r - 8), maxf(r * 2.0, 26.0), 6.0, float(f.hp) / f.max_hp, team_color.lightened(0.3))
+
+
+## An animal drawn from its rendered sprite sheet.
+func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
+	var v: Dictionary = _views[f.uid]
+	var id: String = v.id
+	var p := to_screen(v.pos.x, v.pos.y)
+	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
+	var team_color := OWN_COLOR if f.team == 0 else ENEMY_COLOR
+	var alpha := 1.0
+	if f.deploy_ticks > 0:
+		var grow := 1.0 - float(f.deploy_ticks) / maxf(1.0, sim.deploy_ticks)
+		k *= lerpf(0.55, 1.0, ease(grow, 0.4))
+		alpha = lerpf(0.3, 1.0, grow)
+	if f.stealthed and f.revealed <= 0:
+		alpha = 0.4 if f.team == 0 else 0.12
+	var ring := f.radius * s * 1.45
+	if f.memory.get("burrowing", false):
+		draw_circle(p, ring * 0.7, Color(0.36, 0.24, 0.12, 0.85 if f.team == 0 else 0.5))
+		return
+	_draw_team_ring(p, ring, team_color, alpha)
+
+	var anim := "idle"
+	var frame := int((_time + f.uid * 0.37) * float(UnitSprites.animation(id, "idle").get("fps", 6)))
+	var since := _time - float(v.attack_at)
+	if since >= 0.0 and since < UnitSprites.duration(id, "attack"):
+		anim = "attack"
+		frame = int(since * float(UnitSprites.animation(id, "attack").fps))
+	elif float(v.moving) > 0.0:
+		anim = "walk"
+		frame = int(float(v.walk) * float(UnitSprites.animation(id, "walk").frames))
+	var info := UnitSprites.frame(id, anim, v.facing, frame)
+	var tint := Color(1, 1, 1, alpha)
+	if int(f.memory.get("playing_dead", 0)) > 0:
+		tint = Color(0.6, 0.6, 0.6, alpha)
+	elif f.stun > 0:
+		tint = Color(1.0, 1.0, 0.7, alpha)
+	_blit(info, p, k, tint)
+
+	# Status rings around its feet.
+	if f.stun > 0:
+		_draw_team_ring(p, ring + 5, Color("#ffe066"), 1.0, 3.0)
+	if f.shield > 0:
+		_draw_team_ring(p, ring + 4, Color("#7fd6ff"), 1.0, 2.5)
+	if f.rage > 0:
+		_draw_team_ring(p, ring + 7, Color("#ff9f43", 0.8), 1.0, 2.0)
+	if f.slow > 0:
+		_draw_team_ring(p, ring + 3, Color("#9fd8ff", 0.8), 1.0, 2.0)
+	if f.invulnerable > 0:
+		_draw_team_ring(p, ring + 6, Color.WHITE, 1.0, 3.0)
+	if f.poison > 0:
+		draw_circle(p + Vector2(ring * 0.8, -ring * 1.6), maxf(3.0, ring * 0.2), Color("#7bd34a"))
+	if f.hp < f.max_hp:
+		_draw_bar(Vector2(p.x, p.y - UnitSprites.top(id) * k - 7.0), maxf(ring * 1.6, 26.0), 6.0, float(f.hp) / f.max_hp, team_color.lightened(0.3))
+
+
+func _draw_corpse(corpse: Dictionary, s: float) -> void:
+	var id: String = corpse.id
+	var age := _time - float(corpse.at)
+	var info_anim := UnitSprites.animation(id, "death")
+	var frame := int(age * float(info_anim.get("fps", 10)))
+	var fade := clampf(1.0 - (age - UnitSprites.duration(id, "death")) / 0.9, 0.0, 1.0)
+	var p := to_screen(corpse.pos.x, corpse.pos.y)
+	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
+	_blit(UnitSprites.frame(id, "death", corpse.facing, frame), p, k, Color(1, 1, 1, fade))
+
+
+func _draw_team_ring(p: Vector2, radius: float, color: Color, alpha: float, width := 2.5) -> void:
+	# Flattened to sit on the ground in the sprites' tilted view.
+	draw_set_transform(_shake_offset + p, 0.0, Vector2(1.0, 0.55))
+	draw_circle(Vector2.ZERO, radius, Color(color, 0.18 * alpha))
+	draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Color(color, 0.85 * alpha), width / 0.55 * 0.6)
+	draw_set_transform(_shake_offset)
+
+
+func _blit(info: Dictionary, p: Vector2, k: float, tint: Color) -> void:
+	var region: Rect2 = info.region
+	var anchor: Vector2 = info.anchor * k
+	var size := region.size * k
+	if info.flip:
+		draw_set_transform(_shake_offset + p, 0.0, Vector2(-1, 1))
+		draw_texture_rect_region(info.texture, Rect2(-anchor, size), region, tint)
+		draw_set_transform(_shake_offset)
+	else:
+		draw_texture_rect_region(info.texture, Rect2(p - anchor, size), region, tint)
 
 
 func _draw_effect(fx: Dictionary, s: float) -> void:

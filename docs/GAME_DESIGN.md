@@ -283,8 +283,9 @@ their partners in the deck (a Lion comes with another Savanna animal). The same 
 on.
 
 **Difficulty grows with your arena.** In the first arena the bot is slow to
-react (about 1-2 seconds between moves), skips some defending, only uses a
-tool on 4 or more enemies and waits for almost full energy before attacking.
+react (about 1.3-2.3 seconds between moves), defends less than half the time,
+rarely backs up its own attacks, only uses a tool on 4 or more enemies and
+waits for full energy before attacking.
 In the top arena it reacts in well under a second, always defends, uses tools
 on groups of 2 and attacks sooner, using the deeper placement when it has
 taken a side den.

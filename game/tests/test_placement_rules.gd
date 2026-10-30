@@ -22,8 +22,8 @@ func test_energy() -> void:
 func test_zones() -> void:
 	check(not _allowed("raccoon", {"zone": "river"}), "land animals can't go in the river")
 	check(not _allowed("raccoon", {"zone": "enemy_side"}), "not on the enemy side")
-	check(_allowed("bullfrog", {"zone": "river"}), "aquatic animals may use the river")
-	check(_allowed("bullfrog"), "aquatic animals may also use their own side")
+	check(_allowed("polar_bear", {"zone": "river"}), "aquatic animals may use the river")
+	check(_allowed("polar_bear"), "aquatic animals may also use their own side")
 	check(not _allowed("hippopotamus"), "hippo must use the river")
 	check(_allowed("hippopotamus", {"zone": "river"}), "hippo in the river")
 
@@ -34,15 +34,17 @@ func test_allies_with_tag() -> void:
 
 
 func test_unique_and_no_allies() -> void:
-	var wolf: Dictionary = GameData.cards.red_wolf
 	var fox: Dictionary = GameData.cards.red_fox
-	check(_allowed("red_wolf", {"allies": [fox]}), "red wolf with a canine ally")
-	check(not _allowed("red_wolf", {"allies": [fox, wolf]}), "only one red wolf at a time")
+	var leopard: Dictionary = GameData.cards.amur_leopard
+	check(not _allowed("african_wild_dogs", {"allies": [fox]}), "wild dogs need a pack animal, not just a canine")
+	check(_allowed("african_wild_dogs", {"allies": [GameData.cards.wolf_pack]}), "wild dogs with a wolf pack")
+	check(not _allowed("amur_leopard", {"allies": [fox, leopard]}), "only one amur leopard at a time")
 	check(not _allowed("amur_leopard", {"allies": [GameData.cards.cheetah]}), "amur leopard won't share with big cats")
 	check(_allowed("amur_leopard", {"allies": [fox]}), "amur leopard alone is fine")
 
 
 func test_timing_and_history() -> void:
+	borrow_later_animals()
 	check(not _allowed("tiger", {"elapsed": 59.0}), "tiger waits for 1:00")
 	check(_allowed("tiger", {"elapsed": 60.0}), "tiger at 1:00")
 	check(not _allowed("black_footed_ferret", {"deployed_count": 1}), "ferret needs two releases first")

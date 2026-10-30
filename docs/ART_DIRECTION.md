@@ -27,8 +27,13 @@ modeled, so any animal can be rebuilt or tweaked by editing its file in
   (falcon, condor).
 - **In battle:** sprites from 8 directions (5 rendered, 3 mirrored), 56
   pixels per tile, a soft shadow under each animal, a team-colored ring at
-  its feet. The game times each attack so the hit lands on the strike frame.
-- **Cards:** a rendered three-quarter portrait of each animal.
+  its feet. A played animal drops onto its spot with a puff of dust. The
+  game times each attack so the hit lands on the strike frame, with a hit
+  effect that fits it (claw slashes, a bite, dust from a charge or stomp,
+  feathers from a strike). A fallen animal topples over and lies still for
+  a moment before fading.
+- **Cards:** a rendered three-quarter portrait of each animal, framed so
+  the whole animal fits.
 
 Everything else keeps the **flat icon style**:
 
@@ -43,7 +48,7 @@ Everything else keeps the **flat icon style**:
 
 1. **Play with the 20 animals and react:** which ones don't look right, which
    animations feel weak. Each one is a file to tweak and re-render (about
-   10 minutes per animal).
+   10-15 minutes per animal, or a few minutes to redo one animation).
 2. **The rest of the world in the same style:** the dens, the arena ground
    and the tools could also be rendered 3D, so the whole battle matches.
 3. **More animals** from `game/data/animals_later.json`, once these 20 feel

@@ -147,6 +147,7 @@ def render_sprites(creature, out_dir, samples, with_fur=True):
     sheet, meta = pack(crops, timing, hit, anchor=(anchor[0] - x0, anchor[1] - y0))
     meta["walk_cycle_tiles"] = round(creature.motion.get("cycle_tiles", creature.tiles_long * 0.75), 3)
     meta["top"] = sprite_top(frames, anchor, y0)
+    meta["attack_style"] = creature.motion.get("attack", "bite")
 
     os.makedirs(out_dir, exist_ok=True)
     sheet.save(os.path.join(out_dir, "sheet.webp"), "WEBP", quality=90, method=6)

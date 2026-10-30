@@ -70,5 +70,6 @@
   }
  },
  "walk_cycle_tiles": 1.725,
- "top": 76.2
+ "top": 76.2,
+ "attack_style": "swipe"
 }

@@ -45,6 +45,12 @@ static func top(id: String) -> float:
 	return float(_sheet(id).get("top", 40.0))
 
 
+## How the animal attacks (pounce_bite, bite, swipe, charge, stomp, throw,
+## dive), for matching hit effects.
+static func attack_style(id: String) -> String:
+	return String(_sheet(id).get("attack_style", "bite"))
+
+
 static func pixels_per_tile(id: String) -> float:
 	return float(_sheet(id).get("pixels_per_tile", 64))
 

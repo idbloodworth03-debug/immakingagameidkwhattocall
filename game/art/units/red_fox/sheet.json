@@ -70,5 +70,6 @@
   }
  },
  "walk_cycle_tiles": 1.2,
- "top": 43.7
+ "top": 43.7,
+ "attack_style": "pounce_bite"
 }

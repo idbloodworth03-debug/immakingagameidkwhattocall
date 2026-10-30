@@ -116,6 +116,8 @@ func add_events(events: Array) -> void:
 					_on_unit_hit(e.from)
 				if _views.has(e.to):
 					_views[e.to].hurt = HURT_TIME
+				if _views.has(e.from):
+					_impact(UnitSprites.attack_style(_views[e.from].id), e)
 				if e.to_kind == "tower":
 					_effect("number", e.x + randi_range(-400, 400), e.y - 600, 0, Color("#ffd166"), 0.7, str(e.amount))
 			"death":
@@ -140,8 +142,11 @@ func _event_word(kind: String) -> String:
 	}.get(kind, "")
 
 
-func _effect(kind: String, x: int, y: int, radius: int, color: Color, life: float, text := "") -> void:
-	effects.append({"kind": kind, "x": x, "y": y, "radius": radius, "color": color, "life": life, "age": 0.0, "text": text})
+func _effect(kind: String, x: int, y: int, radius: int, color: Color, life: float, text := "") -> Dictionary:
+	var fx := {"kind": kind, "x": x, "y": y, "radius": radius, "color": color, "life": life, "age": 0.0, "text": text,
+		"dir": Vector2.UP, "seed": randi()}
+	effects.append(fx)
+	return fx
 
 
 func _process(delta: float) -> void:
@@ -226,6 +231,32 @@ func _throw(f: BattleSim.Fighter, to_hit: float) -> void:
 	var flight := minf(THROW_FLIGHT, to_hit + 0.15)
 	_projectiles.append({"from": Vector2(f.x, f.y), "to_uid": f.target.uid, "to": Vector2(f.target.x, f.target.y),
 		"launch": _time + to_hit - flight, "land": _time + to_hit})
+
+
+## A hit effect that fits how the attacker fights.
+func _impact(style: String, e: Dictionary) -> void:
+	var dir := Vector2(e.x - e.fx, e.y - e.fy).normalized()
+	var fx := {}
+	match style:
+		"swipe":
+			fx = _effect("slash", e.x, e.y, 520, Color.WHITE, 0.28)
+		"bite", "pounce_bite":
+			fx = _effect("chomp", e.x, e.y, 420, Color.WHITE, 0.22)
+		"charge":
+			fx = _effect("dust", e.x, e.y, 700, Color("#b49a78"), 0.5)
+		"stomp":
+			_effect("ring", e.x, e.y, 1500, Color("#a88a62"), 0.45)
+			fx = _effect("dust", e.x, e.y, 1000, Color("#b49a78"), 0.6)
+			_shake = maxf(_shake, 0.18)
+		"dive":
+			fx = _effect("feathers", e.x, e.y, 500, Color("#f1ede4"), 0.5)
+		_:
+			return
+	fx["dir"] = dir
+	# Land on the target's body, not at its feet.
+	if _views.has(e.to):
+		var id: String = _views[e.to].id
+		fx["lift"] = UnitSprites.top(id) * _scale() * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE * 0.45
 
 
 func _add_corpse(uid: int) -> void:
@@ -575,7 +606,7 @@ func _draw_projectile(pr: Dictionary, s: float) -> void:
 
 
 func _draw_effect(fx: Dictionary, s: float) -> void:
-	var p := to_screen(fx.x, fx.y)
+	var p := to_screen(fx.x, fx.y) - Vector2(0, float(fx.get("lift", 0.0)))
 	var t: float = fx.age / fx.life
 	var color: Color = fx.color
 	match fx.kind:
@@ -593,6 +624,47 @@ func _draw_effect(fx: Dictionary, s: float) -> void:
 			_draw_text(p + Vector2(0, -30 - 30 * t), fx.text, 20, Color(1, 1, 1, 1.0 - t))
 		"number":
 			_draw_text(p + Vector2(0, -24 * t), fx.text, 18, Color(color, 1.0 - t * t))
+		"slash":
+			# Three claw marks raking across the target.
+			var r: float = fx.radius * s
+			var d: Vector2 = fx.dir
+			var across := Vector2(-d.y, d.x)
+			var reach := clampf(t * 2.2, 0.0, 1.0)
+			for i in 3:
+				var offset := across * (float(i) - 1.0) * r * 0.32
+				var a := p + offset - d * r * 0.6 + across * r * 0.25
+				var b := p + offset + d * r * 0.6 - across * r * 0.25
+				var tip := a.lerp(b, reach)
+				draw_line(a, tip, Color(0, 0, 0, 0.4 * (1.0 - t)), 5.0)
+				draw_line(a, tip, Color(color, 1.0 - t), 2.5)
+		"chomp":
+			# Two jaws snapping shut on the target.
+			var r: float = fx.radius * s
+			var gap := (1.0 - clampf(t * 2.5, 0.0, 1.0)) * r * 0.5
+			var ang: float = fx.dir.angle()
+			var col := Color(color, 1.0 - t * t)
+			draw_arc(p - Vector2.from_angle(ang + PI / 2) * gap, r, ang + PI * 0.15, ang + PI * 0.85, 10, col, 3.0)
+			draw_arc(p + Vector2.from_angle(ang + PI / 2) * gap, r, ang - PI * 0.85, ang - PI * 0.15, 10, col, 3.0)
+		"dust":
+			# Puffs of dust bursting out from the impact.
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			for i in 7:
+				var ang := rng.randf() * TAU
+				var dist: float = fx.radius * s * (0.3 + 0.7 * t) * (0.5 + rng.randf() * 0.5)
+				var puff: float = fx.radius * s * (0.12 + 0.2 * t) * (0.7 + rng.randf() * 0.6)
+				var at := p + Vector2(cos(ang), sin(ang) * 0.55) * dist
+				draw_circle(at, puff, Color(color, 0.55 * (1.0 - t)))
+		"feathers":
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			for i in 6:
+				var ang := rng.randf() * TAU
+				var dist: float = fx.radius * s * (0.2 + 0.8 * t) * (0.5 + rng.randf() * 0.5)
+				var at := p + Vector2(cos(ang), sin(ang)) * dist + Vector2(0, 14.0 * t)
+				draw_set_transform(_shake_offset + at, ang + t * 3.0, Vector2(1.0, 0.35))
+				draw_circle(Vector2.ZERO, 5.0, Color(color, 1.0 - t))
+				draw_set_transform(_shake_offset)
 		"icon":
 			var texture := UIKit.icon(fx.text)
 			if texture != null:

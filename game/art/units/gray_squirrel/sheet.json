@@ -70,5 +70,6 @@
   }
  },
  "walk_cycle_tiles": 0.75,
- "top": 30.8
+ "top": 30.8,
+ "attack_style": "throw"
 }

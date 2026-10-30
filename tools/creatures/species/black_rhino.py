@@ -88,9 +88,14 @@ def make():
     for side in (1, -1):
         c.shapes.append(ellipsoid((side * 0.17, 1.15, 0.84), (0.13, 0.24, 0.16), "cheek", "head", blend=0.06))
     # Two horns on the nose, the front one long and curving back.
-    c.extras.append(Extra("cone", "horn", "head", center=(0, 1.4, 0.86), tip=(0, 1.48, 1.17), radius=0.125, tip_radius=0.06))
-    c.extras.append(Extra("cone", "horn", "head", center=(0, 1.48, 1.17), tip=(0, 1.41, 1.44), radius=0.061, tip_radius=0.008))
-    c.extras.append(Extra("cone", "horn", "head", center=(0, 1.2, 1.0), tip=(0, 1.24, 1.25), radius=0.095, tip_radius=0.01))
+    # Worn keratin, lighter than the hide, so the horns read at battle size.
+    horn = "#7a6b58"
+    c.extras.append(Extra("cone", "horn", "head", center=(0, 1.4, 0.86), tip=(0, 1.5, 1.22), radius=0.135, tip_radius=0.068,
+                          color=horn))
+    c.extras.append(Extra("cone", "horn", "head", center=(0, 1.5, 1.22), tip=(0, 1.43, 1.58), radius=0.069, tip_radius=0.01,
+                          color=horn))
+    c.extras.append(Extra("cone", "horn", "head", center=(0, 1.2, 1.0), tip=(0, 1.25, 1.34), radius=0.1, tip_radius=0.012,
+                          color=horn))
     add_face(c, eye_dir=(-0.8, 0.5, 0.2), eye_radius=0.02, eye_sink=0.013, nose_radius=0, iris="#1a0f08", pupil="round")
     c.fur = {"strands": False, "variation": 0.2, "sheen": 0.05, "bump": 0.9, "roughness": 0.85, "specular": 0.2,
              "streak_x": 90.0, "streak_y": 90.0, "streak_z": 90.0}

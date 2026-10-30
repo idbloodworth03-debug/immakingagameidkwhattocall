@@ -8,7 +8,7 @@ Real size: about 1 m at the shoulder, 1.9 m head and body, 90 cm tail.
 """
 import numpy as np
 
-from anatomy import add_face, quadruped
+from anatomy import Extra, add_face, add_mouth, quadruped
 from paint import Painter
 from sdf import ellipsoid
 
@@ -110,11 +110,18 @@ def make():
     c.voxel = 0.007
     for side in (1, -1):
         c.shapes.append(ellipsoid((side * 0.1, 0.8, 0.86), (0.085, 0.09, 0.085), "cheek", "head", blend=0.06, yaw=side * 0.3))
+    # A mouth to snarl with, and the fangs.
+    add_mouth(c, center=(0, 0.93, 0.812), radii=(0.13, 0.12, 0.01), blend=0.006)
+    for side in (1, -1):
+        c.extras.append(Extra("cone", "tusk", "head", center=(side * 0.034, 0.965, 0.818), tip=(side * 0.036, 0.97, 0.778),
+                              radius=0.009, tip_radius=0.002))
+        c.extras.append(Extra("cone", "tusk", "jaw", center=(side * 0.03, 0.935, 0.805), tip=(side * 0.031, 0.94, 0.836),
+                              radius=0.007, tip_radius=0.002))
     add_face(c, eye_dir=(-0.48, 0.82, 0.32), eye_radius=0.016, eye_sink=0.009, nose_radius=0.024, nose_sink=0.01,
              iris="#d0a030", pupil="round")
     c.extras[-1].color = "#c98a7a"     # pinkish nose
     c.fur = {"variation": 0.08, "sheen": 0.3, "bump": 0.25, "length": 0.035, "density": 14000, "hair_gamma": 1.8,
              "lengths": {"cheek": 1.3, "tail": 0.8, "tail_tip": 0.8, "neck": 1.0}}
-    c.motion = {"gait": "walk", "attack": "pounce_bite", "stride": 1.0}
+    c.motion = {"gait": "walk", "attack": "pounce_bite", "stride": 1.0, "gape": 0.75}
     c.palette = {"eye_line_size": 1.5}
     return c

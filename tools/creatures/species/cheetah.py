@@ -8,7 +8,7 @@ Real size: about 80 cm at the shoulder, 1.2 m head and body, 70 cm tail.
 """
 import numpy as np
 
-from anatomy import add_face, quadruped
+from anatomy import add_face, add_mouth, quadruped
 from paint import Painter
 from sdf import ellipsoid
 
@@ -110,10 +110,11 @@ def make():
     c.voxel = 0.0045
     for side in (1, -1):
         c.shapes.append(ellipsoid((side * 0.045, 0.6, 0.805), (0.04, 0.045, 0.04), "cheek", "head", blend=0.03))
+    add_mouth(c, center=(0, 0.66, 0.783), radii=(0.07, 0.07, 0.007), blend=0.004)
     add_face(c, eye_dir=(-0.5, 0.8, 0.3), eye_radius=0.012, eye_sink=0.007, nose_radius=0.012, nose_sink=0.006,
              iris="#b8862a", pupil="round")
     c.fur = {"variation": 0.1, "sheen": 0.3, "bump": 0.25, "length": 0.018, "density": 40000, "hair_gamma": 2.0,
              "lengths": {"tail": 1.0, "tail_tip": 1.0, "cheek": 1.0, "neck": 1.0}}
-    c.motion = {"gait": "gallop", "attack": "pounce_bite", "stride": 1.25}
+    c.motion = {"gait": "gallop", "attack": "pounce_bite", "stride": 1.25, "gape": 0.75}
     c.palette = {"eye_line_size": 1.45}
     return c

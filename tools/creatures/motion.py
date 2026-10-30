@@ -172,8 +172,9 @@ def pounce_bite(c, t):
         p.leg("fl." + side, upper=-crouch * 0.25 + reach * 0.75, lower=-crouch * 0.4 - reach * 0.1, foot=reach * 0.3)
         p.rot("ear." + side, x=-crouch * 0.35 - reach * 0.2)
     p.rot("neck", x=-crouch * 0.25 + reach * 0.05)
-    p.rot("head", x=-crouch * 0.1 - reach * 0.15 + jaw * 0.12)
-    p.rot("jaw", x=-jaw * 0.55)
+    gape = c.motion.get("gape", 0.55)
+    p.rot("head", x=-crouch * 0.1 - reach * 0.15 + jaw * 0.22 * gape)
+    p.rot("jaw", x=-jaw * gape)
     _tail(p, 0.0, sway=0.0, droop=crouch * -0.3 + reach * 0.2)
     return p
 

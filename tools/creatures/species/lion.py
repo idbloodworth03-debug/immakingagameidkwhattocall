@@ -7,7 +7,7 @@ Real size: about 1.2 m at the shoulder, 2 m head and body, 90 cm tail.
 """
 import numpy as np
 
-from anatomy import add_face, quadruped
+from anatomy import Extra, add_face, add_mouth, quadruped
 from paint import Painter
 from sdf import ellipsoid
 
@@ -100,10 +100,17 @@ def make():
     c.shapes.append(ellipsoid((0, 0.6, 0.98), (0.24, 0.2, 0.28), "mane", "neck", blend=0.09, pitch=0.5))
     c.shapes.append(ellipsoid((0, 0.63, 0.75), (0.18, 0.14, 0.18), "mane", "chest", blend=0.08))
     c.shapes.append(ellipsoid((0, 0.85, 0.85), (0.11, 0.09, 0.09), "mane", "head", blend=0.05))
+    # A mouth to roar and bite with, and the fangs.
+    add_mouth(c, center=(0, 1.01, 0.915), radii=(0.15, 0.11, 0.012), blend=0.006)
+    for side in (1, -1):
+        c.extras.append(Extra("cone", "tusk", "head", center=(side * 0.04, 1.04, 0.922), tip=(side * 0.042, 1.045, 0.875),
+                              radius=0.011, tip_radius=0.002))
+        c.extras.append(Extra("cone", "tusk", "jaw", center=(side * 0.035, 1.0, 0.908), tip=(side * 0.036, 1.005, 0.945),
+                              radius=0.008, tip_radius=0.002))
     add_face(c, eye_dir=(-0.45, 0.84, 0.3), eye_radius=0.017, eye_sink=0.01, nose_radius=0.025, nose_sink=0.01,
              iris="#b8822e", pupil="round")
     c.extras[-1].color = "#7a4a3a"
     c.fur = {"variation": 0.1, "sheen": 0.3, "bump": 0.25, "length": 0.03, "density": 13000, "hair_gamma": 2.1,
              "lengths": {"mane": 5.5, "cheek": 1.4, "tail_tip": 3.0, "neck": 1.3}, "clump": 0.55, "frizz": 0.006}
-    c.motion = {"gait": "walk", "attack": "pounce_bite", "stride": 1.0}
+    c.motion = {"gait": "walk", "attack": "pounce_bite", "stride": 1.0, "gape": 0.8}
     return c

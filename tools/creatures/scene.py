@@ -58,7 +58,7 @@ def build(creature, with_fur=False, fur_quality=1.0):
     arm.parent = facing
     # Center the animal over the origin.
     root = creature.joints["root"]
-    arm["rest_offset"] = (-root[0], -root[1], 0.0)
+    arm["rest_offset"] = (-root[0], -root[1], float(creature.motion.get("altitude", 0.0)))
     arm.location = arm["rest_offset"]
     body = _body(creature, mesh, arm)
     if with_fur:
@@ -87,9 +87,10 @@ def _face_paint(creature, mesh, colors):
     """Dark lining around the eyes and dark skin around the nose."""
     dark = hex_color(creature.palette.get("eye_line", "#1b1210")) if creature.palette else hex_color("#1b1210")
     colors = np.array(colors)
+    size = float(creature.palette.get("eye_line_size", 1.55)) if creature.palette else 1.55
     for center, radius in creature.eyes:
         d = np.linalg.norm(mesh.verts - center, axis=1)
-        amount = np.clip((radius * 1.75 - d) / (radius * 0.5), 0, 1)
+        amount = np.clip((radius * size - d) / (radius * 0.4), 0, 1)
         colors = colors * (1 - amount[:, None]) + dark * amount[:, None]
     if creature.nose is not None:
         center, radius = creature.nose
@@ -130,8 +131,8 @@ def _armature(creature):
         d = (eb.tail - eb.head).normalized()
         # Roll so the bone's X axis points to the animal's right: then a
         # positive X rotation always turns the bone the same way (toes
-        # forward, nose up, tail down).
-        z = Vector((1, 0, 0)).cross(d)
+        # forward, nose up, tail down). Wings say "up" instead.
+        z = Vector(b.up) if b.up is not None else Vector((1, 0, 0)).cross(d)
         if z.length < 1e-4:
             z = Vector((0, 1, 0))
         eb.align_roll(z)

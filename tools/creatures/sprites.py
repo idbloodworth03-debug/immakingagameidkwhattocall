@@ -30,7 +30,7 @@ import motion
 import scene as S
 
 ELEVATION = 50.0
-PIXELS_PER_TILE = 64
+PIXELS_PER_TILE = 56
 DIRECTIONS = [0, 45, 90, 135, 180]      # degrees clockwise from "facing up the screen"
 PADDING = 3                             # empty pixels around each frame in the sheet
 
@@ -41,6 +41,42 @@ def clean_alpha(im, floor=14):
     a = im[:, :, 3].astype(float)
     im[:, :, 3] = np.clip((a - floor) * 255.0 / (255 - floor), 0, 255).astype(np.uint8)
     return im
+
+
+def pack(crops, timing, hit, anchor, pixels_per_tile=PIXELS_PER_TILE):
+    """Lays every frame out in a near-square grid. `crops` maps (anim, dir)
+    to equally sized RGBA arrays; `timing` maps anim to (frames, fps, loops).
+    Each animation and direction records where its first frame is."""
+    first = next(iter(crops.values()))[0]
+    cell_h, cell_w = first.shape[:2]
+    total = sum(len(v) for v in crops.values())
+    step_w, step_h = cell_w + PADDING * 2, cell_h + PADDING * 2
+    columns = max(1, int(math.ceil(math.sqrt(total * step_h / step_w))))
+    rows = int(math.ceil(total / columns))
+    sheet = Image.new("RGBA", (columns * step_w, rows * step_h), (0, 0, 0, 0))
+    meta = {
+        "version": 2,
+        "cell": [int(cell_w), int(cell_h)],
+        "padding": PADDING,
+        "columns": columns,
+        "anchor": [round(float(anchor[0]), 1), round(float(anchor[1]), 1)],
+        "pixels_per_tile": pixels_per_tile,
+        "directions": DIRECTIONS,
+        "animations": {},
+    }
+    index = 0
+    for anim, (count, fps, loops) in timing.items():
+        info = {"frames": count, "fps": fps, "loop": loops, "start": {}}
+        if anim == "attack":
+            info["hit"] = hit
+        for d in DIRECTIONS:
+            info["start"][str(d)] = index
+            for im in crops[(anim, d)]:
+                col, row = index % columns, index // columns
+                sheet.paste(Image.fromarray(im), (col * step_w + PADDING, row * step_h + PADDING))
+                index += 1
+        meta["animations"][anim] = info
+    return sheet, meta
 
 
 def sprite_top(frames, anchor, y0=0):
@@ -68,8 +104,9 @@ def render_sprites(creature, out_dir, samples, with_fur=True):
     S.shadow_catcher(20)
 
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
-    length = float(hi[1] - lo[1])
-    height = float(hi[2])
+    # tiles_long is the animal's biggest size: nose to tail, or a bird's wingspan.
+    length = float(max(hi[0] - lo[0], hi[1] - lo[1]))
+    height = float(hi[2]) + float(creature.motion.get("altitude", 0.0))
     ppm = PIXELS_PER_TILE * creature.tiles_long / length          # pixels per meter
     side = int(math.ceil(max(length, height) * 1.7 * ppm / 2)) * 2
     target_z = height * 0.42
@@ -78,7 +115,9 @@ def render_sprites(creature, out_dir, samples, with_fur=True):
     sc.render.resolution_y = side
     anchor = (side / 2, side / 2 + target_z * math.cos(math.radians(ELEVATION)) * ppm)
 
-    tmp = os.path.join(out_dir, "_frame.png")
+    # Work files go to the system temp folder, not into the game.
+    import tempfile
+    tmp = os.path.join(tempfile.gettempdir(), f"_{creature.name}_frame.png")
     frames = {}        # (anim, dir) -> list of RGBA arrays
     for anim, (fn, count, fps, loops) in motion.ANIMATIONS.items():
         for d in DIRECTIONS:
@@ -102,30 +141,10 @@ def render_sprites(creature, out_dir, samples, with_fur=True):
     ys, xs = np.nonzero(alpha)
     x0, x1 = max(xs.min() - 1, 0), min(xs.max() + 2, side)
     y0, y1 = max(ys.min() - 1, 0), min(ys.max() + 2, side)
-    cell_w, cell_h = x1 - x0, y1 - y0
-    columns = max(count for _, count, _, _ in motion.ANIMATIONS.values())
-    rows = len(frames)
-    sheet = Image.new("RGBA", (columns * (cell_w + PADDING * 2), rows * (cell_h + PADDING * 2)), (0, 0, 0, 0))
-    meta = {
-        "cell": [int(cell_w), int(cell_h)],
-        "padding": PADDING,
-        "anchor": [round(anchor[0] - x0, 1), round(anchor[1] - y0, 1)],
-        "pixels_per_tile": PIXELS_PER_TILE,
-        "directions": DIRECTIONS,
-        "animations": {},
-    }
-    row = 0
-    for anim, (fn, count, fps, loops) in motion.ANIMATIONS.items():
-        info = {"frames": count, "fps": fps, "loop": loops, "rows": {}}
-        if anim == "attack":
-            info["hit"] = motion.HIT_AT.get(creature.motion.get("attack", "bite"), 0.45)
-        for d in DIRECTIONS:
-            for f, im in enumerate(frames[(anim, d)]):
-                crop = Image.fromarray(im[y0:y1, x0:x1])
-                sheet.paste(crop, (f * (cell_w + PADDING * 2) + PADDING, row * (cell_h + PADDING * 2) + PADDING))
-            info["rows"][str(d)] = row
-            row += 1
-        meta["animations"][anim] = info
+    crops = {key: [im[y0:y1, x0:x1] for im in images] for key, images in frames.items()}
+    timing = {anim: (count, fps, loops) for anim, (fn, count, fps, loops) in motion.ANIMATIONS.items()}
+    hit = motion.HIT_AT.get(creature.motion.get("attack", "bite"), 0.45)
+    sheet, meta = pack(crops, timing, hit, anchor=(anchor[0] - x0, anchor[1] - y0))
     meta["walk_cycle_tiles"] = round(creature.motion.get("cycle_tiles", creature.tiles_long * 0.75), 3)
     meta["top"] = sprite_top(frames, anchor, y0)
 
@@ -133,7 +152,7 @@ def render_sprites(creature, out_dir, samples, with_fur=True):
     sheet.save(os.path.join(out_dir, "sheet.webp"), "WEBP", quality=90, method=6)
     with open(os.path.join(out_dir, "sheet.json"), "w") as fh:
         json.dump(meta, fh, indent=1)
-    print(f"sheet {sheet.size[0]}x{sheet.size[1]}, cell {cell_w}x{cell_h}")
+    print(f"sheet {sheet.size[0]}x{sheet.size[1]}, cell {meta['cell'][0]}x{meta['cell'][1]}")
 
 
 def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
@@ -152,7 +171,8 @@ def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
     S.perspective_camera(tuple(center + d * radius * 3.1), tuple(center), lens=85)
     sc.render.resolution_x = size
     sc.render.resolution_y = size
-    path = os.path.join(out_dir, "_portrait.png")
+    import tempfile
+    path = os.path.join(tempfile.gettempdir(), f"_{creature.name}_portrait.png")
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)
     im = Image.fromarray(clean_alpha(np.asarray(Image.open(path).convert("RGBA"))))

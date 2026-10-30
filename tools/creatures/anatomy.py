@@ -18,6 +18,9 @@ class Bone:
     head: str           # joint name
     tail: str           # joint name
     parent: str = None
+    # Which way the bone's Z axis should point (wings use "up", so that a
+    # positive X rotation raises either wing). None: the usual roll.
+    up: tuple = None
 
 
 @dataclass
@@ -80,6 +83,8 @@ def add_face(creature, eye_dir, eye_radius, eye_sink, nose_radius, nose_sink=0.0
                                      direction=tuple(d), color=iris, rot=(0.0, 0.0, 0.0)))
         creature.extras[-1].pupil = pupil
         creature.eyes.append((p, eye_radius))
+    if nose_radius <= 0 or "snout_tip" not in creature.joints:
+        return
     tip = creature.joint("snout_tip")
     toward = tip - skull
     nose = surface_point(creature.shapes, skull, toward, sink=nose_sink)
@@ -208,5 +213,108 @@ def ear_part(base, tip, r, side):
                "lift": 0.35, "density": 90000, "peak": 1.0}
     return {"shapes": shapes, "voxel": r.get("ear_voxel", 0.002), "bone": "ear" + side, "fur": ear_fur}
 
+
+def bird(name, j, r, **extra):
+    """A bird in flight, wings spread. `j` holds the LEFT side (x < 0) and
+    midline joints: pelvis, spine_mid, withers, neck_base, head_base, skull,
+    beak_tip, jaw_hinge, chin, shoulder, elbow, wrist, wing_tip, hip, foot,
+    tail_base, tail_end. `r` holds sizes; wing chords say how wide the wing
+    is (front to back) at the shoulder, elbow, wrist and tip."""
+    joints = {}
+    for key, value in j.items():
+        if key in BIRD_SIDED:
+            joints[key + ".L"] = value
+            joints[key + ".R"] = mirror(value)
+        else:
+            joints[key] = value
+    joints["root"] = (0.0, (j["pelvis"][1] + j["withers"][1]) / 2, 0.0)
+    joints["root_tip"] = (0.0, joints["root"][1] + 0.1, 0.0)
+    bones = [
+        Bone("root", "root", "root_tip"),
+        Bone("hips", "pelvis", "spine_mid", "root"),
+        Bone("chest", "spine_mid", "withers", "hips"),
+        Bone("neck", "neck_base", "head_base", "chest"),
+        Bone("head", "head_base", "beak_tip", "neck"),
+        Bone("jaw", "jaw_hinge", "chin", "head"),
+        Bone("tail1", "tail_base", "tail_end", "hips"),
+    ]
+    for side in (".L", ".R"):
+        bones += [
+            Bone("wing_upper" + side, "shoulder" + side, "elbow" + side, "chest", up=(0, 0, 1)),
+            Bone("wing_lower" + side, "elbow" + side, "wrist" + side, "wing_upper" + side, up=(0, 0, 1)),
+            Bone("wing_hand" + side, "wrist" + side, "wing_tip" + side, "wing_lower" + side, up=(0, 0, 1)),
+            Bone("leg" + side, "hip" + side, "foot" + side, "hips"),
+        ]
+    P = lambda key: np.asarray(joints[key], float)
+    shapes = [
+        ellipsoid((P("pelvis") + P("withers")) / 2 + (0, 0, -r["body_drop"]), r["body"], "torso", "hips", blend=0.0,
+                  pitch=r.get("body_pitch", 0.0)),
+        ellipsoid(P("withers") + (0, -r["breast_back"], -r["breast_drop"]), r["breast"], "breast", "chest", blend=r["body_blend"]),
+        cone(P("neck_base"), P("head_base"), r["neck"][0], r["neck"][1], "neck", "neck", "head", blend=r["neck_blend"]),
+        ellipsoid(P("skull"), r["skull"], "head", "head", blend=r["head_blend"]),
+        cone(P("skull") + np.asarray(r["beak_root"]), P("beak_tip"), r["beak"][0], r["beak"][1], "beak", "head", blend=r["beak_blend"]),
+        cone(P("jaw_hinge"), P("chin"), r["jaw"][0], r["jaw"][1], "beak", "jaw", blend=r["beak_blend"] * 0.5),
+    ]
+    # Hooked tip of the beak.
+    hook = P("beak_tip") + np.array([0, -r["beak"][1] * 0.6, -r["beak"][1] * 2.6])
+    shapes.append(cone(P("beak_tip"), hook, r["beak"][1], r["beak"][1] * 0.4, "beak", "head", blend=0.002))
+    for side, sx in ((".L", 1), (".R", -1)):
+        lead = [P("shoulder" + side), P("elbow" + side), P("wrist" + side), P("wing_tip" + side)]
+        names = ["wing_upper" + side, "wing_lower" + side, "wing_hand" + side]
+        shapes += _wing_feathers(lead, names, r, sx)
+        # The arm inside the leading edge.
+        shapes.append(cone(lead[0], lead[1], r["arm"][0], r["arm"][1], "wing", names[0], names[1], blend=r["wing_blend"]))
+        shapes.append(cone(lead[1], lead[2], r["arm"][1], r["arm"][2], "wing", names[1], names[2], blend=r["wing_blend"]))
+        shapes.append(cone(lead[2], lead[3], r["arm"][2], r["arm"][2] * 0.4, "wing", names[2], blend=r["wing_blend"]))
+        # Tucked legs and feet.
+        shapes.append(cone(P("hip" + side), P("foot" + side), r["leg"][0], r["leg"][1], "leg", "leg" + side, blend=r["leg_blend"]))
+    # Tail fan.
+    tb, te = P("tail_base"), P("tail_end")
+    half = r["tail_width"]
+    left_base, right_base = tb + (-half[0], 0, 0), tb + (half[0], 0, 0)
+    left_end, right_end = te + (-half[1], 0, 0), te + (half[1], 0, 0)
+    tt = r["tail_thick"]
+    shapes.append(plate(left_base, right_base, right_end, tt, tt, "tail", "tail1", blend=r["tail_blend"]))
+    shapes.append(plate(left_base, right_end, left_end, tt, tt, "tail", "tail1", blend=r["tail_blend"]))
+    extra.setdefault("motion", {})
+    creature = Creature(name, joints, bones, shapes, **extra)
+    creature.motion.setdefault("body", "bird")
+    return creature
+
+
+def _wing_feathers(lead, names, r, sx):
+    """A wing as a row of long feather blades along its leading edge. Near
+    the body they point straight back; toward the tip they fan outward, and
+    the last few (the primaries) can splay apart like fingers."""
+    lengths = np.concatenate([[0], np.cumsum([np.linalg.norm(lead[i + 1] - lead[i]) for i in range(3)])])
+    total = lengths[-1]
+    count = int(r.get("feathers", 16))
+    chord = r["chord"]
+    shapes = []
+    for k in range(count):
+        u = (k + 0.5) / count
+        along = u * total
+        seg = min(int(np.searchsorted(lengths, along, side="right") - 1), 2)
+        local = (along - lengths[seg]) / max(lengths[seg + 1] - lengths[seg], 1e-9)
+        base = lead[seg] + (lead[seg + 1] - lead[seg]) * local
+        span_dir = (lead[seg + 1] - lead[seg]) / np.linalg.norm(lead[seg + 1] - lead[seg])
+        length = float(np.interp(along, lengths, chord))
+        # Fan outward toward the tip.
+        fan = r.get("fan", 0.9) * max(0.0, u - 0.45) / 0.55
+        direction = np.array([0, -1.0, 0]) * (1 - fan) + span_dir * fan
+        direction /= np.linalg.norm(direction)
+        primaries = r.get("fingers", 0)
+        if primaries and k >= count - primaries:
+            length *= r.get("finger_length", 1.4)
+        width = total / count * r.get("feather_overlap", 1.9)
+        half = span_dir * width / 2
+        tip = base + direction * length + np.array([0, 0, -0.002])
+        thick = r["wing_thick"] * (1 - 0.35 * u)
+        rounding = width * (0.35 if primaries and k >= count - primaries else 0.2)
+        shapes.append(plate(base - half, base + half, tip, thick, rounding, "wing", names[seg], blend=r["wing_blend"]))
+    return shapes
+
+
+BIRD_SIDED = {"shoulder", "elbow", "wrist", "wing_tip", "hip", "foot"}
 
 SIDED = {"ear_base", "ear_tip", "shoulder", "elbow", "wrist", "front_toe", "hip", "knee", "hock", "hind_toe", "eye"}

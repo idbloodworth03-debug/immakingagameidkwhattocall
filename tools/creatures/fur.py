@@ -29,8 +29,9 @@ def add_fur(creature, body, mesh, quality=1.0, overrides=None):
     weight = np.zeros(len(mesh.verts))
     for region, share in lengths.items():
         weight += mesh.region_weight(region) * share
-    if not overrides:
-        pass
+    if not overrides and "weight_fn" in fur:
+        # A species can vary fur length by position (a bison's woolly cape).
+        weight = weight * np.asarray(fur["weight_fn"](mesh), float)
     for center, radius in list(creature.eyes) + ([creature.nose] if creature.nose is not None else []):
         d = np.linalg.norm(mesh.verts - center, axis=1)
         weight *= np.clip((d - radius * 1.3) / (radius * 1.2), 0, 1)

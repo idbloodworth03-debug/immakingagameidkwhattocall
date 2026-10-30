@@ -99,7 +99,8 @@ def _round_cone(p, a, b, ra, rb):
 
 
 def _plate(p, a, b, c, thickness, rounding):
-    """Distance to a triangle a-b-c thickened to `thickness` with rounded edges."""
+    """Distance to a triangle a-b-c, its outline rounded by `rounding`,
+    `thickness` thick on each side with softly beveled edges."""
     e1 = b - a
     normal = np.cross(b - a, c - a)
     normal /= np.linalg.norm(normal)
@@ -108,14 +109,14 @@ def _plate(p, a, b, c, thickness, rounding):
     q = p - a
     px, py, pz = q @ u, q @ v, q @ normal
     tri = [np.array([0.0, 0.0]), np.array([(b - a) @ u, (b - a) @ v]), np.array([(c - a) @ u, (c - a) @ v])]
-    d2 = _triangle_2d(px, py, *tri)
-    w0 = d2
-    w1 = np.abs(pz) - thickness
-    d = np.minimum(np.maximum(w0, w1), 0.0) + np.sqrt(np.maximum(w0, 0) ** 2 + np.maximum(w1, 0) ** 2)
+    bevel = thickness * 0.5
+    w0 = _triangle_2d(px, py, *tri) - rounding + bevel
+    w1 = np.abs(pz) - (thickness - bevel)
+    d = np.minimum(np.maximum(w0, w1), 0.0) + np.sqrt(np.maximum(w0, 0) ** 2 + np.maximum(w1, 0) ** 2) - bevel
     base_mid = (a + b) / 2
     axis = c - base_mid
     t = np.clip((p - base_mid) @ axis / (axis @ axis), 0.0, 1.0)
-    return d - rounding, t
+    return d, t
 
 
 def _triangle_2d(px, py, p0, p1, p2):
@@ -152,15 +153,24 @@ def smooth_subtract(d_from, d_cut, k):
 
 
 def field_value(shapes, p):
+    """Blends all shapes at points p. Each shape only matters near itself
+    (within its blend distance), so it is only evaluated there."""
     total = None
     for s in shapes:
-        d, _ = distance(s, p)
         if total is None:
-            total = d
-        elif s.subtract:
-            total = smooth_subtract(total, d, s.blend)
+            total, _ = distance(s, p)
+            continue
+        lo, hi = _bounds(s)
+        reach = s.blend + 1e-6
+        near = np.all((p >= lo - reach) & (p <= hi + reach), axis=1)
+        if not near.any():
+            continue
+        idx = np.nonzero(near)[0]
+        d, _ = distance(s, p[idx])
+        if s.subtract:
+            total[idx] = smooth_subtract(total[idx], d, s.blend)
         else:
-            total = smooth_union(total, d, s.blend)
+            total[idx] = smooth_union(total[idx], d, s.blend)
     return total
 
 

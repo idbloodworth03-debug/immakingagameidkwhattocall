@@ -12,52 +12,52 @@ from paint import Painter
 from sdf import ellipsoid
 
 J = {
-    "pelvis": (0, -0.55, 0.93),
-    "spine_mid": (0, -0.05, 0.98),
-    "withers": (0, 0.42, 1.06),
-    "neck_base": (0, 0.55, 0.90),
-    "head_base": (0, 0.76, 0.92),
-    "skull": (0, 0.84, 0.93),
-    "snout_tip": (0, 1.09, 0.83),
-    "jaw_hinge": (0, 0.83, 0.84),
-    "chin": (0, 1.02, 0.77),
-    "ear_base": (-0.10, 0.82, 1.05),
-    "ear_tip": (-0.125, 0.80, 1.13),
-    "shoulder": (-0.17, 0.52, 0.78),
-    "elbow": (-0.18, 0.40, 0.50),
-    "wrist": (-0.17, 0.46, 0.13),
-    "front_toe": (-0.17, 0.62, 0.05),
-    "hip": (-0.18, -0.58, 0.84),
-    "knee": (-0.19, -0.40, 0.52),
-    "hock": (-0.18, -0.70, 0.15),
+    "pelvis": (0, -0.55, 0.95),
+    "spine_mid": (0, -0.05, 1.0),
+    "withers": (0, 0.40, 1.08),
+    "neck_base": (0, 0.52, 0.94),
+    "head_base": (0, 0.80, 0.88),
+    "skull": (0, 0.88, 0.89),
+    "snout_tip": (0, 1.15, 0.79),
+    "jaw_hinge": (0, 0.87, 0.80),
+    "chin": (0, 1.08, 0.735),
+    "ear_base": (-0.10, 0.86, 1.0),
+    "ear_tip": (-0.125, 0.84, 1.08),
+    "shoulder": (-0.17, 0.50, 0.82),
+    "elbow": (-0.18, 0.38, 0.55),
+    "wrist": (-0.17, 0.44, 0.14),
+    "front_toe": (-0.17, 0.60, 0.05),
+    "hip": (-0.18, -0.58, 0.86),
+    "knee": (-0.19, -0.40, 0.56),
+    "hock": (-0.18, -0.70, 0.16),
     "hind_toe": (-0.17, -0.47, 0.05),
-    "tail_base": (0, -0.82, 0.90),
-    "tail_mid": (0, -0.87, 0.84),
-    "tail_end": (0, -0.90, 0.78),
+    "tail_base": (0, -0.82, 0.92),
+    "tail_mid": (0, -0.87, 0.86),
+    "tail_end": (0, -0.90, 0.80),
 }
 
 R = {
-    "rump": (0.30, 0.36, 0.31), "rump_back": 0.03, "rump_drop": 0.2,
-    "belly": (0.33, 0.6, 0.33), "belly_drop": 0.27,
-    "chest": (0.33, 0.42, 0.40), "chest_back": 0.12, "chest_drop": 0.3,
-    "torso_blend": 0.3,
-    "neck_base": 0.28, "neck_top": 0.2, "neck_blend": 0.18,
-    "skull": (0.165, 0.16, 0.14), "skull_pitch": -0.05, "head_blend": 0.1,
-    "snout_root": (0, 0.1, -0.05), "snout_base": 0.105, "snout_end": 0.065, "snout_blend": 0.07,
-    "jaw_base": 0.07, "jaw_end": 0.045, "jaw_blend": 0.03,
+    "rump": (0.24, 0.34, 0.27), "rump_back": 0.03, "rump_drop": 0.17,
+    "belly": (0.29, 0.6, 0.27), "belly_drop": 0.23,
+    "chest": (0.29, 0.38, 0.33), "chest_back": 0.1, "chest_drop": 0.25,
+    "torso_blend": 0.16,
+    "neck_base": 0.24, "neck_top": 0.17, "neck_blend": 0.12,
+    "skull": (0.155, 0.15, 0.13), "skull_pitch": -0.05, "head_blend": 0.07,
+    "snout_root": (0, 0.1, -0.045), "snout_base": 0.095, "snout_end": 0.06, "snout_blend": 0.05,
+    "jaw_base": 0.065, "jaw_end": 0.042, "jaw_blend": 0.025,
     "ear_width": 0.095, "ear_thick": 0.014, "ear_round": 0.03, "ear_yaw": 0.3, "ear_sink": 0.03, "ear_voxel": 0.004,
     "ear_fur": 0.02,
-    "scapula": (0.15, 0.22, 0.28), "scapula_up": 0.16, "scapula_pitch": 0.25,
-    "upper_arm": (0.17, 0.13), "forearm": (0.125, 0.1), "front_paw": (0.09, 0.085),
-    "thigh": (0.23, 0.3, 0.32), "thigh_drop": 0.14, "thigh_pitch": -0.2,
-    "upper_leg": (0.2, 0.135), "shin": (0.125, 0.1), "hind_paw": (0.09, 0.085),
-    "limb_blend": 0.16, "joint_blend": 0.06,
+    "scapula": (0.13, 0.2, 0.25), "scapula_up": 0.14, "scapula_pitch": 0.25,
+    "upper_arm": (0.15, 0.115), "forearm": (0.11, 0.09), "front_paw": (0.085, 0.08),
+    "thigh": (0.2, 0.27, 0.29), "thigh_drop": 0.12, "thigh_pitch": -0.2,
+    "upper_leg": (0.18, 0.12), "shin": (0.11, 0.09), "hind_paw": (0.085, 0.08),
+    "limb_blend": 0.11, "joint_blend": 0.05,
     "tail": (0.06, 0.055, 0.04, 0.02), "tail_blend": 0.05,
 }
 
 COLORS = {
-    "brown": "#4f321e",
-    "tips": "#8a6844",
+    "brown": "#3d2717",
+    "tips": "#7a5a3a",
     "dark": "#24170f",
     "muzzle": "#86654a",
     "nose": "#1a1210",
@@ -85,10 +85,10 @@ def paint(mesh, creature):
 def make():
     c = quadruped("brown_bear", J, R, paint=paint, tiles_long=2.3)
     # The shoulder hump: a big muscle mass over the front legs.
-    c.shapes.append(ellipsoid((0, 0.36, 1.06), (0.26, 0.3, 0.16), "torso", "chest", blend=0.18))
+    c.shapes.append(ellipsoid((0, 0.34, 1.08), (0.22, 0.28, 0.15), "torso", "chest", blend=0.12))
     # A heavy brow and round cheeks for the dished face.
     for side in (1, -1):
-        c.shapes.append(ellipsoid((side * 0.12, 0.83, 0.88), (0.1, 0.11, 0.1), "cheek", "head", blend=0.08))
+        c.shapes.append(ellipsoid((side * 0.11, 0.86, 0.84), (0.085, 0.1, 0.09), "cheek", "head", blend=0.06))
     add_face(c, eye_dir=(-0.55, 0.78, 0.3), eye_radius=0.017, eye_sink=0.012, nose_radius=0.04, nose_sink=0.016,
              iris="#4a2a14", pupil="round")
     c.fur = {"variation": 0.2, "sheen": 0.25, "bump": 0.35, "length": 0.07, "density": 9000, "hair_gamma": 2.1,

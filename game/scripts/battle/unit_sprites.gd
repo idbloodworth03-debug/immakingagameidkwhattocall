@@ -63,10 +63,18 @@ static func frame(id: String, anim: String, facing: float, frame_index: int) -> 
 	var flip := angle > 180
 	if flip:
 		angle = 360 - angle
-	var row := int(info.rows[str(angle)])
 	var cell: Vector2 = sheet.cell_size
 	var pad := float(sheet.padding)
-	var region := Rect2(f * (cell.x + pad * 2) + pad, row * (cell.y + pad * 2) + pad, cell.x, cell.y)
+	var col := f
+	var row := 0
+	if sheet.has("columns"):
+		# Packed layout: frames run left to right, row after row.
+		var index := int(info.start[str(angle)]) + f
+		col = index % int(sheet.columns)
+		row = index / int(sheet.columns)
+	else:
+		row = int(info.rows[str(angle)])
+	var region := Rect2(col * (cell.x + pad * 2) + pad, row * (cell.y + pad * 2) + pad, cell.x, cell.y)
 	return {"texture": sheet.texture, "region": region, "flip": flip, "anchor": sheet.anchor_point}
 
 

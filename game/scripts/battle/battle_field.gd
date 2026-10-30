@@ -40,10 +40,16 @@ var _pressed := false
 var _views := {}
 ## Animals that just died, playing their death animation.
 var _corpses: Array = []
+## Things thrown by ranged animals (a squirrel's acorns), timed to land on the hit.
+var _projectiles: Array = []
 
 ## Sprites are drawn this much bigger than true size, to read on a phone.
 const SPRITE_SCALE := 1.6
 const TURN_SPEED := 600.0     # degrees per second
+## Pack and swarm animals are drawn a bit smaller so a group stays readable.
+const SWARM_SCALE := 0.8
+const HURT_TIME := 0.16
+const THROW_FLIGHT := 0.28    # seconds an acorn is in the air
 
 
 func _ready() -> void:
@@ -108,6 +114,8 @@ func add_events(events: Array) -> void:
 				if e.from_kind == "unit":
 					_lunges[e.from] = {"age": 0.0, "dir": Vector2(e.x - e.fx, e.y - e.fy).normalized()}
 					_on_unit_hit(e.from)
+				if _views.has(e.to):
+					_views[e.to].hurt = HURT_TIME
 				if e.to_kind == "tower":
 					_effect("number", e.x + randi_range(-400, 400), e.y - 600, 0, Color("#ffd166"), 0.7, str(e.amount))
 			"death":
@@ -149,6 +157,7 @@ func _process(delta: float) -> void:
 	if sim != null:
 		_update_views(delta)
 	_corpses = _corpses.filter(func(c): return _time - c.at < UnitSprites.duration(c.id, "death") + 0.9)
+	_projectiles = _projectiles.filter(func(pr): return _time < pr.land)
 	queue_redraw()
 
 
@@ -163,11 +172,12 @@ func _update_views(delta: float) -> void:
 		var pos := Vector2(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
 		var v: Dictionary = _views.get(f.uid, {})
 		if v.is_empty():
-			v = {"id": f.card.id, "pos": pos, "facing": 0.0 if f.team == 0 else 180.0,
+			v = {"id": f.card.id, "pos": pos, "facing": 0.0 if f.team == 0 else 180.0, "hurt": 0.0,
 				"walk": randf(), "moving": 0.0, "attack_at": -100.0, "team": f.team, "flying": f.is_flying()}
 			_views[f.uid] = v
 		var moved: Vector2 = pos - v.pos
 		v.pos = pos
+		v.hurt = maxf(0.0, float(v.hurt) - delta)
 		if moved.length() > 1.0:
 			v.moving = 0.12
 			_turn(v, moved, delta)
@@ -182,6 +192,8 @@ func _update_views(delta: float) -> void:
 			var to_hit := (float(f.cooldown) / 100.0 - blend) / float(sim.tps)
 			if to_hit >= 0.0 and to_hit <= windup:
 				v.attack_at = _time - (windup - to_hit)
+				if f.attack_range > 1500:
+					_throw(f, to_hit)
 	for uid in _views.keys():
 		if not seen.has(uid):
 			_views.erase(uid)
@@ -207,6 +219,13 @@ func _on_unit_hit(uid: int) -> void:
 	# A hit with no attack showing (the first one, often): jump to the strike.
 	if _views.has(uid) and not _attacking(_views[uid]):
 		_views[uid].attack_at = _time - _windup(_views[uid].id)
+
+
+## A ranged animal's throw: leaves its paw before the hit and lands on it.
+func _throw(f: BattleSim.Fighter, to_hit: float) -> void:
+	var flight := minf(THROW_FLIGHT, to_hit + 0.15)
+	_projectiles.append({"from": Vector2(f.x, f.y), "to_uid": f.target.uid, "to": Vector2(f.target.x, f.target.y),
+		"launch": _time + to_hit - flight, "land": _time + to_hit})
 
 
 func _add_corpse(uid: int) -> void:
@@ -273,6 +292,8 @@ func _draw() -> void:
 			_draw_unit(f, s)
 
 	_draw_preview(s)
+	for pr in _projectiles:
+		_draw_projectile(pr, s)
 	for fx in effects:
 		_draw_effect(fx, s)
 
@@ -447,6 +468,8 @@ func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
 	var id: String = v.id
 	var p := to_screen(v.pos.x, v.pos.y)
 	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
+	if int(f.card.get("count", 1)) > 1:
+		k *= SWARM_SCALE
 	var team_color := OWN_COLOR if f.team == 0 else ENEMY_COLOR
 	var alpha := 1.0
 	if f.deploy_ticks > 0:
@@ -476,6 +499,10 @@ func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
 		tint = Color(0.6, 0.6, 0.6, alpha)
 	elif f.stun > 0:
 		tint = Color(1.0, 1.0, 0.7, alpha)
+	if float(v.hurt) > 0.0:
+		# Flash bright when hit.
+		var h := float(v.hurt) / HURT_TIME
+		tint = Color(tint.r + 0.35 * h, tint.g + 0.12 * h, tint.b + 0.1 * h, alpha)
 	_blit(info, p, k, tint)
 
 	# Status rings around its feet.
@@ -503,6 +530,8 @@ func _draw_corpse(corpse: Dictionary, s: float) -> void:
 	var fade := clampf(1.0 - (age - UnitSprites.duration(id, "death")) / 0.9, 0.0, 1.0)
 	var p := to_screen(corpse.pos.x, corpse.pos.y)
 	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
+	if int(GameData.get_card(id).get("count", 1)) > 1:
+		k *= SWARM_SCALE
 	_blit(UnitSprites.frame(id, "death", corpse.facing, frame), p, k, Color(1, 1, 1, fade))
 
 
@@ -524,6 +553,25 @@ func _blit(info: Dictionary, p: Vector2, k: float, tint: Color) -> void:
 		draw_set_transform(_shake_offset)
 	else:
 		draw_texture_rect_region(info.texture, Rect2(p - anchor, size), region, tint)
+
+
+func _draw_projectile(pr: Dictionary, s: float) -> void:
+	if _time < pr.launch:
+		return
+	var t := clampf((_time - float(pr.launch)) / maxf(float(pr.land) - float(pr.launch), 0.01), 0.0, 1.0)
+	var goal: Vector2 = pr.to
+	if _views.has(pr.to_uid):
+		goal = _views[pr.to_uid].pos
+	var from := to_screen(pr.from.x, pr.from.y)
+	var to := to_screen(goal.x, goal.y)
+	# An arc: up and over, a little higher for longer throws.
+	var lift := from.distance_to(to) * 0.35 + 10.0
+	var p := from.lerp(to, t) + Vector2(0, -lift * 4.0 * t * (1.0 - t) - 10.0)
+	var r := maxf(3.0, 220.0 * s)
+	draw_circle(p + Vector2(0, 10.0 + lift * 4.0 * t * (1.0 - t)) * 0.4, r * 0.8, Color(0, 0, 0, 0.25))
+	draw_circle(p, r, Color("#7a4a22"))
+	draw_circle(p + Vector2(0, -r * 0.45), r * 0.75, Color("#4b2e15"))
+	draw_circle(p + Vector2(-r * 0.3, r * 0.15), r * 0.3, Color(1, 1, 1, 0.35))
 
 
 func _draw_effect(fx: Dictionary, s: float) -> void:

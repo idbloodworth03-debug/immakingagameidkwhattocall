@@ -66,6 +66,8 @@ def _scale(c):
 
 
 def idle(c, t):
+    if c.motion.get("body") == "bird":
+        return bird_flap(c, t, power=c.motion.get("hover_power", 0.55))
     p = Pose()
     s = _scale(c)
     breath = math.sin(t * TAU)
@@ -78,7 +80,15 @@ def idle(c, t):
     p.rot("ear.L", z=0.08 * max(0, math.sin(t * TAU * 2)))
     p.rot("ear.R", z=-0.08 * max(0, math.sin(t * TAU * 2 + 1.5)))
     _tail(p, t, sway=0.18, droop=0.0)
+    _trunk(p, z=math.sin(t * TAU) * 0.25, x=0.08 + 0.08 * math.sin(t * TAU * 2))
     return p
+
+
+def _trunk(p, x=0.0, z=0.0):
+    """Elephants: swing (z) and curl (x, positive lifts the tip forward)."""
+    p.rot("trunk1", x=x * 0.5, z=z * 0.5)
+    p.rot("trunk2", x=x * 0.8, z=z * 0.7)
+    p.rot("trunk3", x=x * 1.0, z=z)
 
 
 def _tail(p, t, sway=0.2, droop=0.0, speed=1):
@@ -96,6 +106,8 @@ GAITS = {
 
 
 def walk(c, t):
+    if c.motion.get("body") == "bird":
+        return bird_flap(c, t, power=1.0)
     gait = GAITS[c.motion.get("gait", "trot")]
     p = Pose()
     s = _scale(c)
@@ -132,6 +144,7 @@ def walk(c, t):
     p.rot("ear.L", x=-0.15)
     p.rot("ear.R", x=-0.15)
     _tail(p, t, sway=0.12, droop=-0.1, speed=gait["bobs"] / 2)
+    _trunk(p, z=math.sin(t * TAU) * 0.2, x=0.1)
     return p
 
 
@@ -242,6 +255,10 @@ def stomp(c, t):
     p.rot("neck", x=float(rise) * 0.25)
     p.rot("head", x=float(rise) * 0.2)
     p.move(z=-max(-float(rise), 0) * s * 0.05)
+    # The trunk curls up high, then lashes down with the stomp.
+    _trunk(p, x=max(float(rise), 0) * 1.1 - max(-float(rise), 0) * 0.5)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.4 * max(float(rise), 0))
     return p
 
 
@@ -261,11 +278,72 @@ def throw(c, t):
     return p
 
 
-ATTACKS = {"pounce_bite": pounce_bite, "bite": bite, "swipe": swipe, "charge": charge, "stomp": stomp, "throw": throw}
+# --- Birds ------------------------------------------------------------------------
+
+def _wings(p, upper, lower, hand, sweep=0.0, twist=0.0):
+    """Positive raises the wing (both sides). `sweep` pulls the wing back."""
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("wing_upper." + side, x=upper, z=-sweep * sign, y=twist * sign)
+        p.rot("wing_lower." + side, x=lower, z=-sweep * 0.6 * sign)
+        p.rot("wing_hand." + side, x=hand, z=-sweep * 0.4 * sign)
+
+
+def bird_flap(c, t, power=1.0):
+    """One wingbeat: a strong downstroke, then the wing folds a little and
+    comes back up. The body bobs against the wings."""
+    p = Pose()
+    a = TAU * t
+    amp = c.motion.get("flap", 0.75) * power
+    up = math.sin(a)
+    _wings(p, upper=up * amp, lower=math.sin(a - 0.5) * amp * 0.55, hand=math.sin(a - 1.0) * amp * 0.45,
+           sweep=max(0.0, math.cos(a)) * 0.25 * power)
+    s = c.motion.get("altitude", 0.5)
+    p.move(z=-up * s * 0.05 * power)
+    p.rot("neck", x=up * 0.05)
+    p.rot("head", x=-up * 0.05)
+    p.rot("tail1", x=math.sin(a + 1.0) * 0.08)
+    for side in ("L", "R"):
+        p.rot("leg." + side, x=-0.9)
+    return p
+
+
+def bird_strike(c, t):
+    """Stoop: wings sweep back, the bird drops forward onto its target with
+    talons out, then beats back up."""
+    p = Pose()
+    s = c.motion.get("altitude", 0.5)
+    dive = keys(t, [(0, 0), (0.25, 0.4), (0.48, 1), (0.6, 0.8), (1, 0)])
+    talons = keys(t, [(0, 0), (0.35, 0), (0.48, 1), (0.65, 0.6), (1, 0)])
+    beat = keys(t, [(0, 0), (0.55, 0), (0.7, 1), (0.85, -0.6), (1, 0)])
+    p.move(y=float(dive) * s * 0.5, z=-float(dive) * s * 0.55)
+    p["root_rot"] = (-float(dive) * 0.45, 0.0, 0.0)
+    _wings(p, upper=float(dive) * 0.5 + float(beat) * 0.7, lower=-float(dive) * 0.2 + float(beat) * 0.4,
+           hand=-float(dive) * 0.3, sweep=float(dive) * 0.55)
+    for side in ("L", "R"):
+        p.rot("leg." + side, x=-0.9 + float(talons) * 1.7)
+    p.rot("neck", x=float(dive) * 0.3)
+    p.rot("jaw", x=-float(talons) * 0.4)
+    return p
+
+
+def bird_fall(c, t):
+    """Wings crumple and it tumbles to the ground."""
+    p = Pose()
+    s = c.motion.get("altitude", 0.5)
+    fall = keys(t, [(0, 0), (0.8, 1), (1, 1)])
+    p.move(z=-float(fall) * (s - 0.02))
+    p["root_rot"] = (-float(fall) * 0.3, float(fall) * 1.2, 0.0)
+    _wings(p, upper=0.6 * float(fall), lower=-0.8 * float(fall), hand=-0.6 * float(fall), sweep=0.3 * float(fall))
+    return p
+
+
+ATTACKS = {"dive": bird_strike, "pounce_bite": pounce_bite, "bite": bite, "swipe": swipe, "charge": charge, "stomp": stomp, "throw": throw}
 
 
 def death(c, t):
     """Sink and roll onto the side; legs go limp."""
+    if c.motion.get("body") == "bird":
+        return bird_fall(c, t)
     p = Pose()
     s = _scale(c)
     fall = keys(t, [(0, 0), (0.7, 1), (1, 1)])

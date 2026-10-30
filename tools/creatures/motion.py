@@ -187,8 +187,10 @@ def bite(c, t):
     p.move(y=lean * s * 0.12, z=-abs(lean) * s * 0.02)
     p.rot("chest", x=-lean * 0.06)
     p.rot("neck", x=-lean * 0.25)
-    p.rot("head", x=-lean * 0.1 + jaw * 0.15)
-    p.rot("jaw", x=-jaw * 0.5)
+    # "gape": how wide the jaws open, in radians (a hippo's are enormous).
+    gape = c.motion.get("gape", 0.5)
+    p.rot("head", x=-lean * 0.1 + jaw * 0.3 * gape)
+    p.rot("jaw", x=-jaw * gape)
     for side in ("L", "R"):
         p.leg("fl." + side, upper=lean * 0.25, lower=-lean * 0.1)
         p.leg("hl." + side, upper=-lean * 0.2, lower=lean * 0.1)

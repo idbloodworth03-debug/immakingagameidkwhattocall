@@ -8,7 +8,7 @@ Real size: about 1.5 m at the shoulder, 3.5 m long.
 """
 import numpy as np
 
-from anatomy import add_face, quadruped
+from anatomy import Extra, add_face, add_mouth, quadruped
 from paint import Painter
 from sdf import ellipsoid
 
@@ -95,9 +95,16 @@ def make():
         c.shapes.append(ellipsoid((side * 0.18, 1.32, 0.68), (0.18, 0.24, 0.13), "jaw", "jaw", blend=0.05))
         # Raised eye bumps on top of the head.
         c.shapes.append(ellipsoid((side * 0.18, 1.02, 1.24), (0.08, 0.08, 0.07), "head", "head", blend=0.06))
+    # A real mouth to gape with, and the big lower tusks hidden behind the
+    # upper lip until it opens.
+    add_mouth(c, center=(0, 1.48, 0.755), radii=(0.42, 0.38, 0.022))
+    for side in (1, -1):
+        c.extras.append(Extra("cone", "tusk", "jaw", center=(side * 0.25, 1.5, 0.72), tip=(side * 0.27, 1.56, 0.92),
+                              radius=0.045, tip_radius=0.012))
     add_face(c, eye_dir=(-0.6, 0.35, 0.72), eye_radius=0.026, eye_sink=0.012, nose_radius=0, iris="#2a1408", pupil="round")
     c.fur = {"strands": False, "variation": 0.12, "sheen": 0.05, "bump": 0.4, "roughness": 0.5, "specular": 0.45,
              "subsurface": 0.15, "streak_x": 60.0, "streak_y": 60.0, "streak_z": 60.0}
-    c.motion = {"gait": "walk", "attack": "bite", "stride": 0.8}
+    c.motion = {"gait": "walk", "attack": "bite", "stride": 0.8, "gape": 1.15}
+    c.palette = {"mouth": "#b5606a"}
     c.palette = {"eye_line": "#5a3a34", "eye_line_size": 1.5}
     return c

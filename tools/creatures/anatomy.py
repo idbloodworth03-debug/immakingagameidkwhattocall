@@ -60,9 +60,28 @@ class Creature:
     parts: list = field(default_factory=list)
     eyes: list = field(default_factory=list)     # (center, radius), set by add_face
     nose: tuple = None
+    mouth: dict = None                           # {"center", "radii"}, set by add_mouth
 
     def joint(self, name):
         return np.asarray(self.joints[name], float)
+
+
+def add_mouth(creature, center, radii, blend=0.012):
+    """Carves a thin slab between the upper and lower jaw, from the corners of
+    the mouth out through the lips, so the jaw can open on a real mouth.
+    `radii` are half the width, half the length and half the gap."""
+    creature.shapes.append(ellipsoid(center, radii, "mouth", "jaw", blend=blend, subtract=True))
+    creature.mouth = {"center": tuple(center), "radii": tuple(radii)}
+
+
+def mouth_mask(creature, verts, reach=2.5):
+    """1 on the walls of a carved mouth and along the lips, fading to 0 within
+    `reach` times the mouth's half-gap above and below it."""
+    if not creature.mouth:
+        return np.zeros(len(verts))
+    c, r = np.asarray(creature.mouth["center"]), np.asarray(creature.mouth["radii"])
+    footprint = ((verts[:, 0] - c[0]) / r[0]) ** 2 + ((verts[:, 1] - c[1]) / r[1]) ** 2 < 1.0
+    return footprint * np.clip((r[2] * reach - np.abs(verts[:, 2] - c[2])) / r[2], 0, 1)
 
 
 def add_face(creature, eye_dir, eye_radius, eye_sink, nose_radius, nose_sink=0.004, eye_material="eye",

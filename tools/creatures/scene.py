@@ -9,6 +9,7 @@ import bpy
 import numpy as np
 from mathutils import Matrix, Vector
 
+from anatomy import mouth_mask
 from sdf import build_mesh, bone_weights
 
 
@@ -84,7 +85,8 @@ def _set_colors(me, colors):
 
 
 def _face_paint(creature, mesh, colors):
-    """Dark lining around the eyes and dark skin around the nose."""
+    """Dark lining around the eyes, dark skin around the nose, and the inside
+    of the mouth."""
     dark = hex_color(creature.palette.get("eye_line", "#1b1210")) if creature.palette else hex_color("#1b1210")
     colors = np.array(colors)
     size = float(creature.palette.get("eye_line_size", 1.55)) if creature.palette else 1.55
@@ -97,6 +99,10 @@ def _face_paint(creature, mesh, colors):
         d = np.linalg.norm(mesh.verts - center, axis=1)
         amount = np.clip((radius * 1.6 - d) / (radius * 0.5), 0, 1)
         colors = colors * (1 - amount[:, None]) + dark * amount[:, None]
+    if creature.mouth:
+        mouth = hex_color(creature.palette.get("mouth", "#9c4a50"))
+        amount = mouth_mask(creature, mesh.verts)
+        colors = colors * (1 - amount[:, None]) + mouth * amount[:, None]
     return colors
 
 
@@ -161,7 +167,7 @@ def _body(creature, mesh, arm):
         a = me.attributes.new(key, "FLOAT", "POINT")
         a.data.foreach_set("value", np.asarray(values, float))
 
-    weights = bone_weights(mesh)
+    weights = _split_jaws(creature, mesh, bone_weights(mesh))
     for name, w in weights.items():
         vg = body.vertex_groups.new(name=name)
         for i in np.nonzero(w > 0.01)[0]:
@@ -212,6 +218,27 @@ def _stick_to_bone(obj, arm, bone, creature_space):
     obj.parent_bone = bone
     bpy.context.view_layer.update()
     obj.matrix_world = world
+
+
+def _split_jaws(creature, mesh, weights):
+    """With a carved mouth, the muzzle above the mouth follows the head and
+    the muzzle below it follows the jaw, so the jaws part cleanly instead of
+    stretching wherever the head and jaw shapes overlap."""
+    m = creature.mouth
+    if not m or "jaw" not in weights or "head" not in weights:
+        return weights
+    c, r = np.asarray(m["center"]), np.asarray(m["radii"])
+    v = mesh.verts
+    # The mouth's footprint seen from above, a little bigger than the slab.
+    q = ((v[:, 0] - c[0]) / (r[0] * 1.15)) ** 2 + ((v[:, 1] - c[1]) / (r[1] * 1.15)) ** 2
+    inside = np.clip((1.0 - q) * 4.0, 0.0, 1.0)
+    head, jaw = weights["head"], weights["jaw"]
+    muzzle = head + jaw
+    k = inside * np.clip(muzzle, 0.0, 1.0)
+    below = np.clip((c[2] - v[:, 2]) / (r[2] * 2) + 0.5, 0.0, 1.0)
+    weights["jaw"] = jaw * (1 - k) + muzzle * below * k
+    weights["head"] = head * (1 - k) + muzzle * (1 - below) * k
+    return weights
 
 
 # --- Materials -----------------------------------------------------------------

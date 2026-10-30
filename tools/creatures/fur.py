@@ -7,6 +7,8 @@ every pose.
 import bpy
 import numpy as np
 
+from anatomy import mouth_mask
+
 # Body part -> fur length (as a share of the creature's fur["length"]).
 DEFAULT_LENGTHS = {
     "torso": 0.75, "neck": 0.9, "shoulder": 0.7, "thigh": 0.7,
@@ -35,6 +37,7 @@ def add_fur(creature, body, mesh, quality=1.0, overrides=None):
     for center, radius in list(creature.eyes) + ([creature.nose] if creature.nose is not None else []):
         d = np.linalg.norm(mesh.verts - center, axis=1)
         weight *= np.clip((d - radius * 1.3) / (radius * 1.2), 0, 1)
+    weight *= 1 - mouth_mask(creature, mesh.verts, reach=3.5)
     peak = max(lengths.values())
     if overrides and "peak" in overrides:
         peak = overrides["peak"]

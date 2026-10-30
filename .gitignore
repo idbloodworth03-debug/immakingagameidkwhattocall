@@ -22,3 +22,6 @@ Thumbs.db
 # Local web builds (the GitHub workflow builds and publishes the web version)
 /build/
 __pycache__/
+
+# Work files while tools/creatures renders an animal
+game/art/units/*/_*

@@ -60,10 +60,11 @@ class Painter:
         noise = 1.0 + (self.rng.random(len(self.v)) - 0.5) * amount
         self.colors *= noise[:, None]
 
-    def noise(self, scale, seed=0):
+    def noise(self, scale, seed=0, markings=False):
         """Smooth random values from -1 to 1 over the body (a sum of waves
-        in random directions), `scale` waves per meter."""
-        if Painter.clean:
+        in random directions), `scale` waves per meter. Cartoon coats drop
+        noise unless it draws the animal's `markings`."""
+        if Painter.clean and not markings:
             return np.zeros(len(self.v))
         rng = np.random.default_rng(seed)
         total = np.zeros(len(self.v))

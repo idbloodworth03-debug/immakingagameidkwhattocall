@@ -68,11 +68,12 @@ def paint(mesh, creature):
     v, n = p.v, p.n
     W = p.mesh.region_weight
     p.fill("tan")
-    # The painted coat: blotches of black, cream and brown from noise.
+    # The painted coat: blotches of black, cream and brown from noise. The
+    # finer noise roughens their edges; cartoon coats keep them smooth.
     seed = int(creature.motion.get("coat_seed", 4))
-    p.blend("black", p.smooth(p.noise(26.0, seed) + 0.3 * p.noise(55.0, seed + 5), 0.05, 0.22))
-    p.blend("cream", p.smooth(p.noise(30.0, seed + 1) + 0.3 * p.noise(60.0, seed + 6), 0.6, 0.2) * 0.9)
-    p.blend("brown", p.smooth(p.noise(22.0, seed + 2), 0.45, 0.25) * 0.6)
+    p.blend("black", p.smooth(p.noise(26.0, seed, markings=True) + 0.3 * p.noise(55.0, seed + 5), 0.05, 0.22))
+    p.blend("cream", p.smooth(p.noise(30.0, seed + 1, markings=True) + 0.3 * p.noise(60.0, seed + 6), 0.6, 0.2) * 0.9)
+    p.blend("brown", p.smooth(p.noise(22.0, seed + 2, markings=True), 0.45, 0.25) * 0.6)
     # Black face and muzzle, dark stripe up the forehead, dark ears.
     face = np.clip(W("snout") + W("jaw") + W("cheek"), 0, 1)
     p.blend("black", face)

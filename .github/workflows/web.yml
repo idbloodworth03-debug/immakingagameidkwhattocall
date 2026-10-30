@@ -56,11 +56,16 @@ jobs:
         if: env.NETLIFY_AUTH_TOKEN != ''
         run: |
           cd build/web && zip -qr ../site.zip .
-          curl --fail -sS \
+          status=$(curl -sS -o ../deploy.json -w "%{http_code}" \
             -H "Content-Type: application/zip" \
             -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
             --data-binary "@../site.zip" \
-            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/deploys" > ../deploy.json
+            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/deploys")
+          if [ "$status" -ge 400 ]; then
+            # Show Netlify's reason (e.g. a used-up plan or a revoked token).
+            echo "::error::Netlify refused the deploy ($status): $(head -c 500 ../deploy.json)"
+            exit 1
+          fi
           python3 -c "import json; d = json.load(open('../deploy.json')); print('Published', d.get('ssl_url') or d.get('url'), '(' + str(d.get('state')) + ')')"
 
       - name: Remind about Netlify setup

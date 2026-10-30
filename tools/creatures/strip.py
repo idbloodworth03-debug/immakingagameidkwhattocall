@@ -38,6 +38,8 @@ def main(species, anim, out, size=220):
         for f in range(frames):
             t = f / frames if loops else f / (frames - 1)
             motion.apply(arm, fn(creature, t))
+            if anim == "death":
+                motion.rest_on_ground(arm, body)
             path = f"{out}.f{f}.png"
             sc.render.filepath = path
             bpy.ops.render.render(write_still=True)

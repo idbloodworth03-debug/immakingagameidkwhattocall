@@ -92,7 +92,42 @@ def sprite_top(frames, anchor, y0=0):
     return round(float(np.median(tops)), 1) if tops else 0.0
 
 
-def render_sprites(creature, out_dir, samples, with_fur=True):
+def _old_frames(out_dir, side, anchor, anims):
+    """The frames of `anims` from the sheet already in out_dir, put back where
+    they were in the full rendered frame. Only works while the creature's
+    size and the camera are unchanged since that sheet was rendered."""
+    meta = json.load(open(os.path.join(out_dir, "sheet.json")))
+    sheet = np.asarray(Image.open(os.path.join(out_dir, "sheet.webp")).convert("RGBA"))
+    cw, ch = meta["cell"]
+    pad, cols = meta["padding"], meta["columns"]
+    ox, oy = anchor[0] - meta["anchor"][0], anchor[1] - meta["anchor"][1]
+    lines_up = (meta.get("version") == 2 and meta.get("pixels_per_tile") == PIXELS_PER_TILE
+                and abs(ox - round(ox)) < 0.2 and abs(oy - round(oy)) < 0.2
+                and 0 <= ox and ox + cw <= side and 0 <= oy and oy + ch <= side)
+    if not lines_up:
+        raise SystemExit(f"{out_dir}: the old sheet doesn't line up with this creature (offset {ox:.2f}, {oy:.2f}, "
+                         f"cell {cw}x{ch} in a {side} frame); render every animation")
+    ox, oy = int(round(ox)), int(round(oy))
+    frames = {}
+    for anim in anims:
+        info = meta["animations"][anim]
+        if info["frames"] != motion.ANIMATIONS[anim][1]:
+            raise SystemExit(f"{out_dir}: {anim} has a different frame count now; render it again too")
+        for d in DIRECTIONS:
+            images = []
+            for f in range(info["frames"]):
+                i = int(info["start"][str(d)]) + f
+                x, y = (i % cols) * (cw + pad * 2) + pad, (i // cols) * (ch + pad * 2) + pad
+                full = np.zeros((side, side, 4), np.uint8)
+                full[oy:oy + ch, ox:ox + cw] = sheet[y:y + ch, x:x + cw]
+                images.append(full)
+            frames[(anim, d)] = images
+    return frames
+
+
+def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
+    """Renders every animation, or only those in `anims`, keeping the rest
+    from the sheet already in out_dir."""
     sc = S.reset()
     sc.cycles.samples = samples
     # Keep the scene loaded between frames; only the pose changes.
@@ -119,13 +154,19 @@ def render_sprites(creature, out_dir, samples, with_fur=True):
     import tempfile
     tmp = os.path.join(tempfile.gettempdir(), f"_{creature.name}_frame.png")
     frames = {}        # (anim, dir) -> list of RGBA arrays
+    if anims:
+        frames.update(_old_frames(out_dir, side, anchor, [a for a in motion.ANIMATIONS if a not in anims]))
     for anim, (fn, count, fps, loops) in motion.ANIMATIONS.items():
+        if anims and anim not in anims:
+            continue
         for d in DIRECTIONS:
             facing.rotation_euler = (0, 0, -math.radians(d))
             images = []
             for f in range(count):
                 t = f / count if loops else f / max(count - 1, 1)
                 motion.apply(arm, fn(creature, t))
+                if anim == "death":
+                    motion.rest_on_ground(arm, body)
                 sc.render.filepath = tmp
                 bpy.ops.render.render(write_still=True)
                 images.append(clean_alpha(np.asarray(Image.open(tmp).convert("RGBA"))))
@@ -188,12 +229,15 @@ def main():
     parser.add_argument("--samples", type=int, default=20)
     parser.add_argument("--only", choices=["sprites", "portrait"])
     parser.add_argument("--bare", action="store_true", help="no fur strands (much faster, for testing)")
+    parser.add_argument("--anims", help="comma-separated animations to render again, keeping the others "
+                        "from the existing sheet (e.g. --anims death --only sprites)")
     args = parser.parse_args()
     creature = importlib.import_module(args.species).make()
     out_dir = os.path.join(args.out, args.species)
     os.makedirs(out_dir, exist_ok=True)
     if args.only != "portrait":
-        render_sprites(creature, out_dir, args.samples, with_fur=not args.bare)
+        anims = args.anims.split(",") if args.anims else None
+        render_sprites(creature, out_dir, args.samples, with_fur=not args.bare, anims=anims)
     if args.only != "sprites":
         render_portrait(creature, out_dir, args.samples, with_fur=not args.bare)
 

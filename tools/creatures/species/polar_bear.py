@@ -56,9 +56,9 @@ R = {
 }
 
 COLORS = {
-    "cream": "#e9e0cb",
-    "shadow": "#c9bc9c",
-    "yellow": "#d9c79a",
+    "cream": "#ddd0b0",
+    "shadow": "#a89a7a",
+    "yellow": "#cfb680",
     "black": "#141212",
 }
 
@@ -68,7 +68,10 @@ def paint(mesh, creature):
     p.fill("cream")
     # Yellowish on the back and rump, slightly greyer underneath.
     p.where("yellow", lambda v, n: p.smooth(n[:, 2], 0.3, 0.5), 0.35)
-    p.where("shadow", lambda v, n: p.smooth(-n[:, 2], 0.3, 0.4), 0.3)
+    p.where("shadow", lambda v, n: p.smooth(-n[:, 2], 0.3, 0.4), 0.45)
+    # Legs and paws grubbier from the snow and the hunt.
+    for leg in ("front_lower", "front_paw", "hind_lower", "hind_paw"):
+        p.region(leg, "shadow", 0.35)
     # Black lips: a thin line along the mouth.
     p.region_where("jaw", "black", lambda v, n: p.smooth(n[:, 2], 0.3, 0.3), 0.7)
     p.speckle(0.06)
@@ -83,7 +86,7 @@ def make():
     add_face(c, eye_dir=(-0.55, 0.78, 0.3), eye_radius=0.017, eye_sink=0.012, nose_radius=0.04, nose_sink=0.016,
              iris="#2a1a10", pupil="round")
     c.palette = {"eye_line": "#141212", "eye_line_size": 1.7}
-    c.fur = {"variation": 0.12, "sheen": 0.3, "bump": 0.35, "length": 0.07, "density": 9000, "hair_gamma": 1.8,
+    c.fur = {"variation": 0.12, "sheen": 0.3, "bump": 0.35, "length": 0.07, "density": 9000, "hair_gamma": 2.2,
              "frizz": 0.004, "clump": 0.4,
              "lengths": {"cheek": 1.1, "tail": 0.9, "tail_tip": 0.9, "head": 0.5, "front_paw": 0.4, "hind_paw": 0.4}}
     c.motion = {"gait": "walk", "attack": "swipe", "rear": 0.3, "stride": 0.95}

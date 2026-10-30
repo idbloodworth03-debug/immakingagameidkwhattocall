@@ -332,7 +332,7 @@ def bird_fall(c, t):
     s = c.motion.get("altitude", 0.5)
     fall = keys(t, [(0, 0), (0.8, 1), (1, 1)])
     p.move(z=-float(fall) * (s - 0.02))
-    p["root_rot"] = (-float(fall) * 0.3, float(fall) * 1.2, 0.0)
+    p["root_rot"] = (-float(fall) * 0.2, float(fall) * 0.45, 0.0)
     _wings(p, upper=0.6 * float(fall), lower=-0.8 * float(fall), hand=-0.6 * float(fall), sweep=0.3 * float(fall))
     return p
 
@@ -341,13 +341,15 @@ ATTACKS = {"dive": bird_strike, "pounce_bite": pounce_bite, "bite": bite, "swipe
 
 
 def death(c, t):
-    """Sink and roll onto the side; legs go limp."""
+    """Topple onto the side; legs go limp. The roll pivots under the spine, so
+    the body swings out sideways: shift it back over the spot where it stood.
+    rest_on_ground then lifts it onto the ground."""
     if c.motion.get("body") == "bird":
         return bird_fall(c, t)
     p = Pose()
     s = _scale(c)
     fall = keys(t, [(0, 0), (0.7, 1), (1, 1)])
-    p.move(z=-fall * s * 0.55, x=fall * s * 0.25)
+    p.move(x=-fall * s * 0.55)
     p["root_rot"] = (0.0, float(fall) * 1.45, 0.0)
     for side, sign in (("L", 1), ("R", -1)):
         p.leg("fl." + side, upper=fall * 0.4, lower=-fall * 0.5, splay=sign * fall * 0.2)
@@ -379,6 +381,22 @@ def apply(arm, pose):
     loc = pose.get("root_loc", (0.0, 0.0, 0.0))
     arm.location = (rest[0] + loc[0], rest[1] + loc[1], rest[2] + loc[2])
     arm.rotation_euler = pose.get("root_rot", (0.0, 0.0, 0.0))
+
+
+def rest_on_ground(arm, body):
+    """Lifts the armature until no part of the posed body is under the
+    ground, which would hide it (the shadow catcher is solid to the camera)."""
+    import bpy
+    bpy.context.view_layer.update()
+    evaluated = body.evaluated_get(bpy.context.evaluated_depsgraph_get())
+    me = evaluated.to_mesh()
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    evaluated.to_mesh_clear()
+    m = np.array(body.matrix_world)
+    lowest = float((co.reshape(-1, 3) @ m[2, :3] + m[2, 3]).min())
+    if lowest < 0:
+        arm.location.z -= lowest
 
 
 def preview_pose(arm, creature, spec):

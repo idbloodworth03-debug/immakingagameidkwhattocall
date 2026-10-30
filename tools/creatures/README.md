@@ -35,4 +35,12 @@ python sprites.py red_fox                # writes game/art/units/red_fox/
 python set_import.py                     # after Godot imports the new files
 ```
 
-A full animal takes about 7-10 minutes on four CPU cores.
+A full animal takes about 7-17 minutes on four CPU cores. To redo one
+animation after changing it in `motion.py`, keeping the rest of the sheet:
+
+```bash
+python sprites.py red_fox --anims death --only sprites
+```
+
+That only works while the creature's size is unchanged since its sheet was
+rendered; otherwise it stops and says to render everything.

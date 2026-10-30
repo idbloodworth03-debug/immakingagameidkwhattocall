@@ -52,6 +52,8 @@ const HURT_TIME := 0.16
 const THROW_FLIGHT := 0.28    # seconds an acorn is in the air
 const CORPSE_REST := 0.6      # seconds a fallen animal lies still before fading
 const CORPSE_FADE := 0.8
+const DROP_PART := 0.35       # share of the deploy time spent dropping into place
+const DROP_HEIGHT := 2500.0   # field units a new unit drops from
 
 
 func _ready() -> void:
@@ -180,8 +182,13 @@ func _update_views(delta: float) -> void:
 		var v: Dictionary = _views.get(f.uid, {})
 		if v.is_empty():
 			v = {"id": f.card.id, "pos": pos, "facing": 0.0 if f.team == 0 else 180.0, "hurt": 0.0,
-				"walk": randf(), "moving": 0.0, "attack_at": -100.0, "team": f.team, "flying": f.is_flying()}
+				"walk": randf(), "moving": 0.0, "attack_at": -100.0, "team": f.team, "flying": f.is_flying(),
+				"landed": f.deploy_ticks <= 0}
 			_views[f.uid] = v
+		if not v.landed and _drop(f) <= 0.0:
+			v.landed = true
+			if not v.flying:
+				_effect("dust", int(f.x), int(f.y), 800 + f.radius * 2, Color("#b49a78"), 0.45)
 		var moved: Vector2 = pos - v.pos
 		v.pos = pos
 		v.hurt = maxf(0.0, float(v.hurt) - delta)
@@ -204,6 +211,15 @@ func _update_views(delta: float) -> void:
 	for uid in _views.keys():
 		if not seen.has(uid):
 			_views.erase(uid)
+
+
+## How high a deploying unit still is, from 1 (just placed) down to 0 (landed).
+func _drop(f: BattleSim.Fighter) -> float:
+	if f.deploy_ticks <= 0:
+		return 0.0
+	var elapsed := float(sim.deploy_ticks - f.deploy_ticks) + blend
+	var fall := clampf(elapsed / maxf(1.0, sim.deploy_ticks * DROP_PART), 0.0, 1.0)
+	return 1.0 - fall * fall
 
 
 func _turn(v: Dictionary, toward: Vector2, delta: float) -> void:
@@ -504,18 +520,17 @@ func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
 	if int(f.card.get("count", 1)) > 1:
 		k *= SWARM_SCALE
 	var team_color := OWN_COLOR if f.team == 0 else ENEMY_COLOR
-	var alpha := 1.0
-	if f.deploy_ticks > 0:
-		var grow := 1.0 - float(f.deploy_ticks) / maxf(1.0, sim.deploy_ticks)
-		k *= lerpf(0.55, 1.0, ease(grow, 0.4))
-		alpha = lerpf(0.3, 1.0, grow)
+	# Dropping into place: the ring marks where it will land.
+	var drop := _drop(f)
+	var alpha := clampf((1.0 - drop) * 4.0, 0.0, 1.0)
+	var ring_alpha := 1.0 - drop
 	if f.stealthed and f.revealed <= 0:
 		alpha = 0.4 if f.team == 0 else 0.12
 	var ring := f.radius * s * 1.45
 	if f.memory.get("burrowing", false):
 		draw_circle(p, ring * 0.7, Color(0.36, 0.24, 0.12, 0.85 if f.team == 0 else 0.5))
 		return
-	_draw_team_ring(p, ring, team_color, alpha)
+	_draw_team_ring(p, ring, team_color, minf(alpha, ring_alpha))
 
 	var anim := "idle"
 	var frame := int((_time + f.uid * 0.37) * float(UnitSprites.animation(id, "idle").get("fps", 6)))
@@ -536,7 +551,7 @@ func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
 		# Flash bright when hit.
 		var h := float(v.hurt) / HURT_TIME
 		tint = Color(tint.r + 0.35 * h, tint.g + 0.12 * h, tint.b + 0.1 * h, alpha)
-	_blit(info, p, k, tint)
+	_blit(info, p - Vector2(0, drop * DROP_HEIGHT * s), k, tint)
 
 	# Status rings around its feet.
 	if f.stun > 0:

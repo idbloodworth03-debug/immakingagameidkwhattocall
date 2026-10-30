@@ -1,7 +1,17 @@
 # Creature pipeline
 
-Makes the battle sprites and card portraits for each animal with Blender,
-from code: no hand modeling, so every animal can be rebuilt or tweaked.
+Makes the battle sprites and card portraits for each animal, and the
+treehouse dens, with Blender, from code: no hand modeling, so everything
+can be rebuilt or tweaked.
+
+Each species is modeled at its real proportions, then **turned into a
+cartoon of itself** (`cartoon.py`): shorter legs and body, a rounder torso,
+a shorter muzzle and a much bigger head, big googly eyes, solid puffy ears,
+smooth skin in brighter colors instead of hair, and a dark outline. It is
+still modeled, lit and shaded in 3D. The coat is painted as on the real
+animal, so markings stay where they belong. A species can tune its cartoon
+with `c.cartoon` (the elephant's and hippo's heads grow less; the lion's
+mane grows with its face).
 
 1. **Shape** (`sdf.py`, `anatomy.py`): an animal is a set of smooth shapes
    (round cones for legs and necks, ellipsoids for the torso and head,
@@ -13,8 +23,11 @@ from code: no hand modeling, so every animal can be rebuilt or tweaked.
    the paint underneath, combed back and down.
 4. **Motion** (`motion.py`): idle, walk (trot, walk or gallop), attack
    (pounce-bite, bite, swipe, charge, stomp, throw) and death, as poses.
-5. **Render** (`sprites.py`): Cycles, an orthographic camera at the game's
-   50-degree angle, five directions (the game mirrors the other three).
+5. **Render** (`sprites.py`): Cycles with Freestyle outlines, an
+   orthographic camera at the game's 50-degree angle, five directions (the
+   game mirrors the other three).
+6. **Dens** (`treehouse.py`): the side and main treehouses in each team's
+   color and their ruins, from the same camera, into `game/art/towers/`.
 
 Each animal is one file in `species/`.
 
@@ -35,7 +48,10 @@ python sprites.py red_fox                # writes game/art/units/red_fox/
 python set_import.py                     # after Godot imports the new files
 ```
 
-A full animal takes about 7-17 minutes on four CPU cores. To redo one
+`python sprites.py red_fox --style real` renders the real-proportioned
+animal with fur instead. `python treehouse.py` renders the dens.
+
+A full animal takes about 7-15 minutes on four CPU cores. To redo one
 animation after changing it in `motion.py`, keeping the rest of the sheet:
 
 ```bash

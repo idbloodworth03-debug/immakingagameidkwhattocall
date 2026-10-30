@@ -52,6 +52,12 @@ const HURT_TIME := 0.16
 const THROW_FLIGHT := 0.28    # seconds an acorn is in the air
 const CORPSE_REST := 0.6      # seconds a fallen animal lies still before fading
 const CORPSE_FADE := 0.8
+const DEN_ART := "res://art/towers/"
+const HEADROOM := 2800.0      # field units above the far end, for the tall dens
+const DEN_SCALE := 0.92
+
+static var _den_meta := {}
+static var _den_textures := {}
 const DROP_PART := 0.35       # share of the deploy time spent dropping into place
 const DROP_HEIGHT := 2500.0   # field units a new unit drops from
 
@@ -64,12 +70,14 @@ func _ready() -> void:
 # --- Coordinates -----------------------------------------------------------
 
 func _scale() -> float:
-	return minf(size.x / BattleSim.WIDTH, size.y / BattleSim.HEIGHT)
+	return minf(size.x / BattleSim.WIDTH, size.y / (BattleSim.HEIGHT + HEADROOM))
 
 
+## Room left above the field for the enemy's treehouses to stand up into.
 func _origin() -> Vector2:
 	var s := _scale()
-	return (size - Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s) / 2.0
+	var room := size - Vector2(BattleSim.WIDTH, BattleSim.HEIGHT + HEADROOM) * s
+	return Vector2(room.x / 2.0, room.y / 2.0 + HEADROOM * s)
 
 
 func to_screen(x: float, y: float) -> Vector2:
@@ -301,6 +309,8 @@ func _draw() -> void:
 		var strength := 10.0 * _shake / 0.45
 		_shake_offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
 	draw_set_transform(_shake_offset)
+	# The meadow behind the enemy's dens, a shade darker than the field.
+	draw_rect(Rect2(field.position - Vector2(0, HEADROOM * s), Vector2(field.size.x, HEADROOM * s)), grass.darkened(0.22))
 	draw_rect(Rect2(field.position, Vector2(field.size.x, river_top - field.position.y)), grass.darkened(0.1))
 	draw_rect(Rect2(Vector2(field.position.x, river_bottom), Vector2(field.size.x, field.end.y - river_bottom)), grass)
 	var tile := BattleSim.TILE * s
@@ -326,7 +336,7 @@ func _draw() -> void:
 	_draw_highlight(field, river_top, river_bottom)
 
 	for f in sim.fighters:
-		if f.kind == "tower":
+		if f.kind == "tower" and not f.alive:
 			_draw_tower(f, s)
 	for f in sim.fighters:
 		if f.kind == "bait" and f.alive:
@@ -334,11 +344,15 @@ func _draw() -> void:
 	for corpse in _corpses:
 		_draw_corpse(corpse, s)
 	for flying in [false, true]:
-		var row: Array = sim.fighters.filter(func(f): return f.is_unit() and f.alive and f.is_flying() == flying)
-		# Farther animals first, so nearer ones overlap them.
+		# Dens stand among the animals on the ground.
+		var row: Array = sim.fighters.filter(func(f): return _drawn_in_row(f, flying))
+		# Farther things first, so nearer ones overlap them.
 		row.sort_custom(func(a, b): return a.y < b.y)
 		for f in row:
-			_draw_unit(f, s)
+			if f.kind == "tower":
+				_draw_tower(f, s)
+			else:
+				_draw_unit(f, s)
 
 	_draw_preview(s)
 	for pr in _projectiles:
@@ -412,9 +426,46 @@ func _position(f: BattleSim.Fighter) -> Vector2:
 	return to_screen(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
 
 
+func _drawn_in_row(f: BattleSim.Fighter, flying: bool) -> bool:
+	if f.kind == "tower":
+		return f.alive and not flying
+	return f.is_unit() and f.alive and f.is_flying() == flying
+
+
+## The rendered treehouse for a den, or {} if there is none.
+static func _den_art(name: String) -> Dictionary:
+	if _den_meta.is_empty():
+		var text := FileAccess.get_file_as_string(DEN_ART + "towers.json")
+		_den_meta = JSON.parse_string(text) if text != "" else {"none": true}
+	if not _den_textures.has(name):
+		var path := DEN_ART + name + ".webp"
+		_den_textures[name] = load(path) if ResourceLoader.exists(path) else null
+	if _den_textures[name] == null or not _den_meta.has(name):
+		return {}
+	return {"texture": _den_textures[name], "anchor": Vector2(_den_meta[name].anchor[0], _den_meta[name].anchor[1]),
+		"top": float(_den_meta[name].top), "scale": 1000.0 / float(_den_meta.get("pixels_per_tile", 100))}
+
+
 func _draw_tower(t: BattleSim.Fighter, s: float) -> void:
 	var center := to_screen(t.x, t.y)
 	var half := t.radius * s
+	var team_name := "blue" if t.team == 0 else "red"
+	var art := _den_art(("main_" if t.tower_kind == "main" else "side_") + (team_name if t.alive else "ruin"))
+	if not art.is_empty():
+		var k: float = art.scale * s * DEN_SCALE
+		var texture: Texture2D = art.texture
+		draw_texture_rect(texture, Rect2(center - art.anchor * k, texture.get_size() * k), false)
+		if not t.alive:
+			return
+		var top: float = art.top * k
+		if t.target != null and t.target.alive:
+			var from := center - Vector2(0, top * 0.55)
+			draw_line(from, from.lerp(_position(t.target), 0.25), Color(1, 1, 1, 0.35), 2.0)
+		var color := OWN_COLOR if t.team == 0 else ENEMY_COLOR
+		# The far main den stands right under the top bar, so its bar goes below it.
+		var bar_y := center.y + half * 0.75 if t.team == 1 and t.tower_kind == "main" else center.y - top - 8
+		_draw_bar(Vector2(center.x, bar_y), half * 2.0, 10.0, float(t.hp) / t.max_hp, color.lightened(0.2), str(t.hp))
+		return
 	var rect := Rect2(center - Vector2(half, half), Vector2(half, half) * 2.0)
 	if not t.alive:
 		draw_style_box(UIKit.box(Color("#4a4a4a"), 8), rect.grow(-half * 0.25))

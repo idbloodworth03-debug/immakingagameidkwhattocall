@@ -1,0 +1,45 @@
+{
+ "pixels_per_tile": 100,
+ "side_blue": {
+  "anchor": [
+   156.0,
+   358.5
+  ],
+  "top": 356.5
+ },
+ "side_red": {
+  "anchor": [
+   156.0,
+   358.5
+  ],
+  "top": 356.5
+ },
+ "main_blue": {
+  "anchor": [
+   225.0,
+   479.0
+  ],
+  "top": 477.0
+ },
+ "main_red": {
+  "anchor": [
+   225.0,
+   479.0
+  ],
+  "top": 477.0
+ },
+ "side_ruin": {
+  "anchor": [
+   126.0,
+   102.4
+  ],
+  "top": 100.4
+ },
+ "main_ruin": {
+  "anchor": [
+   188.0,
+   160.8
+  ],
+  "top": 158.8
+ }
+}

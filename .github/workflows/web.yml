@@ -1,8 +1,9 @@
-# Builds the web version of Den Duel on every push, runs the tests, and
-# publishes it to Netlify so the home-screen app on the iPhone updates by
-# itself. Publishing needs the NETLIFY_AUTH_TOKEN repository secret (see
-# README, "Play on your iPhone"); without it the build still runs and can be
-# downloaded from the workflow run's "Artifacts".
+# Builds the web version of Den Duel on every push and runs the tests.
+# Publishing to Netlify (which updates the home-screen app on the iPhone)
+# costs Netlify credits, so it only happens when asked for: "Run workflow"
+# on the Actions tab, or "Re-run all jobs" on any run. Publishing needs the
+# NETLIFY_AUTH_TOKEN repository secret (see README, "Play on your iPhone");
+# every run's build can also be downloaded from its "Artifacts".
 name: Web version
 
 on:
@@ -10,16 +11,18 @@ on:
     branches: [main, "claude/**"]
   workflow_dispatch:
 
-concurrency:
-  group: web-version
-  cancel-in-progress: true
-
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    # A newer push replaces a build still running, but never a publish.
+    concurrency:
+      group: web-version-${{ (github.event_name == 'workflow_dispatch' || github.run_attempt != '1') && 'publish' || 'build' }}
+      cancel-in-progress: true
     env:
       GODOT_VERSION: "4.7.2"
+      # Publish when started by hand: Run workflow, or a re-run of a push.
+      PUBLISH: ${{ github.event_name == 'workflow_dispatch' || github.run_attempt != '1' }}
       NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
       # The Netlify project to publish to (its Project ID). Not a secret.
       NETLIFY_SITE_ID: ec65fb06-1a53-4651-890b-e011fac4b66f
@@ -53,7 +56,7 @@ jobs:
           retention-days: 14
 
       - name: Publish to Netlify
-        if: env.NETLIFY_AUTH_TOKEN != ''
+        if: env.PUBLISH == 'true' && env.NETLIFY_AUTH_TOKEN != ''
         run: |
           cd build/web && zip -qr ../site.zip .
           status=$(curl -sS -o ../deploy.json -w "%{http_code}" \
@@ -68,6 +71,10 @@ jobs:
           fi
           python3 -c "import json; d = json.load(open('../deploy.json')); print('Published', d.get('ssl_url') or d.get('url'), '(' + str(d.get('state')) + ')')"
 
+      - name: Say how to publish
+        if: env.PUBLISH != 'true' && env.NETLIFY_AUTH_TOKEN != ''
+        run: echo "::notice::Built and tested, not published. To update the site, click Re-run all jobs on this run (or Run workflow on the Web version page)."
+
       - name: Remind about Netlify setup
         if: env.NETLIFY_AUTH_TOKEN == ''
-        run: echo "::notice::Built and tested, but not published. Add the NETLIFY_AUTH_TOKEN secret to publish automatically (see README)."
+        run: echo "::notice::Built and tested, but not published. Add the NETLIFY_AUTH_TOKEN secret to publish (see README)."

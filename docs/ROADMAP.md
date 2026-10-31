@@ -35,7 +35,7 @@
 - [x] Name: **Den Duel**, with a logo, app icon and splash screen
 - [ ] Before launch: USPTO trademark check, website domain and social handles
 - [x] Web version that runs in Safari and installs to the iPhone home screen
-- [x] Automatic publishing: every push runs the tests, builds the web version and updates the Netlify site
+- [x] Publishing: every push runs the tests and builds the web version; a re-run (or *Run workflow*) updates the Netlify site
 - [x] 3D-rendered animals with fur, real markings and walk, attack and death animations (Blender pipeline in `tools/creatures/`)
 - [ ] Render the dens, arena ground and tools in the same style
 - [ ] Bring back more animals from `animals_later.json` once the first 20 feel right

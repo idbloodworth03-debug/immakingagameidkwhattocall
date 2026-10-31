@@ -53,7 +53,9 @@ unlocking every animal and resetting your save.
 Den Duel also runs as a website in Safari, and you can add it to your iPhone's
 home screen so it opens full-screen like an app. Every time new work is pushed
 to GitHub, the **Web version** workflow (`.github/workflows/web.yml`) runs the
-tests, builds the web version and publishes it to your Netlify site.
+tests and builds the web version. It publishes to your Netlify site only when
+you ask, because each publish uses Netlify credits (see *Publish an update*
+below).
 
 The site is https://denduel.netlify.app. Its Netlify Project ID is in
 `.github/workflows/web.yml`; to publish somewhere else, change it there.
@@ -70,8 +72,19 @@ The site is https://denduel.netlify.app. Its Netlify Project ID is in
 3. **Give it to GitHub:** on github.com, open this repository, then
    *Settings*, *Secrets and variables*, *Actions*, *New repository secret*.
    Name it `NETLIFY_AUTH_TOKEN` and paste the token as the value.
-4. **Publish now:** open the *Actions* tab, click the latest *Web version*
-   run, then *Re-run all jobs*. From then on, every push publishes by itself.
+4. **Publish now:** see *Publish an update* below.
+
+**Publish an update**
+
+On github.com, open the *Actions* tab and click the latest *Web version* run,
+then *Re-run all jobs*. The re-run builds that version again and publishes it.
+Once the workflow is on the `main` branch, you can also click *Web version*
+in the list on the left, then *Run workflow*, and pick the branch to publish.
+
+Each publish uses Netlify credits, and the free plan only has so many each
+month, so publish when there's something new to play, not after every
+change. If a publish fails with "Account credit usage exceeded",
+wait for the monthly reset or add credits in Netlify (*Usage & billing*).
 
 **On the iPhone:** open your Netlify link in **Safari**, tap **Share**, then
 **Add to Home Screen**. To get an update, close the app completely (swipe it
@@ -81,7 +94,7 @@ Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Without the token**, each workflow run still builds and tests the game. The finished web version is under *Artifacts* on the run's page (`den-duel-web`), ready to drag into Netlify by hand.
+- **Every run's build** is under *Artifacts* on the run's page (`den-duel-web`), ready to drag into Netlify by hand, with or without the token.
 - **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 
 ## Run the tests

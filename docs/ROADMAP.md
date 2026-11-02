@@ -67,6 +67,8 @@
 - [x] 3D-rendered animals with fur, real markings and walk, attack and death animations (Blender pipeline in `tools/creatures/`)
 - [x] Rendered arenas: 12 themed battlefields, each an open fenced field with scenery around it (`tools/creatures/arena.py`)
 - [x] Menu facelift: glossy buttons, raised panels, redesigned cards, icon tab bar, arena preview, popup and screen animations
+- [x] Visual polish pass: fake-3D shader on the animals, squash-and-stretch animation, combat juice (hit flash, knockback, hit-stop, shake, damage numbers, health bars, poof defeats), particles, bouncy UI, ambient motion; all tunable in `data/feel.json`
+- [ ] Blinking: needs eye-closed frames from the Blender pipeline (about an hour of rendering for all 20 animals)
 - [ ] Render the tools' effects and the cages in the same style
 - [ ] Bring back more animals from `animals_later.json` once the first 20 feel right (their release requirements, energy abilities and "dens only" targets need reworking for Draft Duel first)
 

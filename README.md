@@ -30,9 +30,12 @@ Everything runs offline on your computer, saved on the device:
   - 12 rendered arenas: an open, fenced field with themed scenery around it
   - polished cartoon menus: glossy pressable buttons, raised panels, cards with rarity rims and portraits, an icon tab bar, and popups that pop in
   - chunky mobile-game fonts
-  - animations: walking, attacks, screen shake, bouncy buttons and smooth screen fades
+  - a fake-3D finish on every animal (a highlight from the top-left, a cool rim light, soft volume shading, outlines in a dark shade of its own colors)
+  - smooth, bouncy animation: breathing, walking hops, squash and stretch, wind-ups and lunges, pop-ins, and cartoon poof-and-stars defeats
+  - combat juice: white hit flashes, knockback, hit sparks, hit-stop and screen shake on big hits, bouncy damage numbers, chunky health bars with a delayed "damage taken" bar
+  - particles (sparkles, stars, puffs, confetti, coins), drifting cloud shadows, swaying grass and petals or snow, bouncy buttons and popups
   - sound effects and music, which players can switch off
-- **Tests:** 91 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
+- **Tests:** 92 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
 
 Not built yet:
 
@@ -150,6 +153,7 @@ files in `game/data/`:
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
 - **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, moods, Rally): `draft_rules.json`
+- **Look and feel** (animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`
 - **Emotes, quick chats, banners and icons:** their own files

@@ -48,6 +48,14 @@ with two animals from it squaring up on each side.
 (The old mode's treehouse dens, `tools/creatures/treehouse.py`, are no longer
 in the game; the script is kept in case dens come back as scenery.)
 
+**In the game, the animals get a fake-3D finish and smooth motion** on top
+of their rendered frames (`game/scripts/fx/`):
+- A shader on every animal (`unit.gdshader`): a warm highlight on the edge facing the light (always top-left on screen, even for mirrored sprites), a cool rim light on the far edge, soft volume shading across the body, outlines recolored to a dark shade of the animal's own colors and thickened a pixel, a little extra color punch, and a pure white flash when hit.
+- Motion (`unit_view.gd`): breathing and bobbing, walking hops with squash and stretch, a lean into the run, a wind-up and a lunge on every attack, a springy squash and knockback when hit, an elastic pop-in, hops when moved, and cartoon defeats (a hop, a spin and a poof cloud with stars).
+- Effects (`fx_layer.gd`, `particle_layer.gd`): hit sparks, hit-stop and screen shake on big hits, bouncy damage numbers, chunky health bars with a delayed "damage taken" bar, glowing projectile trails, sparkles, stars, puffs, confetti and coins.
+- The arena is toned down a little (`ground.gdshader`) so the animals pop, with drifting cloud shadows, swaying grass and petals, leaves or snow to suit it.
+- Every number is in `game/data/feel.json`.
+
 **The menus** are a chunky cartoon style, built in code so the whole look
 lives in `scripts/ui/ui_kit.gd`:
 - **Buttons** have a pressable colored edge, a gloss and a soft shadow, and sink when pressed (`button_skin.gd`).

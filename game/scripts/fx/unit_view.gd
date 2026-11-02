@@ -89,10 +89,11 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.idle_phase = randf() * TAU
 	v.stars = int(f.memory.get("stars", 1))
 	v.body = Body.new()
-	var material := ShaderMaterial.new()
-	material.shader = SHADER
-	_apply_look(material)
-	v.body.material = material
+	if Feel.on("characters", "shader_enabled"):
+		var material := ShaderMaterial.new()
+		material.shader = SHADER
+		_apply_look(material)
+		v.body.material = material
 	v.add_child(v.body)
 	v.z_index = 1 if v.flying else 0
 	return v
@@ -339,12 +340,17 @@ func animate(dt: float, now: float) -> void:
 		tint = Color(0.6, 0.6, 0.6)
 	elif f != null and f.stun > 0:
 		tint = Color(1.0, 1.0, 0.8)
-	body.self_modulate = tint
 	var m := body.material as ShaderMaterial
-	m.set_shader_parameter("flash", flash)
-	m.set_shader_parameter("flip", 1.0 if body.frame.get("flip", false) else 0.0)
-	m.set_shader_parameter("region", region_uv(body.frame))
-	m.set_shader_parameter("opacity", opacity)
+	if m != null:
+		m.set_shader_parameter("flash", flash)
+		m.set_shader_parameter("flip", 1.0 if body.frame.get("flip", false) else 0.0)
+		m.set_shader_parameter("region", region_uv(body.frame))
+		m.set_shader_parameter("opacity", opacity)
+	else:
+		# No shader (the lighter option): flash and fade with a plain tint.
+		tint = tint.lerp(Color(2.0, 2.0, 2.0), flash * 0.6)
+		tint.a = opacity
+	body.self_modulate = tint
 	body.queue_redraw()
 	queue_redraw()
 
@@ -363,6 +369,11 @@ func render_pos() -> Vector2:
 	if hop_t >= 1.0:
 		return pos
 	return hop_from.lerp(pos, Ease.in_out_sine(hop_t))
+
+
+## A pack's stars show over one of its animals only, not all of them.
+func shows_stars() -> bool:
+	return not swarm or not (key is String) or String(key).ends_with("/0")
 
 
 ## Where the top of its head is now, relative to its feet, for bars and stars.

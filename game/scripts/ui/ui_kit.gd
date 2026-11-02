@@ -173,8 +173,8 @@ static func button(text: String, color := BLUE, font_size := 26, min_size := Vec
 	b.add_theme_stylebox_override("hover_pressed", _text_margins(edge, true))
 	ButtonSkin.attach(b, color)
 	b.resized.connect(func() -> void: b.pivot_offset = b.size / 2.0)
-	b.button_down.connect(func() -> void: _squash(b, 0.95))
-	b.button_up.connect(func() -> void: _squash(b, 1.0))
+	b.button_down.connect(func() -> void: press_squash(b))
+	b.button_up.connect(func() -> void: release_bounce(b))
 	b.pressed.connect(func() -> void: Sound.play("tap"))
 	return b
 
@@ -235,6 +235,38 @@ static func _text_margins(edge: float, pressed: bool) -> StyleBoxEmpty:
 
 static func _squash(control: Control, amount: float) -> void:
 	control.create_tween().tween_property(control, "scale", Vector2(amount, amount), 0.07)
+
+
+## Squashes a control down while it's held (wider than tall, like a
+## cushion), from data/feel.json ("ui").
+static func press_squash(control: Control) -> void:
+	control.pivot_offset = control.size / 2.0
+	var amount := Feel.num("ui", "press_scale", 0.9)
+	# Big panels squash less than buttons and cards.
+	amount = 1.0 - (1.0 - amount) * clampf(140.0 / maxf(control.size.y, 1.0), 0.2, 1.0)
+	var tween := control.create_tween()
+	tween.tween_property(control, "scale", Vector2(amount + (1.0 - amount) * 0.4, amount), 0.06).set_ease(Tween.EASE_OUT)
+
+
+## Springs a control back past full size and settles, on release.
+static func release_bounce(control: Control) -> void:
+	control.pivot_offset = control.size / 2.0
+	var over := Feel.num("ui", "release_overshoot", 1.07)
+	over = 1.0 + (over - 1.0) * clampf(140.0 / maxf(control.size.y, 1.0), 0.2, 1.0)
+	var seconds := Feel.num("ui", "release_seconds", 0.28)
+	var tween := control.create_tween()
+	tween.tween_property(control, "scale", Vector2(over, over), seconds * 0.35).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(control, "scale", Vector2.ONE, seconds * 0.65).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Pops a control in: from small and see-through to full size, overshooting.
+static func pop_in(control: Control, from_scale := 0.85, seconds := 0.3) -> void:
+	control.pivot_offset = control.size / 2.0
+	control.scale = Vector2(from_scale, from_scale)
+	control.modulate.a = 0.0
+	var tween := control.create_tween().set_parallel()
+	tween.tween_property(control, "scale", Vector2.ONE, seconds).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(control, "modulate:a", 1.0, seconds * 0.5)
 
 
 static func color_button(b: Button, color: Color) -> void:
@@ -390,15 +422,16 @@ static func on_tap(control: Control, callback: Callable) -> void:
 			if event.pressed:
 				press.position = event.global_position
 				press.down = true
+				press_squash(control)
 			elif press.down:
 				press.down = false
+				release_bounce(control)
 				if event.global_position.distance_to(press.position) < 24.0:
 					Sound.play("select")
 					callback.call()
 	)
 
 
-## A tinted icon from res://art/icons/ as a plain control.
 ## Draws `count` gold stars in a row centered on `center` (an animal's stars
 ## in Draft Duel), each `radius` across, with a navy outline.
 static func draw_stars(canvas: CanvasItem, center: Vector2, count: int, radius: float) -> void:
@@ -419,6 +452,7 @@ static func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
 	return points
 
 
+## A tinted icon from res://art/icons/ as a plain control.
 static func icon_rect(icon_name: String, tint: Color, side: int) -> TextureRect:
 	var rect := TextureRect.new()
 	rect.texture = icon(icon_name)

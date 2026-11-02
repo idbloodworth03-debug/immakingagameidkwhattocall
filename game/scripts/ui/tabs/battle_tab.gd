@@ -93,6 +93,7 @@ func _build_arena() -> void:
 		window.add_child(art)
 	else:
 		var preview := ArenaPreview.new()
+		preview.animate = true
 		preview.arena_id = arena.id
 		window.add_child(preview)
 	var overlay := MarginContainer.new()

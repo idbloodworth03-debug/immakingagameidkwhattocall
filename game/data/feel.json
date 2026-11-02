@@ -2,7 +2,8 @@
   "_note": "How the game LOOKS and FEELS: animation, hit effects, particles, UI motion and backgrounds. Nothing here changes the rules or balance. Times are in seconds, sizes in screen pixels unless they say tiles. Set a strength to 0 to switch an effect off.",
 
   "characters": {
-    "_note": "The animals. shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a warm highlight on the edge facing the light (top-left), a cool rim light on the far edge, outlines recolored to a dark shade of the animal's own color, and a little extra color punch.",
+    "_note": "The animals. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a warm highlight on the edge facing the light (top-left), a cool rim light on the far edge, outlines recolored to a dark shade of the animal's own color, and a little extra color punch.",
+    "shader_enabled": true,
     "sprite_scale": 1.6,
     "swarm_scale": 0.8,
     "shader_vibrance": 0.45,
@@ -90,11 +91,10 @@
   },
 
   "ui": {
-    "_note": "Buttons squash when pressed and spring back with an overshoot; panels slide up and bounce in.",
+    "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in.",
     "press_scale": 0.9,
     "release_overshoot": 1.07,
     "release_seconds": 0.28,
-    "panel_slide_pixels": 46.0,
     "panel_seconds": 0.32,
     "pill_bump": 1.22
   },

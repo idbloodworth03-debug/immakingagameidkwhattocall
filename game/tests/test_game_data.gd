@@ -28,3 +28,11 @@ func test_rarity_matches_conservation_status() -> void:
 func test_every_arena_unlocks_something() -> void:
 	for i in GameData.arenas.size():
 		check(not GameData.cards_in_arena(i).is_empty(), "arena %s unlocks no animals" % GameData.arenas[i].id)
+
+
+func test_feel_settings_load() -> void:
+	for section in ["characters", "combat", "effects", "ui", "background"]:
+		check(GameData.feel.has(section), "feel.json has a '%s' section" % section)
+	check(Feel.num("combat", "hitstop_seconds", -1.0) >= 0.0, "hit-stop length is set")
+	check(Feel.count("effects", "max_particles", 0) > 0, "a particle cap is set")
+	check_eq(Feel.num("characters", "no_such_value", 1.5), 1.5, "missing values fall back to the default")

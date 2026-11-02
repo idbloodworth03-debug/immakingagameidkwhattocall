@@ -28,6 +28,13 @@ var _panel_key := ""
 var _result: Dictionary = {}
 
 var _field: BattleField
+## Particles over the whole screen: coins, sparkles, confetti.
+var _ui_fx: ParticleLayer
+var _panel_box: PanelContainer
+## The part of the round the panel last showed, to animate a change.
+var _panel_phase := ""
+var _market_cards: Array = []
+var _herd_chips: Array = []
 var _round_label: Label
 var _phase_label: Label
 var _their_acorns: PanelContainer
@@ -142,6 +149,7 @@ func _build() -> void:
 	# Only as tall as each part of the round needs, so the fight gets room.
 	var panel := UIKit.panel(UIKit.PANEL_DARK, 10, 18)
 	column.add_child(panel)
+	_panel_box = panel
 	_panel = UIKit.vbox(8)
 	panel.add_child(_panel)
 
@@ -157,6 +165,11 @@ func _build() -> void:
 	leave.pressed.connect(_on_leave)
 	bottom.add_child(leave)
 	_update_hud()
+	var fx_layer := CanvasLayer.new()
+	fx_layer.layer = 10
+	add_child(fx_layer)
+	_ui_fx = ParticleLayer.new()
+	fx_layer.add_child(_ui_fx)
 
 
 ## Before the first round: up to 3 of your animals to start with, within
@@ -245,6 +258,10 @@ func _overlay(content: Control) -> Control:
 	panel.custom_minimum_size = Vector2(560, 0)
 	panel.add_child(content)
 	center.add_child(panel)
+	# Dim fades in, the panel pops in.
+	dim.modulate.a = 0.0
+	dim.create_tween().tween_property(dim, "modulate:a", 1.0, 0.2)
+	(func() -> void: UIKit.pop_in(panel, 0.8, Feel.num("ui", "panel_seconds", 0.32))).call_deferred()
 	return layer
 
 
@@ -267,11 +284,21 @@ func _update_hud() -> void:
 		if duel.hearts[team] != _hearts_shown[team]:
 			var pill := _my_hearts if team == 0 else _their_hearts
 			_set_amount(pill, duel.hearts[team])
-			if _hearts_shown[team] >= 0:
+			if _hearts_shown[team] >= 0 and duel.hearts[team] < _hearts_shown[team]:
 				_bump(pill)
+				var at := pill.get_global_rect().get_center()
+				_ui_fx.burst("spark", at, 10, 260.0, 0.35, 8.0, [UIKit.HEART, Color("#ffd0d8")], 0.0, 5.0)
+				_ui_fx.burst("star", at, 3, 160.0, 0.5, 7.0, [UIKit.HEART], 400.0, 1.5, 120.0)
 			_hearts_shown[team] = duel.hearts[team]
 	var their_tools: int = duel.tools[1].size()
 	_their_tools.text = "%s  ·  %d tool%s hidden" % [opponent.name, their_tools, "" if their_tools == 1 else "s"]
+
+
+## The middle of one of the panel's cards on screen (or the screen's middle).
+func _chip_center(chips: Array, index: int) -> Vector2:
+	if index >= 0 and index < chips.size() and is_instance_valid(chips[index]):
+		return (chips[index] as Control).get_global_rect().get_center()
+	return get_viewport_rect().size / 2.0
 
 
 func _set_amount(pill: PanelContainer, amount: int) -> void:
@@ -282,7 +309,8 @@ func _set_amount(pill: PanelContainer, amount: int) -> void:
 func _bump(pill: Control) -> void:
 	pill.pivot_offset = pill.size / 2.0
 	var tween := pill.create_tween()
-	tween.tween_property(pill, "scale", Vector2(1.25, 1.25), 0.12).set_trans(Tween.TRANS_BACK)
+	var bump := Feel.num("ui", "pill_bump", 1.22)
+	tween.tween_property(pill, "scale", Vector2(bump, bump), 0.12).set_trans(Tween.TRANS_BACK)
 	tween.parallel().tween_property(pill, "modulate", Color(1.0, 0.55, 0.55), 0.12)
 	tween.tween_property(pill, "scale", Vector2.ONE, 0.25)
 	tween.parallel().tween_property(pill, "modulate", Color.WHITE, 0.25)
@@ -397,6 +425,11 @@ func _handle_events(events: Array) -> void:
 				_rally_selected = false
 				_field.highlight = ""
 				Sound.play("upgrade" if e.winner == 0 else "pop")
+				if e.winner == 0:
+					var field_rect := _field.get_global_rect()
+					var half := Feel.count("effects", "win_confetti", 60) / 2
+					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.25, field_rect.size.y * 0.35), half)
+					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.75, field_rect.size.y * 0.35), half)
 				var lost: Array = e.hearts_lost
 				if int(lost[0]) > 0:
 					_set_status("You lose %d heart%s." % [lost[0], "" if int(lost[0]) == 1 else "s"], UIKit.HEART)
@@ -437,6 +470,10 @@ func _rebuild_panel() -> void:
 	for child in _panel.get_children():
 		_panel.remove_child(child)
 		child.queue_free()
+	if duel.phase != _panel_phase:
+		# A new part of the round: the panel springs in.
+		_panel_phase = duel.phase
+		(func() -> void: UIKit.pop_in(_panel_box, 0.92, Feel.num("ui", "panel_seconds", 0.32))).call_deferred()
 	match duel.phase:
 		"draft":
 			_draft_panel()
@@ -479,15 +516,21 @@ func _draft_panel() -> void:
 		duel.tools[0].size(), int(duel.rules.tools_max), who])
 	var row := UIKit.hbox(6)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	_market_cards.clear()
 	for i in duel.shops[0].size():
-		row.add_child(_market_card(i))
+		var card := _market_card(i)
+		_market_cards.append(card)
+		row.add_child(card)
 	_panel.add_child(row)
 
 	var herd_row := UIKit.hbox(6)
 	herd_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	herd_row.add_child(UIKit.label("Herd", 18, UIKit.TEXT_DIM))
+	_herd_chips.clear()
 	for i in duel.herds[0].size():
-		herd_row.add_child(_herd_chip(i, Vector2(70, 94)))
+		var chip := _herd_chip(i, Vector2(70, 94))
+		_herd_chips.append(chip)
+		herd_row.add_child(chip)
 	_panel.add_child(herd_row)
 
 	var actions := []
@@ -517,7 +560,10 @@ func _draft_panel() -> void:
 		var train := UIKit.button("Train for %d" % price if problem == "" else problem, UIKit.YELLOW.darkened(0.15), 22, Vector2(230, 64))
 		train.disabled = problem != ""
 		train.pressed.connect(func() -> void:
-			duel.train(0, _selected_herd)
+			var at := _chip_center(_herd_chips, _selected_herd)
+			if duel.train(0, _selected_herd):
+				_ui_fx.burst("sparkle", at, Feel.count("effects", "upgrade_sparkles", 14), 220.0, 0.7, 10.0, [Color("#ffe14d"), Color.WHITE], -80.0, 2.5)
+				_ui_fx.burst("star", at, 4, 200.0, 0.7, 9.0, [Color("#ffe14d")], 500.0, 1.2, 160.0)
 		)
 		actions.append(train)
 	var reroll := UIKit.button("Reroll (%d)" % int(duel.rules.reroll_cost), UIKit.BLUE, 22, Vector2(150, 64))
@@ -589,7 +635,10 @@ func _buy(slot: int) -> void:
 		Sound.play("error")
 		_set_status(problem, UIKit.RED.lightened(0.3))
 		return
+	var at := _chip_center(_market_cards, slot)
 	duel.buy(0, slot)
+	_ui_fx.burst_coins(at, Feel.count("effects", "coin_burst", 8))
+	_ui_fx.burst("sparkle", at, 6, 160.0, 0.5, 8.0, [Color.WHITE, Color("#fff3a8")], -40.0, 3.0)
 
 
 # Placing.
@@ -818,6 +867,12 @@ func _end_match() -> void:
 	ok.pressed.connect(_back_to_menu)
 	box.add_child(ok)
 	_overlay(box)
+	if outcome == "win":
+		# A shower of confetti and coins for the winner.
+		var screen_size := get_viewport_rect().size
+		for i in 3:
+			_ui_fx.burst_confetti(Vector2(screen_size.x * (0.2 + 0.3 * i), screen_size.y * 0.3), Feel.count("effects", "win_confetti", 60) / 2)
+		_ui_fx.burst_coins(screen_size / 2.0 + Vector2(0, -120), Feel.count("effects", "coin_burst", 8) * 2)
 
 
 func _record(outcome: String) -> void:

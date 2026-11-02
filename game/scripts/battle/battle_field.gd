@@ -30,6 +30,7 @@ const GROUND_SHADER := preload("res://scripts/fx/ground.gdshader")
 
 static var _arena_meta := {}
 static var _arena_textures := {}
+static var _soft: GradientTexture2D
 
 var sim: BattleSim
 var grass := Color("#5f9e4f")
@@ -57,6 +58,10 @@ var _trauma := 0.0
 
 var _press_at := Vector2.ZERO
 var _pressed := false
+## Ambient life: cloud shadows drifting over, grass tufts swaying.
+var _clouds: Array = []
+var _tufts: Array = []
+var _ambient_size := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -183,6 +188,7 @@ func _process(delta: float) -> void:
 	if sim != null:
 		_sync_views(dt)
 	fx._process_fx(dt)
+	_ambient(delta)
 	for v in _views.values():
 		v.animate(dt, _time)
 		v.position = to_screen(v.render_pos().x, v.render_pos().y)
@@ -229,6 +235,110 @@ func _drop_view(key: Variant) -> void:
 	var v: UnitView = _views[key]
 	_views.erase(key)
 	v.queue_free()
+
+
+# --- Ambient motion --------------------------------------------------------
+
+## Cloud shadows and grass tufts (made again when the field's size changes),
+## and drifting petals, leaves or snow to suit the arena.
+func _ambient(delta: float) -> void:
+	var b := "background"
+	if size != _ambient_size and size.x > 0.0:
+		_ambient_size = size
+		_make_ambient()
+	var tile := BattleSim.TILE * _scale()
+	for c in _clouds:
+		c.pos += Vector2(1.0, 0.35) * Feel.num(b, "cloud_speed", 0.22) * tile * delta
+		if c.pos.x - c.r > size.x:
+			c.pos = Vector2(-c.r * 1.2, randf() * size.y)
+	var wanted := Feel.count(b, "petals", 7)
+	var drifting := 0
+	for p in fx.particles:
+		if p.kind == "petal":
+			drifting += 1
+	if drifting < wanted and randf() < delta * 1.5:
+		var style := _ambient_style()
+		var start := Vector2(randf_range(-0.2, 0.8) * size.x, -10.0) if randf() < 0.6 else Vector2(-10.0, randf() * size.y * 0.7)
+		var vel := Vector2(randf_range(14.0, 30.0), randf_range(18.0, 32.0)) * (0.6 if style.snow else 1.0)
+		var colors: Array = style.colors
+		fx.particle("petal", start, vel, randf_range(9.0, 14.0), randf_range(2.5, 4.0), colors[randi() % colors.size()], 0.0, 0.0, randf_range(-1.5, 1.5))
+
+
+## What drifts through this arena.
+func _ambient_style() -> Dictionary:
+	match arena_id:
+		"frozen_tundra", "cloudpeak_mountains":
+			return {"snow": true, "colors": [Color(1, 1, 1, 0.85), Color("#e6f3ff", 0.8)]}
+		"whispering_woods", "emerald_jungle", "misty_marsh":
+			return {"snow": false, "colors": [Color("#8fd16a", 0.8), Color("#d9b44a", 0.75), Color("#6fb84f", 0.8)]}
+		"red_rock_canyon", "sunbaked_savanna":
+			return {"snow": false, "colors": [Color("#f2d9a6", 0.6), Color("#e8c07a", 0.55)]}
+	return {"snow": false, "colors": [Color("#ffc6dd", 0.85), Color(1, 1, 1, 0.8), Color("#fff1a8", 0.8)]}
+
+
+func _make_ambient() -> void:
+	var b := "background"
+	var rng := RandomNumberGenerator.new()
+	rng.seed = hash(arena_id)
+	_clouds.clear()
+	for i in Feel.count(b, "cloud_shadows", 3):
+		_clouds.append({"pos": Vector2(rng.randf() * size.x, rng.randf() * size.y), "r": size.x * rng.randf_range(0.18, 0.3)})
+	# Grass tufts around the edges, outside the fence and just inside it.
+	_tufts.clear()
+	var s := _scale()
+	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
+	var inner := field.grow(-BattleSim.TILE * s * 0.6)
+	var tries := 0
+	while _tufts.size() < Feel.count(b, "grass_tufts", 46) and tries < 2000:
+		tries += 1
+		var at := Vector2(rng.randf() * size.x, rng.randf() * size.y)
+		if inner.has_point(at):
+			continue
+		_tufts.append({"pos": at, "h": rng.randf_range(6.0, 11.0), "phase": rng.randf() * TAU, "shade": rng.randf_range(-0.15, 0.25)})
+
+
+func _draw_ambient(canvas: CanvasItem) -> void:
+	var b := "background"
+	var alpha := Feel.num(b, "cloud_alpha", 0.09)
+	var soft := _soft_texture()
+	for c in _clouds:
+		# A soft shadow, fading out to nothing at the edge.
+		var r: float = c.r
+		canvas.draw_texture_rect(soft, Rect2(c.pos - Vector2(r, r * 0.55), Vector2(r * 2.0, r * 1.1)), false, Color(0.02, 0.08, 0.14, alpha))
+	var sway_amount := Feel.num(b, "grass_sway", 1.0)
+	var snowy: bool = _ambient_style().snow
+	var base := grass.lightened(0.05)
+	for t in _tufts:
+		# Three blades bending in the breeze (frosty ones on snow).
+		var sway := sin(_time * 1.8 + float(t.phase) + float(t.pos.x) * 0.01) * 3.0 * sway_amount
+		var color := base.lightened(t.shade) if float(t.shade) > 0.0 else base.darkened(-float(t.shade))
+		var edge := color.darkened(0.25)
+		if snowy:
+			color = Color(1, 1, 1, 0.85)
+			edge = Color("#9cc3dd", 0.5)
+		for blade in 3:
+			var foot: Vector2 = t.pos + Vector2((blade - 1) * 3.0, 0)
+			var lean := (blade - 1) * 2.5 + sway * (0.7 + blade * 0.15)
+			var tip := foot + Vector2(lean, -float(t.h) * (0.8 if blade != 1 else 1.0))
+			canvas.draw_line(foot, tip, edge, 3.0)
+			canvas.draw_line(foot, tip, color, 1.6)
+
+
+## A soft round blob, solid in the middle and clear at the edge.
+static func _soft_texture() -> GradientTexture2D:
+	if _soft == null:
+		var gradient := Gradient.new()
+		gradient.set_color(0, Color(1, 1, 1, 1))
+		gradient.set_color(1, Color(1, 1, 1, 0))
+		gradient.add_point(0.55, Color(1, 1, 1, 0.65))
+		_soft = GradientTexture2D.new()
+		_soft.gradient = gradient
+		_soft.fill = GradientTexture2D.FILL_RADIAL
+		_soft.fill_from = Vector2(0.5, 0.5)
+		_soft.fill_to = Vector2(1.0, 0.5)
+		_soft.width = 128
+		_soft.height = 128
+	return _soft
 
 
 # --- Effects ---------------------------------------------------------------
@@ -386,6 +496,7 @@ func _draw_decor(canvas: CanvasItem) -> void:
 		return
 	var s := _scale()
 	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
+	_draw_ambient(canvas)
 	_draw_highlight(canvas, field)
 	fx.draw_ground(canvas)
 	for f in sim.fighters:

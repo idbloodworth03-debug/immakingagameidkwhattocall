@@ -2,6 +2,9 @@
 
 ![Den Duel](game/art/logo/logo.png)
 
+**Play it in your browser:** https://idbloodworth03-debug.github.io/immakingagameidkwhattocall/
+(on an iPhone, open it in Safari and *Add to Home Screen*; see below)
+
 Den Duel is an animal battler for iOS and Android, made with Godot 4. In
 **Draft Duel**, the main mode, you and your opponent take turns drafting
 animals, place your herds, bet Acorns on the fight and knock down each

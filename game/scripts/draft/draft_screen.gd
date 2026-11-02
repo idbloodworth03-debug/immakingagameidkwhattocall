@@ -319,6 +319,8 @@ func _opponent_moves(delta: float) -> void:
 
 
 func _run_fight(delta: float) -> void:
+	if _field.is_frozen():
+		return  # hit-stop: the fight holds still for a moment
 	var tick_length := 1.0 / duel.sim.tps
 	_accumulator += delta * (2.0 if _fast else 1.0)
 	var steps := 0

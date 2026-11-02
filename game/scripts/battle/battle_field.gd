@@ -1,8 +1,17 @@
 class_name BattleField
 extends Control
-## Draws a fight (the arena, animals, effects) and turns taps into field
-## positions. It only reads the BattleSim; it never changes it. Team 0 (the
-## player) is at the bottom.
+## Draws a fight and turns taps into field positions. It only reads the
+## BattleSim; it never changes it. Team 0 (the player) is at the bottom.
+##
+## It's built in layers, all inside a "world" node that shakes as one:
+##   arena   the rendered arena picture, toned down a little (ground shader)
+##   decor   the highlight, food bait, ground effects and ambient motion
+##   units   one UnitView per animal, sorted by depth (scripts/fx/unit_view.gd)
+##   fx      particles, damage numbers, health bars, projectiles (fx_layer.gd)
+##
+## Strong hits briefly freeze the fight (hit-stop): the screen asks
+## is_frozen() before stepping the battle. How everything looks and moves
+## comes from data/feel.json.
 
 signal tapped(at: Vector2i)
 
@@ -14,6 +23,13 @@ const EFFECT_COLORS := {
 	"heal": Color("#5ef08a"), "cloud": Color("#9bd36b"), "scare": Color("#ffd166"),
 	"stun_pulse": Color("#ffe066"), "rage": Color("#ff9f43"), "tree": Color("#3fbf55"),
 }
+## How much of the arena around the field to show, in field units.
+const MARGIN := 600.0
+const ARENA_ART := "res://art/arenas/"
+const GROUND_SHADER := preload("res://scripts/fx/ground.gdshader")
+
+static var _arena_meta := {}
+static var _arena_textures := {}
 
 var sim: BattleSim
 var grass := Color("#5f9e4f")
@@ -24,55 +40,69 @@ var blend := 0.0
 ## What to light up: "" (nothing), "own_half" (where the player's animals
 ## may start) or "field" (anywhere: aiming a tool or a Rally).
 var highlight := ""
-var effects: Array = []
 
+var fx: FxLayer
+
+var _world: Node2D
+var _arena: Node2D
+var _decor: Node2D
+var _units: Node2D
+## Animal views by their key (a herd slot, or the fighter's uid).
+var _views := {}
+var _by_uid := {}
 var _time := 0.0
-var _shake := 0.0
-var _lunges := {}          # attacker uid -> {"age", "dir"}
-var _shake_offset := Vector2.ZERO
+var _freeze := 0.0
+var _freeze_ready := 0.0
+var _trauma := 0.0
 
 var _press_at := Vector2.ZERO
 var _pressed := false
-
-## How each animal looks right now, for the rendered sprites:
-## uid -> {"id", "pos" (field position), "facing" (degrees clockwise from up),
-## "walk" (cycles walked), "moving" (seconds left of walking pose),
-## "attack_at" (when the attack animation started)}
-var _views := {}
-## Animals that just died, playing their death animation.
-var _corpses: Array = []
-## Things thrown by ranged animals (a squirrel's acorns), timed to land on the hit.
-var _projectiles: Array = []
-
-## Sprites are drawn this much bigger than true size, to read on a phone.
-const SPRITE_SCALE := 1.6
-const TURN_SPEED := 600.0     # degrees per second
-## Pack and swarm animals are drawn a bit smaller so a group stays readable.
-const SWARM_SCALE := 0.8
-const HURT_TIME := 0.16
-const THROW_FLIGHT := 0.28    # seconds an acorn is in the air
-const CORPSE_REST := 0.6      # seconds a fallen animal lies still before fading
-const CORPSE_FADE := 0.8
-## How much of the arena around the field to show, in field units.
-const MARGIN := 600.0
-const ARENA_ART := "res://art/arenas/"
-static var _arena_meta := {}
-static var _arena_textures := {}
-const DROP_PART := 0.35       # share of the deploy time spent dropping into place
-const DROP_HEIGHT := 2500.0   # field units a new unit drops from
 
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
-	# The arena is drawn smaller than its picture.
+	# The arena and animals are drawn smaller than their pictures.
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	_world = Node2D.new()
+	add_child(_world)
+	_arena = _Painter.new(_draw_arena)
+	var ground := ShaderMaterial.new()
+	ground.shader = GROUND_SHADER
+	ground.set_shader_parameter("saturation", Feel.num("background", "arena_saturation", 0.82))
+	ground.set_shader_parameter("brightness", Feel.num("background", "arena_brightness", 1.02))
+	_arena.material = ground
+	_world.add_child(_arena)
+	_decor = _Painter.new(_draw_decor)
+	_world.add_child(_decor)
+	_units = Node2D.new()
+	_units.y_sort_enabled = true
+	_world.add_child(_units)
+	fx = FxLayer.new(self)
+	_world.add_child(fx)
+	resized.connect(_arena.queue_redraw)
+
+
+## A node that draws with a function from the field.
+class _Painter:
+	extends Node2D
+	var paint: Callable
+
+	func _init(painter: Callable) -> void:
+		paint = painter
+
+	func _draw() -> void:
+		paint.call(self)
 
 
 # --- Coordinates -----------------------------------------------------------
 
 func _scale() -> float:
 	return minf(size.x / (BattleSim.WIDTH + 2.0 * MARGIN), size.y / (BattleSim.HEIGHT + 2.0 * MARGIN))
+
+
+func field_scale() -> float:
+	return _scale()
 
 
 ## The field sits in the middle, with the arena's scenery around it.
@@ -90,6 +120,41 @@ func to_field(point: Vector2) -> Vector2i:
 	return Vector2i(clampi(roundi(p.x), 0, BattleSim.WIDTH), clampi(roundi(p.y), 0, BattleSim.HEIGHT))
 
 
+## Screen pixels per sprite pixel for an animal.
+func sprite_k(id: String, swarm: bool) -> float:
+	var c := "characters"
+	var k := _scale() * 1000.0 / UnitSprites.pixels_per_tile(id) * Feel.num(c, "sprite_scale", 1.6)
+	return k * (Feel.num(c, "swarm_scale", 0.8) if swarm else 1.0)
+
+
+func views() -> Array:
+	return _views.values()
+
+
+func view_for_uid(uid: int) -> UnitView:
+	return _by_uid.get(uid, null)
+
+
+# --- Hit-stop and shake ----------------------------------------------------
+
+## True during a hit-stop: the fight should not step.
+func is_frozen() -> bool:
+	return _freeze > 0.0
+
+
+## Freezes the fight for `seconds` (not again until the cooldown passes).
+func hit_stop(seconds: float) -> void:
+	if seconds <= 0.0 or _freeze_ready > 0.0:
+		return
+	_freeze = maxf(_freeze, seconds)
+	_freeze_ready = Feel.num("combat", "hitstop_cooldown", 0.3)
+
+
+## Shakes the field; `amount` from 0 to 1 (bigger shakes stack).
+func shake(amount: float) -> void:
+	_trauma = clampf(_trauma + amount, 0.0, 1.0)
+
+
 # --- Input -----------------------------------------------------------------
 
 func _gui_input(event: InputEvent) -> void:
@@ -103,37 +168,157 @@ func _gui_input(event: InputEvent) -> void:
 				tapped.emit(to_field(event.position))
 
 
+# --- Every frame -----------------------------------------------------------
+
+func _process(delta: float) -> void:
+	var dt := delta
+	_freeze_ready = maxf(0.0, _freeze_ready - delta)
+	if _freeze > 0.0:
+		_freeze -= delta
+		dt = 0.0
+	_time += dt
+	_trauma = maxf(0.0, _trauma - delta / maxf(0.05, Feel.num("combat", "shake_seconds", 0.3)))
+	var strength := Feel.num("combat", "shake_pixels", 8.0) * _trauma * _trauma
+	_world.position = Vector2(randf_range(-strength, strength), randf_range(-strength, strength)) if strength > 0.1 else Vector2.ZERO
+	if sim != null:
+		_sync_views(dt)
+	fx._process_fx(dt)
+	for v in _views.values():
+		v.animate(dt, _time)
+		v.position = to_screen(v.render_pos().x, v.render_pos().y)
+	_remove_finished()
+	_decor.queue_redraw()
+	fx.queue_redraw()
+
+
+func _sync_views(dt: float) -> void:
+	var seen := {}
+	_by_uid.clear()
+	for f in sim.fighters:
+		if not f.alive or not f.is_unit() or not UnitSprites.has(f.card.id):
+			continue
+		var key: Variant = f.memory.get("view_key", f.uid)
+		var v: UnitView = _views.get(key, null)
+		if v != null and (v.defeat >= 0.0 or v.id != f.card.id):
+			_drop_view(key)
+			v = null
+		var at := Vector2(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
+		if v == null:
+			v = UnitView.make(self, f, key)
+			_views[key] = v
+			_units.add_child(v)
+			v.position = to_screen(at.x, at.y)
+			fx.burst_spawn(v.position)
+		v.sync(f, at, dt, _time)
+		seen[key] = true
+		_by_uid[f.uid] = v
+	for key in _views.keys():
+		var v: UnitView = _views[key]
+		if not seen.has(key) and v.defeat < 0.0:
+			# Gone without a fight (the herds were cleared): no fuss.
+			_drop_view(key)
+
+
+func _remove_finished() -> void:
+	for key in _views.keys():
+		if _views[key].is_done():
+			_drop_view(key)
+
+
+func _drop_view(key: Variant) -> void:
+	var v: UnitView = _views[key]
+	_views.erase(key)
+	v.queue_free()
+
+
 # --- Effects ---------------------------------------------------------------
 
-## Turns battle events into short-lived visual effects.
+## Turns battle events into animation and effects.
 func add_events(events: Array) -> void:
+	var s := _scale()
 	for e in events:
 		match e.type:
 			"tool":
-				_effect("ring", e.x, e.y, maxi(e.radius, 600), EFFECT_COLORS.get(e.effect, Color.WHITE), 0.6)
-				_effect("icon", e.x, e.y, maxi(e.radius, 900), EFFECT_COLORS.get(e.effect, Color.WHITE), 0.7, GameData.card_icon(e.card))
+				var at := to_screen(e.x, e.y)
+				var color: Color = EFFECT_COLORS.get(e.effect, Color.WHITE)
+				fx.effect("ring", at, maxi(e.radius, 600) * s, color, 0.6, "", true)
+				fx.effect("icon", at - Vector2(0, 10), maxi(e.radius, 900) * s, color, 0.7)
+				fx.burst("puff", at, 8, 160.0, 0.5, 12.0, [Color(color, 0.85), Color(1, 1, 1, 0.8)], 0.0, 3.0)
+				fx.burst("sparkle", at, 6, 200.0, 0.5, 7.0, [color.lightened(0.4), Color.WHITE], -40.0, 3.0)
 				if e.effect in ["flare", "air_horn"]:
-					_shake = maxf(_shake, 0.25)
+					shake(Feel.num("combat", "shake_tool", 0.25))
 			"hit":
-				_effect("flash", e.x, e.y, 260, Color(1, 1, 1, 0.9), 0.12)
-				if e.from_kind == "unit":
-					_lunges[e.from] = {"age": 0.0, "dir": Vector2(e.x - e.fx, e.y - e.fy).normalized()}
-					_on_unit_hit(e.from)
-				if _views.has(e.to):
-					_views[e.to].hurt = HURT_TIME
-				if _views.has(e.from):
-					_impact(UnitSprites.attack_style(_views[e.from].id), e)
+				_on_hit(e)
 			"death":
-				if _views.has(e.uid):
-					_add_corpse(e.uid)
+				var v := view_for_uid(e.uid)
+				if v != null:
+					fx.burst_defeat(v.middle())
+					v.start_defeat()
+					hit_stop(Feel.num("combat", "hitstop_defeat_seconds", 0.07))
+					shake(Feel.num("combat", "shake_defeat", 0.08))
 				else:
-					_effect("ring", e.x, e.y, 700, Color(0.2, 0.2, 0.2), 0.35)
-			"heal", "cloud", "scare", "stun_pulse", "rage":
-				_effect("ring", e.x, e.y, mini(e.radius, BattleSim.WIDTH), EFFECT_COLORS[e.type], 0.6)
+					fx.burst("puff", to_screen(e.x, e.y), 6, 90.0, 0.4, 10.0, [Color(1, 1, 1, 0.9)], -30.0, 3.0)
+			"heal":
+				var at := to_screen(e.x, e.y)
+				fx.effect("ring", at, mini(e.radius, BattleSim.WIDTH) * s, EFFECT_COLORS.heal, 0.6, "", true)
+				fx.burst_heal(at - Vector2(0, 14))
+			"cloud", "scare", "stun_pulse", "rage":
+				fx.effect("ring", to_screen(e.x, e.y), mini(e.radius, BattleSim.WIDTH) * s, EFFECT_COLORS[e.type], 0.6, "", true)
+				if e.type == "rage":
+					fx.burst("sparkle", to_screen(e.x, e.y) - Vector2(0, 12), 8, 170.0, 0.5, 8.0, [Color("#ff9f43"), Color("#ffe14d")], -60.0, 3.0)
 			"tree":
-				_effect("area", e.x, e.y, e.radius, EFFECT_COLORS.tree, e.seconds)
-			"dodge", "play_dead", "revive", "roll_up", "sleep", "pounce", "emerge":
-				_effect("text", e.x, e.y, 0, Color.WHITE, 0.8, _event_word(e.type))
+				fx.effect("area", to_screen(e.x, e.y), e.radius * s, EFFECT_COLORS.tree, e.seconds, "", true)
+			"emerge":
+				fx.effect("dust", to_screen(e.x, e.y), 800 * s, Color("#b49a78"), 0.5, "", true)
+				fx.effect("text", to_screen(e.x, e.y), 0, Color.WHITE, 0.8, _event_word(e.type))
+			"dodge", "play_dead", "revive", "roll_up", "sleep", "pounce":
+				fx.effect("text", to_screen(e.x, e.y), 0, Color.WHITE, 0.8, _event_word(e.type))
+
+
+func _on_hit(e: Dictionary) -> void:
+	var s := _scale()
+	var target := view_for_uid(e.to)
+	var attacker := view_for_uid(e.from)
+	var dir := Vector2(e.x - e.fx, e.y - e.fy).normalized()
+	var strong := false
+	if target != null and target.fighter != null:
+		strong = float(e.amount) >= float(target.fighter.max_hp) * Feel.num("combat", "strong_hit_pct", 22) / 100.0
+	var style := UnitSprites.attack_style(attacker.id) if attacker != null else ""
+	if style in ["charge", "stomp", "pounce_bite", "dive"]:
+		strong = strong or float(e.amount) >= 150.0
+	if attacker != null:
+		attacker.strike(_time, Vector2(e.x - e.fx, e.y - e.fy))
+	var at := to_screen(e.x, e.y)
+	if target != null:
+		target.hurt(dir, strong)
+		at = target.middle()
+	_impact(style, at, dir, s)
+	fx.burst_hit(at, strong, Vector2(dir.x, dir.y * 0.6))
+	var kind := "hurt_enemy" if target == null or target.team == 1 else "hurt_own"
+	fx.number(at + Vector2(0, -10), int(e.amount), kind, strong, target.key if target != null else null)
+	if strong:
+		hit_stop(Feel.num("combat", "hitstop_seconds", 0.055))
+		shake(Feel.num("combat", "shake_strong_hit", 0.12))
+
+
+## A hit effect that fits how the attacker fights.
+func _impact(style: String, at: Vector2, dir: Vector2, s: float) -> void:
+	var effect := {}
+	match style:
+		"swipe":
+			effect = fx.effect("slash", at, 520 * s, Color.WHITE, 0.28)
+		"bite", "pounce_bite":
+			effect = fx.effect("chomp", at, 420 * s, Color.WHITE, 0.22)
+		"charge":
+			effect = fx.effect("dust", at, 700 * s, Color("#c9b08a"), 0.5)
+		"stomp":
+			fx.effect("ring", at, 1500 * s, Color("#a88a62"), 0.45, "", true)
+			effect = fx.effect("dust", at, 1000 * s, Color("#c9b08a"), 0.6)
+			shake(Feel.num("combat", "shake_stomp", 0.18))
+		"dive":
+			effect = fx.effect("feathers", at, 500 * s, Color("#f1ede4"), 0.5)
+	if not effect.is_empty():
+		effect.dir = dir
 
 
 ## The sounds that go with battle events (tools, hits, deaths...).
@@ -154,7 +339,7 @@ static func play_sounds(events: Array) -> void:
 
 ## A word floating up from a spot on the field, e.g. an animal's mood.
 func say(x: int, y: int, text: String, color := Color.WHITE, life := 1.2) -> void:
-	_effect("text", x, y, 0, color, life, text)
+	fx.effect("text", to_screen(x, y) - Vector2(0, 20), 0, color, life, text)
 
 
 func _event_word(kind: String) -> String:
@@ -164,198 +349,75 @@ func _event_word(kind: String) -> String:
 	}.get(kind, "")
 
 
-func _effect(kind: String, x: int, y: int, radius: int, color: Color, life: float, text := "") -> Dictionary:
-	var fx := {"kind": kind, "x": x, "y": y, "radius": radius, "color": color, "life": life, "age": 0.0, "text": text,
-		"dir": Vector2.UP, "seed": randi()}
-	effects.append(fx)
-	return fx
-
-
-func _process(delta: float) -> void:
-	_time += delta
-	_shake = maxf(0.0, _shake - delta)
-	for fx in effects:
-		fx.age += delta
-	effects = effects.filter(func(fx): return fx.age < fx.life)
-	for uid in _lunges.keys():
-		_lunges[uid].age += delta
-		if _lunges[uid].age > 0.16:
-			_lunges.erase(uid)
-	if sim != null:
-		_update_views(delta)
-	_corpses = _corpses.filter(func(c): return _time - c.at < UnitSprites.duration(c.id, "death") + CORPSE_REST + CORPSE_FADE)
-	_projectiles = _projectiles.filter(func(pr): return _time < pr.land)
-	queue_redraw()
-
-
-# --- Sprite animation state ---------------------------------------------------
-
-func _update_views(delta: float) -> void:
-	var seen := {}
-	for f in sim.fighters:
-		if not f.alive or not f.is_unit() or not UnitSprites.has(f.card.id):
-			continue
-		seen[f.uid] = true
-		var pos := Vector2(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
-		var v: Dictionary = _views.get(f.uid, {})
-		if v.is_empty():
-			v = {"id": f.card.id, "pos": pos, "facing": 0.0 if f.team == 0 else 180.0, "hurt": 0.0,
-				"walk": randf(), "moving": 0.0, "attack_at": -100.0, "team": f.team, "flying": f.is_flying(),
-				"landed": f.deploy_ticks <= 0}
-			_views[f.uid] = v
-		if not v.landed and _drop(f) <= 0.0:
-			v.landed = true
-			if not v.flying:
-				_effect("dust", int(f.x), int(f.y), 800 + f.radius * 2, Color("#b49a78"), 0.45)
-		var moved: Vector2 = pos - v.pos
-		v.pos = pos
-		v.hurt = maxf(0.0, float(v.hurt) - delta)
-		if moved.length() > 1.0:
-			v.moving = 0.12
-			_turn(v, moved, delta)
-			v.walk += moved.length() / 1000.0 / UnitSprites.walk_cycle_tiles(v.id)
-		else:
-			v.moving = maxf(0.0, v.moving - delta)
-			if f.target != null and f.target.alive:
-				_turn(v, Vector2(f.target.x - f.x, f.target.y - f.y), delta)
-		# Start the attack early enough that the bite lands on the hit.
-		if f.target != null and f.target.alive and f.deploy_ticks <= 0 and sim.in_range(f, f.target) and not _attacking(v):
-			var windup := _windup(v.id)
-			var to_hit := (float(f.cooldown) / 100.0 - blend) / float(sim.tps)
-			if to_hit >= 0.0 and to_hit <= windup:
-				v.attack_at = _time - (windup - to_hit)
-				if f.attack_range > 1500:
-					_throw(f, to_hit)
-	for uid in _views.keys():
-		if not seen.has(uid):
-			_views.erase(uid)
-
-
-## How high a deploying unit still is, from 1 (just placed) down to 0 (landed).
-func _drop(f: BattleSim.Fighter) -> float:
-	if f.deploy_ticks <= 0:
-		return 0.0
-	var elapsed := float(sim.deploy_ticks - f.deploy_ticks) + blend
-	var fall := clampf(elapsed / maxf(1.0, sim.deploy_ticks * DROP_PART), 0.0, 1.0)
-	return 1.0 - fall * fall
-
-
-func _turn(v: Dictionary, toward: Vector2, delta: float) -> void:
-	if toward.length() < 1.0:
-		return
-	var goal := rad_to_deg(atan2(toward.x, -toward.y))
-	var diff := wrapf(goal - float(v.facing), -180.0, 180.0)
-	v.facing = float(v.facing) + clampf(diff, -TURN_SPEED * delta, TURN_SPEED * delta)
-
-
-func _windup(id: String) -> float:
-	return float(UnitSprites.animation(id, "attack").get("hit", 0.45)) * UnitSprites.duration(id, "attack")
-
-
-func _attacking(v: Dictionary) -> bool:
-	return _time - float(v.attack_at) < UnitSprites.duration(v.id, "attack")
-
-
-func _on_unit_hit(uid: int) -> void:
-	# A hit with no attack showing (the first one, often): jump to the strike.
-	if _views.has(uid) and not _attacking(_views[uid]):
-		_views[uid].attack_at = _time - _windup(_views[uid].id)
-
-
-## A ranged animal's throw: leaves its paw before the hit and lands on it.
-func _throw(f: BattleSim.Fighter, to_hit: float) -> void:
-	var flight := minf(THROW_FLIGHT, to_hit + 0.15)
-	_projectiles.append({"from": Vector2(f.x, f.y), "to_uid": f.target.uid, "to": Vector2(f.target.x, f.target.y),
-		"launch": _time + to_hit - flight, "land": _time + to_hit})
-
-
-## A hit effect that fits how the attacker fights.
-func _impact(style: String, e: Dictionary) -> void:
-	var dir := Vector2(e.x - e.fx, e.y - e.fy).normalized()
-	var fx := {}
-	match style:
-		"swipe":
-			fx = _effect("slash", e.x, e.y, 520, Color.WHITE, 0.28)
-		"bite", "pounce_bite":
-			fx = _effect("chomp", e.x, e.y, 420, Color.WHITE, 0.22)
-		"charge":
-			fx = _effect("dust", e.x, e.y, 700, Color("#b49a78"), 0.5)
-		"stomp":
-			_effect("ring", e.x, e.y, 1500, Color("#a88a62"), 0.45)
-			fx = _effect("dust", e.x, e.y, 1000, Color("#b49a78"), 0.6)
-			_shake = maxf(_shake, 0.18)
-		"dive":
-			fx = _effect("feathers", e.x, e.y, 500, Color("#f1ede4"), 0.5)
-		_:
-			return
-	fx["dir"] = dir
-	# Land on the target's body, not at its feet.
-	if _views.has(e.to):
-		var id: String = _views[e.to].id
-		fx["lift"] = UnitSprites.top(id) * _scale() * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE * 0.45
-
-
-func _add_corpse(uid: int) -> void:
-	var v: Dictionary = _views[uid]
-	_corpses.append({"id": v.id, "pos": v.pos, "facing": v.facing, "team": v.team, "at": _time})
-	_views.erase(uid)
-
-
 # --- Drawing ---------------------------------------------------------------
 
 func _draw() -> void:
-	if sim == null:
-		return
-	var s := _scale()
-	var origin := _origin()
-	var field := Rect2(origin, Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
-
 	draw_rect(Rect2(Vector2.ZERO, size), grass.darkened(0.25))
-	_shake_offset = Vector2.ZERO
-	if _shake > 0.0:
-		# A big blast or stomp shakes the whole field for a moment.
-		var strength := 10.0 * _shake / 0.45
-		_shake_offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
-	draw_set_transform(_shake_offset)
+
+
+## The rendered arena (or plain grass), under everything.
+func _draw_arena(canvas: CanvasItem) -> void:
+	var s := _scale()
+	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
 	var ground := arena_art(arena_id)
 	if not ground.is_empty():
 		# The rendered arena: the fenced field and themed scenery around it.
 		var top_left := to_screen(ground.area.position.x, ground.area.position.y)
 		var bottom_right := to_screen(ground.area.end.x, ground.area.end.y)
-		draw_texture_rect(ground.texture, Rect2(top_left, bottom_right - top_left), false)
-	else:
-		# Plain grass: tile stripes, the halfway line and the center ring.
-		draw_rect(field, grass)
-		var tile := BattleSim.TILE * s
-		for row in BattleSim.HEIGHT / BattleSim.TILE:
-			for col in BattleSim.WIDTH / BattleSim.TILE:
-				if (row + col) % 2 == 0:
-					draw_rect(Rect2(origin + Vector2(col, row) * tile, Vector2(tile, tile)), Color(1, 1, 1, 0.035))
-		var middle := to_screen(0, BattleSim.MIDDLE).y
-		draw_line(Vector2(field.position.x, middle), Vector2(field.end.x, middle), Color(1, 1, 1, 0.35), 3.0)
-		draw_arc(field.get_center(), tile * 2.2, 0, TAU, 48, Color(1, 1, 1, 0.35), 3.0)
-		draw_rect(field, Color(0.25, 0.18, 0.1, 0.8), false, 4.0)
-	_draw_highlight(field)
-	_draw_things(s)
+		canvas.draw_texture_rect(ground.texture, Rect2(top_left, bottom_right - top_left), false)
+		return
+	# Plain grass: tile stripes, the halfway line and the center ring.
+	canvas.draw_rect(Rect2(Vector2.ZERO, size).grow(20), grass.darkened(0.15))
+	canvas.draw_rect(field, grass)
+	var tile := BattleSim.TILE * s
+	for row in BattleSim.HEIGHT / BattleSim.TILE:
+		for col in BattleSim.WIDTH / BattleSim.TILE:
+			if (row + col) % 2 == 0:
+				canvas.draw_rect(Rect2(field.position + Vector2(col, row) * tile, Vector2(tile, tile)), Color(1, 1, 1, 0.035))
+	var middle := to_screen(0, BattleSim.MIDDLE).y
+	canvas.draw_line(Vector2(field.position.x, middle), Vector2(field.end.x, middle), Color(1, 1, 1, 0.35), 3.0)
+	canvas.draw_arc(field.get_center(), tile * 2.2, 0, TAU, 48, Color(1, 1, 1, 0.35), 3.0)
+	canvas.draw_rect(field, Color(0.25, 0.18, 0.1, 0.8), false, 4.0)
 
 
-## Animals, bait and effects, over the ground.
-func _draw_things(s: float) -> void:
+## Over the ground, under the animals: the highlight, bait and ground effects.
+func _draw_decor(canvas: CanvasItem) -> void:
+	if sim == null:
+		return
+	var s := _scale()
+	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
+	_draw_highlight(canvas, field)
+	fx.draw_ground(canvas)
 	for f in sim.fighters:
-		if f.kind == "bait" and f.alive:
-			_draw_bait(f, s)
-	for corpse in _corpses:
-		_draw_corpse(corpse, s)
-	for flying in [false, true]:
-		var row: Array = sim.fighters.filter(func(f): return f.is_unit() and f.alive and f.is_flying() == flying)
-		# Farther things first, so nearer ones overlap them.
-		row.sort_custom(func(a, b): return a.y < b.y)
-		for f in row:
-			_draw_unit(f, s)
-	for pr in _projectiles:
-		_draw_projectile(pr, s)
-	for fx in effects:
-		_draw_effect(fx, s)
+		if f.alive and f.kind == "bait":
+			_draw_bait(canvas, f, s)
+
+
+func _draw_highlight(canvas: CanvasItem, field: Rect2) -> void:
+	var area := field
+	match highlight:
+		"own_half":
+			var top := to_screen(0, BattleSim.MIDDLE + DraftMatch.START_GAP).y
+			area = Rect2(field.position.x, top, field.size.x, field.end.y - top)
+		"field":
+			pass
+		_:
+			return
+	var pulse := 0.5 + 0.5 * sin(_time * 4.0)
+	canvas.draw_rect(area, Color(1, 1, 0.6, 0.1 + 0.06 * pulse))
+	canvas.draw_rect(area.grow(-2), Color(1, 1, 0.6, 0.7), false, 3.0)
+
+
+func _draw_bait(canvas: CanvasItem, f: BattleSim.Fighter, s: float) -> void:
+	var p := to_screen(f.x, f.y)
+	var r := f.radius * s
+	var bob := sin(_time * 6.0) * 1.5
+	canvas.draw_circle(p + Vector2(0, r * 0.4), r * 0.9, Color(0, 0, 0, 0.2))
+	canvas.draw_circle(p + Vector2(0, bob), r + 2, Color("#5a3a1a"))
+	canvas.draw_circle(p + Vector2(0, bob), r, Color("#c98b4a"))
+	var bait_icon := UIKit.icon(GameData.ui_icon("bait"))
+	if bait_icon != null:
+		canvas.draw_texture_rect(bait_icon, Rect2(p + Vector2(0, bob) - Vector2(r, r) * 0.75, Vector2(r, r) * 1.5), false, Color.WHITE)
 
 
 ## An arena's rendered ground: {"texture", "area": the field units it covers}
@@ -378,297 +440,3 @@ static func arena_art(id: String) -> Dictionary:
 	var area := Rect2(float(x[0]) * BattleSim.TILE, float(y[0]) * BattleSim.TILE,
 			(float(x[1]) - float(x[0])) * BattleSim.TILE, (float(y[1]) - float(y[0])) * BattleSim.TILE)
 	return {"texture": _arena_textures[id], "area": area}
-
-
-func _draw_highlight(field: Rect2) -> void:
-	var area := field
-	match highlight:
-		"own_half":
-			var top := to_screen(0, BattleSim.MIDDLE + DraftMatch.START_GAP).y
-			area = Rect2(field.position.x, top, field.size.x, field.end.y - top)
-		"field":
-			pass
-		_:
-			return
-	var pulse := 0.5 + 0.5 * sin(_time * 4.0)
-	draw_rect(area, Color(1, 1, 0.6, 0.1 + 0.06 * pulse))
-	draw_rect(area.grow(-2), Color(1, 1, 0.6, 0.7), false, 3.0)
-
-
-func _position(f: BattleSim.Fighter) -> Vector2:
-	return to_screen(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
-
-
-func _draw_bait(f: BattleSim.Fighter, s: float) -> void:
-	var p := to_screen(f.x, f.y)
-	var r := f.radius * s
-	draw_circle(p, r + 2, Color("#5a3a1a"))
-	draw_circle(p, r, Color("#c98b4a"))
-	var bait_icon := UIKit.icon(GameData.ui_icon("bait"))
-	if bait_icon != null:
-		draw_texture_rect(bait_icon, Rect2(p - Vector2(r, r) * 0.75, Vector2(r, r) * 1.5), false, Color.WHITE)
-	_draw_bar(p + Vector2(0, -r - 8), r * 2.0, 6.0, float(f.hp) / f.max_hp, Color("#ffcf40"))
-
-
-func _draw_unit(f: BattleSim.Fighter, s: float) -> void:
-	if _views.has(f.uid):
-		_draw_sprite_unit(f, s)
-		return
-	var p := _position(f)
-	var r := maxf(7.0, f.radius * s * 1.25)
-	# Little hops while walking, a pop-in while deploying, a lunge when attacking.
-	if f.prev_x != f.x or f.prev_y != f.y:
-		p.y -= absf(sin(_time * 11.0 + f.uid)) * r * 0.22
-	if f.deploy_ticks > 0:
-		r *= lerpf(1.0, 0.6, float(f.deploy_ticks) / maxf(1.0, sim.deploy_ticks))
-	if _lunges.has(f.uid):
-		var lunge: Dictionary = _lunges[f.uid]
-		p += lunge.dir * r * 0.45 * sin(PI * clampf(lunge.age / 0.16, 0.0, 1.0))
-	var team_color := OWN_COLOR if f.team == 0 else ENEMY_COLOR
-	var alpha := 1.0
-	if f.deploy_ticks > 0:
-		alpha = 0.55
-	if f.stealthed and f.revealed <= 0:
-		alpha = 0.4 if f.team == 0 else 0.12
-	if f.memory.get("burrowing", false):
-		draw_circle(p, r * 0.8, Color(0.36, 0.24, 0.12, 0.85 if f.team == 0 else 0.5))
-		draw_arc(p, r * 0.8, PI, TAU, 10, team_color, 2.0)
-		return
-
-	if f.is_flying():
-		draw_circle(p + Vector2(0, r * 0.5), r * 0.8, Color(0, 0, 0, 0.25 * alpha))
-		p.y -= r * 0.9
-	var fill := UIKit.habitat_color(f.card)
-	if int(f.memory.get("playing_dead", 0)) > 0:
-		fill = Color("#777777")
-	draw_circle(p, r + 3, Color(team_color, alpha))
-	draw_circle(p, r, Color(fill, alpha))
-	var icon := UIKit.icon(GameData.card_icon(f.card.id))
-	if icon != null:
-		var side := r * 1.45
-		var icon_rect := Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side))
-		if GameData.card_icon_flipped(f.card.id):
-			draw_set_transform(_shake_offset + Vector2(icon_rect.end.x, icon_rect.position.y), 0.0, Vector2(-1, 1))
-			draw_texture_rect(icon, Rect2(Vector2.ZERO, icon_rect.size), false, Color(1, 1, 1, alpha))
-			draw_set_transform(_shake_offset)
-		else:
-			draw_texture_rect(icon, icon_rect, false, Color(1, 1, 1, alpha))
-	elif r >= 11:
-		_draw_text(p, UIKit.initials(f.card.name), int(r * 0.85), Color(1, 1, 1, alpha))
-
-	# Effect rings
-	if f.stun > 0:
-		draw_arc(p, r + 6, 0, TAU, 20, Color("#ffe066"), 3.0)
-	if f.shield > 0:
-		draw_arc(p, r + 5, 0, TAU, 20, Color("#7fd6ff"), 2.5)
-	if f.rage > 0:
-		draw_arc(p, r + 8, 0, TAU, 20, Color("#ff9f43", 0.8), 2.0)
-	if f.poison > 0:
-		draw_circle(p + Vector2(r * 0.7, -r * 0.7), maxf(3.0, r * 0.25), Color("#7bd34a"))
-	if f.slow > 0:
-		draw_arc(p, r + 4, 0, TAU, 20, Color("#9fd8ff", 0.8), 2.0)
-	if f.invulnerable > 0:
-		draw_arc(p, r + 6, 0, TAU, 20, Color("#ffffff"), 3.0)
-
-	if f.hp < f.max_hp:
-		_draw_bar(p + Vector2(0, -r - 8), maxf(r * 2.0, 26.0), 6.0, float(f.hp) / f.max_hp, team_color.lightened(0.3))
-
-
-## An animal drawn from its rendered sprite sheet.
-func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
-	var v: Dictionary = _views[f.uid]
-	var id: String = v.id
-	var p := to_screen(v.pos.x, v.pos.y)
-	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
-	if int(f.card.get("count", 1)) > 1:
-		k *= SWARM_SCALE
-	var team_color := OWN_COLOR if f.team == 0 else ENEMY_COLOR
-	# Dropping into place: the ring marks where it will land.
-	var drop := _drop(f)
-	var alpha := clampf((1.0 - drop) * 4.0, 0.0, 1.0)
-	var ring_alpha := 1.0 - drop
-	if f.stealthed and f.revealed <= 0:
-		alpha = 0.4 if f.team == 0 else 0.12
-	var ring := f.radius * s * 1.45
-	if f.memory.get("burrowing", false):
-		draw_circle(p, ring * 0.7, Color(0.36, 0.24, 0.12, 0.85 if f.team == 0 else 0.5))
-		return
-	_draw_team_ring(p, ring, team_color, minf(alpha, ring_alpha))
-
-	var anim := "idle"
-	var frame := int((_time + f.uid * 0.37) * float(UnitSprites.animation(id, "idle").get("fps", 6)))
-	var since := _time - float(v.attack_at)
-	if since >= 0.0 and since < UnitSprites.duration(id, "attack"):
-		anim = "attack"
-		frame = int(since * float(UnitSprites.animation(id, "attack").fps))
-	elif float(v.moving) > 0.0:
-		anim = "walk"
-		frame = int(float(v.walk) * float(UnitSprites.animation(id, "walk").frames))
-	var info := UnitSprites.frame(id, anim, v.facing, frame)
-	var tint := Color(1, 1, 1, alpha)
-	if int(f.memory.get("playing_dead", 0)) > 0:
-		tint = Color(0.6, 0.6, 0.6, alpha)
-	elif f.stun > 0:
-		tint = Color(1.0, 1.0, 0.7, alpha)
-	if float(v.hurt) > 0.0:
-		# Flash bright when hit.
-		var h := float(v.hurt) / HURT_TIME
-		tint = Color(tint.r + 0.35 * h, tint.g + 0.12 * h, tint.b + 0.1 * h, alpha)
-	_blit(info, p - Vector2(0, drop * DROP_HEIGHT * s), k, tint)
-
-	# Status rings around its feet.
-	if f.stun > 0:
-		_draw_team_ring(p, ring + 5, Color("#ffe066"), 1.0, 3.0)
-	if f.shield > 0:
-		_draw_team_ring(p, ring + 4, Color("#7fd6ff"), 1.0, 2.5)
-	if f.rage > 0:
-		_draw_team_ring(p, ring + 7, Color("#ff9f43", 0.8), 1.0, 2.0)
-	if f.slow > 0:
-		_draw_team_ring(p, ring + 3, Color("#9fd8ff", 0.8), 1.0, 2.0)
-	if f.invulnerable > 0:
-		_draw_team_ring(p, ring + 6, Color.WHITE, 1.0, 3.0)
-	if f.poison > 0:
-		draw_circle(p + Vector2(ring * 0.8, -ring * 1.6), maxf(3.0, ring * 0.2), Color("#7bd34a"))
-	if f.hp < f.max_hp:
-		_draw_bar(Vector2(p.x, p.y - UnitSprites.top(id) * k - 7.0), maxf(ring * 1.6, 26.0), 6.0, float(f.hp) / f.max_hp, team_color.lightened(0.3))
-	var stars := int(f.memory.get("stars", 1))
-	if stars > 1 and alpha > 0.5:
-		# Draft Duel stars, over its head (above the health bar).
-		UIKit.draw_stars(self, Vector2(p.x, p.y - UnitSprites.top(id) * k - 18.0), stars, 6.0)
-
-
-func _draw_corpse(corpse: Dictionary, s: float) -> void:
-	var id: String = corpse.id
-	var age := _time - float(corpse.at)
-	var info_anim := UnitSprites.animation(id, "death")
-	var frame := int(age * float(info_anim.get("fps", 10)))
-	var fade := clampf(1.0 - (age - UnitSprites.duration(id, "death") - CORPSE_REST) / CORPSE_FADE, 0.0, 1.0)
-	var p := to_screen(corpse.pos.x, corpse.pos.y)
-	var k := s * 1000.0 / UnitSprites.pixels_per_tile(id) * SPRITE_SCALE
-	if int(GameData.get_card(id).get("count", 1)) > 1:
-		k *= SWARM_SCALE
-	_blit(UnitSprites.frame(id, "death", corpse.facing, frame), p, k, Color(1, 1, 1, fade))
-
-
-func _draw_team_ring(p: Vector2, radius: float, color: Color, alpha: float, width := 2.5) -> void:
-	# Flattened to sit on the ground in the sprites' tilted view.
-	draw_set_transform(_shake_offset + p, 0.0, Vector2(1.0, 0.55))
-	draw_circle(Vector2.ZERO, radius, Color(color, 0.18 * alpha))
-	draw_arc(Vector2.ZERO, radius, 0, TAU, 32, Color(color, 0.85 * alpha), width / 0.55 * 0.6)
-	draw_set_transform(_shake_offset)
-
-
-func _blit(info: Dictionary, p: Vector2, k: float, tint: Color) -> void:
-	var region: Rect2 = info.region
-	var anchor: Vector2 = info.anchor * k
-	var size := region.size * k
-	if info.flip:
-		draw_set_transform(_shake_offset + p, 0.0, Vector2(-1, 1))
-		draw_texture_rect_region(info.texture, Rect2(-anchor, size), region, tint)
-		draw_set_transform(_shake_offset)
-	else:
-		draw_texture_rect_region(info.texture, Rect2(p - anchor, size), region, tint)
-
-
-func _draw_projectile(pr: Dictionary, s: float) -> void:
-	if _time < pr.launch:
-		return
-	var t := clampf((_time - float(pr.launch)) / maxf(float(pr.land) - float(pr.launch), 0.01), 0.0, 1.0)
-	var goal: Vector2 = pr.to
-	if _views.has(pr.to_uid):
-		goal = _views[pr.to_uid].pos
-	var from := to_screen(pr.from.x, pr.from.y)
-	var to := to_screen(goal.x, goal.y)
-	# An arc: up and over, a little higher for longer throws.
-	var lift := from.distance_to(to) * 0.35 + 10.0
-	var p := from.lerp(to, t) + Vector2(0, -lift * 4.0 * t * (1.0 - t) - 10.0)
-	var r := maxf(3.0, 220.0 * s)
-	draw_circle(p + Vector2(0, 10.0 + lift * 4.0 * t * (1.0 - t)) * 0.4, r * 0.8, Color(0, 0, 0, 0.25))
-	draw_circle(p, r, Color("#7a4a22"))
-	draw_circle(p + Vector2(0, -r * 0.45), r * 0.75, Color("#4b2e15"))
-	draw_circle(p + Vector2(-r * 0.3, r * 0.15), r * 0.3, Color(1, 1, 1, 0.35))
-
-
-func _draw_effect(fx: Dictionary, s: float) -> void:
-	var p := to_screen(fx.x, fx.y) - Vector2(0, float(fx.get("lift", 0.0)))
-	var t: float = fx.age / fx.life
-	var color: Color = fx.color
-	match fx.kind:
-		"ring":
-			var r: float = fx.radius * s * (0.6 + 0.4 * t)
-			draw_circle(p, r, Color(color, 0.25 * (1.0 - t)))
-			draw_arc(p, r, 0, TAU, 32, Color(color, 0.9 * (1.0 - t)), 3.0)
-		"area":
-			var r: float = fx.radius * s
-			draw_circle(p, r, Color(color, 0.12))
-			draw_arc(p, r, 0, TAU, 32, Color(color, 0.5), 2.0)
-		"flash":
-			draw_circle(p, fx.radius * s * (1.0 - t), Color(color, 0.8 * (1.0 - t)))
-		"text":
-			_draw_text(p + Vector2(0, -30 - 30 * t), fx.text, 20, Color(color, 1.0 - t))
-		"number":
-			_draw_text(p + Vector2(0, -24 * t), fx.text, 18, Color(color, 1.0 - t * t))
-		"slash":
-			# Three claw marks raking across the target.
-			var r: float = fx.radius * s
-			var d: Vector2 = fx.dir
-			var across := Vector2(-d.y, d.x)
-			var reach := clampf(t * 2.2, 0.0, 1.0)
-			for i in 3:
-				var offset := across * (float(i) - 1.0) * r * 0.32
-				var a := p + offset - d * r * 0.6 + across * r * 0.25
-				var b := p + offset + d * r * 0.6 - across * r * 0.25
-				var tip := a.lerp(b, reach)
-				draw_line(a, tip, Color(0, 0, 0, 0.4 * (1.0 - t)), 5.0)
-				draw_line(a, tip, Color(color, 1.0 - t), 2.5)
-		"chomp":
-			# Two jaws snapping shut on the target.
-			var r: float = fx.radius * s
-			var gap := (1.0 - clampf(t * 2.5, 0.0, 1.0)) * r * 0.5
-			var ang: float = fx.dir.angle()
-			var col := Color(color, 1.0 - t * t)
-			draw_arc(p - Vector2.from_angle(ang + PI / 2) * gap, r, ang + PI * 0.15, ang + PI * 0.85, 10, col, 3.0)
-			draw_arc(p + Vector2.from_angle(ang + PI / 2) * gap, r, ang - PI * 0.85, ang - PI * 0.15, 10, col, 3.0)
-		"dust":
-			# Puffs of dust bursting out from the impact.
-			var rng := RandomNumberGenerator.new()
-			rng.seed = int(fx.seed)
-			for i in 7:
-				var ang := rng.randf() * TAU
-				var dist: float = fx.radius * s * (0.3 + 0.7 * t) * (0.5 + rng.randf() * 0.5)
-				var puff: float = fx.radius * s * (0.12 + 0.2 * t) * (0.7 + rng.randf() * 0.6)
-				var at := p + Vector2(cos(ang), sin(ang) * 0.55) * dist
-				draw_circle(at, puff, Color(color, 0.55 * (1.0 - t)))
-		"feathers":
-			var rng := RandomNumberGenerator.new()
-			rng.seed = int(fx.seed)
-			for i in 6:
-				var ang := rng.randf() * TAU
-				var dist: float = fx.radius * s * (0.2 + 0.8 * t) * (0.5 + rng.randf() * 0.5)
-				var at := p + Vector2(cos(ang), sin(ang)) * dist + Vector2(0, 14.0 * t)
-				draw_set_transform(_shake_offset + at, ang + t * 3.0, Vector2(1.0, 0.35))
-				draw_circle(Vector2.ZERO, 5.0, Color(color, 1.0 - t))
-				draw_set_transform(_shake_offset)
-		"icon":
-			var texture := UIKit.icon(fx.text)
-			if texture != null:
-				var side: float = fx.radius * s * (0.7 + 0.3 * t)
-				draw_texture_rect(texture, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 0.85 * (1.0 - t)))
-
-
-func _draw_bar(center: Vector2, width: float, height: float, ratio: float, color: Color, label := "") -> void:
-	var rect := Rect2(center - Vector2(width / 2.0, height / 2.0), Vector2(width, height))
-	draw_rect(rect.grow(1.5), Color(0, 0, 0, 0.7))
-	draw_rect(Rect2(rect.position, Vector2(width * clampf(ratio, 0.0, 1.0), height)), color)
-	if label != "":
-		_draw_text(center + Vector2(0, -height - 2), label, 15, Color.WHITE)
-
-
-func _draw_text(center: Vector2, text: String, font_size: int, color: Color) -> void:
-	if font_size < 6:
-		return
-	var font := get_theme_default_font()
-	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
-	var baseline := center + Vector2(-width / 2.0, font_size * 0.36)
-	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, maxi(2, font_size / 5), Color(0, 0, 0, color.a * 0.8))
-	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)

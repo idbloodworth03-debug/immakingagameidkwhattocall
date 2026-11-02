@@ -35,6 +35,7 @@ var player_icons: Array = []
 var progression: Dictionary = {}
 var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
+var feel: Dictionary = {}            # animation, effects and juice (feel.json)
 var art: Dictionary = {}
 
 
@@ -80,6 +81,7 @@ func reload() -> void:
 	progression = _load("progression.json")
 	battle_rules = _load("battle_rules.json")
 	draft_rules = _load("draft_rules.json")
+	feel = _load("feel.json")
 	art = _load("art.json")
 
 

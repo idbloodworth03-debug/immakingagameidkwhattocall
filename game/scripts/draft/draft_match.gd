@@ -468,11 +468,16 @@ func _lay_out_herds() -> void:
 	sim.clear_units()
 	groups = [[], []]
 	for team in 2:
-		for entry in herds[team]:
+		for index in herds[team].size():
+			var entry: Dictionary = herds[team][index]
 			var made := sim.spawn(team, entry.id, int(entry.x), int(entry.y))
-			for f in made:
+			for member in made.size():
+				var f: BattleSim.Fighter = made[member]
 				f.deploy_ticks = 0
 				apply_stars(f, int(entry.get("stars", 1)), rules)
+				# For the screen only: the same animal keeps the same view when
+				# the herds are laid out again, so it hops instead of popping in.
+				f.memory.view_key = "%d/%d/%d" % [team, index, member]
 			groups[team].append(int(made[0].memory.group) if not made.is_empty() else -1)
 	sim.take_events()
 

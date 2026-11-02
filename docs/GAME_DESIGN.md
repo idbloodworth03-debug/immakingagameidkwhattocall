@@ -6,11 +6,94 @@ Battle tuning (dens, timing, energy) is in `game/data/battle_rules.json`.
 
 ## The big idea
 
-A hands-off, real-time card battler in the style of Clash Royale. You release
-animals onto the field and they act on their own; your skill is choosing
-*what* to release, *where* and *when*. The theme is wildlife rescue: chests
-are **cages** you open to **free** animals, the player is a **Ranger**, and
-card rarity follows how endangered the animal is in real life.
+An animal battler with two ways to play:
+
+- **Draft Duel** (the main mode, on the big button): a round-based duel.
+  Draft a herd from a shared pool, place it with no clock running, then
+  watch it fight on its own while you make a few well-timed calls: a Rally,
+  your tools and a bet. Dens are your lives. There's a gambling layer with
+  Acorns, which only exist inside a match.
+- **Classic battle**: a real-time card battler in the style of Clash Royale.
+  You release animals from an 8-card deck onto the field and they act on
+  their own; your skill is choosing *what* to release, *where* and *when*.
+
+The theme is wildlife rescue: chests are **cages** you open to **free**
+animals, the player is a **Ranger**, and card rarity follows how endangered
+the animal is in real life.
+
+## Draft Duel
+
+The goal: give players time to think, keep them involved during the fight,
+and add the thrill of a bet, while skill (reading the fight) still beats
+luck. Up to 7 rounds; each round has five parts:
+
+1. **Draft at the Watering Hole.** Six cards sit face up: 4 animals, 1 Ranger
+   tool and a face-down **Mystery Crate** (a random animal for 4 Acorns:
+   maybe a Legendary, maybe one rat). Players take turns buying one card or
+   passing; whoever lost the last round picks first. Taking a card the other
+   player wants is a real move. A herd holds up to 6 animals and 2 tools,
+   and it carries over from round to round.
+2. **Place your herd.** Nothing moves and there's no clock. Both herds are on
+   the field (the opponent places first, so you can answer it). Animals start
+   on your own bank; river animals (the Hippo) start in the river.
+3. **The Bookie's odds.** The Bookie (the raccoon) plays the fight out ahead 6
+   times and posts how often your herd won, e.g. 25%. You may back your herd
+   with up to 5 Acorns; if it wins, the Bookie pays back about 0.9 / chance
+   per Acorn (x3.6 at 25%, up to x8). There are no bets on a sure thing
+   (over 90%). The Bookie can't see the tools in anyone's hand, so an
+   underdog holding a Net has a good bet.
+4. **The fight** (up to 40 seconds) runs on its own, with some luck:
+   - **Moods:** at the whistle, after the bets, every animal rolls a mood for
+     the fight: up to 20% harder or softer bites ("Fired up!", "Sleepy").
+   - **Hits** vary by up to 25% each.
+   - **Rally:** once a fight, tap a spot and your animals there bite 30%
+     harder, attack and move 20% faster for 4 seconds. Timing is everything.
+   - **Tools** bought in the draft can be used anywhere, any time.
+   - **Halftime** (8 seconds in, while both herds stand): the fight pauses
+     for the **Pot**. Both players put a 1-Acorn ante in when the fight
+     starts. At halftime you may raise (up to 3, never more than the other
+     player can call) or check, then the opponent. A raise must be called
+     or folded. Folding ends the round at once: you lose the Pot but your
+     dens take no more damage. So the player who's ahead chooses: raise to
+     win Acorns and offer a way out, or check and let the herd at the dens.
+     Which tools you hold is hidden (only how many shows), so a raise can be
+     a bluff.
+5. **Round over.** The herd that outlasts the other wins the round (if both
+   stand at the bell: more den damage this round, then more herd left).
+   The winner takes the Pot; a tie carries it over.
+
+**Dens are lives.** Den damage stays from round to round. In Draft Duel dens
+are tougher (side 1,800, main 3,000). Lose your main den and the match is
+over. After round 7, more dens destroyed wins, then more den health left.
+
+**Acorns** are the only money in a match: 10 to start, +5 each round, plus
+Pots and Bookie wins. Spend them on animals and tools, or keep them to bet.
+Everyone starts equal, every animal fights at its starting level, and the
+draft pool is all 20 animals (rarer ones show up less often), so your
+collection doesn't decide a Draft Duel.
+
+**Match stakes.** Before the match: Safe (half the trophies, win or lose),
+Bold (normal) or All-in (double).
+
+**Gambling without harm.** Acorns can't be bought, carry nothing out of a
+match and reset every time. The bets reward reading the fight (and knowing
+your own tools), not blind luck. Keep it that way: if Acorns or bets ever
+connect to anything bought with money, the game becomes real gambling, with
+legal trouble in some countries and a higher App Store age rating.
+
+**The opponent** drafts by cost (it wants one tool, sometimes gambles on the
+Mystery Crate and saves Acorns once its herd has 3 animals), places tough
+animals in front and ranged ones behind, leaning toward your stronger lane,
+rallies when two of its animals are fighting, uses tools on groups, and bets
+from the Bookie's odds plus its own tools, sometimes bluffing.
+
+**Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
+bot-vs-bot matches with the real Bookie and prints match length, den damage,
+betting and how sure the Bookie's odds are. From the first runs (40 matches):
+- Matches last 4.3 rounds on average, and the main den falls in most of them. Wins split 20-20.
+- Without luck, fights were so predictable that the Bookie's odds were nearly always 0% or 100%, which made the bets pointless. Moods and hit luck fixed part of that; the rest comes from matchups, which decide a lot (that's the strategy).
+- Folding used to be allowed any time at halftime, and the losing side always folded to save its dens. Now you can only fold when someone raises.
+- The Bookie takes about 0.8 seconds on a computer (slower on phones). The screen spreads its work across frames and settles on the tries it has after 3 seconds.
 
 ## Rarity = how endangered the animal is
 
@@ -298,7 +381,8 @@ In the top arena it reacts in well under a second, always defends, uses tools
 on groups of 2 and attacks sooner, using the deeper placement when it has
 taken a side den.
 
-**Balance report.** `tests/balance_report.tscn` plays hundreds of
+**Balance report.** (Classic battle; Draft Duel has its own report, see
+above.) `tests/balance_report.tscn` plays hundreds of
 bot-vs-bot battles with random decks and prints each card's win rate and how
 often it gets played (see the instructions at the top of
 `tests/balance_report.gd`). Bots aren't people, so it's a guide for spotting
@@ -313,8 +397,9 @@ outliers, not a verdict.
 
 ## Still open
 
-1. **Energy name:** keep "energy", or something like Stamina or Instinct?
-2. **Den levels:** should dens get stronger with Ranger Level, or stay fixed so only animal levels matter?
-3. **Balance:** all stats are first guesses. The balance report spots outliers, but playing a lot is the only way to really tune them.
+1. **Draft Duel or Classic as the game?** Draft Duel is the main button for now; playtesting decides whether Classic stays.
+2. **Energy name** (Classic): keep "energy", or something like Stamina or Instinct?
+3. **Den levels:** should dens get stronger with Ranger Level, or stay fixed so only animal levels matter?
+4. **Balance:** all stats are first guesses. The balance report spots outliers, but playing a lot is the only way to really tune them.
 
 Settled: deeper placement after taking a side den (yes), and a bot that gets harder as you climb (yes).

@@ -25,6 +25,22 @@
 - [x] First balance pass from bot-vs-bot battles (see "Computer opponent" in [GAME_DESIGN.md](GAME_DESIGN.md))
 - [ ] Playtest a lot with real people and keep balancing
 
+## Phase 1b: Draft Duel (first version done)
+
+- [x] Round-based mode: draft, place, bet, fight, results, with dens as lives
+- [x] The Watering Hole: alternate picks from a shared pool, a Ranger tool and a Mystery Crate
+- [x] Acorns: the match's own money, for animals, tools and bets
+- [x] The Bookie: odds from playing the fight out ahead, and bets on your own herd
+- [x] Luck that the Bookie can't foresee: moods and hit luck
+- [x] Rally once a fight, tools during the fight, and the halftime Pot (raise, call, fold)
+- [x] Match stakes (Safe, Bold, All-in) for trophies
+- [x] Computer opponent that drafts, places, rallies, uses tools and bets (with bluffs)
+- [x] Draft Duel report: bot-vs-bot matches with the real Bookie
+- [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
+- [ ] Check the Bookie's speed on real phones (it settles early if it's slow)
+- [ ] Decide whether Classic battle stays (see the end of [GAME_DESIGN.md](GAME_DESIGN.md))
+- [ ] Online Draft Duel: picks and bets are turns, so it suits online play well
+
 ## Phase 2: Look and feel (first pass done)
 
 - [x] Icons for every animal, tool, emote, player icon and arena (game-icons.net), with habitat-colored cards and rarity glow
@@ -37,7 +53,7 @@
 - [x] Web version that runs in Safari and installs to the iPhone home screen
 - [x] Publishing: every push runs the tests and builds the web version; a re-run (or *Run workflow*) updates the Netlify site
 - [x] 3D-rendered animals with fur, real markings and walk, attack and death animations (Blender pipeline in `tools/creatures/`)
-- [ ] Render the dens, arena ground and tools in the same style
+- [ ] Render the arena ground and tools in the same style (the dens are 3D treehouses now)
 - [ ] Bring back more animals from `animals_later.json` once the first 20 feel right
 
 ## Phase 3: Online play

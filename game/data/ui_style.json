@@ -1,0 +1,110 @@
+{
+  "_note": "The look of every screen: colors, fonts, text sizes, spacing, corners and the chunky components (panels, buttons, pills, cards, popups). Screens use these through scripts/ui/style/ui_style.gd and never pick their own colors or sizes. Sizes are in game pixels: the layout is 720 wide, so on an iPhone 1 pixel is about 0.54 pt (26 px is about 14 pt, 88 px about 48 pt).",
+
+  "colors": {
+    "_note": "Every color, defined once. Gradients are made from these: a lighter top (gradient_light) and a darker bottom (gradient_dark).",
+    "sky": "#45a8f5",
+    "sky_deep": "#2378d6",
+    "panel": "#3a9cf0",
+    "panel_inset": "#1f6fcc",
+    "outline": "#0f2e5c",
+    "text": "#ffffff",
+    "text_soft": "#d9efff",
+    "text_dark": "#0f2e5c",
+    "primary": "#4cc72e",
+    "secondary": "#2f95f5",
+    "danger": "#f0453f",
+    "tool": "#9a5af0",
+    "gold": "#ffc21a",
+    "disabled": "#9fb0c4",
+    "chip": "#1b67c4",
+    "heart": "#ff4f6d",
+    "acorn": "#d68d45",
+    "gem": "#44dd85",
+    "trophy": "#ffb51f",
+    "flame": "#ff8a2b",
+    "selected": "#ffe14d",
+    "player": "#3b8ff0",
+    "enemy": "#f0453f",
+    "rarity_common": "#b7c7da",
+    "rarity_rare": "#ff9f2e",
+    "rarity_epic": "#c062ff",
+    "rarity_legendary": "#38e8cf"
+  },
+
+  "gradient_light": 0.2,
+  "gradient_dark": 0.14,
+
+  "fonts": {
+    "_note": "display: titles, numbers and buttons (thick outline and drop shadow). body: the few longer lines.",
+    "display": "res://art/fonts/LilitaOne-Regular.ttf",
+    "body": "res://art/fonts/Nunito.ttf"
+  },
+
+  "text_sizes": {
+    "_note": "The only four sizes. Nothing smaller than small (about 14 pt on an iPhone).",
+    "small": 26,
+    "body": 32,
+    "large": 44,
+    "title": 64
+  },
+  "text_outline": 0.24,
+  "text_shadow": 0.12,
+  "text_shadow_alpha": 0.55,
+
+  "space": {
+    "_note": "Padding and gaps: always one of these.",
+    "xs": 8,
+    "s": 16,
+    "m": 24,
+    "l": 32
+  },
+
+  "radius": {
+    "panel": 28,
+    "chip": 16,
+    "button": 22,
+    "card": 20
+  },
+
+  "panel": {
+    "border": 5,
+    "lip": 6,
+    "highlight": 0.45,
+    "shadow_alpha": 0.28,
+    "shadow_size": 10,
+    "shadow_offset": 6
+  },
+
+  "button": {
+    "_note": "A button's darker lip under the face makes it look pressable; pressed, the face sinks onto it. min_height is the smallest touch target.",
+    "min_height": 88,
+    "border": 4,
+    "lip": 8,
+    "pressed_lip": 2,
+    "gloss": 0.3,
+    "highlight": 0.55,
+    "shadow_alpha": 0.3,
+    "shadow_offset": 4
+  },
+
+  "chip": {
+    "height": 60,
+    "border": 3,
+    "lip": 4,
+    "icon": 40
+  },
+
+  "card": {
+    "_note": "The frame is the rarity color; selected cards get a thick selected-color outline and lift.",
+    "border": 4,
+    "frame": 7,
+    "selected_lift": 1.06
+  },
+
+  "screen": {
+    "_note": "safe_area_extra adds a little room under a notch and above the home bar on top of what the phone reports.",
+    "margin": 16,
+    "safe_area_extra": 0
+  }
+}

@@ -96,7 +96,7 @@ Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Testing switches (on right now):** `game/data/testing.json` unlocks every animal and tool, keeps gold and gems topped up at 999,999, keeps your Acorns at 99 in Draft Duel (the opponent plays normally), and shows the Developer tools (+300 trophies and more) at the bottom of your Profile, even on the website. Set each switch to `false` to play normally again, and before any real release.
+- **Testing switches (on right now):** `game/data/testing.json` unlocks every animal and tool, keeps gold and gems topped up at 999,999, keeps your Acorns at 99 in Draft Duel (the opponent plays normally), and shows the Developer tools (+300 trophies and more) at the bottom of your Profile, even on the website. Set each switch to `false` to play normally again, and before any real release: `python3 tools/check_release.py` fails while any is on, and the web build prints a warning.
 - **Every run's build** is also under *Artifacts* on the run's page (`den-duel-web`), to download or host anywhere else.
 - **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 
@@ -156,6 +156,7 @@ files in `game/data/`:
 - **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, moods, Rally): `draft_rules.json`
 - **Habitat synergies** (tiers, bonuses, icons, colors): `synergies.json`; each animal's habitat is in `animals.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`
+- **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`
 - **Look and feel** (VS screen and emote timings, animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`

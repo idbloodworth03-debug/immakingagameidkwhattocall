@@ -42,6 +42,7 @@ var habitat_order: Array = []        # habitat ids, in synergies.json order
 var synergy_tiers: Array = []        # how many animals each tier needs, e.g. [2, 4, 6]
 var rival_rules: Dictionary = {}     # rivals.json settings (bosses, easing, reward)
 var rivals: Array = []               # Rival Rangers, in rivals.json order
+var ui_style: Dictionary = {}        # the design system (ui_style.json, see UIStyle)
 var art: Dictionary = {}
 
 
@@ -98,6 +99,7 @@ func reload() -> void:
 		habitat_order.append(habitat.id)
 	rival_rules = _load("rivals.json")
 	rivals = rival_rules.get("rivals", [])
+	ui_style = _load("ui_style.json")
 	art = _load("art.json")
 
 

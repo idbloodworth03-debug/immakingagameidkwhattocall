@@ -30,6 +30,8 @@ if [ "$STATUS" -ne 0 ] || grep -q "SCRIPT ERROR" "$LOG"; then
   exit 1
 fi
 
+python3 "$ROOT/tools/check_release.py" >/dev/null || echo "!! Testing switches are on (endless gold, gems and Acorns...): fine for testing, not for a real release. See tools/check_release.py."
+
 echo "== Exporting the web build to $OUT"
 rm -rf "${OUT:?}"/*
 "$GODOT" --headless --path "$ROOT/game" --export-release "Web" "$OUT/index.html" >/dev/null 2>&1

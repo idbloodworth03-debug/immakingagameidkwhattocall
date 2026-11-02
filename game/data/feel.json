@@ -124,12 +124,14 @@
   },
 
   "ui": {
-    "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in.",
+    "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in. Numbers in pills tick to their new value over count_seconds; short messages over the field stay for toast_seconds.",
     "press_scale": 0.9,
     "release_overshoot": 1.07,
     "release_seconds": 0.28,
     "panel_seconds": 0.32,
-    "pill_bump": 1.22
+    "pill_bump": 1.22,
+    "count_seconds": 0.4,
+    "toast_seconds": 2.2
   },
 
   "background": {

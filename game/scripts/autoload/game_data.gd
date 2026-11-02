@@ -36,6 +36,7 @@ var progression: Dictionary = {}
 var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
+var testing: Dictionary = {}         # testing switches (testing.json)
 var art: Dictionary = {}
 
 
@@ -82,6 +83,7 @@ func reload() -> void:
 	battle_rules = _load("battle_rules.json")
 	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
+	testing = _load("testing.json")
 	art = _load("art.json")
 
 

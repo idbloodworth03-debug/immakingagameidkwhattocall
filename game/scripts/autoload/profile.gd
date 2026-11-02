@@ -16,6 +16,9 @@ const SAVE_VERSION := 1
 var save_path := "user://profile.json"
 ## Tests turn this off so they never touch the real save file.
 var autosave := true
+## Whether data/testing.json's switches apply (unlock everything, endless
+## gold and gems). Tests turn this off.
+var testing_switches := true
 ## Seconds added to the real clock. Tests use it to fast-forward cage timers.
 var time_offset := 0.0
 ## Result of the last battle, shown when we get back to the menu. Not saved.
@@ -40,6 +43,7 @@ func load_or_create() -> void:
 		if parsed is Dictionary:
 			data = parsed
 			_repair()
+			_apply_testing()
 			return
 		push_warning("Profile: save file was unreadable, starting a new profile")
 	reset()
@@ -136,6 +140,7 @@ func _first_default(items: Array) -> String:
 
 
 func _changed() -> void:
+	_apply_testing()
 	if autosave:
 		save()
 	changed.emit()
@@ -587,6 +592,22 @@ func dev_skip_time(seconds: float) -> void:
 		if entry != null and float(entry.unlock_at) > 0.0:
 			entry.unlock_at = float(entry.unlock_at) - seconds
 	_changed()
+
+
+## Testing switches (data/testing.json): every animal and tool unlocked, and
+## gold and gems topped back up after every spend.
+func _apply_testing() -> void:
+	if not testing_switches or data.is_empty():
+		return
+	var t: Dictionary = GameData.testing
+	if t.get("unlock_all_animals", false):
+		for id in GameData.card_order:
+			if not data.collection.has(id):
+				data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": false}
+	if t.get("infinite_gold_and_gems", false):
+		var amount := int(t.get("money_amount", 999999))
+		data.gold = maxi(int(data.gold), amount)
+		data.gems = maxi(int(data.gems), amount)
 
 
 func dev_unlock_all_animals() -> void:

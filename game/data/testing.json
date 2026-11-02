@@ -1,0 +1,8 @@
+{
+  "_note": "Testing switches, for trying things out. Turn them all off (false) before a real release. money_amount is what gold and gems are topped back up to; acorns_amount is what your Acorns are topped back up to in Draft Duel (the opponent is not affected).",
+  "unlock_all_animals": true,
+  "infinite_gold_and_gems": true,
+  "money_amount": 999999,
+  "infinite_acorns": true,
+  "acorns_amount": 99
+}

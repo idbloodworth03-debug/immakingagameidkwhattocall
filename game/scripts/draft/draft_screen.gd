@@ -84,6 +84,9 @@ static func _opponent_levels(pool: Array) -> Dictionary:
 func _process(delta: float) -> void:
 	if not _result.is_empty():
 		return
+	if GameData.testing.get("infinite_acorns", false):
+		# Testing switch (data/testing.json): your Acorns never run low.
+		duel.acorns[0] = maxi(duel.acorns[0], int(GameData.testing.get("acorns_amount", 99)))
 	_opponent_moves(delta)
 	if duel.phase == "fight":
 		_run_fight(delta)

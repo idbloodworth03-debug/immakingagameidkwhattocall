@@ -6,6 +6,7 @@ var profile: Node
 func _init() -> void:
 	profile = load("res://scripts/autoload/profile.gd").new()
 	profile.autosave = false
+	profile.testing_switches = false
 	profile.reset()
 
 

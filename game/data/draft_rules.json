@@ -1,0 +1,38 @@
+{
+  "_note": "Draft Duel tuning. Times are in seconds, distances in tiles. Anything about the fighting itself that isn't under \"battle\" here comes from battle_rules.json.",
+  "rounds": 7,
+  "acorns_start": 10,
+  "acorns_per_round": 5,
+  "market_animals": 4,
+  "market_tools": 1,
+  "mystery_crates": 1,
+  "mystery_cost": 4,
+  "rarity_weights": {"common": 55, "rare": 27, "epic": 13, "legendary": 5},
+  "herd_max": 6,
+  "tools_max": 2,
+  "rally": {"radius": 3.0, "seconds": 4, "damage_pct": 30, "speed_pct": 20, "attack_pct": 20},
+  "fight_seconds": 40,
+  "mood_pct": 20,
+  "halftime_seconds": 8,
+  "ante": 1,
+  "raise_max": 3,
+  "wager_max": 5,
+  "bookie_edge": 0.1,
+  "payout_max": 8,
+  "no_bets_above": 0.9,
+  "bookie_trials": 6,
+  "bookie_jitter": 0.4,
+  "bookie_lookahead_seconds": 25,
+  "stakes": [
+    {"id": "safe", "name": "Safe", "multiplier": 0.5, "text": "Half the trophies, win or lose."},
+    {"id": "bold", "name": "Bold", "multiplier": 1.0, "text": "The usual trophies."},
+    {"id": "all_in", "name": "All-in", "multiplier": 2.0, "text": "Double the trophies, win or lose."}
+  ],
+  "battle": {
+    "match_seconds": 100000, "overtime_seconds": 0, "damage_variance_pct": 25,
+    "towers": {
+      "side": {"hp": 1800, "damage": 50, "hit_speed": 0.8, "range": 7.0, "size": 1.4},
+      "main": {"hp": 3000, "damage": 80, "hit_speed": 1.0, "range": 7.5, "size": 1.9}
+    }
+  }
+}

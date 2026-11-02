@@ -4,7 +4,6 @@ extends Control
 ## the other side and BattleField draws it all.
 
 const MENU_SCENE := "res://scenes/main.tscn"
-const OPPONENT_NAMES := ["MossyFox", "RiverOtter42", "SilentOwl", "BadgerBoss", "TundraTom", "ZebraZoe", "CanopyKid", "DuneRunner"]
 const OPPONENT_CHATS := ["good_luck", "well_played", "wow", "good_game", "oops"]
 ## How far a finger must move on a card before it counts as a drag.
 const DRAG_START := 18.0
@@ -56,7 +55,7 @@ func _ready() -> void:
 	# The opponent gets sharper the higher the arena.
 	var difficulty := float(Profile.arena_index()) / maxf(1.0, GameData.arenas.size() - 1)
 	bot = BattleBot.new(sim, 1, rng.randi(), difficulty)
-	_make_opponent(rng)
+	opponent = Opponents.random(rng)
 	_build()
 	Sound.play_music("battle")
 	_set_status("Drag a card onto the glowing area to play it.")
@@ -164,18 +163,6 @@ func _build() -> void:
 	_update_hud()
 
 
-func _make_opponent(rng: RandomNumberGenerator) -> void:
-	var banners := GameData.banners.filter(func(b): return b.unlock.type == "default")
-	var icons := GameData.player_icons.filter(func(i): return i.unlock.type == "default")
-	opponent = {
-		"name": OPPONENT_NAMES[rng.randi_range(0, OPPONENT_NAMES.size() - 1)],
-		"trophies": maxi(0, Profile.get_trophies() + rng.randi_range(-80, 80)),
-		"banner": banners[rng.randi_range(0, banners.size() - 1)].id,
-		"icon": icons[rng.randi_range(0, icons.size() - 1)].id,
-		"level": maxi(1, int(Profile.ranger_info().level) + rng.randi_range(-1, 1)),
-	}
-
-
 # --- Every frame -----------------------------------------------------------
 
 func _update_hud() -> void:
@@ -278,39 +265,13 @@ func _refresh_hand() -> void:
 
 func _handle_events(events: Array) -> void:
 	_field.add_events(events)
-	_play_event_sounds(events)
+	BattleField.play_sounds(events)
 	for e in events:
 		if e.type == "death" and e.kind == "tower":
 			if e.team == 0 and randf() < 0.5:
 				_opponent_emote("laughing_hyena", 0.6)
 			elif e.team == 1 and randf() < 0.35:
 				_opponent_emote("crocodile_tears", 0.8)
-
-
-func _play_event_sounds(events: Array) -> void:
-	for e in events:
-		match e.type:
-			"release":
-				if GameData.is_tool(e.card):
-					Sound.play("horn" if e.card == "air_horn" else "tool")
-				else:
-					Sound.play("release", -2.0, 0.08)
-			"hit":
-				if e.from_kind == "tower":
-					Sound.play("zap", -10.0, 0.1)
-				elif e.to_kind == "tower":
-					Sound.play("tower_hit", -4.0, 0.1)
-				else:
-					Sound.play("hit", -7.0, 0.2)
-			"death":
-				if e.kind == "tower":
-					Sound.play("boom")
-				else:
-					Sound.play("death", -6.0, 0.15)
-			"heal", "tree":
-				Sound.play("heal", -4.0)
-			"dodge", "play_dead", "pounce", "emerge", "sleep", "steal":
-				Sound.play("pop", -6.0, 0.2)
 
 
 # --- Playing cards ---------------------------------------------------------

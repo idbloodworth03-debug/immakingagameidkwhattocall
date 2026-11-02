@@ -341,6 +341,9 @@ func step() -> void:
 			_update(f)
 	_update_zones()
 	_separate()
+	for f in fighters:
+		if not f.alive and f.kind != "tower":
+			f.target = null  # two animals aiming at each other would never be freed
 	fighters = fighters.filter(func(f): return f.alive or f.kind == "tower")
 	_check_end()
 
@@ -677,6 +680,10 @@ func _attack(f: Fighter, t: Fighter) -> void:
 	if f.rage > 0:
 		amount = amount * (100 + f.rage_damage_pct) / 100
 	amount = BattleAbilities.outgoing_damage(self, f, t, amount)
+	# Draft Duel adds some luck to every hit; the classic battle has none.
+	var variance := int(rules.get("damage_variance_pct", 0))
+	if variance > 0:
+		amount = amount * (100 + rng.randi_range(-variance, variance)) / 100
 	f.stealthed = false
 	f.memory.attacked = true
 	f.memory.last_combat = tick
@@ -875,6 +882,71 @@ func make_bait(team: int, x: int, y: int, hp: int, ticks: int, lure_radius: int)
 func add_zone(zone: Dictionary) -> void:
 	zone["acc"] = {}
 	zones.append(zone)
+
+
+## Takes every animal and food bait off the field and ends lingering areas.
+## Dens keep their health. Draft Duel clears the field between rounds.
+func clear_units() -> void:
+	for f in fighters:
+		f.target = null
+	fighters = fighters.filter(func(f): return f.kind == "tower")
+	for t in fighters:
+		t.cooldown = 0
+	zones.clear()
+
+
+## How much of a team's herd is still standing: each animal counts its card's
+## cost (split among a pack) times the share of health it has left, in
+## thousandths of a cost point.
+func herd_value(team: int) -> int:
+	var total := 0
+	for f in units(team):
+		var count := maxi(1, int(f.card.get("count", 1)))
+		total += int(f.card.cost) * 1000 * f.hp / maxi(1, f.max_hp) / count
+	return total
+
+
+## A separate copy of the battle as it stands, to try out what happens next
+## (Draft Duel's Bookie plays fights out ahead to set its odds). Running the
+## copy never changes this battle.
+func clone() -> BattleSim:
+	var copy := BattleSim.new([[], []], [{}, {}], 0, rules)
+	copy.tick = tick
+	copy.outcome = outcome
+	copy.match_ticks = match_ticks
+	copy.overtime_ticks = overtime_ticks
+	copy.double_energy_tick = double_energy_tick
+	copy._next_uid = _next_uid
+	copy._next_group = _next_group
+	copy.rng.seed = rng.seed
+	copy.rng.state = rng.state
+	copy.zones = zones.duplicate(true)
+	copy.teams = []
+	for t in teams:
+		copy.teams.append(_copy_fields(t, Team.new()))
+	var by_uid := {}
+	copy.fighters = []
+	for f in fighters:
+		var twin: Fighter = _copy_fields(f, Fighter.new())
+		by_uid[f.uid] = twin
+		copy.fighters.append(twin)
+	for twin in copy.fighters:
+		if twin.target != null:
+			twin.target = by_uid.get(twin.target.uid)
+	return copy
+
+
+## Copies every script variable from one object to another. Arrays and
+## dictionaries are copied too, except a fighter's card, which never changes.
+static func _copy_fields(from: Object, to: Object) -> Object:
+	for prop in from.get_property_list():
+		if not prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			continue
+		var value: Variant = from.get(prop.name)
+		if (value is Dictionary or value is Array) and prop.name != "card":
+			value = value.duplicate(true)
+		to.set(prop.name, value)
+	return to
 
 
 ## How big an animal is on the field: swarm members are small, the

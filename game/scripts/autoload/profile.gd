@@ -336,14 +336,15 @@ func average_deck_cost() -> float:
 ## Updates trophies, stats and rewards after a battle. `outcome` is "win",
 ## "loss" or "draw" (draws change no trophies and give no cage).
 ## Returns a summary for the results screen.
-func record_match(outcome: String, opponent_trophies: int) -> Dictionary:
+## `stake` scales the trophies won or lost (Draft Duel's match stakes).
+func record_match(outcome: String, opponent_trophies: int, stake := 1.0) -> Dictionary:
 	var prog := GameData.progression
 	var won := outcome == "win"
 	var before := get_trophies()
 	var highest_before := highest_arena()
 	var after := before
 	if outcome != "draw":
-		after = TrophyRules.trophies_after_match(before, opponent_trophies, won, prog.trophies, GameData.arenas)
+		after = TrophyRules.trophies_after_match(before, opponent_trophies, won, prog.trophies, GameData.arenas, stake)
 
 	data.trophies = after
 	data.best_trophies = maxi(int(data.best_trophies), after)

@@ -39,6 +39,7 @@ var banners: Array = []
 var player_icons: Array = []
 var progression: Dictionary = {}
 var battle_rules: Dictionary = {}
+var draft_rules: Dictionary = {}     # Draft Duel tuning
 var art: Dictionary = {}
 
 
@@ -83,6 +84,7 @@ func reload() -> void:
 	player_icons = _load("player_icons.json")
 	progression = _load("progression.json")
 	battle_rules = _load("battle_rules.json")
+	draft_rules = _load("draft_rules.json")
 	art = _load("art.json")
 
 
@@ -256,6 +258,14 @@ func validate() -> Array:
 			problems.append("cage %s: weights add up to zero" % cage_id)
 		if cage.has("shop_requires_arena") and not arena_index_by_id.has(cage.shop_requires_arena):
 			problems.append("cage %s: unknown arena '%s'" % [cage_id, cage.shop_requires_arena])
+
+	for rarity in draft_rules.get("rarity_weights", {}):
+		if not rarities.has(rarity):
+			problems.append("draft_rules: unknown rarity '%s'" % rarity)
+	if int(draft_rules.get("halftime_seconds", 0)) >= int(draft_rules.get("fight_seconds", 0)):
+		problems.append("draft_rules: halftime must come before the end of the fight")
+	if draft_rules.get("stakes", []).is_empty():
+		problems.append("draft_rules: needs at least one stake")
 
 	for cage_id in progression.get("win_cage_cycle", []):
 		if not cages.has(cage_id):

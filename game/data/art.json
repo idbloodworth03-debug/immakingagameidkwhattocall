@@ -170,7 +170,7 @@
     "main_tower": "delapouite/hut",
     "bait": "lorc/meat",
     "paw": "lorc/flat-paw-print",
-    "locked": "lorc/padlock"
+    "locked": "lorc/padlock", "acorn": "lorc/acorn", "mystery": "delapouite/wooden-crate", "whistle": "delapouite/whistle", "dice": "delapouite/rolling-dices", "bookie": "delapouite/raccoon-head", "pot": "lorc/swap-bag"
   },
   "logo": {
     "wolf": "lorc/wolf-head",

@@ -3,6 +3,7 @@ extends Control
 ## four cage slots.
 
 const BATTLE_SCENE := "res://scenes/battle.tscn"
+const DRAFT_SCENE := "res://scenes/draft.tscn"
 
 var _arena_holder: PanelContainer
 var _slots_row: HBoxContainer
@@ -34,16 +35,21 @@ func _ready() -> void:
 	column.add_child(_arena_holder)
 	UIKit.on_tap(_arena_holder, func() -> void: Modal.open(TrophyRoad.create(), "Trophy Road"))
 
-	var battle := UIKit.button("BATTLE", UIKit.YELLOW, 52, Vector2(440, 130))
+	var battle := UIKit.button("DRAFT DUEL", UIKit.YELLOW, 52, Vector2(440, 120))
 	battle.add_theme_color_override("font_color", Color.WHITE)
 	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	battle.pressed.connect(func() -> void: get_tree().change_scene_to_file(BATTLE_SCENE))
+	battle.pressed.connect(func() -> void: get_tree().change_scene_to_file(DRAFT_SCENE))
 	column.add_child(battle)
-	# A gentle pulse so the Battle button invites a tap.
+	# A gentle pulse so the main button invites a tap.
 	var pulse := battle.create_tween().set_loops()
 	pulse.tween_property(battle, "scale", Vector2(1.04, 1.04), 0.8).set_trans(Tween.TRANS_SINE)
 	pulse.tween_property(battle, "scale", Vector2.ONE, 0.8).set_trans(Tween.TRANS_SINE)
-	column.add_child(UIKit.label("Practice against a computer opponent. Online matches come later.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(UIKit.label("Draft a herd, bet Acorns, knock down their dens.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	var classic := UIKit.button("Classic battle", UIKit.BLUE, 24, Vector2(300, 64))
+	classic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	classic.pressed.connect(func() -> void: get_tree().change_scene_to_file(BATTLE_SCENE))
+	column.add_child(classic)
+	column.add_child(UIKit.label("Both against a computer opponent. Online matches come later.", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_slots_row = UIKit.hbox(10)
 	column.add_child(_slots_row)

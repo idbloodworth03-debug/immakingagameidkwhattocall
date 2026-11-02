@@ -147,6 +147,38 @@ func add_events(events: Array) -> void:
 				_effect("text", e.x, e.y, 0, Color.WHITE, 0.8, _event_word(e.type))
 
 
+## The sounds that go with battle events (releases, hits, deaths...).
+static func play_sounds(events: Array) -> void:
+	for e in events:
+		match e.type:
+			"release":
+				if GameData.is_tool(e.card):
+					Sound.play("horn" if e.card == "air_horn" else "tool")
+				else:
+					Sound.play("release", -2.0, 0.08)
+			"hit":
+				if e.from_kind == "tower":
+					Sound.play("zap", -10.0, 0.1)
+				elif e.to_kind == "tower":
+					Sound.play("tower_hit", -4.0, 0.1)
+				else:
+					Sound.play("hit", -7.0, 0.2)
+			"death":
+				if e.kind == "tower":
+					Sound.play("boom")
+				else:
+					Sound.play("death", -6.0, 0.15)
+			"heal", "tree":
+				Sound.play("heal", -4.0)
+			"dodge", "play_dead", "pounce", "emerge", "sleep", "steal":
+				Sound.play("pop", -6.0, 0.2)
+
+
+## A word floating up from a spot on the field, e.g. an animal's mood.
+func say(x: int, y: int, text: String, color := Color.WHITE, life := 1.2) -> void:
+	_effect("text", x, y, 0, color, life, text)
+
+
 func _event_word(kind: String) -> String:
 	return {
 		"dodge": "Dodge!", "play_dead": "Playing dead...", "revive": "Back up!", "roll_up": "Rolled up!",
@@ -689,7 +721,7 @@ func _draw_effect(fx: Dictionary, s: float) -> void:
 		"flash":
 			draw_circle(p, fx.radius * s * (1.0 - t), Color(color, 0.8 * (1.0 - t)))
 		"text":
-			_draw_text(p + Vector2(0, -30 - 30 * t), fx.text, 20, Color(1, 1, 1, 1.0 - t))
+			_draw_text(p + Vector2(0, -30 - 30 * t), fx.text, 20, Color(color, 1.0 - t))
 		"number":
 			_draw_text(p + Vector2(0, -24 * t), fx.text, 18, Color(color, 1.0 - t * t))
 		"slash":

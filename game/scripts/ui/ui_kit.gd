@@ -1,25 +1,31 @@
 class_name UIKit
 extends RefCounted
 ## Shared colors, the menu theme and small helpers that build styled controls
-## in code. Every screen uses these so the whole game looks consistent. When
-## real art arrives, most of the look can change in this one file.
+## in code. Every screen uses these so the whole game looks consistent: most
+## of the look can change in this one file.
+##
+## The style: chunky cartoon buttons with a pressable edge and a gloss,
+## raised panels with a light rim and a soft shadow, sunken panels for lists,
+## and bold outlined text with a drop shadow.
 
-const BG_TOP := Color("#3277c9")
-const BG_BOTTOM := Color("#163a73")
-const PANEL := Color("#1e4f96")
-const PANEL_DARK := Color("#112f5e")
-const PANEL_LIGHT := Color("#2f68b8")
+const BG_TOP := Color("#2f7fe0")
+const BG_BOTTOM := Color("#142f6e")
+const PANEL := Color("#1f4f9c")
+const PANEL_DARK := Color("#15397a")
+const PANEL_LIGHT := Color("#3a74cc")
+## The deep navy used for outlines and shadows instead of plain black.
+const INK := Color("#0a1938")
 const TEXT := Color("#ffffff")
-const TEXT_DIM := Color("#b9cdee")
-const GOLD := Color("#ffcf40")
-const GEMS := Color("#5ef08a")
-const ENERGY := Color("#e04dd8")
-const YELLOW := Color("#ffc533")
-const GREEN := Color("#3fbf55")
-const BLUE := Color("#3a8ee6")
-const RED := Color("#e5484d")
-const GREY := Color("#7d8796")
-const TROPHY := Color("#ffb627")
+const TEXT_DIM := Color("#bcd3f4")
+const GOLD := Color("#ffd23f")
+const GEMS := Color("#4be38b")
+const ENERGY := Color("#d44fe0")
+const YELLOW := Color("#ffc62e")
+const GREEN := Color("#45c35a")
+const BLUE := Color("#3b8ff0")
+const RED := Color("#ec4b52")
+const GREY := Color("#7f8ba0")
+const TROPHY := Color("#ffb51f")
 
 const DISPLAY_FONT := preload("res://art/fonts/LilitaOne-Regular.ttf")
 const BODY_FONT := preload("res://art/fonts/Nunito.ttf")
@@ -50,12 +56,20 @@ static func build_theme() -> Theme:
 	theme.default_font = DISPLAY_FONT
 	theme.default_font_size = 24
 
-	# Chunky outlined text, like most mobile card games.
+	# Chunky outlined text with a drop shadow, like most mobile card games.
 	for type in ["Label", "Button", "LineEdit"]:
 		theme.set_color("font_color", type, TEXT)
-		theme.set_color("font_outline_color", type, Color(0, 0, 0, 0.85))
-		theme.set_constant("outline_size", type, 6)
-	theme.set_color("font_disabled_color", "Button", Color(1, 1, 1, 0.6))
+		theme.set_color("font_outline_color", type, Color(INK, 0.92))
+		theme.set_constant("outline_size", type, 7)
+		theme.set_color("font_shadow_color", type, Color(INK, 0.5))
+		theme.set_constant("shadow_offset_x", type, 0)
+		theme.set_constant("shadow_offset_y", type, 3)
+		theme.set_constant("shadow_outline_size", type, 7)
+	theme.set_color("font_disabled_color", "Button", Color(1, 1, 1, 0.65))
+	theme.set_color("font_hover_color", "Button", TEXT)
+	theme.set_color("font_pressed_color", "Button", TEXT)
+	theme.set_color("font_focus_color", "Button", TEXT)
+	theme.set_color("font_hover_pressed_color", "Button", TEXT)
 
 	theme.set_stylebox("normal", "Button", chunky(BLUE))
 	theme.set_stylebox("hover", "Button", chunky(BLUE.lightened(0.08)))
@@ -63,17 +77,29 @@ static func build_theme() -> Theme:
 	theme.set_stylebox("disabled", "Button", chunky(GREY.darkened(0.25)))
 	theme.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 
-	theme.set_stylebox("panel", "PanelContainer", box(PANEL, 18, 14))
-	theme.set_stylebox("panel", "Panel", box(PANEL, 18))
+	theme.set_stylebox("panel", "PanelContainer", raised(PANEL, 18, 14))
+	theme.set_stylebox("panel", "Panel", raised(PANEL, 18))
 
-	var field := box(PANEL_DARK, 12, 12)
+	var field := box(Color(INK, 0.55), 14, 12)
 	field.set_border_width_all(3)
 	field.border_color = PANEL_LIGHT
 	theme.set_stylebox("normal", "LineEdit", field)
 	theme.set_stylebox("focus", "LineEdit", field)
 
-	theme.set_stylebox("background", "ProgressBar", box(Color(0, 0, 0, 0.45), 8))
-	theme.set_stylebox("fill", "ProgressBar", box(BLUE, 8))
+	var track := box(Color(INK, 0.6), 10)
+	track.set_border_width_all(2)
+	track.border_color = Color(INK, 0.85)
+	theme.set_stylebox("background", "ProgressBar", track)
+	theme.set_stylebox("fill", "ProgressBar", bar_fill(BLUE, 10))
+
+	# Thin, rounded scroll bars.
+	var grabber := box(Color(1, 1, 1, 0.3), 6)
+	grabber.content_margin_left = 6
+	grabber.content_margin_right = 6
+	theme.set_stylebox("grabber", "VScrollBar", grabber)
+	theme.set_stylebox("grabber_highlight", "VScrollBar", grabber)
+	theme.set_stylebox("grabber_pressed", "VScrollBar", box(Color(1, 1, 1, 0.45), 6))
+	theme.set_stylebox("scroll", "VScrollBar", box(Color(INK, 0.25), 6))
 	return theme
 
 
@@ -87,7 +113,38 @@ static func box(color: Color, radius := 16, padding := 0) -> StyleBoxFlat:
 	return style
 
 
-## A button style with a thick darker bottom edge so it looks pressable.
+## A raised panel: a lighter rim (brightest along the top) and a soft shadow
+## underneath, like a card lifted off the table.
+static func raised(color: Color, radius := 18, padding := 14) -> StyleBoxFlat:
+	var style := box(color, radius, padding)
+	style.set_border_width_all(2)
+	style.border_width_top = 3
+	style.border_color = color.lightened(0.16)
+	style.border_blend = false
+	style.shadow_color = Color(INK, 0.35)
+	style.shadow_size = 6
+	style.shadow_offset = Vector2(0, 4)
+	return style
+
+
+## A sunken area inside a panel (lists, stat boxes): darker, with a dark rim.
+static func inset(color := PANEL_DARK, radius := 14, padding := 12) -> StyleBoxFlat:
+	var style := box(color.darkened(0.18), radius, padding)
+	style.set_border_width_all(2)
+	style.border_color = Color(INK, 0.4)
+	return style
+
+
+## The filled part of a progress bar: the color with a bright line on top.
+static func bar_fill(color: Color, radius := 10) -> StyleBoxFlat:
+	var style := box(color, radius)
+	style.border_width_top = 3
+	style.border_color = color.lightened(0.35)
+	return style
+
+
+## A plain button style with a thick darker bottom edge so it looks
+## pressable (for buttons not made with button()).
 static func chunky(color: Color, pressed := false) -> StyleBoxFlat:
 	var style := box(color, 16)
 	style.border_color = color.darkened(0.45)
@@ -100,18 +157,78 @@ static func chunky(color: Color, pressed := false) -> StyleBoxFlat:
 	return style
 
 
-## A chunky button that squashes a little when pressed and clicks.
+## A chunky game button (see ButtonSkin) that squashes a little when
+## pressed and clicks.
 static func button(text: String, color := BLUE, font_size := 26, min_size := Vector2(0, 72)) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = min_size
 	b.add_theme_font_size_override("font_size", font_size)
-	color_button(b, color)
+	var edge := ButtonSkin.edge_for(min_size.y if min_size.y > 0 else 72.0)
+	for state in ["normal", "hover", "disabled", "focus"]:
+		b.add_theme_stylebox_override(state, _text_margins(edge, false))
+	b.add_theme_stylebox_override("pressed", _text_margins(edge, true))
+	b.add_theme_stylebox_override("hover_pressed", _text_margins(edge, true))
+	ButtonSkin.attach(b, color)
 	b.resized.connect(func() -> void: b.pivot_offset = b.size / 2.0)
-	b.button_down.connect(func() -> void: _squash(b, 0.93))
+	b.button_down.connect(func() -> void: _squash(b, 0.95))
 	b.button_up.connect(func() -> void: _squash(b, 1.0))
 	b.pressed.connect(func() -> void: Sound.play("tap"))
 	return b
+
+
+## Fades a screen in from dark when it opens, so changing screens is smooth.
+static func fade_in(screen: Control, seconds := 0.25) -> void:
+	var cover := ColorRect.new()
+	cover.color = INK
+	cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cover.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	screen.add_child(cover)
+	var tween := cover.create_tween()
+	tween.tween_property(cover, "modulate:a", 0.0, seconds)
+	tween.tween_callback(cover.queue_free)
+
+
+## A dark pill holding a control, for scores and clocks over the battle.
+static func hud_pill(content: Control) -> PanelContainer:
+	var p := PanelContainer.new()
+	var style := box(Color(INK, 0.6), 18, 4)
+	style.content_margin_left = 14
+	style.content_margin_right = 14
+	style.set_border_width_all(2)
+	style.border_color = Color(1, 1, 1, 0.12)
+	p.add_theme_stylebox_override("panel", style)
+	p.add_child(content)
+	return p
+
+
+## A buy button: the price next to a gold or gem icon.
+static func price_button(price_text: String, icon_key: String, color := GREEN, font_size := 22, min_size := Vector2(0, 62)) -> Button:
+	var b := button(price_text, color, font_size, min_size)
+	b.icon = icon(GameData.ui_icon(icon_key))
+	b.add_theme_constant_override("icon_max_width", int(font_size * 1.3))
+	b.add_theme_constant_override("h_separation", 6)
+	return b
+
+
+## A round button with an icon instead of text, e.g. the X that closes a popup.
+static func icon_button(icon_key: String, color := RED, side := 60) -> Button:
+	var b := button("", color, 20, Vector2(side, side))
+	b.icon = icon(GameData.ui_icon(icon_key))
+	b.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	b.expand_icon = true
+	b.add_theme_constant_override("icon_max_width", int(side * 0.48))
+	return b
+
+
+## Where a skinned button's text sits: on the face, which sinks when pressed.
+static func _text_margins(edge: float, pressed: bool) -> StyleBoxEmpty:
+	var style := StyleBoxEmpty.new()
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 6 + (edge - 2 if pressed else 0.0)
+	style.content_margin_bottom = 6 + (2.0 if pressed else edge)
+	return style
 
 
 static func _squash(control: Control, amount: float) -> void:
@@ -119,6 +236,10 @@ static func _squash(control: Control, amount: float) -> void:
 
 
 static func color_button(b: Button, color: Color) -> void:
+	for child in b.get_children():
+		if child is ButtonSkin:
+			child.color = color
+			return
 	b.add_theme_stylebox_override("normal", chunky(color))
 	b.add_theme_stylebox_override("hover", chunky(color.lightened(0.08)))
 	b.add_theme_stylebox_override("pressed", chunky(color.darkened(0.1), true))
@@ -133,19 +254,30 @@ static func label(text: String, font_size := 24, color := TEXT, align := HORIZON
 	return l
 
 
-## A label that wraps onto several lines.
+## A label that wraps onto several lines, in the rounded body font.
 static func paragraph(text: String, font_size := 22, color := TEXT_DIM) -> Label:
 	var l := label(text, font_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.add_theme_font_override("font", body_font())
 	l.add_theme_constant_override("outline_size", 0)
+	l.add_theme_constant_override("shadow_outline_size", 0)
+	l.add_theme_constant_override("shadow_offset_y", 2)
+	l.add_theme_color_override("font_shadow_color", Color(INK, 0.45))
 	l.custom_minimum_size.x = 100
 	return l
 
 
+## A panel. Solid colors get the raised look; see-through ones stay flat.
 static func panel(color := PANEL, padding := 14, radius := 18) -> PanelContainer:
 	var p := PanelContainer.new()
-	p.add_theme_stylebox_override("panel", box(color, radius, padding))
+	p.add_theme_stylebox_override("panel", raised(color, radius, padding) if color.a >= 0.99 else box(color, radius, padding))
+	return p
+
+
+## A sunken panel for lists and stats inside another panel.
+static func well(padding := 12, radius := 14) -> PanelContainer:
+	var p := PanelContainer.new()
+	p.add_theme_stylebox_override("panel", inset(PANEL_DARK, radius, padding))
 	return p
 
 
@@ -169,13 +301,20 @@ static func spacer() -> Control:
 	return c
 
 
-## A section heading with a thin line, used inside scrolling pages.
+## A section heading: a yellow tab, the title, then a line fading out.
 static func heading(text: String) -> Control:
 	var row := hbox(10)
-	var l := label(text, 28, TEXT)
+	var tab := ColorRect.new()
+	tab.color = YELLOW
+	tab.custom_minimum_size = Vector2(7, 26)
+	tab.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(tab)
+	var l := label(text, 30, TEXT)
 	row.add_child(l)
-	var line := ColorRect.new()
-	line.color = Color(1, 1, 1, 0.25)
+	var line := TextureRect.new()
+	line.texture = _fade_texture()
+	line.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	line.stretch_mode = TextureRect.STRETCH_SCALE
 	line.custom_minimum_size = Vector2(0, 3)
 	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -183,10 +322,32 @@ static func heading(text: String) -> Control:
 	return row
 
 
-## A dark pill showing an amount, like the gold and gem counters.
-## `icon_name` is a file in res://art/icons/ (see GameData.ui_icon).
+static var _fade: GradientTexture2D
+
+
+static func _fade_texture() -> GradientTexture2D:
+	if _fade == null:
+		var gradient := Gradient.new()
+		gradient.set_color(0, Color(1, 1, 1, 0.35))
+		gradient.set_color(1, Color(1, 1, 1, 0.0))
+		_fade = GradientTexture2D.new()
+		_fade.gradient = gradient
+		_fade.width = 64
+		_fade.height = 4
+	return _fade
+
+
+## A dark pill showing an amount, like the gold and gem counters, with the
+## icon on the left. `icon_name` is a file in res://art/icons/ (see
+## GameData.ui_icon).
 static func pill(icon_name: String, icon_color: Color, amount_text: String) -> PanelContainer:
-	var p := panel(Color(0, 0, 0, 0.35), 6, 22)
+	var p := PanelContainer.new()
+	var style := box(Color(INK, 0.55), 24, 6)
+	style.content_margin_left = 8
+	style.content_margin_right = 18
+	style.set_border_width_all(2)
+	style.border_color = Color(1, 1, 1, 0.12)
+	p.add_theme_stylebox_override("panel", style)
 	var row := hbox(8)
 	p.add_child(row)
 	row.add_child(icon_rect(icon_name, icon_color, 36))
@@ -203,7 +364,11 @@ static func progress(ratio: float, text: String, fill := BLUE, height := 30) -> 
 	bar.max_value = 1.0
 	bar.value = clampf(ratio, 0.0, 1.0)
 	bar.custom_minimum_size = Vector2(0, height)
-	bar.add_theme_stylebox_override("fill", box(fill, 8))
+	bar.add_theme_stylebox_override("fill", bar_fill(fill, int(height / 3.0)))
+	var track := box(Color(INK, 0.6), int(height / 3.0))
+	track.set_border_width_all(2)
+	track.border_color = Color(INK, 0.85)
+	bar.add_theme_stylebox_override("background", track)
 	var l := label(text, int(height * 0.7), TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -315,22 +480,32 @@ static func error_toast(text: String) -> void:
 	toast(text, RED.darkened(0.35))
 
 
-## A short message that floats at the top of the screen, then fades.
+## A short message that drops in at the top of the screen, then fades.
 static func toast(text: String, color := PANEL_DARK) -> void:
 	var tree := Engine.get_main_loop() as SceneTree
 	var layer := tree.get_first_node_in_group("popup_layer") as Control
 	if layer == null:
 		layer = tree.current_scene as Control
-	var p := panel(color, 16, 16)
+	var p := PanelContainer.new()
+	var style := raised(color, 24, 16)
+	style.border_color = color.lightened(0.3)
+	style.set_border_width_all(3)
+	p.add_theme_stylebox_override("panel", style)
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var l := paragraph(text, 24, TEXT)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var l := label(text, 24, TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# A fixed width, so the wrapped text knows how tall it is.
+	l.custom_minimum_size = Vector2(528, 0)
 	p.add_child(l)
-	p.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	p.custom_minimum_size = Vector2(560, 0)
 	layer.add_child(p)
-	p.position = Vector2((layer.size.x - 560) / 2.0, 140)
+	p.reset_size()
+	var x := (layer.size.x - 560) / 2.0
+	p.position = Vector2(x, 100)
+	p.modulate.a = 0.0
 	var tween := p.create_tween()
-	tween.tween_interval(1.8)
-	tween.tween_property(p, "modulate:a", 0.0, 0.4)
-	tween.tween_callback(p.queue_free)
+	tween.set_parallel()
+	tween.tween_property(p, "position:y", 140.0, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(p, "modulate:a", 1.0, 0.15)
+	tween.chain().tween_interval(1.7)
+	tween.chain().tween_property(p, "modulate:a", 0.0, 0.35)
+	tween.chain().tween_callback(p.queue_free)

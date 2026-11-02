@@ -4,16 +4,18 @@ extends Control
 ## (Shop - Animals - Battle - Clan - Events), opening on Battle.
 
 const TABS := [
-	["Shop", preload("res://scripts/ui/tabs/shop_tab.gd")],
-	["Animals", preload("res://scripts/ui/tabs/animals_tab.gd")],
-	["Battle", preload("res://scripts/ui/tabs/battle_tab.gd")],
-	["Clan", preload("res://scripts/ui/tabs/clan_tab.gd")],
-	["Events", preload("res://scripts/ui/tabs/events_tab.gd")],
+	["Shop", preload("res://scripts/ui/tabs/shop_tab.gd"), "tab_shop"],
+	["Animals", preload("res://scripts/ui/tabs/animals_tab.gd"), "tab_animals"],
+	["Battle", preload("res://scripts/ui/tabs/battle_tab.gd"), "tab_battle"],
+	["Clan", preload("res://scripts/ui/tabs/clan_tab.gd"), "tab_clan"],
+	["Events", preload("res://scripts/ui/tabs/events_tab.gd"), "tab_events"],
 ]
 const BATTLE_TAB := 2
+const SHOP_TAB := 0
 
 var _pages: Array = []
-var _nav_buttons: Array = []
+## Each tab in the bar: {"cell", "icon", "label"}.
+var _nav: Array = []
 var _animals_badge: Label
 var _current := -1
 
@@ -21,16 +23,7 @@ var _current := -1
 func _ready() -> void:
 	theme = UIKit.build_theme()
 
-	var gradient := Gradient.new()
-	gradient.set_color(0, UIKit.BG_TOP)
-	gradient.set_color(1, UIKit.BG_BOTTOM)
-	var texture := GradientTexture2D.new()
-	texture.gradient = gradient
-	texture.fill_to = Vector2(0, 1)
-	var background := TextureRect.new()
-	background.texture = texture
-	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	background.stretch_mode = TextureRect.STRETCH_SCALE
+	var background := Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
 
@@ -41,7 +34,9 @@ func _ready() -> void:
 
 	var column := UIKit.vbox(0)
 	safe_area.add_child(column)
-	column.add_child(preload("res://scripts/ui/top_bar.gd").new())
+	var top_bar: Control = preload("res://scripts/ui/top_bar.gd").new()
+	top_bar.shop_requested.connect(select_tab.bind(SHOP_TAB))
+	column.add_child(top_bar)
 
 	var page_host := Control.new()
 	page_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -66,6 +61,7 @@ func _ready() -> void:
 	_update_badges()
 	select_tab(BATTLE_TAB)
 	Sound.play_music("menu")
+	UIKit.fade_in(self)
 
 	if OS.is_debug_build():
 		for problem in GameData.validate():
@@ -87,31 +83,66 @@ func select_tab(index: int) -> void:
 			_pages[i].modulate.a = 0.0
 			_pages[i].create_tween().tween_property(_pages[i], "modulate:a", 1.0, 0.15)
 		var selected: bool = i == index
-		var button: Button = _nav_buttons[i]
-		UIKit.color_button(button, UIKit.PANEL_LIGHT.lightened(0.15) if selected else UIKit.PANEL_DARK)
-		button.size_flags_stretch_ratio = 1.5 if selected else 1.0
-		button.add_theme_font_size_override("font_size", 26 if selected else 21)
+		var tab: Dictionary = _nav[i]
+		var cell: PanelContainer = tab.cell
+		if selected:
+			var style := UIKit.raised(UIKit.PANEL_LIGHT, 18, 4)
+			style.border_color = UIKit.PANEL_LIGHT.lightened(0.35)
+			style.shadow_offset = Vector2(0, 2)
+			cell.add_theme_stylebox_override("panel", style)
+		else:
+			cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		cell.size_flags_stretch_ratio = 1.45 if selected else 1.0
+		tab.icon.custom_minimum_size = Vector2(56, 56) if selected else Vector2(46, 46)
+		tab.icon.modulate = Color.WHITE if selected else Color(UIKit.TEXT_DIM, 0.75)
+		tab.label.visible = selected
+		if selected:
+			# The chosen tab pops up a little.
+			tab.icon.pivot_offset = Vector2(28, 28)
+			tab.icon.scale = Vector2(0.8, 0.8)
+			tab.icon.create_tween().tween_property(tab.icon, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
+## The tab bar at the bottom: an icon for each tab; the chosen one is raised
+## and shows its name.
 func _build_nav() -> Control:
 	var bar := PanelContainer.new()
-	bar.add_theme_stylebox_override("panel", UIKit.box(Color(0, 0, 0, 0.35), 0, 8))
+	var bar_style := UIKit.box(Color(UIKit.INK, 0.7), 0, 8)
+	bar_style.border_width_top = 2
+	bar_style.border_color = Color(1, 1, 1, 0.12)
+	bar_style.shadow_color = Color(UIKit.INK, 0.4)
+	bar_style.shadow_size = 10
+	bar.add_theme_stylebox_override("panel", bar_style)
 	var row := UIKit.hbox(6)
 	bar.add_child(row)
 	for i in TABS.size():
-		var button := UIKit.button(TABS[i][0], UIKit.PANEL_DARK, 21, Vector2(0, 96))
-		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		button.pressed.connect(select_tab.bind(i))
-		row.add_child(button)
-		_nav_buttons.append(button)
+		var cell := PanelContainer.new()
+		cell.custom_minimum_size = Vector2(0, 96)
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var stack := UIKit.vbox(0)
+		stack.alignment = BoxContainer.ALIGNMENT_CENTER
+		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(stack)
+		var icon := UIKit.icon_rect(GameData.ui_icon(TABS[i][2]), Color.WHITE, 46)
+		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		stack.add_child(icon)
+		var label := UIKit.label(TABS[i][0], 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		stack.add_child(label)
+		UIKit.on_tap(cell, select_tab.bind(i))
+		row.add_child(cell)
+		_nav.append({"cell": cell, "icon": icon, "label": label})
 
 	# A little "!" on the Animals tab when something can be upgraded or is new.
 	_animals_badge = UIKit.label("!", 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	var badge_style := UIKit.box(UIKit.RED, 14)
+	var badge_style := UIKit.box(UIKit.RED, 15)
+	badge_style.set_border_width_all(2)
+	badge_style.border_color = UIKit.INK
 	_animals_badge.add_theme_stylebox_override("normal", badge_style)
-	_animals_badge.custom_minimum_size = Vector2(28, 28)
-	_animals_badge.position = Vector2(4, 2)
-	_nav_buttons[1].add_child(_animals_badge)
+	_animals_badge.size = Vector2(30, 30)
+	_animals_badge.position = Vector2(30, -6)
+	_animals_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# On the icon (not a container), so it keeps its own size and spot.
+	_nav[1].icon.add_child(_animals_badge)
 	return bar
 
 

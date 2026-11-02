@@ -36,20 +36,20 @@ func _build() -> void:
 	var owned := Profile.has_card(animal_id)
 	var level := Profile.card_level(animal_id)
 
-	# Header: art, name, rarity, conservation status
-	var header := UIKit.hbox(16)
+	# Header: the card, name, rarity, conservation status
+	var header := UIKit.hbox(18)
 	add_child(header)
-	var art := UIKit.card_art(animal_id)
-	art.dimmed = not owned
-	art.custom_minimum_size = Vector2(150, 170)
-	header.add_child(art)
-	var info := UIKit.vbox(4)
+	var card := AnimalCard.create(animal_id)
+	card.info = AnimalCard.Info.NONE
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	header.add_child(card)
+	var info := UIKit.vbox(6)
 	info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(info)
-	var title := UIKit.label(animal.name, 34)
+	var title := UIKit.label(animal.name, 38)
 	title.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	info.add_child(title)
-	info.add_child(UIKit.label(GameData.rarity_name(rarity), 26, GameData.rarity_color(rarity)))
+	info.add_child(_chip(GameData.rarity_name(rarity), GameData.rarity_color(rarity)))
 	var is_tool: bool = animal.kind == "tool"
 	if is_tool:
 		info.add_child(UIKit.paragraph("Ranger tool", 20))
@@ -67,14 +67,12 @@ func _build() -> void:
 		var where := "Found in cages from Arena %d: %s" % [arena_index + 1, GameData.get_arena(arena_index).name]
 		info.add_child(UIKit.paragraph(where, 20, UIKit.YELLOW))
 
-	# Stats
-	var stats_panel := UIKit.panel(UIKit.PANEL_DARK, 14)
-	add_child(stats_panel)
+	# Stats, as a grid of tiles
 	var grid := GridContainer.new()
-	grid.columns = 2
-	grid.add_theme_constant_override("h_separation", 24)
-	grid.add_theme_constant_override("v_separation", 6)
-	stats_panel.add_child(grid)
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	add_child(grid)
 	var growth := float(GameData.progression.stat_growth_per_level)
 	var start := GameData.start_level(rarity)
 	var stats: Dictionary = animal.stats
@@ -100,7 +98,7 @@ func _build() -> void:
 			_add_stat(grid, "Count", "x%d" % int(animal.count))
 
 	# Ability
-	var ability_panel := UIKit.panel(UIKit.PANEL_DARK, 14)
+	var ability_panel := UIKit.well(16)
 	add_child(ability_panel)
 	var ability_box := UIKit.vbox(4)
 	ability_panel.add_child(ability_box)
@@ -108,7 +106,7 @@ func _build() -> void:
 	ability_box.add_child(UIKit.paragraph(animal.ability.text, 21, UIKit.TEXT))
 
 	# Release requirements
-	var req_panel := UIKit.panel(UIKit.PANEL_DARK, 14)
+	var req_panel := UIKit.well(16)
 	add_child(req_panel)
 	var req_box := UIKit.vbox(4)
 	req_panel.add_child(req_box)
@@ -124,12 +122,14 @@ func _build() -> void:
 	for line in lines:
 		req_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
 
-	# Tags
+	# Traits, as little chips
 	if not is_tool:
-		var tag_names := []
+		var traits := HFlowContainer.new()
+		traits.add_theme_constant_override("h_separation", 8)
+		traits.add_theme_constant_override("v_separation", 8)
+		add_child(traits)
 		for tag in animal.tags:
-			tag_names.append(GameData.tag_name(tag))
-		add_child(UIKit.paragraph("Traits: " + ", ".join(tag_names), 19))
+			traits.add_child(_chip(GameData.tag_name(tag), UIKit.PANEL_LIGHT, 18))
 
 	# Buttons
 	if owned:
@@ -150,9 +150,29 @@ func _build() -> void:
 			row.add_child(upgrade)
 
 
+## One stat: a small tile with the name over the value.
 func _add_stat(grid: GridContainer, stat_name: String, value: String) -> void:
-	grid.add_child(UIKit.label(stat_name, 21, UIKit.TEXT_DIM))
-	grid.add_child(UIKit.label(value, 23))
+	var tile := UIKit.well(10, 14)
+	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var column := UIKit.vbox(0)
+	tile.add_child(column)
+	column.add_child(UIKit.label(stat_name, 17, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(UIKit.label(value, 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	grid.add_child(tile)
+
+
+## A small colored pill with a word on it.
+func _chip(text: String, color: Color, font_size := 20) -> Control:
+	var chip := PanelContainer.new()
+	var style := UIKit.box(color.darkened(0.25), 14, 4)
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.set_border_width_all(2)
+	style.border_color = color.lightened(0.2)
+	chip.add_theme_stylebox_override("panel", style)
+	chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	chip.add_child(UIKit.label(text, font_size))
+	return chip
 
 
 func _on_upgrade() -> void:

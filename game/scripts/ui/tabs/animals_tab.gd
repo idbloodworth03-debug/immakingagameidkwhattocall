@@ -40,16 +40,17 @@ func _rebuild() -> void:
 	var deck := Profile.get_deck()
 
 	# Deck
-	var deck_panel := UIKit.panel(UIKit.PANEL_DARK, 14)
+	var deck_panel := UIKit.panel(UIKit.PANEL, 16, 22)
 	_content.add_child(deck_panel)
-	var deck_box := UIKit.vbox(10)
+	var deck_box := UIKit.vbox(12)
 	deck_panel.add_child(deck_box)
 	var title_row := UIKit.hbox(8)
 	deck_box.add_child(title_row)
-	var title := UIKit.label("Battle Deck", 30)
+	var title := UIKit.label("Battle Deck", 32)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title_row.add_child(title)
-	title_row.add_child(UIKit.label("Average cost: %.1f" % Profile.average_deck_cost(), 22, UIKit.ENERGY.lightened(0.3)))
+	var average := UIKit.pill(GameData.ui_icon("energy"), UIKit.ENERGY.lightened(0.2), "%.1f avg" % Profile.average_deck_cost())
+	title_row.add_child(average)
 
 	if _swap_id != "":
 		var swap_row := UIKit.hbox(10)
@@ -64,8 +65,10 @@ func _rebuild() -> void:
 		)
 		swap_row.add_child(cancel)
 
+	var deck_well := UIKit.well(10, 18)
+	deck_box.add_child(deck_well)
 	var deck_grid := _grid()
-	deck_box.add_child(deck_grid)
+	deck_well.add_child(deck_grid)
 	for slot in deck.size():
 		var card := AnimalCard.create(deck[slot])
 		card.highlighted = _swap_id != ""

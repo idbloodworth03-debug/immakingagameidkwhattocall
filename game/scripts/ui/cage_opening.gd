@@ -10,6 +10,7 @@ var _steps: Array = []   # what to reveal, in order
 var _step := -1
 var _stage: VBoxContainer
 var _counter: Label
+var _rays: LightRays
 
 
 static func play(cage_rewards: Dictionary) -> CageOpening:
@@ -25,11 +26,17 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
-	var background := ColorRect.new()
-	background.color = Color(0.04, 0.08, 0.16)
+	var background := Backdrop.new()
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(background)
+	var shade := ColorRect.new()
+	shade.color = Color(UIKit.INK, 0.55)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(shade)
+	_rays = LightRays.new()
+	_rays.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(_rays)
 
 	var column := UIKit.vbox(24)
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -41,7 +48,8 @@ func _ready() -> void:
 	add_child(column)
 
 	var cage: Dictionary = GameData.cages.get(rewards.get("cage_id", ""), {})
-	column.add_child(UIKit.label(cage.get("name", "Cage"), 44, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
+	_rays.color = Color(cage.get("color", "#ffd060")).lightened(0.4)
+	column.add_child(UIKit.label(cage.get("name", "Cage"), 50, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
 	_counter = UIKit.label("", 26, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	column.add_child(_counter)
 
@@ -67,7 +75,7 @@ func _show_closed_cage(cage: Dictionary) -> void:
 	var art := IconArt.new()
 	art.shape = IconArt.Shape.CAGE
 	art.color = Color(cage.get("color", "#a27447"))
-	art.custom_minimum_size = Vector2(320, 300)
+	art.custom_minimum_size = Vector2(360, 340)
 	art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_stage.add_child(art)
 	_stage.add_child(UIKit.label("Tap to free the animals!", 30, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
@@ -130,8 +138,9 @@ func _card_reward(stack: Dictionary) -> Control:
 	var box := UIKit.vbox(14)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if stack.get("is_new", false):
-		box.add_child(UIKit.label("NEW ANIMAL FREED!", 34, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-	# The card glows in its rarity color.
+		box.add_child(ComingSoon.ribbon("NEW ANIMAL FREED!"))
+	_rays.color = GameData.rarity_color(stack.rarity).lightened(0.3)
+	# The card itself, big, glowing in its rarity color.
 	var glow := PanelContainer.new()
 	var glow_style := UIKit.box(Color(0, 0, 0, 0), 30)
 	glow_style.shadow_color = Color(GameData.rarity_color(stack.rarity), 0.7)
@@ -140,10 +149,12 @@ func _card_reward(stack: Dictionary) -> Control:
 	glow.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(glow)
-	var art := UIKit.card_art(stack.animal)
-	art.custom_minimum_size = Vector2(260, 300)
-	glow.add_child(art)
-	box.add_child(UIKit.label(animal.name, 40, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	var card := AnimalCard.create(stack.animal)
+	card.info = AnimalCard.Info.NONE
+	card.custom_minimum_size = AnimalCard.SIZE_NORMAL * 1.6
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.add_child(card)
+	box.add_child(UIKit.label(animal.name, 44, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label(GameData.rarity_name(stack.rarity), 30, GameData.rarity_color(stack.rarity), HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("x%d" % int(stack.count), 48, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	return box

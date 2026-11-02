@@ -34,7 +34,14 @@ func _rebuild() -> void:
 	_add_gold_packs()
 	_add_cosmetics()
 	_content.add_child(UIKit.heading("Gems"))
-	_content.add_child(UIKit.paragraph("Gem packs will be real-money purchases through the App Store and Google Play. We'll add them when the store accounts are set up.", 21))
+	var gems := UIKit.panel(UIKit.PANEL_DARK, 16)
+	_content.add_child(gems)
+	var gem_row := UIKit.hbox(14)
+	gems.add_child(gem_row)
+	gem_row.add_child(UIKit.icon_rect(GameData.ui_icon("gems"), UIKit.GEMS, 64))
+	var note := UIKit.paragraph("Gem packs will be real-money purchases through the App Store and Google Play. They come when the store accounts are set up.", 20)
+	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gem_row.add_child(note)
 
 
 func _add_daily_offers() -> void:
@@ -50,15 +57,17 @@ func _add_daily_offers() -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	_content.add_child(row)
 	for offer in Profile.daily_offers():
-		var cell := UIKit.panel(UIKit.PANEL_DARK, 10)
+		var cell := UIKit.panel(UIKit.PANEL, 10, 20)
 		row.add_child(cell)
-		var column := UIKit.vbox(6)
+		var column := UIKit.vbox(8)
 		cell.add_child(column)
 		var card := AnimalCard.create(offer.animal)
+		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		UIKit.on_tap(card, func() -> void: Modal.open(AnimalDetail.create(offer.animal, false), ""))
 		column.add_child(card)
-		column.add_child(UIKit.label("x%d" % offer.amount, 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		var buy := UIKit.button("Bought" if offer.bought else "%s gold" % UIKit.format_number(offer.price), UIKit.GOLD.darkened(0.3), 20, Vector2(0, 62))
+		column.add_child(UIKit.label("x%d" % offer.amount, 28, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+		var buy := UIKit.button("Bought", UIKit.GREY, 20, Vector2(0, 62)) if offer.bought else \
+				UIKit.price_button(UIKit.format_number(offer.price), "gold", UIKit.GREEN, 22)
 		buy.disabled = offer.bought
 		buy.pressed.connect(func() -> void:
 			if not Profile.buy_daily_offer(offer.index):
@@ -77,14 +86,14 @@ func _add_cages() -> void:
 		var price := int(cage.get("shop_gems", 0))
 		if price <= 0:
 			continue
-		var row_panel := UIKit.panel(UIKit.PANEL_DARK, 12)
+		var row_panel := UIKit.panel(UIKit.PANEL, 14, 20)
 		_content.add_child(row_panel)
 		var row := UIKit.hbox(14)
 		row_panel.add_child(row)
 		var art := IconArt.new()
 		art.shape = IconArt.Shape.CAGE
 		art.color = Color(cage.color)
-		art.custom_minimum_size = Vector2(120, 110)
+		art.custom_minimum_size = Vector2(124, 116)
 		row.add_child(art)
 		var info := UIKit.vbox(4)
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -93,10 +102,10 @@ func _add_cages() -> void:
 		info.add_child(UIKit.paragraph(CageInfo.summary(cage_id, arena), 19))
 		var buttons := UIKit.vbox(8)
 		row.add_child(buttons)
-		var odds := UIKit.button("Odds", UIKit.GREY, 20, Vector2(160, 54))
+		var odds := UIKit.button("Odds", UIKit.GREY, 20, Vector2(160, 52))
 		odds.pressed.connect(func() -> void: CageInfo.show_odds(cage_id, arena))
 		buttons.add_child(odds)
-		var buy := UIKit.button("%s gems" % UIKit.format_number(price), UIKit.GEMS.darkened(0.35), 20, Vector2(160, 60))
+		var buy := UIKit.price_button(UIKit.format_number(price), "gems", UIKit.GREEN, 22, Vector2(160, 62))
 		if not Profile.can_buy_cage(cage_id):
 			buy.disabled = true
 			buy.text = "Reach\n%s" % GameData.get_arena(GameData.arena_index_by_id.get(cage.get("shop_requires_arena", ""), 0)).name
@@ -122,16 +131,21 @@ func _add_gold_packs() -> void:
 	var packs: Array = GameData.progression.gold_packs
 	for i in packs.size():
 		var pack: Dictionary = packs[i]
-		var cell := UIKit.panel(UIKit.PANEL_DARK, 12)
+		var cell := UIKit.panel(UIKit.PANEL, 12, 20)
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(cell)
 		var column := UIKit.vbox(8)
 		cell.add_child(column)
-		var icon := UIKit.icon_rect(GameData.ui_icon("gold"), UIKit.GOLD, 64 + i * 16)
-		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		column.add_child(icon)
-		column.add_child(UIKit.label(UIKit.format_number(int(pack.gold)), 26, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
-		var buy := UIKit.button("%s gems" % UIKit.format_number(int(pack.gems)), UIKit.GEMS.darkened(0.35), 20, Vector2(0, 60))
+		# Bigger coins for a bigger pack.
+		var coins := UIKit.icon_rect(GameData.ui_icon("gold"), UIKit.GOLD, 64 + i * 16)
+		coins.custom_minimum_size = Vector2(96, 96)
+		coins.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var shrink := (64.0 + i * 16) / 96.0
+		coins.scale = Vector2(shrink, shrink)
+		coins.pivot_offset = Vector2(48, 96)
+		column.add_child(coins)
+		column.add_child(UIKit.label(UIKit.format_number(int(pack.gold)), 28, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+		var buy := UIKit.price_button(UIKit.format_number(int(pack.gems)), "gems", UIKit.GREEN, 22)
 		buy.pressed.connect(func() -> void:
 			Modal.confirm("Trade %s gems for %s gold?" % [UIKit.format_number(int(pack.gems)), UIKit.format_number(int(pack.gold))], "Buy", func() -> void:
 				if not Profile.buy_gold_pack(i):
@@ -153,7 +167,7 @@ func _add_cosmetics() -> void:
 		return
 	_content.add_child(UIKit.heading("Emotes & Banners"))
 	for item in items:
-		var row_panel := UIKit.panel(UIKit.PANEL_DARK, 12)
+		var row_panel := UIKit.panel(UIKit.PANEL, 12, 20)
 		_content.add_child(row_panel)
 		var row := UIKit.hbox(14)
 		row_panel.add_child(row)
@@ -172,7 +186,8 @@ func _add_cosmetics() -> void:
 		info.add_child(UIKit.label(item.name, 24))
 		info.add_child(UIKit.label(("Emote: \"%s\"" % item.caption) if is_emote else "Player banner", 19, UIKit.TEXT_DIM))
 		var owned := Profile.is_unlocked(item)
-		var buy := UIKit.button("Owned" if owned else "%d gems" % int(item.unlock.gems), UIKit.GEMS.darkened(0.35), 20, Vector2(150, 60))
+		var buy := UIKit.button("Owned", UIKit.GREY, 20, Vector2(150, 60)) if owned else \
+				UIKit.price_button(str(int(item.unlock.gems)), "gems", UIKit.GREEN, 22, Vector2(150, 60))
 		buy.disabled = owned
 		buy.pressed.connect(func() -> void:
 			Modal.confirm("Buy %s for %d gems?" % [item.name, int(item.unlock.gems)], "Buy", func() -> void:

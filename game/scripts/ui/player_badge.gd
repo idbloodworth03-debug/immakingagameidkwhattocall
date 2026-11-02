@@ -28,7 +28,8 @@ static func for_player(compact_mode := false) -> PlayerBadge:
 func _build() -> void:
 	var banner := GameData.find_by_id(GameData.banners, banner_id)
 	var colors: Array = banner.get("colors", ["#1e4f96", "#3277c9"])
-	var style := UIKit.box(Color(colors[0]), 16, 8 if compact else 12)
+	var style := UIKit.raised(Color(colors[0]), 18, 8 if compact else 12)
+	style.content_margin_right = 16 if compact else 20
 	style.set_border_width_all(4)
 	style.border_color = Color(colors[1])
 	add_theme_stylebox_override("panel", style)
@@ -40,7 +41,7 @@ func _build() -> void:
 	var icon := GameData.find_by_id(GameData.player_icons, icon_id)
 	var art := IconArt.make(GameData.player_icon(icon_id), Color(icon.get("color", "#888888")))
 	art.text = icon.get("text", "?")
-	var art_size := 56 if compact else 84
+	var art_size := 58 if compact else 84
 	art.custom_minimum_size = Vector2(art_size, art_size)
 	row.add_child(art)
 
@@ -50,6 +51,17 @@ func _build() -> void:
 	row.add_child(column)
 	var name_label := UIKit.label(player_name, 24 if compact else 30)
 	name_label.clip_text = true
-	name_label.custom_minimum_size.x = 150 if compact else 260
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.custom_minimum_size.x = 140 if compact else 260
 	column.add_child(name_label)
-	column.add_child(UIKit.label("Ranger Lv %d" % level, 18 if compact else 22, Color(colors[1]).lightened(0.4)))
+	var level_row := UIKit.hbox(6)
+	level_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(level_row)
+	var level_style := UIKit.box(Color(UIKit.INK, 0.45), 10, 2)
+	level_style.content_margin_left = 8
+	level_style.content_margin_right = 8
+	var level_chip := PanelContainer.new()
+	level_chip.add_theme_stylebox_override("panel", level_style)
+	level_chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	level_chip.add_child(UIKit.label("Ranger Lv %d" % level, 16 if compact else 20, Color(colors[1]).lightened(0.55)))
+	level_row.add_child(level_chip)

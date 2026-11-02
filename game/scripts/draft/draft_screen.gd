@@ -58,6 +58,7 @@ func _ready() -> void:
 	_build()
 	Sound.play_music("battle")
 	_choose_stake()
+	UIKit.fade_in(self)
 
 
 func _process(delta: float) -> void:
@@ -99,12 +100,13 @@ func _build() -> void:
 	column.add_child(top)
 	top.add_child(PlayerBadge.create(opponent.banner, opponent.icon, opponent.name, opponent.level, true))
 	var middle := UIKit.vbox(0)
-	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	top.add_child(middle)
 	_round_label = UIKit.label("", 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	middle.add_child(_round_label)
 	_phase_label = UIKit.label("", 17, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	middle.add_child(_phase_label)
+	var round_pill := UIKit.hud_pill(middle)
+	round_pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(round_pill)
 	var pot_box := UIKit.vbox(0)
 	top.add_child(pot_box)
 	pot_box.add_child(UIKit.label("Pot", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
@@ -122,6 +124,7 @@ func _build() -> void:
 	_field = BattleField.new()
 	_field.sim = duel.sim
 	_field.grass = Color(GameData.get_arena(Profile.arena_index()).color)
+	_field.arena_id = GameData.get_arena(Profile.arena_index()).id
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.tapped.connect(_on_field_tapped)
 	column.add_child(_field)
@@ -419,13 +422,11 @@ func _draft_panel() -> void:
 		who = "You're done picking. %s" % ("%s is still picking..." % opponent.name if not duel.passed[1] else "")
 	_heading("The Watering Hole", "%s  Herd %d/%d · Tools %d/%d" % [who, duel.herds[0].size(), int(duel.rules.herd_max),
 		duel.tools[0].size(), int(duel.rules.tools_max)])
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 8)
-	grid.add_theme_constant_override("v_separation", 8)
+	var row := UIKit.hbox(6)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	for i in duel.market.size():
-		grid.add_child(_market_card(i))
-	_panel.add_child(grid)
+		row.add_child(_market_card(i))
+	_panel.add_child(row)
 
 	if _selected_market >= 0 and int(duel.market[_selected_market].taken) < 0:
 		_panel.add_child(_market_details(duel.market[_selected_market]))
@@ -450,44 +451,19 @@ func _draft_panel() -> void:
 func _market_card(slot: int) -> Control:
 	var item: Dictionary = duel.market[slot]
 	var taken := int(item.taken)
-	var hidden: bool = item.mystery and taken < 0
-	var box := PanelContainer.new()
-	box.custom_minimum_size = Vector2(214, 0)
-	var frame := UIKit.box(UIKit.PANEL, 12, 6)
-	frame.set_border_width_all(4 if slot == _selected_market else 2)
-	var rarity_color := GameData.rarity_color(GameData.get_card(item.id).rarity)
-	frame.border_color = UIKit.YELLOW if slot == _selected_market else (ACORN if hidden else rarity_color)
-	box.add_theme_stylebox_override("panel", frame)
-	var row := UIKit.hbox(6)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(row)
-	var art: IconArt
-	if hidden:
-		art = IconArt.make(GameData.ui_icon("mystery"), ACORN.darkened(0.2), IconArt.Shape.ROUNDED)
-	else:
-		art = UIKit.card_art(item.id)
-	art.custom_minimum_size = Vector2(76, 76)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(art)
-	var text := UIKit.vbox(0)
-	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(text)
-	var name_label := UIKit.label("Mystery Crate" if hidden else GameData.get_card(item.id).name, 17, UIKit.TEXT)
-	name_label.clip_text = true
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	text.add_child(name_label)
-	var price := UIKit.hbox(4)
-	price.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	price.add_child(UIKit.icon_rect(GameData.ui_icon("acorn"), ACORN, 22))
-	var affordable: bool = duel.acorns[0] >= int(item.cost)
-	price.add_child(UIKit.label(str(item.cost), 20, UIKit.TEXT if affordable else UIKit.RED.lightened(0.3)))
-	text.add_child(price)
+	var card := AnimalCard.create(item.id, true)
+	card.custom_minimum_size = Vector2(108, 144)
+	card.info = AnimalCard.Info.NONE
+	card.mystery = item.mystery and taken < 0
+	card.price = int(item.cost)
+	card.price_color = ACORN if duel.acorns[0] >= int(item.cost) or taken >= 0 else UIKit.RED
+	card.highlighted = slot == _selected_market
 	if taken >= 0:
-		box.modulate = Color(1, 1, 1, 0.45)
-		text.add_child(UIKit.label("Yours" if taken == 0 else "Theirs", 16, UIKit.YELLOW if taken == 0 else UIKit.RED.lightened(0.3)))
-	UIKit.on_tap(box, func() -> void: _on_market_tapped(slot))
-	return box
+		card.stamp = "YOURS" if taken == 0 else "THEIRS"
+		card.stamp_color = UIKit.GREEN if taken == 0 else UIKit.RED
+		card.modulate = Color(1, 1, 1, 0.75)
+	UIKit.on_tap(card, func() -> void: _on_market_tapped(slot))
+	return card
 
 
 ## What the picked card does: its stats and ability, or the crate's odds.
@@ -558,18 +534,12 @@ func _place_panel() -> void:
 
 
 func _herd_chip(index: int) -> Control:
-	var id: String = duel.herds[0][index].id
-	var box := PanelContainer.new()
-	var frame := UIKit.box(UIKit.PANEL, 12, 4)
-	frame.set_border_width_all(4 if index == _selected_herd else 2)
-	frame.border_color = UIKit.YELLOW if index == _selected_herd else GameData.rarity_color(GameData.get_card(id).rarity)
-	box.add_theme_stylebox_override("panel", frame)
-	var art := UIKit.card_art(id)
-	art.custom_minimum_size = Vector2(92, 92)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(art)
-	UIKit.on_tap(box, func() -> void: _select_herd(index))
-	return box
+	var card := AnimalCard.create(duel.herds[0][index].id, true)
+	card.custom_minimum_size = Vector2(96, 128)
+	card.info = AnimalCard.Info.NONE
+	card.highlighted = index == _selected_herd
+	UIKit.on_tap(card, func() -> void: _select_herd(index))
+	return card
 
 
 func _select_herd(index: int) -> void:

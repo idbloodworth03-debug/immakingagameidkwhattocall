@@ -56,10 +56,13 @@ func _build() -> void:
 	level_box.add_child(UIKit.paragraph("Earn XP by upgrading animals and playing battles. Higher levels unlock banners, icons and emotes.", 19))
 
 	# Stats
+	var stats_well := UIKit.well(14)
+	add_child(stats_well)
 	var stats := GridContainer.new()
 	stats.columns = 2
 	stats.add_theme_constant_override("h_separation", 30)
-	add_child(stats)
+	stats.add_theme_constant_override("v_separation", 6)
+	stats_well.add_child(stats)
 	var arena := GameData.get_arena(Profile.arena_index())
 	for pair in [
 		["Trophies", UIKit.format_number(Profile.get_trophies())],

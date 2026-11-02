@@ -51,7 +51,7 @@ func _build(content: Control, title: String, width: float) -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.6)
+	dim.color = Color(UIKit.INK, 0.7)
 	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	UIKit.on_tap(dim, close)
 	add_child(dim)
@@ -61,25 +61,45 @@ func _build(content: Control, title: String, width: float) -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
-	var window := UIKit.panel(UIKit.PANEL, 20, 24)
-	var border := UIKit.box(UIKit.PANEL, 24, 20)
-	border.set_border_width_all(4)
-	border.border_color = UIKit.PANEL_LIGHT
-	window.add_theme_stylebox_override("panel", border)
+	var window := PanelContainer.new()
+	var frame := UIKit.raised(UIKit.PANEL, 26, 0)
+	frame.set_border_width_all(4)
+	frame.border_color = UIKit.PANEL_LIGHT.lightened(0.2)
+	frame.shadow_size = 18
+	frame.shadow_color = Color(UIKit.INK, 0.55)
+	window.add_theme_stylebox_override("panel", frame)
 	window.custom_minimum_size = Vector2(width, 0)
 	center.add_child(window)
 
-	body = UIKit.vbox(16)
-	window.add_child(body)
+	var column := UIKit.vbox(0)
+	window.add_child(column)
 
-	var header := UIKit.hbox(8)
-	body.add_child(header)
-	var title_label := UIKit.label(title, 32)
+	# A colored band across the top with the title and a round close button.
+	var header := PanelContainer.new()
+	var band := UIKit.box(UIKit.PANEL_LIGHT, 22, 10)
+	band.corner_radius_bottom_left = 0
+	band.corner_radius_bottom_right = 0
+	band.content_margin_left = 22
+	band.border_width_bottom = 3
+	band.border_color = Color(UIKit.INK, 0.35)
+	header.add_theme_stylebox_override("panel", band if title != "" else UIKit.box(Color(0, 0, 0, 0), 22, 10))
+	column.add_child(header)
+	var header_row := UIKit.hbox(8)
+	header.add_child(header_row)
+	var title_label := UIKit.label(title, 34)
 	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(title_label)
-	var close_button := UIKit.button("X", UIKit.RED, 26, Vector2(64, 60))
+	header_row.add_child(title_label)
+	var close_button := UIKit.icon_button("close", UIKit.RED, 56)
 	close_button.pressed.connect(close)
-	header.add_child(close_button)
+	header_row.add_child(close_button)
+
+	var margin := MarginContainer.new()
+	for side in ["left", "right", "bottom"]:
+		margin.add_theme_constant_override("margin_" + side, 20)
+	margin.add_theme_constant_override("margin_top", 6 if title == "" else 16)
+	column.add_child(margin)
+	body = UIKit.vbox(16)
+	margin.add_child(body)
 
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -88,6 +108,16 @@ func _build(content: Control, title: String, width: float) -> void:
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
 	_fit_scroll.call_deferred(scroll, content)
+
+	# Pop in.
+	dim.modulate.a = 0.0
+	window.modulate.a = 0.0
+	window.scale = Vector2(0.9, 0.9)
+	window.resized.connect(func() -> void: window.pivot_offset = window.size / 2.0)
+	var tween := create_tween().set_parallel()
+	tween.tween_property(dim, "modulate:a", 1.0, 0.15)
+	tween.tween_property(window, "modulate:a", 1.0, 0.12)
+	tween.tween_property(window, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 
 
 ## Grow the scroll area to fit the content, up to 78% of the screen height.

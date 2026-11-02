@@ -17,6 +17,8 @@ const EFFECT_COLORS := {
 
 var sim: BattleSim
 var grass := Color("#5f9e4f")
+## Which arena's rendered ground to draw (art/arenas/); plain grass without one.
+var arena_id := ""
 ## How far we are between the last tick and the next (0-1), for smooth motion.
 var blend := 0.0
 var highlight_zones: Array = []
@@ -58,6 +60,9 @@ const DEN_SCALE := 0.92
 
 static var _den_meta := {}
 static var _den_textures := {}
+const ARENA_ART := "res://art/arenas/"
+static var _arena_meta := {}
+static var _arena_textures := {}
 const DROP_PART := 0.35       # share of the deploy time spent dropping into place
 const DROP_HEIGHT := 2500.0   # field units a new unit drops from
 
@@ -65,6 +70,8 @@ const DROP_HEIGHT := 2500.0   # field units a new unit drops from
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
+	# The arena and dens are drawn smaller than their pictures.
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
 # --- Coordinates -----------------------------------------------------------
@@ -341,6 +348,15 @@ func _draw() -> void:
 		var strength := 10.0 * _shake / 0.45
 		_shake_offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
 	draw_set_transform(_shake_offset)
+	var ground := arena_art(arena_id)
+	if not ground.is_empty():
+		# The rendered arena: grass, paths, river, bridges and scenery.
+		var top_left := to_screen(ground.area.position.x, ground.area.position.y)
+		var bottom_right := to_screen(ground.area.end.x, ground.area.end.y)
+		draw_texture_rect(ground.texture, Rect2(top_left, bottom_right - top_left), false)
+		_draw_highlight(field, river_top, river_bottom)
+		_draw_things(s)
+		return
 	# The meadow behind the enemy's dens, a shade darker than the field.
 	draw_rect(Rect2(field.position - Vector2(0, HEADROOM * s), Vector2(field.size.x, HEADROOM * s)), grass.darkened(0.22))
 	draw_rect(Rect2(field.position, Vector2(field.size.x, river_top - field.position.y)), grass.darkened(0.1))
@@ -366,7 +382,11 @@ func _draw() -> void:
 			draw_line(Vector2(bridge.position.x + 3, plank_y), Vector2(bridge.end.x - 3, plank_y), Color("#6e4a2a"), 2.0)
 
 	_draw_highlight(field, river_top, river_bottom)
+	_draw_things(s)
 
+
+## Dens, animals, bait, the placement preview and effects, over the ground.
+func _draw_things(s: float) -> void:
 	for f in sim.fighters:
 		if f.kind == "tower" and not f.alive:
 			_draw_tower(f, s)
@@ -391,6 +411,28 @@ func _draw() -> void:
 		_draw_projectile(pr, s)
 	for fx in effects:
 		_draw_effect(fx, s)
+
+
+## An arena's rendered ground: {"texture", "area": the field units it covers}
+## or {} if it has none.
+static func arena_art(id: String) -> Dictionary:
+	if id == "":
+		return {}
+	if _arena_meta.is_empty():
+		var text := FileAccess.get_file_as_string(ARENA_ART + "arenas.json")
+		_arena_meta = JSON.parse_string(text) if text != "" else {"none": true}
+	if not _arena_meta.has("x"):
+		return {}
+	if not _arena_textures.has(id):
+		var path := ARENA_ART + id + ".webp"
+		_arena_textures[id] = load(path) if ResourceLoader.exists(path) else null
+	if _arena_textures[id] == null:
+		return {}
+	var x: Array = _arena_meta.x
+	var y: Array = _arena_meta.y
+	var area := Rect2(float(x[0]) * BattleSim.TILE, float(y[0]) * BattleSim.TILE,
+			(float(x[1]) - float(x[0])) * BattleSim.TILE, (float(y[1]) - float(y[0])) * BattleSim.TILE)
+	return {"texture": _arena_textures[id], "area": area}
 
 
 func _draw_highlight(field: Rect2, river_top: float, river_bottom: float) -> void:

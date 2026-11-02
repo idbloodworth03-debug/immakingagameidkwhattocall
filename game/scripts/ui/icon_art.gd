@@ -78,11 +78,24 @@ func _draw() -> void:
 			var sheen := Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.45))
 			draw_style_box(UIKit.box(Color(1, 1, 1, 0.08), int(short_side * 0.15)), sheen)
 		Shape.CAGE:
-			draw_style_box(UIKit.box(edge, int(short_side * 0.18)), rect)
-			draw_style_box(UIKit.box(fill.darkened(0.45), int(short_side * 0.15)), rect.grow(-maxf(3.0, short_side * 0.06)))
-			if icon == null:
-				icon = UIKit.icon(GameData.ui_icon("cage"))
-			icon_color = fill.lightened(0.35)
+			# A glowing cage standing on its shadow, outlined like the cards.
+			var cage := icon if icon != null else UIKit.icon(GameData.ui_icon("cage"))
+			if cage == null:
+				return
+			var glow := AnimalCard._spot_texture()
+			var glow_side := short_side * 1.1
+			draw_texture_rect(glow, Rect2(center - Vector2(glow_side, glow_side) / 2.0, Vector2(glow_side, glow_side)), false,
+					Color(fill.lightened(0.3), 0.3 if dimmed else 0.55))
+			draw_set_transform(center + Vector2(0, short_side * 0.4), 0.0, Vector2(1.0, 0.25))
+			draw_circle(Vector2.ZERO, short_side * 0.36, Color(UIKit.INK, 0.35))
+			draw_set_transform(Vector2.ZERO)
+			var side := short_side * 0.86
+			var at := center - Vector2(side, side) / 2.0
+			var outline := maxf(2.0, short_side * 0.025)
+			for offset in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2(-0.7, -0.7), Vector2(0.7, 0.7), Vector2(-0.7, 0.7), Vector2(0.7, -0.7)]:
+				draw_texture_rect(cage, Rect2(at + offset * outline, Vector2(side, side)), false, UIKit.INK)
+			draw_texture_rect(cage, Rect2(at, Vector2(side, side)), false, fill.lightened(0.1))
+			return
 
 	if portrait != null:
 		# The animal stands in the frame, a little bigger than the shape so

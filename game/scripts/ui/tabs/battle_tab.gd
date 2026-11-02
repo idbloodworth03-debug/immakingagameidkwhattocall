@@ -1,6 +1,6 @@
 extends Control
-## Battle tab (the home screen): current arena, the Battle button and the
-## four cage slots.
+## Battle tab (the home screen): a window onto your arena, the Draft Duel
+## and Classic battle buttons, and the four cage slots.
 
 const BATTLE_SCENE := "res://scenes/battle.tscn"
 const DRAFT_SCENE := "res://scenes/draft.tscn"
@@ -15,41 +15,44 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 20)
+		margin.add_theme_constant_override("margin_" + side, 18)
 	add_child(margin)
 
-	var column := UIKit.vbox(18)
+	var column := UIKit.vbox(14)
 	margin.add_child(column)
 
 	var logo := TextureRect.new()
 	logo.texture = load("res://art/logo/logo.png")
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	logo.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	logo.custom_minimum_size = Vector2(0, 150)
+	logo.custom_minimum_size = Vector2(0, 118)
 	logo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(logo)
 
 	_arena_holder = PanelContainer.new()
-	_arena_holder.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	_arena_holder.add_theme_stylebox_override("panel", UIKit.raised(UIKit.PANEL, 24, 8))
 	_arena_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_arena_holder)
 	UIKit.on_tap(_arena_holder, func() -> void: Modal.open(TrophyRoad.create(), "Trophy Road"))
 
-	var battle := UIKit.button("DRAFT DUEL", UIKit.YELLOW, 52, Vector2(440, 120))
-	battle.add_theme_color_override("font_color", Color.WHITE)
+	var battle := UIKit.button("DRAFT DUEL", UIKit.YELLOW, 50, Vector2(460, 118))
+	battle.icon = UIKit.icon(GameData.ui_icon("tab_battle"))
+	battle.add_theme_constant_override("icon_max_width", 58)
+	battle.add_theme_constant_override("h_separation", 14)
 	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	battle.pressed.connect(func() -> void: get_tree().change_scene_to_file(DRAFT_SCENE))
 	column.add_child(battle)
 	# A gentle pulse so the main button invites a tap.
 	var pulse := battle.create_tween().set_loops()
-	pulse.tween_property(battle, "scale", Vector2(1.04, 1.04), 0.8).set_trans(Tween.TRANS_SINE)
-	pulse.tween_property(battle, "scale", Vector2.ONE, 0.8).set_trans(Tween.TRANS_SINE)
-	column.add_child(UIKit.label("Draft a herd, bet Acorns, knock down their dens.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	var classic := UIKit.button("Classic battle", UIKit.BLUE, 24, Vector2(300, 64))
-	classic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pulse.tween_property(battle, "scale", Vector2(1.03, 1.03), 0.9).set_trans(Tween.TRANS_SINE)
+	pulse.tween_property(battle, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_SINE)
+	var modes := UIKit.hbox(12)
+	modes.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_child(modes)
+	modes.add_child(UIKit.label("Draft a herd, bet Acorns,\nknock down their dens.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	var classic := UIKit.button("Classic battle", UIKit.BLUE, 22, Vector2(230, 60))
 	classic.pressed.connect(func() -> void: get_tree().change_scene_to_file(BATTLE_SCENE))
-	column.add_child(classic)
-	column.add_child(UIKit.label("Both against a computer opponent. Online matches come later.", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	modes.add_child(classic)
 
 	_slots_row = UIKit.hbox(10)
 	column.add_child(_slots_row)
@@ -69,6 +72,8 @@ func refresh() -> void:
 	_refresh_slots(true)
 
 
+## The current arena: a window onto it with its dens, its name, and your
+## trophies toward the next one.
 func _build_arena() -> void:
 	for child in _arena_holder.get_children():
 		_arena_holder.remove_child(child)
@@ -80,17 +85,47 @@ func _build_arena() -> void:
 	var column := UIKit.vbox(8)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_arena_holder.add_child(column)
-	column.add_child(UIKit.label("Arena %d" % (index + 1), 24, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	column.add_child(UIKit.label(arena.name, 44, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 
-	var art := ArenaArt.new()
-	art.arena_id = arena.id
-	art.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	art.custom_minimum_size = Vector2(0, 200)
-	column.add_child(art)
+	var window := PanelContainer.new()
+	var frame := UIKit.box(Color(arena.color).darkened(0.5), 18, 0)
+	window.add_theme_stylebox_override("panel", frame)
+	window.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	window.custom_minimum_size = Vector2(0, 230)
+	window.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	window.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	column.add_child(window)
+	if BattleField.arena_art(arena.id).is_empty():
+		var art := ArenaArt.new()
+		art.arena_id = arena.id
+		window.add_child(art)
+	else:
+		var preview := ArenaPreview.new()
+		preview.arena_id = arena.id
+		window.add_child(preview)
+	var overlay := MarginContainer.new()
+	overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for side in ["left", "right", "top", "bottom"]:
+		overlay.add_theme_constant_override("margin_" + side, 12)
+	window.add_child(overlay)
+	var stack := UIKit.vbox(0)
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	overlay.add_child(stack)
+	var chip := PanelContainer.new()
+	var chip_style := UIKit.box(Color(UIKit.INK, 0.65), 14, 4)
+	chip_style.content_margin_left = 12
+	chip_style.content_margin_right = 12
+	chip.add_theme_stylebox_override("panel", chip_style)
+	chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(UIKit.label("Arena %d" % (index + 1), 20, UIKit.TEXT_DIM))
+	stack.add_child(chip)
+	stack.add_child(UIKit.spacer())
+	var name_label := UIKit.label(arena.name, 46, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+	name_label.add_theme_constant_override("outline_size", 10)
+	stack.add_child(name_label)
+	stack.add_child(UIKit.label("Tap for the Trophy Road", 17, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 
 	var trophy_row := UIKit.hbox(12)
-	trophy_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	trophy_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(trophy_row)
 	trophy_row.add_child(UIKit.pill(GameData.ui_icon("trophy"), UIKit.TROPHY, UIKit.format_number(trophies)))
@@ -98,11 +133,11 @@ func _build_arena() -> void:
 		var next_at := int(GameData.arenas[index + 1].min_trophies)
 		var start_at := int(arena.min_trophies)
 		var bar := UIKit.progress(float(trophies - start_at) / float(next_at - start_at),
-				"Next arena at %s" % UIKit.format_number(next_at), UIKit.TROPHY.darkened(0.25), 34)
-		bar.custom_minimum_size.x = 380
+				"Next arena at %s" % UIKit.format_number(next_at), UIKit.TROPHY.darkened(0.2), 34)
+		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		trophy_row.add_child(bar)
-	column.add_child(UIKit.label("Tap the arena to see the Trophy Road", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 
 ## Rebuilds the slots when a cage arrives, starts or finishes unlocking.
@@ -132,14 +167,17 @@ func _slot_view(slot: int) -> Control:
 	var entry: Variant = Profile.cage_slot(slot)
 	var cage: Dictionary = GameData.cages.get(entry.cage_id, {}) if entry != null else {}
 
-	var view := UIKit.panel(UIKit.PANEL_DARK, 8, 14)
-	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	view.custom_minimum_size = Vector2(0, 170)
+	var view := PanelContainer.new()
+	var style := UIKit.inset(UIKit.PANEL_DARK, 18, 8) if state == "empty" else UIKit.raised(UIKit.PANEL_DARK, 18, 8)
 	if state == "ready":
-		var style := UIKit.box(UIKit.PANEL_DARK, 14, 8)
 		style.set_border_width_all(4)
 		style.border_color = UIKit.YELLOW
-		view.add_theme_stylebox_override("panel", style)
+		style.shadow_color = Color(UIKit.YELLOW, 0.45)
+		style.shadow_size = 10
+		style.shadow_offset = Vector2.ZERO
+	view.add_theme_stylebox_override("panel", style)
+	view.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	view.custom_minimum_size = Vector2(0, 168)
 
 	var column := UIKit.vbox(4)
 	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -180,6 +218,14 @@ func _slot_view(slot: int) -> Control:
 			status.text = "OPEN!"
 			status.add_theme_color_override("font_color", UIKit.YELLOW)
 
+	if state == "ready":
+		# A ready cage hops now and then to say "open me".
+		art.resized.connect(func() -> void: art.pivot_offset = Vector2(art.size.x / 2.0, art.size.y))
+		var hop := art.create_tween().set_loops()
+		hop.tween_interval(1.2)
+		hop.tween_property(art, "scale", Vector2(1.1, 0.9), 0.1)
+		hop.tween_property(art, "scale", Vector2(0.95, 1.08), 0.12)
+		hop.tween_property(art, "scale", Vector2.ONE, 0.15)
 	UIKit.on_tap(view, func() -> void: _on_slot_tapped(slot))
 	return view
 

@@ -27,7 +27,6 @@ var _towers_label: Label
 var _status: Label
 var _hand_row: HBoxContainer
 var _hand_cards: Array = []
-var _hand_shades: Array = []
 var _hand_ready: Array = []
 var _energy_bar: EnergyBar
 var _swap_button: Button
@@ -59,6 +58,7 @@ func _ready() -> void:
 	_build()
 	Sound.play_music("battle")
 	_set_status("Drag a card onto the glowing area to play it.")
+	UIKit.fade_in(self)
 	if rng.randf() < 0.5:
 		get_tree().create_timer(1.5).timeout.connect(func() -> void: _opponent_says("good_luck"))
 
@@ -105,18 +105,25 @@ func _build() -> void:
 	middle.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(middle)
 	middle.add_child(UIKit.label("Dens destroyed", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	var score := UIKit.hbox(8)
+	score.add_child(UIKit.icon_rect(GameData.ui_icon("roles"), UIKit.BLUE.lightened(0.3), 28))
 	_towers_label = UIKit.label("0 - 0", 30, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
-	middle.add_child(_towers_label)
+	score.add_child(_towers_label)
+	score.add_child(UIKit.icon_rect(GameData.ui_icon("roles"), UIKit.RED.lightened(0.3), 28))
+	var score_pill := UIKit.hud_pill(score)
+	score_pill.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	middle.add_child(score_pill)
 	var clock := UIKit.vbox(0)
-	top.add_child(clock)
-	_mode_label = UIKit.label("Time left", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_RIGHT)
+	_mode_label = UIKit.label("Time left", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
 	clock.add_child(_mode_label)
-	_timer_label = UIKit.label("3:00", 32, UIKit.TEXT, HORIZONTAL_ALIGNMENT_RIGHT)
+	_timer_label = UIKit.label("3:00", 32, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	clock.add_child(_timer_label)
+	top.add_child(UIKit.hud_pill(clock))
 
 	_field = BattleField.new()
 	_field.sim = sim
 	_field.grass = Color(GameData.get_arena(Profile.arena_index()).color)
+	_field.arena_id = GameData.get_arena(Profile.arena_index()).id
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.tapped.connect(_on_field_tapped)
 	column.add_child(_field)
@@ -210,7 +217,7 @@ func _update_card_fill() -> void:
 	for i in _hand_cards.size():
 		var cost := float(GameData.get_card(sim.hand(0)[i]).cost)
 		var missing := clampf(1.0 - energy / maxf(cost, 0.01), 0.0, 1.0)
-		_hand_shades[i].anchor_bottom = missing
+		_hand_cards[i].shade = missing
 		var affordable := missing <= 0.0
 		if affordable and not _hand_ready[i]:
 			var card: Control = _hand_cards[i]
@@ -227,11 +234,11 @@ func _refresh_hand() -> void:
 		_hand_row.remove_child(child)
 		child.queue_free()
 	_hand_cards.clear()
-	_hand_shades.clear()
 	_hand_ready.clear()
 	var hand := sim.hand(0)
 	for i in hand.size():
 		var card := AnimalCard.create(hand[i], true)
+		card.info = AnimalCard.Info.LEVEL
 		card.highlighted = i == selected
 		if not sim.requirement_problems(0, i).is_empty():
 			card.modulate = Color(0.55, 0.55, 0.6)
@@ -242,21 +249,13 @@ func _refresh_hand() -> void:
 			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 				_on_card_pressed(i, event.global_position)
 		)
-		var shade_holder := Control.new()
-		shade_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		card.add_child(shade_holder)
-		var shade := ColorRect.new()
-		shade.color = Color(0.03, 0.04, 0.12, 0.62)
-		shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		shade.anchor_right = 1.0
-		shade_holder.add_child(shade)
 		_hand_row.add_child(card)
 		_hand_cards.append(card)
-		_hand_shades.append(shade)
 		_hand_ready.append(sim.energy(0) >= float(GameData.get_card(hand[i]).cost))
 	var next_box := UIKit.vbox(2)
 	next_box.add_child(UIKit.label("Next", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	var next_card := AnimalCard.create(sim.next_card(0), true)
+	next_card.info = AnimalCard.Info.NONE
 	next_card.modulate = Color(0.8, 0.8, 0.85)
 	next_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	next_box.add_child(next_card)

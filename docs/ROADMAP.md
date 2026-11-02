@@ -48,6 +48,10 @@
 - [x] Stars: train an animal for Acorns, or buy a copy for a free star (up to 3, +60% health and bite each)
 - [x] Bonus Acorns for the loser of a round
 - [x] All the gambling removed for now: the Bookie's odds and bets, the halftime Pot, the Mystery Crate and the trophy stakes
+- [x] Interest, win streaks and big-moment celebrations (3 stars, comebacks, flawless rounds)
+- [x] Habitat synergies at 2, 4 and 6 different animals of a habitat
+- [x] Rival Rangers: 38 named opponents with portraits, lines, styles and emotes; a VS screen; arena bosses that guard promotion, with a first-win reward; quiet easing after 3 losses in a row
+- [ ] Painted portraits for the Rival Rangers (they're drawn in code for now)
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] A balance pass for the open field, from real play
 - [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)

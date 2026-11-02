@@ -52,8 +52,9 @@ func test_repair_adds_new_starter_cards() -> void:
 
 
 func test_reaching_a_new_arena() -> void:
+	# Only by beating the arena's boss (see test_rivals.gd).
 	profile.data.trophies = 290
-	var result: Dictionary = profile.record_match("win", 290)
+	var result: Dictionary = profile.record_match("win", 290, true)
 	check(result.new_arena, "crossed 300 trophies")
 	check_eq(profile.highest_arena(), 1, "highest arena updated")
 

@@ -7,23 +7,41 @@ extends RefCounted
 ##
 ## `difficulty` (0 = first arena, 1 = top arena) sets how well it shops
 ## (less random), and how quickly and how well it uses tools.
+##
+## `style` is a Rival Ranger's personality (rivals.json): a favorite habitat
+## it builds toward, and how much (0 to 1, 0.5 = ordinary) it rerolls, saves
+## Acorns, trains stars and likes tools. Without a style it plays ordinarily.
 
 const T := BattleSim.TILE
+## How much more it wants an animal from its favorite habitat.
+const FAVORITE_BONUS := 1.5
 
 var duel: DraftMatch
 var team := 1
 var rng := RandomNumberGenerator.new()
 var difficulty := 0.5
+var style: Dictionary = {}
+var favorite := ""   # the habitat it likes, if the pool has enough of it
 var _tool_wait := 0
 var _rerolls := 0
 
 
-func _init(draft_match: DraftMatch, bot_team: int, seed_value: int, bot_difficulty := 0.5) -> void:
+func _init(draft_match: DraftMatch, bot_team: int, seed_value: int, bot_difficulty := 0.5, bot_style: Dictionary = {}) -> void:
 	duel = draft_match
 	team = bot_team
 	rng.seed = seed_value
 	difficulty = clampf(bot_difficulty, 0.0, 1.0)
+	style = bot_style
+	var wanted: String = style.get("favorite", "")
+	var available := duel.pool.filter(func(id): return not GameData.is_tool(id) and Synergies.habitat_of(id) == wanted).size()
+	# Not enough of it to build around: it plays like anyone else.
+	favorite = wanted if available >= int(GameData.synergy_tiers[0]) else ""
 	_tool_wait = _reaction()
+
+
+## A personality trait from `style`, from -0.5 to 0.5 (0 = ordinary).
+func _lean(trait_name: String) -> float:
+	return clampf(float(style.get(trait_name, 0.5)), 0.0, 1.0) - 0.5
 
 
 # --- Starters ------------------------------------------------------------
@@ -53,6 +71,9 @@ func pick_starters() -> void:
 		# Starters that share a habitat give it a head start.
 		for habitat in Synergies.active(pick.map(func(id): return {"id": id})):
 			score += 2.5 * synergy_iq()
+		for id in pick:
+			if favorite != "" and Synergies.habitat_of(id) == favorite:
+				score += FAVORITE_BONUS
 		score += rng.randf() * lerpf(4.0, 1.0, difficulty)
 		if score > best_score:
 			best = pick
@@ -90,16 +111,19 @@ func shop() -> void:
 		if score > best_score:
 			best_score = score
 			best_action = duel.train.bind(team, i)
-	# Only weak picks and Acorns to spare: try a fresh shop first.
-	var rich: bool = spendable - int(duel.rules.reroll_cost) >= 4
-	if _rerolls < 2 and rich and best_score < 4.0:
+	# Only weak picks and Acorns to spare: try a fresh shop first. Rerollers
+	# do it sooner, more often and on less spare change.
+	var rerolls := _lean("rerolls")
+	var max_rerolls := roundi(2.0 + rerolls * 4.0)
+	var rich: bool = spendable - int(duel.rules.reroll_cost) >= roundi(4.0 - rerolls * 4.0)
+	if _rerolls < max_rerolls and rich and best_score < 4.0 + rerolls * 3.0:
 		_rerolls += 1
 		duel.reroll(team)
 		return
 	if best_action.is_valid():
 		best_action.call()
 		return
-	if _rerolls < 2 and rich:
+	if _rerolls < max_rerolls and rich:
 		_rerolls += 1
 		duel.reroll(team)
 		return
@@ -109,18 +133,19 @@ func shop() -> void:
 
 ## Acorns it keeps back to earn interest: once its herd is decent and it
 ## isn't in danger, it holds on to whole steps of interest (5, 10, ... up to
-## the cap). Sharper opponents save more steadily.
+## the cap). Sharper opponents save more steadily, and so do savers.
 func _reserve() -> int:
 	var herd: int = duel.herds[team].size()
 	var hearts: int = duel.hearts[team]
 	if herd < 3 or hearts <= int(duel.rules.hearts) / 3:
 		return 0
+	var saving := _lean("saving")
 	var per := maxi(1, int(duel.rules.interest_per))
 	var steps := mini(int(duel.rules.interest_cap), duel.acorns[team] / per)
 	# Still building its herd: keep fewer steps.
 	if herd < int(duel.rules.herd_max) - 1:
-		steps = mini(steps, 2)
-	return roundi(steps * clampf(0.3 + difficulty * 0.7, 0.0, 1.0)) * per
+		steps = mini(steps, roundi(2.0 + saving * 2.0))
+	return roundi(steps * clampf(0.3 + difficulty * 0.7 + saving * 0.8, 0.0, 1.0)) * per
 
 
 ## How much it wants a shop card. Pricier animals are stronger; a copy of
@@ -132,13 +157,15 @@ func _want(item: Dictionary) -> float:
 	var full := herd_size >= int(duel.rules.herd_max)
 	var noise := rng.randf() * lerpf(3.0, 0.8, difficulty)
 	if GameData.is_tool(item.id):
-		return (3.0 + 2.0 * difficulty if duel.tools[team].is_empty() else 0.5) + noise
+		var tools := _lean("tools")
+		return (3.0 + 2.0 * difficulty + tools * 4.0 if duel.tools[team].is_empty() else 0.5 + maxf(0.0, tools) * 6.0) + noise
 	if duel.merge_target(team, item.id) >= 0:
 		# A star for the price of a copy: good value, and it saves a herd spot.
-		return float(cost) * (1.3 if full or herd_size >= 4 else 0.8) + noise
+		return float(cost) * (1.3 if full or herd_size >= 4 else 0.8) * (1.0 + _lean("stars")) + noise
 	# Early on, numbers matter more than size: two cheap animals can beat one big one.
 	var size_need := 1.5 if herd_size < 4 else 0.0
-	return float(cost) + size_need + _synergy_value(item.id) + noise
+	var liked := FAVORITE_BONUS if favorite != "" and Synergies.habitat_of(item.id) == favorite else 0.0
+	return float(cost) + size_need + _synergy_value(item.id) + liked + noise
 
 
 ## How much `id` would help its herd's habitat synergies: a lot if it turns
@@ -172,7 +199,7 @@ func synergy_iq() -> float:
 func _train_value(index: int, price: int) -> float:
 	var cost := float(GameData.get_card(duel.herds[team][index].id).cost)
 	var full: bool = duel.herds[team].size() >= int(duel.rules.herd_max)
-	var value := cost * float(duel.rules.star_bonus_pct) / 100.0 * (2.0 if full else 1.0)
+	var value := cost * float(duel.rules.star_bonus_pct) / 100.0 * (2.0 if full else 1.0) * (1.0 + _lean("stars"))
 	return value * 5.0 / maxf(5.0, float(price)) + rng.randf() * lerpf(2.0, 0.5, difficulty)
 
 

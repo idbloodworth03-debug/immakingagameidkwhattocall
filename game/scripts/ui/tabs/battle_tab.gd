@@ -123,15 +123,23 @@ func _build_arena() -> void:
 	trophy_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(trophy_row)
 	trophy_row.add_child(UIKit.pill(GameData.ui_icon("trophy"), UIKit.TROPHY, UIKit.format_number(trophies)))
+	# The arena's boss guards the way up: show who's next.
+	var boss_next := Opponents.is_boss_match(trophies, Profile.bosses_beaten())
+	var boss: Dictionary = GameData.rivals_in_arena(index, true)[0] if boss_next else {}
+	if boss_next:
+		trophy_row.add_child(RangerPortrait.create(boss, 52))
 	if index + 1 < GameData.arenas.size():
 		var next_at := int(GameData.arenas[index + 1].min_trophies)
 		var start_at := int(arena.min_trophies)
+		var bar_text := "Boss next: %s" % boss.name if boss_next else "Next arena at %s" % UIKit.format_number(next_at)
 		var bar := UIKit.progress(float(trophies - start_at) / float(next_at - start_at),
-				"Next arena at %s" % UIKit.format_number(next_at), UIKit.TROPHY.darkened(0.2), 34)
+				bar_text, UIKit.GOLD.darkened(0.25) if boss_next else UIKit.TROPHY.darkened(0.2), 34)
 		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		trophy_row.add_child(bar)
+	elif boss_next:
+		trophy_row.add_child(UIKit.label("Boss next: %s" % boss.name, 22, UIKit.GOLD))
 
 
 ## Rebuilds the slots when a cage arrives, starts or finishes unlocking.

@@ -14,6 +14,8 @@ extends Control
 ## comes from data/feel.json.
 
 signal tapped(at: Vector2i)
+## A strong hit (see _on_hit) by one of `team`'s animals.
+signal strong_hit(team: int)
 
 const OWN_COLOR := Color("#3d7fd9")
 const ENEMY_COLOR := Color("#d94a4a")
@@ -464,6 +466,8 @@ func _on_hit(e: Dictionary) -> void:
 	if strong:
 		hit_stop(Feel.num("combat", "hitstop_seconds", 0.055))
 		shake(Feel.num("combat", "shake_strong_hit", 0.12))
+		if attacker != null:
+			strong_hit.emit(attacker.team)
 
 
 ## A hit effect that fits how the attacker fights.

@@ -174,8 +174,19 @@ func _show_match_result(result: Dictionary) -> void:
 	var box := UIKit.vbox(14)
 	var outcome: String = result.get("outcome", "win" if result.won else "loss")
 	var titles := {"win": "Victory!", "loss": "Defeat", "draw": "Draw"}
+	if result.get("boss_beaten", false):
+		titles.win = "Boss Defeated!"
 	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
 	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
+	var rival := GameData.rival(result.get("rival", ""))
+	if not rival.is_empty():
+		var row := UIKit.hbox(10)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		var portrait := RangerPortrait.create(rival, 72)
+		portrait.mood = {"win": "sad", "loss": "happy"}.get(outcome, "normal")
+		row.add_child(portrait)
+		row.add_child(UIKit.label(("vs %s" % rival.name) + ("  (Boss)" if rival.get("boss", false) else ""), 24, UIKit.TEXT))
+		box.add_child(row)
 	if result.has("hearts"):
 		box.add_child(UIKit.label("Hearts left  %d - %d" % [result.hearts[0], result.hearts[1]], 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	var change := int(result.trophy_change)
@@ -195,6 +206,21 @@ func _show_match_result(result: Dictionary) -> void:
 		var unlocked := UIKit.paragraph("New animals can now be found: " + ", ".join(names), 21, UIKit.TEXT)
 		unlocked.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		arena_box.add_child(unlocked)
+
+	var boss_reward: Dictionary = result.get("boss_reward", {})
+	if not boss_reward.is_empty():
+		var reward_panel := UIKit.panel(Color("#8a5a00"), 14)
+		box.add_child(reward_panel)
+		var reward_box := UIKit.vbox(6)
+		reward_panel.add_child(reward_box)
+		reward_box.add_child(UIKit.label("First boss win!", 28, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+		var reward_row := UIKit.hbox(10)
+		reward_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		reward_row.add_child(UIKit.pill(GameData.ui_icon("gold"), UIKit.GOLD, "+%s" % UIKit.format_number(int(boss_reward.gold))))
+		reward_row.add_child(UIKit.pill(GameData.ui_icon("gems"), UIKit.GEMS, "+%d" % int(boss_reward.gems)))
+		reward_box.add_child(reward_row)
+		if boss_reward.get("cage_id", "") != "":
+			reward_box.add_child(UIKit.label("and a %s!" % GameData.cages[boss_reward.cage_id].name, 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 
 	if result.cage_id != "":
 		box.add_child(UIKit.label("You won a %s!" % GameData.cages[result.cage_id].name, 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))

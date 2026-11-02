@@ -131,6 +131,38 @@ glow on its animals.
 - Timings, zoom, slow motion and particle counts are in `feel.json`
   ("celebrations").
 
+**Rival Rangers** (`game/data/rivals.json`, `scripts/battle/opponents.gd`):
+you play against named Rangers, not random usernames. Each arena has 2 or 3
+regulars and one **boss** (38 in all), each with a cartoon portrait (drawn in
+code from `look` in `rivals.json` until there's painted art), a personality
+line, a banner, a favorite habitat or way of playing, and emotes for the
+start, their big hits, and rounds going their way or not.
+
+- **VS screen** before every match: their portrait and banner on top, yours
+  below, a VS that slams down, their line and favorite habitat, and an ARENA
+  BOSS ribbon for a boss. Tap to go on (or it goes on by itself).
+- **In the match** their badge shows their portrait. They emote (a speech
+  bubble and a change of face) when the match starts, on their first big hit
+  of a round, and when they win or lose a round, at most one every few
+  seconds. At the end they react to the result.
+- **Ways of playing** (`style`): a favorite habitat they build toward (ignored
+  if your collection doesn't have 2 of it), and how much they reroll, save
+  Acorns, chase stars and like tools. 0.5 is an ordinary player.
+- **Bosses guard promotion.** When a win could take you to the next arena
+  (within `boss_within_trophies`), you face that arena's boss. Beat the boss
+  and you go up; regular wins stop just short of the next arena. In the top
+  arena the boss turns up once you're `top_arena_boss_after` trophies in, then
+  joins the regulars for rematches. The home screen shows "Boss next" when a
+  boss is waiting.
+- **The first win against each boss** gives `boss_reward` (1,000 gold, 100 gems
+  and a Golden Cage if a slot is free), with a "BOSS DEFEATED!" banner,
+  fireworks and coins, and a gold box on the results.
+- **Difficulty:** the arena (0 in the first, 1 at the top) plus the rival's
+  own `skill`, plus `boss_skill` for a boss. After `ease_after_losses` (3)
+  losses in a row, the next rival is quietly easier: `ease_amount` less
+  difficulty and cards `ease_card_levels` lower. Nothing on screen says so.
+- Timings and sizes for the VS screen and emotes are in `feel.json` ("rivals").
+
 **Your collection matters, a little.** Your starters and shop come from the
 cards you own, and your animals and tools fight at their levels. The computer opponent's cards
 are leveled like yours on average, so leveling a few favorites helps without
@@ -145,6 +177,7 @@ close fights are 8 seconds in. From the latest runs (30 matches):
 - Herds average 5 animals with 1.4 stars each. A bot buys about 18 cards a match (almost half of them copies for a star) and trains about twice.
 - 8 seconds into a fight, about 80% are still fairly close (each side has 20-80% of the strength left).
 - Before starters and shops, with one shared, take-turns Watering Hole and no stars, fights were much more one-sided.
+- Rival styles (`draft_report.tscn -- 266 rivals`: each rival's style against an ordinary bot at the same difficulty): rivals overall win 54%. Mountains fans 77%, Savanna fans 75%, star chasers 71% and spenders 61% win more; Forest fans 33%, Rainforest fans 33% and savers 46% win less. Rerollers 54%, Arctic fans 50%, tool lovers 50%, City fans 57%. So a rival's favorite habitat changes how hard it is about as much as its skill does.
 - Synergies (60 matches, every card available): Forest 2 is the most common (507 fights) but wins only 46% (38% at Forest 4), since its animals are cheap. Mountains 2 (60%) and Rainforest 2 (72%, only 18 fights) win more, likely because they come with expensive Epics and Legendaries. Savanna 2 wins 53%, Arctic 2 51%, City 2 52%.
 
 **Gambling (removed for now).** Draft Duel used to have a gambling layer
@@ -216,7 +249,9 @@ Watering Hole.
 You win and lose **trophies** in battles. A win against an even opponent is +30 and a
 loss is -30. Beating someone with more trophies gives more, and losing to someone with fewer
 costs more (always 20 to 40). Trophies decide your arena, and each arena adds
-new animals to your cages. Most arenas have a **floor**: once you reach one,
+new animals to your cages. To move up you beat the arena's **boss** (see
+Rival Rangers): it shows up when a win could take you over, and regular wins
+stop one trophy short. Most arenas have a **floor**: once you reach one,
 you can't drop back below it. The top two arenas don't, to keep some stakes.
 
 | # | Arena | Trophies | Floor | New animals |
@@ -372,8 +407,8 @@ start with the Net and Air Horn.
 
 ## Computer opponent
 
-The opponent plays Draft Duel through the same calls as a person, so it
-follows the same rules:
+The opponent is a Rival Ranger (see Draft Duel) played by this bot. It plays
+Draft Duel through the same calls as a person, so it follows the same rules:
 
 - **Starters:** it tries random sets within the budget and keeps the one worth the most.
 - **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, and rerolls a weak shop when it has Acorns to spare.
@@ -383,7 +418,12 @@ follows the same rules:
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
 
 **Difficulty grows with your arena:** it shops less randomly and uses tools
-sooner and on smaller groups. Its cards are leveled like yours on average. The same bot can later fill online matchmaking when
+sooner and on smaller groups. Each rival adds its own skill, bosses more, and
+it eases off quietly after 3 losses in a row. Its cards are leveled like yours
+on average. **Personality** (the rival's `style`): a favorite habitat adds to
+how much it wants those animals; rerollers reroll sooner and more often;
+savers keep more interest steps back and spenders fewer; star chasers value
+copies and training more; tool lovers want a tool sooner and a second one. The same bot can later fill online matchmaking when
 few players are on.
 
 **Balance.** All animal stats were first tuned from about 7,000 bot battles

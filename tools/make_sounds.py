@@ -158,6 +158,13 @@ SFX = {
         at(0.5 * envelope(tone(1760, 0.45, "sine") * (0.7 + 0.3 * np.sin(2 * np.pi * 9 * t_axis(0.45))), decay=0.25), 0.18, 0.7),
     ),
     "whoosh": lambda: envelope(lowpass(noise(0.45), 0.85) * np.sin(np.pi * t_axis(0.45) / 0.45), attack=0.05, release=0.1),
+    # Rival Rangers: the VS slam, and an emote popping up
+    "versus": lambda: mix(
+        envelope(tone(110, 0.7, "sine", 38), decay=0.25) * 1.3,
+        envelope(lowpass(noise(0.35), 0.8), decay=0.08),
+        at(envelope(mix(tone(392, 0.5, "square") * 0.5, tone(587, 0.5, "triangle"), tone(784, 0.5, "triangle")), decay=0.22), 0.05, 0.8),
+    ),
+    "emote": lambda: mix(envelope(tone(620, 0.09, "sine", 1240), decay=0.05), at(envelope(tone(1480, 0.07, "triangle"), decay=0.03), 0.07, 0.18)),
 }
 
 

@@ -111,6 +111,18 @@
     "banner_seconds": 1.4
   },
 
+  "rivals": {
+    "_note": "Rival Rangers. The VS screen before a match (versus_seconds before it goes on by itself, 0 to wait for a tap; it can't be tapped away before versus_min_seconds), and the rival's emote bubbles in the match (shown for emote_seconds, at most one every emote_gap_seconds). Beating a boss plays its celebration for boss_celebration_seconds before the result shows.",
+    "versus_seconds": 3.6,
+    "versus_min_seconds": 0.6,
+    "vs_size": 128,
+    "portrait_size": 236,
+    "player_icon_size": 150,
+    "emote_seconds": 2.4,
+    "emote_gap_seconds": 5.0,
+    "boss_celebration_seconds": 1.8
+  },
+
   "ui": {
     "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in.",
     "press_scale": 0.9,

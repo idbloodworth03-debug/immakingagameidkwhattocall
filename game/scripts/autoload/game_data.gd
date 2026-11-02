@@ -40,6 +40,8 @@ var testing: Dictionary = {}         # testing switches (testing.json)
 var synergies: Dictionary = {}       # habitat id -> its synergy (synergies.json)
 var habitat_order: Array = []        # habitat ids, in synergies.json order
 var synergy_tiers: Array = []        # how many animals each tier needs, e.g. [2, 4, 6]
+var rival_rules: Dictionary = {}     # rivals.json settings (bosses, easing, reward)
+var rivals: Array = []               # Rival Rangers, in rivals.json order
 var art: Dictionary = {}
 
 
@@ -94,6 +96,8 @@ func reload() -> void:
 	for habitat in synergy_data.get("habitats", []):
 		synergies[habitat.id] = habitat
 		habitat_order.append(habitat.id)
+	rival_rules = _load("rivals.json")
+	rivals = rival_rules.get("rivals", [])
 	art = _load("art.json")
 
 
@@ -167,6 +171,18 @@ func arena_index_for_trophies(trophies: int) -> int:
 
 func get_arena(index: int) -> Dictionary:
 	return arenas[clampi(index, 0, arenas.size() - 1)]
+
+
+# --- Rival Rangers ----------------------------------------------------------
+
+## The rivals of one arena; bosses only, or only the regulars.
+func rivals_in_arena(index: int, boss: bool) -> Array:
+	var arena_id: String = get_arena(index).id
+	return rivals.filter(func(r): return r.arena == arena_id and bool(r.get("boss", false)) == boss)
+
+
+func rival(id: String) -> Dictionary:
+	return find_by_id(rivals, id)
 
 
 # --- Art -------------------------------------------------------------------
@@ -276,6 +292,36 @@ func validate() -> Array:
 			problems.append("synergies: %s's icon '%s' isn't in art.json" % [habitat_id, habitat.get("icon")])
 	if int(draft_rules.get("hearts", 0)) <= 0 or int(draft_rules.get("max_rounds", 0)) <= 0:
 		problems.append("draft_rules: hearts and max_rounds must be above zero")
+
+	const LOOKS := {
+		"hair_style": ["short", "spiky", "long", "ponytail", "bun", "curly", "bald"],
+		"hat": ["none", "cap", "beanie", "bandana", "safari", "ranger", "crown"],
+		"eyes": ["happy", "sly", "determined", "sleepy", "wide"],
+		"mouth": ["grin", "smile", "smirk", "open", "flat"],
+		"extra": ["none", "glasses", "freckles", "mustache", "scarf"],
+	}
+	var banner_ids := _ids(banners)
+	var emote_ids := _ids(emotes)
+	for i in arenas.size():
+		if rivals_in_arena(i, false).is_empty() or rivals_in_arena(i, true).size() != 1:
+			problems.append("rivals: arena '%s' needs regulars and exactly one boss" % arenas[i].id)
+	for r in rivals:
+		if not arena_index_by_id.has(r.get("arena", "")):
+			problems.append("rival %s: unknown arena '%s'" % [r.id, r.get("arena")])
+		if not banner_ids.has(r.get("banner", "")):
+			problems.append("rival %s: unknown banner '%s'" % [r.id, r.get("banner")])
+		for moment in ["start", "big_hit", "winning", "losing"]:
+			if not emote_ids.has(r.get("emotes", {}).get(moment, "")):
+				problems.append("rival %s: unknown %s emote '%s'" % [r.id, moment, r.get("emotes", {}).get(moment)])
+		var favorite: String = r.get("style", {}).get("favorite", "")
+		if favorite != "" and not synergies.has(favorite):
+			problems.append("rival %s: unknown favorite habitat '%s'" % [r.id, favorite])
+		for part in LOOKS:
+			if not LOOKS[part].has(r.get("look", {}).get(part, "")):
+				problems.append("rival %s: look.%s must be one of %s" % [r.id, part, ", ".join(LOOKS[part])])
+	var reward_cage: String = rival_rules.get("boss_reward", {}).get("cage", "")
+	if reward_cage != "" and not cages.has(reward_cage):
+		problems.append("rivals: unknown boss reward cage '%s'" % reward_cage)
 
 	for cage_id in progression.get("win_cage_cycle", []):
 		if not cages.has(cage_id):

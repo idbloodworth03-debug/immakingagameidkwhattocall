@@ -77,6 +77,8 @@ func _new_profile() -> Dictionary:
 		"wins": 0,
 		"losses": 0,
 		"draws": 0,
+		"loss_streak": 0,
+		"bosses_beaten": [],
 		"collection": {},
 		"cage_slots": [],
 		"cage_cycle_index": 0,
@@ -310,16 +312,24 @@ func card_levels() -> Dictionary:
 # --- Battles ---------------------------------------------------------------
 
 ## Updates trophies, stats and rewards after a battle. `outcome` is "win",
-## "loss" or "draw" (draws change no trophies and give no cage).
+## "loss" or "draw" (draws change no trophies and give no cage). `boss` is
+## true against an arena boss (see Opponents): beating one takes you to the
+## next arena, and the first time you beat each boss you get rivals.json's
+## boss_reward. Regular wins can't take you past a boss.
 ## Returns a summary for the results screen.
-func record_match(outcome: String, opponent_trophies: int) -> Dictionary:
+func record_match(outcome: String, opponent_trophies: int, boss := false) -> Dictionary:
 	var prog := GameData.progression
 	var won := outcome == "win"
 	var before := get_trophies()
+	var arena_before := arena_index()
+	var arena_id: String = GameData.get_arena(arena_before).id
 	var highest_before := highest_arena()
 	var after := before
 	if outcome != "draw":
 		after = TrophyRules.trophies_after_match(before, opponent_trophies, won, prog.trophies, GameData.arenas)
+	var next_at := int(GameData.arenas[arena_before + 1].min_trophies) if arena_before + 1 < GameData.arenas.size() else -1
+	if won and next_at > 0:
+		after = maxi(after, next_at) if boss else mini(after, maxi(before, next_at - 1))
 
 	data.trophies = after
 	data.best_trophies = maxi(int(data.best_trophies), after)
@@ -327,13 +337,19 @@ func record_match(outcome: String, opponent_trophies: int) -> Dictionary:
 	match outcome:
 		"win":
 			data.wins = int(data.wins) + 1
+			data.loss_streak = 0
 		"loss":
 			data.losses = int(data.losses) + 1
+			data.loss_streak = int(data.get("loss_streak", 0)) + 1
 		_:
 			data.draws = int(data.get("draws", 0)) + 1
 	data.xp = int(data.xp) + int(prog.xp_per_win if won else prog.xp_per_loss)
 
 	var cage_id := _award_win_cage() if won else ""
+	var boss_reward := {}
+	if won and boss and not bosses_beaten().has(arena_id):
+		data.bosses_beaten.append(arena_id)
+		boss_reward = _award_boss_reward(arena_before)
 	_changed()
 	return {
 		"outcome": outcome,
@@ -344,7 +360,35 @@ func record_match(outcome: String, opponent_trophies: int) -> Dictionary:
 		"new_arena": highest_arena() > highest_before,
 		"cage_id": cage_id,
 		"slots_full": won and cage_id == "",
+		"boss": boss,
+		"boss_beaten": won and boss,
+		"boss_reward": boss_reward,
 	}
+
+
+## Losses in a row (a win resets it; draws leave it alone).
+func loss_streak() -> int:
+	return int(data.get("loss_streak", 0))
+
+
+## The arenas (ids) whose boss you have beaten.
+func bosses_beaten() -> Array:
+	return data.get("bosses_beaten", [])
+
+
+## The first-win reward for an arena's boss: gold, gems, and a cage if a
+## slot is free. Returns what was given, for the results screen.
+func _award_boss_reward(arena: int) -> Dictionary:
+	var reward: Dictionary = GameData.rival_rules.get("boss_reward", {})
+	var given := {"gold": int(reward.get("gold", 0)), "gems": int(reward.get("gems", 0)), "cage_id": ""}
+	data.gold = get_gold() + given.gold
+	data.gems = get_gems() + given.gems
+	var cage: String = reward.get("cage", "")
+	var slot: int = data.cage_slots.find(null)
+	if cage != "" and slot != -1:
+		data.cage_slots[slot] = {"cage_id": cage, "arena": arena, "unlock_at": 0.0}
+		given.cage_id = cage
+	return given
 
 
 func _award_win_cage() -> String:

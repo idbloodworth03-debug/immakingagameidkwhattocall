@@ -6,6 +6,8 @@ extends Control
 ## your Rally and tools in the fight, and the round's results.
 
 const MENU_SCENE := "res://scenes/main.tscn"
+## Draws popups above the field (flying animals sit a step higher).
+const OVER_FIELD := 10
 ## Moods this strong or more show over the animals when a fight starts.
 const MOOD_SHOWN := 12
 
@@ -76,6 +78,10 @@ var _my_streak: Control
 var _their_streak: Control
 var _hearts_shown := [-1, -1]
 var _status: Label
+## The rival's badge, and when their next emote bubble may show.
+var _their_badge: PlayerBadge
+var _emote_free_at := 0.0
+var _big_hit_round := -1
 var _panel: VBoxContainer
 
 
@@ -84,28 +90,30 @@ func _ready() -> void:
 	_rng.randomize()
 	# You draft from the cards you own, and they fight at your levels. The
 	# opponent's cards are about as leveled as yours.
+	# Your opponent is a Rival Ranger from your arena (or its boss, when a
+	# win would take you up), with their own way of playing (see Opponents).
+	opponent = Opponents.next_for_player(_rng)
 	var pool := DraftMatch.pool_from_collection(Profile.has_card)
-	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(pool)], "pool": pool})
-	# The opponent gets sharper the higher the arena.
-	var difficulty := float(Profile.arena_index()) / maxf(1.0, GameData.arenas.size() - 1)
-	bot = DraftBot.new(duel, 1, _rng.randi(), difficulty)
-	opponent = Opponents.random(_rng)
+	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(pool, Opponents.level_drop(opponent))], "pool": pool})
+	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
 	_build()
 	Sound.play_music("battle")
-	_choose_starters()
-	UIKit.fade_in(self)
+	var intro := VersusIntro.create(opponent)
+	intro.finished.connect(_choose_starters)
+	intro.z_index = OVER_FIELD
+	add_child(intro)
 
 
 ## Levels for the opponent's cards: each rarity's starting level, plus as
-## many levels as the player's cards have on average.
-static func _opponent_levels(pool: Array) -> Dictionary:
+## many levels as the player's cards have on average, minus `drop`.
+static func _opponent_levels(pool: Array, drop := 0) -> Dictionary:
 	var above := 0.0
 	for id in pool:
 		above += Profile.card_level(id) - GameData.start_level(GameData.cards[id].rarity)
 	var offset := roundi(above / maxf(1.0, pool.size()))
 	var levels := {}
 	for id in pool:
-		levels[id] = mini(int(GameData.progression.card_max_level), GameData.start_level(GameData.cards[id].rarity) + offset)
+		levels[id] = clampi(GameData.start_level(GameData.cards[id].rarity) + offset - drop, 1, int(GameData.progression.card_max_level))
 	return levels
 
 
@@ -149,7 +157,8 @@ func _build() -> void:
 
 	var top := UIKit.hbox(10)
 	column.add_child(top)
-	top.add_child(PlayerBadge.create(opponent.banner, opponent.icon, opponent.name, opponent.level, true))
+	_their_badge = PlayerBadge.for_rival(opponent, true)
+	top.add_child(_their_badge)
 	var middle := UIKit.vbox(0)
 	_round_label = UIKit.label("", 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	middle.add_child(_round_label)
@@ -179,6 +188,7 @@ func _build() -> void:
 	_field.arena_id = GameData.get_arena(Profile.arena_index()).id
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.tapped.connect(_on_field_tapped)
+	_field.strong_hit.connect(_on_strong_hit)
 	column.add_child(_field)
 	# The synergy tracker sits on the left of the field.
 	_tracker = UIKit.vbox(4)
@@ -286,6 +296,7 @@ func _choose_starters() -> void:
 			if duel.pick_starters(0, _starter_ids):
 				Sound.play("horn")
 				overlay.queue_free()
+				get_tree().create_timer(0.7).timeout.connect(func() -> void: _rival_says("start"))
 		)
 		box.add_child(go)
 	rebuild.call(rebuild)
@@ -295,6 +306,7 @@ func _choose_starters() -> void:
 func _overlay(content: Control) -> Control:
 	var layer := Control.new()
 	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.z_index = OVER_FIELD  # above flying animals
 	add_child(layer)
 	var dim := ColorRect.new()
 	dim.color = Color(0, 0, 0, 0.55)
@@ -519,6 +531,77 @@ func _celebrate_round() -> void:
 			show_flawless.call()
 
 
+# --- The rival's reactions -------------------------------------------------
+
+## The rival reacts with one of their emotes (rivals.json) in a bubble by
+## their badge, and their face changes for a moment: at the start, on a big
+## hit, and when a round goes their way or not. One at a time, and not too
+## often (feel.json "rivals").
+func _rival_says(moment: String) -> bool:
+	var emote := GameData.find_by_id(GameData.emotes, opponent.get("emotes", {}).get(moment, ""))
+	var now := Time.get_ticks_msec() / 1000.0
+	if emote.is_empty() or now < _emote_free_at or _their_badge == null or not _result.is_empty():
+		return false
+	var seconds := Feel.num("rivals", "emote_seconds", 2.4)
+	_emote_free_at = now + maxf(seconds, Feel.num("rivals", "emote_gap_seconds", 5.0))
+	Sound.play("emote", -2.0)
+	var portrait := _their_badge.portrait
+	portrait.mood = {"winning": "happy", "big_hit": "happy", "losing": "sad"}.get(moment, "normal")
+	portrait.pivot_offset = portrait.size / 2.0
+	var bounce := portrait.create_tween()
+	bounce.tween_property(portrait, "scale", Vector2(1.18, 0.88), 0.08)
+	bounce.tween_property(portrait, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	bounce.tween_interval(maxf(0.0, seconds - 0.5))
+	bounce.tween_callback(func() -> void: portrait.mood = "normal")
+
+	var bubble := _emote_bubble(emote)
+	bubble.z_index = OVER_FIELD
+	add_child(bubble)
+	bubble.reset_size()
+	var anchor := portrait.get_global_rect()
+	bubble.position = Vector2(anchor.position.x + anchor.size.x * 0.55, anchor.end.y - 4.0)
+	bubble.position.x = minf(bubble.position.x, get_viewport_rect().size.x - bubble.size.x - 6.0)
+	bubble.pivot_offset = Vector2(12, 0)
+	bubble.scale = Vector2(0.2, 0.2)
+	var tween := bubble.create_tween()
+	tween.tween_property(bubble, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(maxf(0.2, seconds - 0.55))
+	tween.tween_property(bubble, "modulate:a", 0.0, 0.25)
+	tween.tween_callback(bubble.queue_free)
+	return true
+
+
+## A speech bubble with an emote's picture and caption.
+func _emote_bubble(emote: Dictionary) -> Control:
+	var style := UIKit.box(Color.WHITE, 18, 6)
+	style.corner_radius_top_left = 4
+	style.content_margin_left = 8
+	style.content_margin_right = 14
+	style.set_border_width_all(3)
+	style.border_color = UIKit.INK
+	var bubble := PanelContainer.new()
+	bubble.add_theme_stylebox_override("panel", style)
+	bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := UIKit.hbox(8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bubble.add_child(row)
+	var art := IconArt.make(GameData.emote_icon(emote.id), Color(emote.get("color", "#888888")))
+	art.custom_minimum_size = Vector2(46, 46)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(art)
+	var caption := UIKit.label(emote.get("caption", ""), 24, UIKit.INK)
+	caption.add_theme_constant_override("outline_size", 0)
+	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(caption)
+	return bubble
+
+
+## The rival cheers their own big hits (once a round).
+func _on_strong_hit(team: int) -> void:
+	if team == bot.team and _big_hit_round != duel.round_number and _rival_says("big_hit"):
+		_big_hit_round = duel.round_number
+
+
 ## Big bouncy words over the field, with a small line under them.
 func _banner(text: String, color: Color, font_size: int, subtitle := "") -> void:
 	# One banner at a time: a second one waits its turn.
@@ -706,6 +789,8 @@ func _handle_events(events: Array) -> void:
 					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.75, field_rect.size.y * 0.35), half)
 				if e.winner == 0:
 					_celebrate_round()
+				if not duel.is_over() and e.winner != DraftMatch.NO_WINNER:
+					_rival_says("losing" if e.winner == 0 else "winning")
 				var lost: Array = e.hearts_lost
 				if int(lost[0]) > 0:
 					_set_status("You lose %d heart%s." % [lost[0], "" if int(lost[0]) == 1 else "s"], UIKit.HEART)
@@ -1144,26 +1229,102 @@ func _end_match() -> void:
 	var titles := {"win": "Victory!", "loss": "Defeat", "draw": "Draw"}
 	if outcome == "win" and duel.hearts[0] <= Feel.count("celebrations", "comeback_hearts", 5):
 		titles.win = "Comeback Victory!"
+	var boss_beaten: bool = _result.get("boss_beaten", false)
+	if boss_beaten:
+		titles.win = "Boss Defeated!"
 	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
 	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
+	box.add_child(_rival_reaction(outcome))
 	box.add_child(UIKit.label("Hearts left  %d - %d" % [duel.hearts[0], duel.hearts[1]], 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	box.add_child(UIKit.label("%d rounds" % duel.round_number, 22, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	box.add_child(UIKit.label("%d round%s" % [duel.round_number, "" if duel.round_number == 1 else "s"], 22, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	if opponent.boss:
+		box.add_child(_boss_lines(boss_beaten))
 	var ok := UIKit.button("OK", UIKit.GREEN, 28, Vector2(220, 84))
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(_back_to_menu)
 	box.add_child(ok)
-	_overlay(box)
-	if outcome == "win":
-		# A shower of confetti and coins for the winner.
-		var screen_size := get_viewport_rect().size
-		for i in 3:
-			_ui_fx.burst_confetti(Vector2(screen_size.x * (0.2 + 0.3 * i), screen_size.y * 0.3), Feel.count("effects", "win_confetti", 60) / 2)
-		_ui_fx.burst_coins(screen_size / 2.0 + Vector2(0, -120), Feel.count("effects", "coin_burst", 8) * 2)
+	# A beaten boss gets its own moment over the field first.
+	var show_result := func() -> void:
+		_overlay(box)
+		if outcome == "win":
+			# A shower of confetti and coins for the winner.
+			var screen_size := get_viewport_rect().size
+			for i in 3:
+				_ui_fx.burst_confetti(Vector2(screen_size.x * (0.2 + 0.3 * i), screen_size.y * 0.3), Feel.count("effects", "win_confetti", 60) / 2)
+			_ui_fx.burst_coins(screen_size / 2.0 + Vector2(0, -120), Feel.count("effects", "coin_burst", 8) * 2)
+	if boss_beaten:
+		_celebrate_boss()
+		get_tree().create_timer(Feel.num("rivals", "boss_celebration_seconds", 1.8)).timeout.connect(show_result)
+	else:
+		show_result.call()
+
+
+## The rival's face and last word at the end: their winning emote if they
+## won, their losing one if you did.
+func _rival_reaction(outcome: String) -> Control:
+	var row := UIKit.hbox(12)
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var portrait := RangerPortrait.create(opponent, 104)
+	portrait.mood = {"win": "sad", "loss": "happy"}.get(outcome, "normal")
+	row.add_child(portrait)
+	var moment: String = {"win": "losing", "loss": "winning"}.get(outcome, "start")
+	var emote := GameData.find_by_id(GameData.emotes, opponent.get("emotes", {}).get(moment, ""))
+	var words := UIKit.vbox(0)
+	words.alignment = BoxContainer.ALIGNMENT_CENTER
+	words.add_child(UIKit.label(opponent.name, 26, UIKit.TEXT))
+	if not emote.is_empty():
+		words.add_child(_emote_bubble(emote))
+	row.add_child(words)
+	return row
+
+
+## Under a boss match's result: the promotion and first-win reward, or what
+## it would have meant.
+func _boss_lines(beaten: bool) -> Control:
+	var box := UIKit.vbox(6)
+	var next := int(opponent.arena_index) + 1
+	var text := ""
+	if beaten:
+		text = "You've earned your place in %s!" % GameData.get_arena(next).name if next < GameData.arenas.size() else "You're the champion of %s!" % GameData.get_arena(next - 1).name
+	else:
+		text = "%s still guards the way. Beat them to reach %s." % [opponent.name, GameData.get_arena(next).name] if next < GameData.arenas.size() else "%s is still the champion here." % opponent.name
+	var line := UIKit.paragraph(text, 21, UIKit.YELLOW if beaten else UIKit.TEXT)
+	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	box.add_child(line)
+	var reward: Dictionary = _result.get("boss_reward", {})
+	if not reward.is_empty():
+		box.add_child(UIKit.label("First boss win reward", 22, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
+		var row := UIKit.hbox(10)
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_child(UIKit.pill(GameData.ui_icon("gold"), UIKit.GOLD, "+%s" % UIKit.format_number(int(reward.gold))))
+		row.add_child(UIKit.pill(GameData.ui_icon("gems"), UIKit.GEMS, "+%d" % int(reward.gems)))
+		box.add_child(row)
+		if reward.cage_id != "":
+			box.add_child(UIKit.label("and a %s!" % GameData.cages[reward.cage_id].name, 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	return box
+
+
+## Beating a boss: a gold banner, fireworks of stars and confetti, and coins.
+func _celebrate_boss() -> void:
+	var screen_size := get_viewport_rect().size
+	_banner("BOSS DEFEATED!", UIKit.GOLD, Feel.count("celebrations", "banner_size", 54), opponent.name)
+	Sound.play("fanfare")
+	for i in 4:
+		var at := Vector2(screen_size.x * (0.15 + 0.233 * i), screen_size.y * (0.22 + 0.08 * (i % 2)))
+		get_tree().create_timer(0.25 * i).timeout.connect(func() -> void:
+			_ui_fx.burst("star", at, Feel.count("celebrations", "star3_stars", 22), 300.0, 0.9, 9.0, [UIKit.GOLD, Color("#ffb03b"), Color.WHITE], 380.0, 1.2, 180.0)
+			Sound.play("pop")
+		)
+	get_tree().create_timer(1.1).timeout.connect(func() -> void:
+		Sound.play("star3")
+		_ui_fx.burst_coins(screen_size / 2.0, Feel.count("effects", "coin_burst", 8) * 3)
+	)
 
 
 func _record(outcome: String) -> void:
-	_result = Profile.record_match(outcome, int(opponent.trophies))
+	_result = Profile.record_match(outcome, int(opponent.trophies), bool(opponent.boss))
 	_result["hearts"] = duel.hearts.duplicate()
+	_result["rival"] = opponent.id
 
 
 func _back_to_menu() -> void:

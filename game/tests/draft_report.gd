@@ -6,6 +6,9 @@ extends Node
 ##
 ## From the repository root (the number of matches is optional):
 ##   godot --headless --path game res://tests/draft_report.tscn -- 40
+## Add "rivals" to give team 1 each Rival Ranger's way of playing in turn
+## (rivals.json "style", at the same difficulty) and see how each kind does:
+##   godot --headless --path game res://tests/draft_report.tscn -- 76 rivals
 
 const DEFAULT_MATCHES := 40
 
@@ -15,6 +18,8 @@ func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
 	if args.size() >= 1 and args[0].is_valid_int():
 		matches = maxi(1, args[0].to_int())
+	var rivals_mode := args.has("rivals")
+	var kinds := {}   # kind of rival -> [matches, team 1 wins]
 
 	var totals := {"rounds": 0, "knockouts": 0, "fights": 0, "fight_seconds": 0.0, "hearts_lost": 0,
 		"wipes": 0, "halfway": 0, "herd": 0, "stars": 0,
@@ -31,7 +36,8 @@ func _ready() -> void:
 	for match_index in matches:
 		var seed_value := 1000 + match_index
 		var m := DraftMatch.new(seed_value)
-		var bots := [DraftBot.new(m, 0, seed_value + 1, 0.6), DraftBot.new(m, 1, seed_value + 2, 0.6)]
+		var rival: Dictionary = GameData.rivals[match_index % GameData.rivals.size()] if rivals_mode else {}
+		var bots := [DraftBot.new(m, 0, seed_value + 1, 0.6), DraftBot.new(m, 1, seed_value + 2, 0.6, rival.get("style", {}))]
 		while not m.is_over():
 			match m.phase:
 				"starters":
@@ -89,6 +95,12 @@ func _ready() -> void:
 		totals.rounds += m.round_number
 		totals.knockouts += int(m.hearts[0] <= 0 or m.hearts[1] <= 0)
 		wins[m.match_winner() + 1] += 1
+		if rivals_mode:
+			for kind in _kinds(rival.style, bots[1].favorite):
+				var tally: Array = kinds.get(kind, [0, 0])
+				tally[0] += 1
+				tally[1] += int(m.match_winner() == 1)
+				kinds[kind] = tally
 
 	var fights := maxf(1.0, float(totals.fights))
 	print("\nDraft Duel: %d matches in %.0f s" % [matches, (Time.get_ticks_msec() - started) / 1000.0])
@@ -107,4 +119,26 @@ func _ready() -> void:
 	print("  synergies            (fights a team had it active: its round wins)")
 	for tag in tags:
 		print("    %-16s %4d fights, won %d%%" % [tag, synergy_fights[tag], roundi(100.0 * int(synergy_wins.get(tag, 0)) / maxf(1.0, float(synergy_fights[tag])))])
+	if rivals_mode:
+		print("  rival styles         (team 1's matches against an ordinary bot: its match wins)")
+		for kind in kinds:
+			print("    %-16s %4d matches, won %d%%" % [kind, kinds[kind][0], roundi(100.0 * kinds[kind][1] / maxf(1.0, float(kinds[kind][0])))])
 	get_tree().quit()
+
+
+## The kinds of player a rival style makes, for the report.
+static func _kinds(style: Dictionary, favorite: String) -> Array:
+	var kinds := ["any rival"]
+	if float(style.get("rerolls", 0.5)) >= 0.8:
+		kinds.append("reroller")
+	if float(style.get("saving", 0.5)) >= 0.8:
+		kinds.append("saver")
+	if float(style.get("saving", 0.5)) <= 0.1:
+		kinds.append("spender")
+	if float(style.get("stars", 0.5)) >= 0.8:
+		kinds.append("star chaser")
+	if float(style.get("tools", 0.5)) >= 0.8:
+		kinds.append("tool lover")
+	if favorite != "":
+		kinds.append(favorite + " fan")
+	return kinds

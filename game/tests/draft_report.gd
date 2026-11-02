@@ -1,7 +1,7 @@
 extends Node
 ## Plays computer-vs-computer Draft Duel matches, with the real Bookie setting
-## the odds, and prints how they go: how many rounds a match lasts, how much
-## den damage a round does, how often the bots bet, raise and fold, how sure
+## the odds, and prints how they go: how many rounds a match lasts, how many
+## hearts a round costs, how often the bots bet, raise and fold, how sure
 ## the Bookie's odds are, and how long the Bookie takes to think. A guide for
 ## tuning draft_rules.json, not a verdict: bots aren't people.
 ##
@@ -17,8 +17,8 @@ func _ready() -> void:
 	if args.size() >= 1 and args[0].is_valid_int():
 		matches = maxi(1, args[0].to_int())
 
-	var totals := {"rounds": 0, "knockouts": 0, "fights": 0, "fight_seconds": 0.0, "den_damage": 0,
-		"bets": 0, "raises": 0, "folds": 0, "halftimes": 0}
+	var totals := {"rounds": 0, "knockouts": 0, "fights": 0, "fight_seconds": 0.0, "hearts_lost": 0,
+		"wipes": 0, "bets": 0, "raises": 0, "folds": 0, "halftimes": 0, "herd": 0}
 	var wins := [0, 0, 0]          # draws, team 0, team 1
 	var odds := [0, 0, 0, 0, 0]    # Bookie's pre-fight odds in fifths: 0-20% ... 80-100%
 	var think_ms := []
@@ -71,16 +71,19 @@ func _ready() -> void:
 					"round_over":
 						totals.fights += 1
 						totals.fight_seconds += float(m.fight_tick) / m.sim.tps
-						totals.den_damage += int(m.last_round.dealt[0]) + int(m.last_round.dealt[1])
+						totals.hearts_lost += int(m.last_round.hearts_lost[0]) + int(m.last_round.hearts_lost[1])
+						totals.wipes += int(m.wiped_at[0] >= 0 or m.wiped_at[1] >= 0)
+						totals.herd += m.herds[0].size() + m.herds[1].size()
 		totals.rounds += m.round_number
-		totals.knockouts += int(m.sim.is_over())
+		totals.knockouts += int(m.hearts[0] <= 0 or m.hearts[1] <= 0)
 		wins[m.match_winner() + 1] += 1
 
 	var fights := maxf(1.0, float(totals.fights))
 	print("\nDraft Duel: %d matches in %.0f s" % [matches, (Time.get_ticks_msec() - started) / 1000.0])
-	print("  rounds per match     %.1f (main den fell in %d)" % [float(totals.rounds) / matches, totals.knockouts])
+	print("  rounds per match     %.1f (someone ran out of hearts in %d)" % [float(totals.rounds) / matches, totals.knockouts])
 	print("  wins                 team 0: %d, team 1: %d, draws: %d" % [wins[1], wins[2], wins[0]])
-	print("  per fight            %.1f s, %.0f den damage" % [totals.fight_seconds / fights, totals.den_damage / fights])
+	print("  per fight            %.1f s, %.1f hearts lost, %d%% ended in a wipe-out" % [totals.fight_seconds / fights, totals.hearts_lost / fights, roundi(100.0 * totals.wipes / fights)])
+	print("  herd size            %.1f animals each, on average" % (totals.herd / fights / 2.0))
 	print("  betting              %d bets on own herd, %d raises, %d folds in %d halftimes" % [totals.bets, totals.raises, totals.folds, totals.halftimes])
 	print("  Bookie's odds        0-20%%: %d, 20-40%%: %d, 40-60%%: %d, 60-80%%: %d, 80-100%%: %d" % odds)
 	think_ms.sort()

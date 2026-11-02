@@ -2,7 +2,7 @@ class_name AnimalCard
 extends Control
 ## One collectible card, drawn in code so it stays crisp at any size: a
 ## glossy rim in the rarity's color, the animal's portrait standing in a
-## spotlight of its habitat color, a name plate, the energy cost in a gem,
+## spotlight of its habitat color, a name plate, the Acorn cost in a gem,
 ## and the level with copies toward the next upgrade. Epic and Legendary
 ## cards shine now and then. Tap it to call `on_tap`.
 
@@ -20,17 +20,10 @@ var highlighted := false:
 	set(value):
 		highlighted = value
 		queue_redraw()
-## Shades the card from the top down by this much (0-1), e.g. while energy
-## for it is still coming in.
-var shade := 0.0:
-	set(value):
-		if not is_equal_approx(value, shade):
-			shade = value
-			queue_redraw()
-## A price to show in the corner gem instead of the energy cost (-1: none),
-## in its own color, e.g. Acorns in Draft Duel.
+## A price to show in the corner gem instead of the card's cost (-1: none),
+## in its own color, e.g. red when it's more Acorns than you have.
 var price := -1
-var price_color := UIKit.ENERGY
+var price_color := UIKit.ACORN
 ## A face-down card: a crate instead of the animal.
 var mystery := false
 ## A word stamped across the card, like "YOURS" ("" for none).
@@ -159,11 +152,11 @@ func _draw() -> void:
 	if info != Info.NONE:
 		_draw_info(font, Rect2(margin, plate.end.y + h * 0.025, w - margin * 2, h - margin - plate.end.y - h * 0.025), rarity_color)
 
-	# Energy cost (or price) gem, overlapping the top-left corner.
+	# Acorn cost (or price) gem, overlapping the top-left corner.
 	if price >= 0:
 		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.15, price_color, str(price))
 	elif not dim or _reachable:
-		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.135, UIKit.ENERGY, str(int(animal.get("cost", 0))))
+		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.135, UIKit.ACORN, str(int(animal.get("cost", 0))))
 	if _new and info == Info.COLLECTION:
 		var tag := Rect2(w - w * 0.38, -h * 0.015, w * 0.36, h * 0.1)
 		var tag_style := UIKit.box(UIKit.YELLOW, int(tag.size.y * 0.4))
@@ -173,13 +166,6 @@ func _draw() -> void:
 		_text(font, "NEW", tag, int(tag.size.y * 0.62), Color.WHITE)
 	if stamp != "":
 		_draw_stamp(font, rect)
-	if shade > 0.0:
-		var shaded := Rect2(rect.position, Vector2(rect.size.x, rect.size.y * shade))
-		var shade_style := UIKit.box(Color(0.03, 0.04, 0.12, 0.62), radius)
-		if shade < 0.98:
-			shade_style.corner_radius_bottom_left = 0
-			shade_style.corner_radius_bottom_right = 0
-		draw_style_box(shade_style, shaded)
 
 
 func _draw_animal(animal: Dictionary, art: Rect2, dim: bool) -> void:
@@ -285,7 +271,7 @@ func _draw_info(font: Font, area: Rect2, rarity_color: Color) -> void:
 			draw_texture_rect(arrow, Rect2(Vector2(bar.end.x - side * 0.85, bar.get_center().y - side / 2.0), Vector2(side, side)), false, Color.WHITE)
 
 
-## A round gem with a number, like the energy cost.
+## A round gem with a number, like the Acorn cost.
 func _draw_gem(font: Font, center: Vector2, radius: float, color: Color, text: String) -> void:
 	draw_circle(center + Vector2(0, 2), radius, Color(UIKit.INK, 0.45))
 	draw_circle(center, radius, UIKit.INK)

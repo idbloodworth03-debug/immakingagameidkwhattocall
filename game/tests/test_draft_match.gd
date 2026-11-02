@@ -1,6 +1,6 @@
 extends TestCase
 ## Draft Duel tests: the draft, placing, the Pot and halftime betting, rounds
-## and dens, the Bookie's odds and the computer opponent.
+## and hearts, the Bookie's odds and the computer opponent.
 
 const T := BattleSim.TILE
 
@@ -17,7 +17,7 @@ func _with_herds(herd_0: Array, herd_1: Array, seed_value := 3) -> DraftMatch:
 	_skip_draft(m)
 	for team in 2:
 		for id in [herd_0, herd_1][team]:
-			var spot := m.default_spot(team, id)
+			var spot := m.default_spot(team)
 			m.herds[team].append({"id": id, "x": spot.x, "y": spot.y})
 	m._lay_out_herds()
 	return m
@@ -51,7 +51,8 @@ func test_a_match_starts_with_a_draft() -> void:
 	check_eq(m.market.size(), int(rules.market_animals) + int(rules.market_tools) + int(rules.mystery_crates), "a full Watering Hole")
 	check_eq(m.market.filter(func(s): return s.mystery).size(), int(rules.mystery_crates), "a Mystery Crate")
 	check_eq(m.market.filter(func(s): return GameData.is_tool(s.id) and not s.mystery).size(), int(rules.market_tools), "a tool")
-	check(m.sim.towers(0).size() == 3 and m.sim.towers(1).size() == 3, "three dens each")
+	check_eq(m.hearts, [int(rules.hearts), int(rules.hearts)], "same hearts for both")
+	check(m.sim.fighters.is_empty(), "an empty field")
 
 
 func test_players_take_turns_buying() -> void:
@@ -101,16 +102,18 @@ func test_draft_ends_when_nobody_can_go_on() -> void:
 	check_eq(m.phase, "place", "nobody can afford anything: the draft ends by itself")
 
 
-func test_herds_start_on_their_own_side() -> void:
+func test_herds_start_on_their_own_half() -> void:
 	var m := _with_herds(["red_fox", "hippopotamus"], ["wild_boar"])
 	check_eq(m.sim.units(0).size(), 2, "the herd stands on the field while placing")
 	check(m.sim.units(0).all(func(f): return f.deploy_ticks == 0), "already standing, not dropping in")
-	check(m.move(0, 0, 9 * T, 25 * T), "fox moves on its own side")
-	check(not m.move(0, 0, 9 * T, 8 * T), "not onto the enemy side")
-	check(not m.move(0, 0, 9 * T, 15 * T), "not into the river")
-	check(m.sim.zone_for(0, m.herds[0][1].x, m.herds[0][1].y) == "river", "the hippo starts in the river")
-	check(not m.move(0, 1, 9 * T, 22 * T), "and can't start on land")
-	check_eq(m.herd_index_at(0, 9 * T, 25 * T), 0, "tapping the fox finds it")
+	check(m.sim.units(0).all(func(f): return DraftMatch.can_start_at(0, f.y)), "new animals stand on the near half")
+	check(m.sim.units(1).all(func(f): return DraftMatch.can_start_at(1, f.y)), "the opponent's on the far half")
+	check(m.move(0, 0, 3 * T, 17 * T), "the fox moves")
+	check_eq(Vector2i(m.herds[0][0].x, m.herds[0][0].y), Vector2i(3 * T, 17 * T), "to the spot")
+	check(m.move(0, 0, 3 * T, 4 * T), "a move onto the other half...")
+	check(DraftMatch.can_start_at(0, m.herds[0][0].y), "...stops at the edge of your own")
+	check(not DraftMatch.can_start_at(0, BattleSim.MIDDLE), "nobody starts right on the middle line")
+	check_eq(m.herd_index_at(0, m.herds[0][0].x, m.herds[0][0].y), 0, "tapping the fox finds it")
 
 
 func test_fight_pays_the_pot_to_the_winner() -> void:
@@ -123,17 +126,39 @@ func test_fight_pays_the_pot_to_the_winner() -> void:
 	check_eq(m.acorns[0], before[0] + ante, "winner takes both antes")
 	check_eq(m.acorns[1], before[1] - ante, "loser loses its ante")
 	check_eq(m.pot, 0, "pot paid out")
-	check(int(m.last_round.dealt[0]) > 0, "the winning herd reached the dens")
+	var standing := int(m.last_round.standing[0])
+	check(standing > 0, "some of the winners still stand")
+	check_eq(m.last_round.hearts_lost, [0, m.heart_loss(standing, false)], "the loser loses hearts")
+	check_eq(m.hearts[1], int(GameData.draft_rules.hearts) - m.heart_loss(standing, false), "off its total")
+	check_eq(m.hearts[0], int(GameData.draft_rules.hearts), "the winner keeps them all")
 
 
-func test_dens_keep_their_damage_between_rounds() -> void:
+func test_heart_loss_grows_with_the_round_and_survivors() -> void:
+	var m := DraftMatch.new(1)
+	var rules := GameData.draft_rules
+	check_eq(m.heart_loss(0, false), int(rules.heart_loss_per_round), "round 1, nobody standing")
+	check_eq(m.heart_loss(3, false), int(rules.heart_loss_per_round) + 3 * int(rules.heart_loss_per_animal), "plus each animal still standing")
+	check_eq(m.heart_loss(3, true), int(rules.heart_loss_per_round), "folding saves the extra")
+	m.round_number = 4
+	check_eq(m.heart_loss(0, false), 4 * int(rules.heart_loss_per_round), "more each round")
+
+
+func test_an_empty_herd_loses_at_once() -> void:
+	var m := _with_herds(["red_fox"], [])
+	_start(m)
+	check_eq(m.phase, "round_over", "no fight without two herds")
+	check_eq(m.last_round.winner, 0, "the side with animals wins")
+	check_eq(m.last_round.standing, [1, 0], "the fox is still standing")
+
+
+func test_herds_and_hearts_carry_over() -> void:
 	var m := _with_herds(["red_fox"], [])
 	_fight(m)
-	var hurt := DraftMatch.den_health(m.sim, 1)
-	check(hurt < m.den_before[1], "dens took damage")
+	var hearts := m.hearts.duplicate()
+	check(hearts[1] < int(GameData.draft_rules.hearts), "hearts lost")
 	m.next_round()
 	check_eq(m.round_number, 2, "next round")
-	check_eq(DraftMatch.den_health(m.sim, 1), hurt, "the damage stays")
+	check_eq(m.hearts, hearts, "lost hearts stay lost")
 	check(m.sim.units(0).size() == 1 and m.sim.units(0)[0].hp == m.sim.units(0)[0].max_hp, "the herd stands ready again, fully healed")
 	check_eq(m.acorns[0], int(GameData.draft_rules.acorns_start) + int(GameData.draft_rules.ante) + int(GameData.draft_rules.acorns_per_round), "income each round")
 
@@ -154,13 +179,12 @@ func test_halftime_raise_and_fold() -> void:
 	check_eq(m.pot, pot + 2, "into the pot")
 	check(not m.check(1), "a raise can't be checked")
 	check(not m.fold(0), "only the one facing the raise can fold")
-	var den := DraftMatch.den_health(m.sim, 1)
 	check(m.fold(1), "fold")
 	check_eq(m.phase, "round_over", "folding ends the round")
 	check_eq(m.last_round.winner, 0, "the raiser wins")
 	check_eq(m.last_round.folded, 1, "noted who folded")
 	check_eq(m.acorns[0], acorns[0] + pot, "and takes the pot")
-	check_eq(DraftMatch.den_health(m.sim, 1), den, "the folder's dens take no more damage")
+	check_eq(m.last_round.hearts_lost, [0, m.heart_loss(0, true)], "the folder loses only the round's base hearts")
 
 
 func test_halftime_call_and_checks_resume_the_fight() -> void:
@@ -232,23 +256,59 @@ func test_rally_once_a_fight() -> void:
 
 func test_the_match_ends_after_the_last_round() -> void:
 	var m := DraftMatch.new(6)
-	for r in m.rounds():
+	for r in m.max_rounds():
 		_skip_draft(m)
 		_fight(m)
 		if m.phase == "round_over":
 			m.next_round()
 	check_eq(m.phase, "over", "over after the last round")
-	check_eq(m.round_number, m.rounds(), "every round played")
+	check_eq(m.round_number, m.max_rounds(), "every round played")
 	check_eq(m.match_winner(), DraftMatch.NO_WINNER, "nobody fought: a draw")
+	m.hearts = [3, 5]
+	check_eq(m.match_winner(), 1, "otherwise more hearts wins")
 
 
-func test_the_main_den_falling_ends_the_match() -> void:
-	var m := _with_herds(["asian_elephant", "black_rhino", "american_bison"], [])
-	for t in m.sim.towers(1):
-		t.hp = 50
+func test_running_out_of_hearts_ends_the_match() -> void:
+	var m := _with_herds(["brown_bear", "lion"], ["sewer_rats"])
+	m.hearts[1] = 2
 	_fight(m)
 	check_eq(m.phase, "over", "match over")
-	check_eq(m.match_winner(), 0, "the den breakers win")
+	check_eq(m.hearts[1], 0, "no hearts left (never below zero)")
+	check_eq(m.match_winner(), 0, "the other player wins")
+
+
+func test_raccoon_steals_acorns() -> void:
+	var m := _with_herds(["raccoon"], ["red_fox"])
+	m.acorns = [5, 5]
+	_start(m)
+	var ante := int(GameData.draft_rules.ante)
+	var amount := int(GameData.get_card("raccoon").ability.params.amount)
+	check_eq(m.acorns, [5 - ante + amount, 5 - ante - amount], "one Acorn changes hands as the fight starts")
+	check(m.take_events().any(func(e): return e.type == "steal" and e.team == 0), "and the screen hears about it")
+
+
+func test_the_watering_hole_draws_from_the_pool() -> void:
+	var pool := ["red_fox", "raccoon", "wild_boar", "brown_bear", "sewer_rats", "net"]
+	for seed_value in 5:
+		var m := DraftMatch.new(seed_value, {"pool": pool})
+		check(m.market.all(func(item): return pool.has(item.id)), "seed %d: only cards from the pool" % seed_value)
+
+
+func test_pool_from_a_collection() -> void:
+	var starters := GameData.cards_in_arena(0)
+	var pool := DraftMatch.pool_from_collection(func(id): return starters.has(id) or id == "tiger")
+	check(pool.has("tiger"), "cards you own")
+	check(starters.all(func(id): return pool.has(id)), "and your starters")
+	check(not pool.has("amur_leopard"), "but not cards you haven't found")
+	var tiny := DraftMatch.pool_from_collection(func(id): return id == "red_fox")
+	var animals := tiny.filter(func(id): return not GameData.is_tool(id)).size()
+	check(animals >= int(GameData.draft_rules.market_animals), "topped up to fill the Watering Hole")
+
+
+func test_card_levels_carry_into_the_fight() -> void:
+	var m := DraftMatch.new(1, {"levels": [{"red_fox": 6}, {}]})
+	check_eq(m.sim.level_of(0, "red_fox"), 6, "your level")
+	check_eq(m.sim.level_of(1, "red_fox"), GameData.start_level("common"), "theirs at the start level")
 
 
 func test_backing_your_herd() -> void:

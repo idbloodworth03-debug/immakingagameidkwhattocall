@@ -1,46 +1,32 @@
 class_name BattleSim
 extends RefCounted
-## The battle engine.
+## The battle engine: two herds fighting it out on an open field.
 ##
 ## It runs in fixed steps ("ticks", 20 per second) and uses whole numbers for
-## positions, health and time. That makes it deterministic: the same decks,
-## seed and releases always play out exactly the same way. Online play will
-## rely on this, because both phones run the battle and only the releases
-## travel over the network.
+## positions, health and time. That makes it deterministic: the same herds,
+## seed and actions always play out exactly the same way. Online play will
+## rely on this, because both phones run the fight and only the players'
+## actions travel over the network.
 ##
-## Positions are in thousandths of a tile. The field is 18 tiles wide and 30
-## tall with a river across the middle. Team 0 plays from the bottom, team 1
-## from the top. Nothing here draws anything; battle_field.gd does that.
+## Positions are in thousandths of a tile. The field is 16 tiles wide and 20
+## long; team 0 starts on the near half (the bottom), team 1 on the far half.
+## Animals go for the nearest enemy they can reach. Nothing here draws
+## anything (battle_field.gd does that), and Draft Duel (draft_match.gd) runs
+## the rounds around it.
 
 const TILE := 1000
-const WIDTH := 18 * TILE
-const HEIGHT := 30 * TILE
-const RIVER_TOP := 14 * TILE
-const RIVER_BOTTOM := 16 * TILE
-const BRIDGE_XS := [4 * TILE, 14 * TILE]
-const BRIDGE_HALF_WIDTH := 1 * TILE
-## Tower spots for team 0 (bottom). Team 1's are mirrored at the top.
-const TOWER_SPOTS := [
-	{"kind": "side", "x": 4000, "y": 25500},
-	{"kind": "side", "x": 14000, "y": 25500},
-	{"kind": "main", "x": 9000, "y": 28200},
-]
-## How far past the river you may release animals in a lane whose enemy
-## side den you've destroyed.
-const POCKET_DEPTH := 6 * TILE
-## Energy is stored in millionths so refilling stays exact in whole numbers.
-const ENERGY_UNIT := 1000000
-const DRAW := -1
-const RUNNING := -2
+const WIDTH := 16 * TILE
+const HEIGHT := 20 * TILE
+## The line between the two halves.
+const MIDDLE := HEIGHT / 2
 
 
-## Anything on the field that has health: animals, towers and food bait.
+## Anything on the field that has health: animals and food bait.
 class Fighter:
 	extends RefCounted
 	var uid := 0
 	var team := 0
-	var kind := "unit"            # "unit", "tower" or "bait"
-	var tower_kind := ""          # "side" or "main" for towers
+	var kind := "unit"            # "unit" or "bait"
 	var card: Dictionary = {}     # the card an animal came from
 	var level := 1
 	var x := 0
@@ -56,7 +42,7 @@ class Fighter:
 	var attack_range := 700
 	var speed := 50               # thousandths of a tile per tick
 	var flying := false
-	var targets := "ground"       # "ground", "air_ground" or "buildings"
+	var targets := "ground"       # "ground" or "air_ground"
 	var target: Fighter = null
 	var deploy_ticks := 0
 	var alive := true
@@ -97,17 +83,11 @@ class Fighter:
 		return kind == "unit"
 
 
-## Per-player battle state.
+## Per-player state.
 class Team:
 	extends RefCounted
-	var energy := 0
-	var hand: Array = []
-	var queue: Array = []
 	var levels: Dictionary = {}
-	var deployed := 0             # animals released this battle
 	var defeated := 0             # own animals defeated
-	var tower_damaged := false
-	var towers_destroyed := 0     # enemy towers this team has destroyed
 
 
 var rules: Dictionary
@@ -117,206 +97,65 @@ var fighters: Array = []
 var teams: Array = []
 ## Areas that keep working for a while, e.g. the Orangutan's fruit tree.
 var zones: Array = []
-## Things that happened (releases, hits, deaths, tool blasts) for the screen
-## to animate. The screen collects them with take_events().
+## Things that happened (hits, deaths, tool blasts) for the screen to
+## animate. The screen collects them with take_events().
 var events: Array = []
-var outcome := RUNNING
 var rng := RandomNumberGenerator.new()
 
-var match_ticks := 0
-var overtime_ticks := 0
-var double_energy_tick := 0
 var deploy_ticks := 0
-var sight := 0
 var melee := 0
 var _next_uid := 1
 var _next_group := 1
 
 
-## `decks` is two arrays of 8 card ids, `levels` two dictionaries of
-## card id -> level. The seed decides deck order and any random rolls.
-func _init(decks: Array, levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> void:
+## `levels` is two dictionaries of card id -> level (a card not listed
+## fights at its rarity's starting level). The seed decides the luck.
+func _init(levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> void:
 	rules = battle_rules if not battle_rules.is_empty() else GameData.battle_rules
 	rng.seed = seed_value
 	tps = int(rules.ticks_per_second)
-	match_ticks = roundi(float(rules.match_seconds) * tps)
-	overtime_ticks = roundi(float(rules.overtime_seconds) * tps)
-	double_energy_tick = match_ticks - roundi(float(rules.double_energy_seconds) * tps)
 	deploy_ticks = roundi(float(rules.deploy_seconds) * tps)
-	sight = roundi(float(rules.sight_range) * TILE)
 	melee = roundi(float(rules.melee_range) * TILE)
-
 	for team_index in 2:
 		var team := Team.new()
-		var deck: Array = decks[team_index].duplicate()
-		_shuffle(deck)
-		var hand_size := int(rules.hand_size)
-		team.hand = deck.slice(0, hand_size)
-		team.queue = deck.slice(hand_size)
 		team.levels = levels[team_index]
-		team.energy = int(rules.energy_start) * ENERGY_UNIT
 		teams.append(team)
-		for spot in TOWER_SPOTS:
-			fighters.append(_make_tower(team_index, spot))
 
 
 func _notification(what: int) -> void:
-	# Animals point at their targets; clear that so finished battles free their memory.
+	# Animals point at their targets; clear that so finished fights free their memory.
 	if what == NOTIFICATION_PREDELETE:
 		for f in fighters:
 			f.target = null
 
 
-# --- Info for the screen and the bot ---------------------------------------
-
-func is_over() -> bool:
-	return outcome != RUNNING
-
-
-func energy(team: int) -> float:
-	return float(teams[team].energy) / ENERGY_UNIT
-
-
-func seconds_left() -> float:
-	var end := match_ticks if tick < match_ticks else match_ticks + overtime_ticks
-	return maxf(0.0, float(end - tick) / tps)
-
-
-func in_overtime() -> bool:
-	return tick >= match_ticks
-
-
-func is_double_energy() -> bool:
-	return tick >= double_energy_tick
-
-
-func hand(team: int) -> Array:
-	return teams[team].hand
-
-
-func next_card(team: int) -> String:
-	return teams[team].queue[0] if not teams[team].queue.is_empty() else ""
-
+# --- Info ------------------------------------------------------------------
 
 func level_of(team: int, card_id: String) -> int:
 	return int(teams[team].levels.get(card_id, GameData.start_level(GameData.get_card(card_id).get("rarity", "common"))))
-
-
-func towers(team: int) -> Array:
-	return fighters.filter(func(f): return f.kind == "tower" and f.team == team)
 
 
 func units(team: int) -> Array:
 	return fighters.filter(func(f): return f.alive and f.kind == "unit" and f.team == team)
 
 
-## "own_side", "river" or "enemy_side", from `team`'s point of view.
-## Once a team destroys an enemy side den, the near part of that lane on the
-## enemy's side counts as its own side too (deeper placement).
-func zone_for(team: int, x: int, y: int) -> String:
-	if y > RIVER_TOP and y < RIVER_BOTTOM:
-		return "river"
-	var bottom := y >= RIVER_BOTTOM
-	if bottom == (team == 0):
-		return "own_side"
-	for pocket in pocket_rects(team):
-		if pocket.has_point(Vector2i(x, y)):
-			return "own_side"
-	return "enemy_side"
+## True if (x, y) is on `team`'s own half of the field.
+static func on_own_half(team: int, y: int) -> bool:
+	return y >= MIDDLE if team == 0 else y < MIDDLE
 
 
-## The enemy-side areas `team` has unlocked by destroying side dens.
-func pocket_rects(team: int) -> Array:
-	var pockets := []
-	for den in towers(1 - team):
-		if den.tower_kind != "side" or den.alive:
-			continue
-		var left: bool = den.x < WIDTH / 2
-		var x := 0 if left else WIDTH / 2
-		var y := RIVER_TOP - POCKET_DEPTH if team == 0 else RIVER_BOTTOM
-		pockets.append(Rect2i(x, y, WIDTH / 2, POCKET_DEPTH))
-	return pockets
-
-
-## Battle state in the form PlacementRules expects.
-func placement_state(team: int, zone: String) -> Dictionary:
-	var allies := []
+## How much of a team's herd is still standing: each animal counts its card's
+## cost (split among a pack) times the share of health it has left, in
+## thousandths of a cost point.
+func herd_value(team: int) -> int:
+	var total := 0
 	for f in units(team):
-		allies.append(f.card)
-	var t: Team = teams[team]
-	return {
-		"energy": energy(team),
-		"elapsed": float(tick) / tps,
-		"zone": zone,
-		"allies": allies,
-		"deployed_count": t.deployed,
-		"allies_defeated": t.defeated,
-		"own_tower_damaged": t.tower_damaged,
-	}
+		var count := maxi(1, int(f.card.get("count", 1)))
+		total += int(f.card.cost) * 1000 * f.hp / maxi(1, f.max_hp) / count
+	return total
 
 
-## Why the card in `hand_index` can't be played at (x, y). Empty means it can.
-func release_problems(team: int, hand_index: int, x: int, y: int) -> Array:
-	if is_over():
-		return ["The battle is over"]
-	if hand_index < 0 or hand_index >= teams[team].hand.size():
-		return ["No card there"]
-	var card := GameData.get_card(teams[team].hand[hand_index])
-	return PlacementRules.blocking_reasons(card, placement_state(team, zone_for(team, x, y)))
-
-
-## Plays a card from the hand. Returns false (and changes nothing) if it
-## isn't allowed. The played card goes to the back of the deck.
-func release(team: int, hand_index: int, x: int, y: int) -> bool:
-	if not release_problems(team, hand_index, x, y).is_empty():
-		return false
-	x = clampi(x, 0, WIDTH)
-	y = clampi(y, 0, HEIGHT)
-	var t: Team = teams[team]
-	var id: String = t.hand[hand_index]
-	var card := GameData.get_card(id)
-	t.energy -= int(card.cost) * ENERGY_UNIT
-	t.queue.push_back(id)
-	t.hand[hand_index] = t.queue.pop_front()
-	events.append({"type": "release", "team": team, "card": id, "x": x, "y": y})
-	if card.kind == "tool":
-		ToolEffects.use(self, team, card, level_of(team, id), x, y)
-	else:
-		spawn(team, id, x, y)
-		t.deployed += 1
-	return true
-
-
-## Requirement problems for a hand card, ignoring energy and where it's aimed.
-func requirement_problems(team: int, hand_index: int) -> Array:
-	var card := GameData.get_card(teams[team].hand[hand_index])
-	var state := placement_state(team, PlacementRules.allowed_zones(card)[0])
-	state.energy = 1000.0
-	return PlacementRules.blocking_reasons(card, state)
-
-
-## True when no card in the hand can be played because of its requirements
-## (not counting energy). Then a card may be swapped out for free, so a hand
-## full of picky cards never gets stuck.
-func can_swap(team: int) -> bool:
-	for i in teams[team].hand.size():
-		if requirement_problems(team, i).is_empty():
-			return false
-	return true
-
-
-## Sends a hand card to the back of the deck. Only allowed when can_swap().
-func swap(team: int, hand_index: int) -> bool:
-	var t: Team = teams[team]
-	if is_over() or not can_swap(team) or hand_index < 0 or hand_index >= t.hand.size():
-		return false
-	t.queue.push_back(t.hand[hand_index])
-	t.hand[hand_index] = t.queue.pop_front()
-	events.append({"type": "swap", "team": team})
-	return true
-
-
-# --- Running the battle ----------------------------------------------------
+# --- Running the fight -----------------------------------------------------
 
 ## Returns the events since the last call and forgets them.
 func take_events() -> Array:
@@ -325,14 +164,11 @@ func take_events() -> Array:
 	return taken
 
 
-## Advances the battle by one tick.
+## Advances the fight by one tick.
 func step() -> void:
-	if is_over():
-		return
 	if events.size() > 2000:
 		events.clear()  # nobody is collecting them (tests, simulations)
 	tick += 1
-	_refill_energy()
 	for f in fighters:
 		f.prev_x = f.x
 		f.prev_y = f.y
@@ -342,25 +178,9 @@ func step() -> void:
 	_update_zones()
 	_separate()
 	for f in fighters:
-		if not f.alive and f.kind != "tower":
+		if not f.alive:
 			f.target = null  # two animals aiming at each other would never be freed
-	fighters = fighters.filter(func(f): return f.alive or f.kind == "tower")
-	_check_end()
-
-
-func _refill_energy() -> void:
-	var regen_ms := roundi(float(rules.energy_regen_seconds) * 1000.0)
-	var per_tick := ENERGY_UNIT * 1000 / (regen_ms * tps)
-	if is_double_energy():
-		per_tick *= 2
-	var cap := int(rules.energy_max) * ENERGY_UNIT
-	for team_index in 2:
-		var boost := 0
-		for f in units(team_index):
-			if f.ability_id() == "energy_boost" and f.deploy_ticks <= 0:
-				boost += int(f.param("pct"))
-		var t: Team = teams[team_index]
-		t.energy = mini(cap, t.energy + per_tick * (100 + boost) / 100)
+	fighters = fighters.filter(func(f): return f.alive)
 
 
 func _update(f: Fighter) -> void:
@@ -382,14 +202,14 @@ func _update(f: Fighter) -> void:
 		_move_burrowed(f)
 		return
 	_choose_target(f)
-	if f.target != null and in_range(f, f.target):
+	if f.target == null:
+		return
+	if in_range(f, f.target):
 		if f.cooldown <= 0:
 			_attack(f, f.target)
 			f.cooldown = f.hit_ticks * 100
-	elif f.is_unit():
-		var goal: Fighter = f.target if f.target != null else nearest_enemy_tower(f)
-		if goal != null:
-			_move_toward(f, _waypoint(f, Vector2i(goal.x, goal.y)), current_speed(f))
+	else:
+		_move_toward(f, Vector2i(f.target.x, f.target.y), current_speed(f))
 
 
 func _tick_effects(f: Fighter) -> void:
@@ -434,47 +254,6 @@ func _update_zones() -> void:
 	zones = zones.filter(func(z): return z.ticks > 0)
 
 
-func _check_end() -> void:
-	var main_alive := [false, false]
-	for f in fighters:
-		if f.kind == "tower" and f.tower_kind == "main" and f.alive:
-			main_alive[f.team] = true
-	if not main_alive[0] and not main_alive[1]:
-		outcome = DRAW
-	elif not main_alive[0]:
-		outcome = 1
-	elif not main_alive[1]:
-		outcome = 0
-	if is_over():
-		return
-
-	var crowns_0: int = teams[0].towers_destroyed
-	var crowns_1: int = teams[1].towers_destroyed
-	if tick >= match_ticks and crowns_0 != crowns_1:
-		# End of regular time, or a tower falls in sudden-death overtime.
-		outcome = 0 if crowns_0 > crowns_1 else 1
-	elif tick >= match_ticks + overtime_ticks:
-		# Still tied after overtime: the side whose weakest tower is healthier
-		# wins. If those are level, compare the next weakest, and so on.
-		var hp_0 := _tower_hps(0)
-		var hp_1 := _tower_hps(1)
-		outcome = DRAW
-		for i in mini(hp_0.size(), hp_1.size()):
-			if hp_0[i] != hp_1[i]:
-				outcome = 0 if hp_0[i] > hp_1[i] else 1
-				break
-
-
-## Hitpoints of a team's standing towers, weakest first.
-func _tower_hps(team: int) -> Array:
-	var hps := []
-	for f in towers(team):
-		if f.alive:
-			hps.append(f.hp)
-	hps.sort()
-	return hps
-
-
 # --- Targeting and movement ------------------------------------------------
 
 func can_target(f: Fighter, t: Fighter) -> bool:
@@ -482,10 +261,6 @@ func can_target(f: Fighter, t: Fighter) -> bool:
 		return false
 	if t.kind == "bait":
 		return f.is_unit() and not f.is_flying()
-	if t.kind == "tower":
-		return true
-	if f.targets == "buildings":
-		return false
 	if t.stealthed and t.revealed <= 0:
 		return false
 	if t.memory.get("burrowing", false) or int(t.memory.get("playing_dead", 0)) > 0:
@@ -501,46 +276,23 @@ func _choose_target(f: Fighter) -> void:
 	f.target = _find_target(f)
 
 
+## Food bait close by first; then the nearest enemy in sight; failing that,
+## the nearest enemy anywhere, so nobody stands around.
 func _find_target(f: Fighter) -> Fighter:
-	if f.kind == "tower":
-		var best: Fighter = null
-		var best_dist := 1 << 40
-		for t in fighters:
-			if t.is_unit() and can_target(f, t):
-				var d := edge_distance(f, t)
-				if d <= f.attack_range and d < best_dist:
-					best = t
-					best_dist = d
-		return best
-
-	# Food bait pulls in nearby enemy ground animals first.
 	if not f.is_flying():
 		for t in fighters:
 			if t.kind == "bait" and t.alive and t.team != f.team and dist(f, t) <= t.lure_radius:
 				return t
-
 	var nearest: Fighter = null
 	var nearest_dist := 1 << 40
 	for t in fighters:
 		if t.kind == "bait" or not can_target(f, t):
 			continue
 		var d := edge_distance(f, t)
-		if d <= sight and d < nearest_dist:
+		if d < nearest_dist:
 			nearest = t
 			nearest_dist = d
-	return nearest if nearest != null else nearest_enemy_tower(f)
-
-
-func nearest_enemy_tower(f: Fighter) -> Fighter:
-	var best: Fighter = null
-	var best_dist := 1 << 40
-	for t in fighters:
-		if t.kind == "tower" and t.alive and t.team != f.team:
-			var d := dist(f, t)
-			if d < best_dist:
-				best = t
-				best_dist = d
-	return best
+	return nearest
 
 
 func in_range(f: Fighter, t: Fighter) -> bool:
@@ -555,32 +307,6 @@ func current_speed(f: Fighter) -> int:
 		pct += f.rage_speed_pct
 	pct += BattleAbilities.speed_bonus_pct(self, f)
 	return maxi(0, f.speed * maxi(0, pct) / 100)
-
-
-## Where a ground animal should walk next to reach `goal`: straight there if
-## it's on the same bank, otherwise to the nearest bridge and across.
-## Flyers, swimmers, burrowers and leapers go straight.
-func _waypoint(f: Fighter, goal: Vector2i) -> Vector2i:
-	if f.is_flying() or f.has_tag("aquatic") or f.ability_id() == "jump_river":
-		return goal
-	var my_bank := bank(f.y)
-	var goal_bank := bank(goal.y)
-	if goal_bank == 0 and absi(goal.x - nearest_bridge(goal.x)) > BRIDGE_HALF_WIDTH:
-		# The goal is in the water: walk to the nearest shore point.
-		goal = Vector2i(goal.x, RIVER_BOTTOM if f.y > goal.y else RIVER_TOP)
-		goal_bank = my_bank
-	if my_bank != 0 and goal_bank == my_bank:
-		return goal
-	var bridge := nearest_bridge(f.x)
-	var lane := BRIDGE_HALF_WIDTH - 250
-	var heading_down := goal.y > f.y
-	if my_bank == 0 or absi(f.x - bridge) <= lane:
-		var far_bank := RIVER_BOTTOM + 400 if heading_down else RIVER_TOP - 400
-		if goal_bank == 0:
-			return goal
-		return Vector2i(clampi(f.x, bridge - lane, bridge + lane), far_bank)
-	var near_bank := RIVER_TOP - 400 if heading_down else RIVER_BOTTOM + 400
-	return Vector2i(bridge, near_bank)
 
 
 func _move_toward(f: Fighter, goal: Vector2i, step_size: int) -> void:
@@ -600,20 +326,26 @@ func _move_toward(f: Fighter, goal: Vector2i, step_size: int) -> void:
 	BattleAbilities.on_moved(self, f)
 
 
-## Burrowing animals travel underground straight to the nearest enemy tower
-## and pop up as soon as anything they can attack is close.
+## Burrowing animals travel underground straight at the nearest enemy and
+## pop up as soon as one they can attack is close.
 func _move_burrowed(f: Fighter) -> void:
+	var goal: Fighter = null
+	var best := 1 << 40
 	for t in fighters:
-		if t.alive and t.team != f.team and (t.kind == "tower" or (t.is_unit() and not t.is_flying())) and edge_distance(f, t) <= TILE:
-			f.memory.burrowing = false
-			events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
-			return
-	var goal := nearest_enemy_tower(f)
+		if t.alive and t.team != f.team and t.is_unit() and not t.is_flying():
+			var d := edge_distance(f, t)
+			if d <= TILE:
+				f.memory.burrowing = false
+				events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
+				return
+			if d < best:
+				goal = t
+				best = d
 	if goal != null:
 		_move_toward(f, Vector2i(goal.x, goal.y), current_speed(f))
 
 
-## Pushes overlapping animals apart and keeps walkers out of towers and water.
+## Pushes overlapping animals apart and keeps everyone on the field.
 func _separate() -> void:
 	var walkers: Array = fighters.filter(func(f): return f.alive and f.is_unit() and not f.memory.get("burrowing", false))
 	for i in walkers.size():
@@ -639,38 +371,9 @@ func _separate() -> void:
 			a.y -= dy * push / d
 			b.x += dx * push / d
 			b.y += dy * push / d
-
 	for f in walkers:
-		if not f.is_flying():
-			for t in fighters:
-				if t.kind == "tower" and t.alive:
-					_push_out(f, t)
 		f.x = clampi(f.x, f.radius, WIDTH - f.radius)
 		f.y = clampi(f.y, f.radius, HEIGHT - f.radius)
-		_keep_out_of_water(f)
-
-
-func _push_out(f: Fighter, solid: Fighter) -> void:
-	var min_d := f.radius + solid.radius
-	var dx := f.x - solid.x
-	var dy := f.y - solid.y
-	if absi(dx) >= min_d or absi(dy) >= min_d:
-		return
-	var d := isqrt(dx * dx + dy * dy)
-	if d >= min_d:
-		return
-	if d == 0:
-		dx = 1
-		d = 1
-	f.x = solid.x + dx * min_d / d
-	f.y = solid.y + dy * min_d / d
-
-
-func _keep_out_of_water(f: Fighter) -> void:
-	if f.is_flying() or f.has_tag("aquatic") or f.ability_id() == "jump_river":
-		return
-	if bank(f.y) == 0 and absi(f.x - nearest_bridge(f.x)) > BRIDGE_HALF_WIDTH:
-		f.y = RIVER_TOP if f.y < (RIVER_TOP + RIVER_BOTTOM) / 2 else RIVER_BOTTOM
 
 
 # --- Fighting --------------------------------------------------------------
@@ -680,7 +383,7 @@ func _attack(f: Fighter, t: Fighter) -> void:
 	if f.rage > 0:
 		amount = amount * (100 + f.rage_damage_pct) / 100
 	amount = BattleAbilities.outgoing_damage(self, f, t, amount)
-	# Draft Duel adds some luck to every hit; the classic battle has none.
+	# Some luck in every hit, if the rules ask for it.
 	var variance := int(rules.get("damage_variance_pct", 0))
 	if variance > 0:
 		amount = amount * (100 + rng.randi_range(-variance, variance)) / 100
@@ -704,8 +407,6 @@ func deal_damage(t: Fighter, amount: int, source: Fighter) -> void:
 		return
 	t.hp -= amount
 	t.memory.last_combat = tick
-	if t.kind == "tower":
-		teams[t.team].tower_damaged = true
 	if t.hp <= 0:
 		_defeat(t, source)
 	else:
@@ -726,16 +427,7 @@ func _defeat(t: Fighter, source: Fighter) -> void:
 	t.alive = false
 	t.hp = 0
 	events.append({"type": "death", "uid": t.uid, "kind": t.kind, "team": t.team, "x": t.x, "y": t.y})
-	if t.kind == "tower":
-		teams[1 - t.team].towers_destroyed += 1
-		if t.tower_kind == "main":
-			# The main tower takes the side towers down with it.
-			for other in towers(t.team):
-				if other.alive:
-					other.alive = false
-					other.hp = 0
-					teams[1 - t.team].towers_destroyed += 1
-	elif t.is_unit():
+	if t.is_unit():
 		teams[t.team].defeated += 1
 		BattleAbilities.on_defeated(self, t, source)
 
@@ -765,14 +457,13 @@ func knock_back(t: Fighter, from_x: int, from_y: int, distance: int) -> void:
 		d = 1
 	t.x = clampi(t.x + dx * distance / d, t.radius, WIDTH - t.radius)
 	t.y = clampi(t.y + dy * distance / d, t.radius, HEIGHT - t.radius)
-	_keep_out_of_water(t)
 
 
 ## Enemies of `team` within `radius` of a point (edges count).
-func enemies_near(team: int, px: int, py: int, radius: int, include_towers := false) -> Array:
+func enemies_near(team: int, px: int, py: int, radius: int) -> Array:
 	var found := []
 	for f in fighters:
-		if f.alive and f.team != team and (f.is_unit() or (include_towers and f.kind == "tower")):
+		if f.alive and f.team != team and f.is_unit():
 			if dist_to_point(f, px, py) <= radius + f.radius:
 				found.append(f)
 	return found
@@ -788,7 +479,7 @@ func allies_near(team: int, px: int, py: int, radius: int) -> Array:
 
 # --- Creating fighters -----------------------------------------------------
 
-## Puts an animal card's animals on the field (no energy or hand checks).
+## Puts an animal card's animals on the field.
 func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	var card := GameData.get_card(card_id)
 	var count := int(card.get("count", 1))
@@ -837,28 +528,6 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 	return f
 
 
-func _make_tower(team: int, spot: Dictionary) -> Fighter:
-	var conf: Dictionary = rules.towers[spot.kind]
-	var f := Fighter.new()
-	f.uid = _next_uid
-	_next_uid += 1
-	f.team = team
-	f.kind = "tower"
-	f.tower_kind = spot.kind
-	f.x = spot.x
-	f.y = spot.y if team == 0 else HEIGHT - int(spot.y)
-	f.prev_x = f.x
-	f.prev_y = f.y
-	f.max_hp = int(conf.hp)
-	f.hp = f.max_hp
-	f.damage = int(conf.damage)
-	f.hit_ticks = maxi(1, roundi(float(conf.hit_speed) * tps))
-	f.attack_range = roundi(float(conf.range) * TILE)
-	f.radius = roundi(float(conf.size) * TILE)
-	f.targets = "air_ground"
-	return f
-
-
 ## Food bait from the Food Bait tool.
 func make_bait(team: int, x: int, y: int, hp: int, ticks: int, lure_radius: int) -> Fighter:
 	var f := Fighter.new()
@@ -884,38 +553,21 @@ func add_zone(zone: Dictionary) -> void:
 	zones.append(zone)
 
 
-## Takes every animal and food bait off the field and ends lingering areas.
-## Dens keep their health. Draft Duel clears the field between rounds.
+## Takes everything off the field and ends lingering areas, ready for the
+## next round.
 func clear_units() -> void:
 	for f in fighters:
 		f.target = null
-	fighters = fighters.filter(func(f): return f.kind == "tower")
-	for t in fighters:
-		t.cooldown = 0
+	fighters.clear()
 	zones.clear()
 
 
-## How much of a team's herd is still standing: each animal counts its card's
-## cost (split among a pack) times the share of health it has left, in
-## thousandths of a cost point.
-func herd_value(team: int) -> int:
-	var total := 0
-	for f in units(team):
-		var count := maxi(1, int(f.card.get("count", 1)))
-		total += int(f.card.cost) * 1000 * f.hp / maxi(1, f.max_hp) / count
-	return total
-
-
-## A separate copy of the battle as it stands, to try out what happens next
+## A separate copy of the fight as it stands, to try out what happens next
 ## (Draft Duel's Bookie plays fights out ahead to set its odds). Running the
-## copy never changes this battle.
+## copy never changes this fight.
 func clone() -> BattleSim:
-	var copy := BattleSim.new([[], []], [{}, {}], 0, rules)
+	var copy := BattleSim.new([{}, {}], 0, rules)
 	copy.tick = tick
-	copy.outcome = outcome
-	copy.match_ticks = match_ticks
-	copy.overtime_ticks = overtime_ticks
-	copy.double_energy_tick = double_energy_tick
 	copy._next_uid = _next_uid
 	copy._next_group = _next_group
 	copy.rng.seed = rng.seed
@@ -959,7 +611,7 @@ static func unit_radius(card: Dictionary) -> int:
 	return 450
 
 
-## Where each animal of a group stands, relative to the release point.
+## Where each animal of a group stands, relative to its spot.
 static func formation(index: int, count: int) -> Vector2i:
 	match count:
 		2:
@@ -971,34 +623,13 @@ static func formation(index: int, count: int) -> Vector2i:
 	return Vector2i.ZERO
 
 
-func _shuffle(list: Array) -> void:
-	for i in range(list.size() - 1, 0, -1):
-		var j := rng.randi_range(0, i)
-		var held: Variant = list[i]
-		list[i] = list[j]
-		list[j] = held
-
-
 # --- Geometry --------------------------------------------------------------
 
-## The middle of the tile under a point. The player's releases snap to it.
+## The middle of the tile under a point. Placing animals snaps to it.
 static func tile_center(x: int, y: int) -> Vector2i:
 	var col := clampi(x / TILE, 0, WIDTH / TILE - 1)
 	var row := clampi(y / TILE, 0, HEIGHT / TILE - 1)
 	return Vector2i(col * TILE + TILE / 2, row * TILE + TILE / 2)
-
-
-## 1 = bottom bank, -1 = top bank, 0 = in the river band.
-static func bank(y: int) -> int:
-	if y >= RIVER_BOTTOM:
-		return 1
-	if y <= RIVER_TOP:
-		return -1
-	return 0
-
-
-static func nearest_bridge(x: int) -> int:
-	return BRIDGE_XS[0] if absi(x - BRIDGE_XS[0]) <= absi(x - BRIDGE_XS[1]) else BRIDGE_XS[1]
 
 
 static func isqrt(n: int) -> int:
@@ -1024,12 +655,10 @@ static func dist_to_point(f: Fighter, px: int, py: int) -> int:
 	return isqrt((f.x - px) * (f.x - px) + (f.y - py) * (f.y - py))
 
 
-## A number that changes if anything about the battle differs. Two copies of
-## the same battle must give the same checksum (online play depends on it).
+## A number that changes if anything about the fight differs. Two copies of
+## the same fight must give the same checksum (online play depends on it).
 func checksum() -> int:
-	var total := tick * 31 + outcome
+	var total := tick * 31
 	for f in fighters:
 		total = (total * 131 + f.uid * 7 + f.x * 3 + f.y * 5 + f.hp) % 2147483647
-	for t in teams:
-		total = (total * 17 + t.energy) % 2147483647
 	return total

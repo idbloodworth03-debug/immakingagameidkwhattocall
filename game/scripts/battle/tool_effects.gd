@@ -49,12 +49,11 @@ static func use(sim: BattleSim, team: int, card: Dictionary, level: int, x: int,
 				sim.events.append({"type": "sleep", "x": closest.x, "y": closest.y})
 
 
-## Damage to every enemy in the area; towers take a share.
+## Damage to every enemy in the area.
 static func _blast(sim: BattleSim, team: int, card: Dictionary, level: int, x: int, y: int, radius: int) -> void:
 	var damage := _scaled(card, level, card.stats.damage)
-	var tower_damage := damage * int(card.stats.get("tower_damage_pct", 0)) / 100
-	for enemy in sim.enemies_near(team, x, y, radius, true):
-		sim.deal_damage(enemy, tower_damage if enemy.kind == "tower" else damage, null)
+	for enemy in sim.enemies_near(team, x, y, radius):
+		sim.deal_damage(enemy, damage, null)
 
 
 static func _scaled(card: Dictionary, level: int, value: Variant) -> int:

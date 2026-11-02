@@ -7,13 +7,15 @@ extends RefCounted
 ## Rattlesnake, Platypus, King Cobra and Komodo Dragon all use "poison"), so
 ## each type is written once. BattleSim calls these hooks at the right moments.
 
+## "acorn_steal" does nothing in the fight itself: Draft Duel steals the
+## Acorns when the fight starts (draft_match.gd).
 const KNOWN := [
-	"bonus_vs_tag", "burrow", "charge", "colony_bonus", "damage_reduction", "death_cloud",
-	"deploy_haste", "dive_bomb", "dodge", "energy_boost", "energy_steal", "fearless", "grab",
+	"acorn_steal", "bonus_vs_tag", "burrow", "charge", "colony_bonus", "damage_reduction",
+	"death_cloud", "deploy_haste", "dive_bomb", "dodge", "fearless", "grab",
 	"habitat_bonus", "heal_aura", "heal_burst", "heal_on_death", "heal_on_kill",
-	"invulnerable_once", "jump_river", "knockback", "pack_bonus", "poison", "pounce",
+	"invulnerable_once", "knockback", "pack_bonus", "poison", "pounce",
 	"protect_aura", "pull", "pulse_stun", "rage_aura", "regenerate", "revive_once", "shield",
-	"slow_burst", "slow_on_hit", "splash", "stealth", "stun_hits", "trample", "water_speed",
+	"slow_burst", "slow_on_hit", "splash", "stealth", "stun_hits", "trample",
 ]
 
 
@@ -38,7 +40,7 @@ static func tiles(value: Variant) -> int:
 # --- Placing an animal -----------------------------------------------------
 
 ## Right after an animal appears. `first` is true for the first animal of a
-## group, so once-per-card effects (like stealing energy) happen once.
+## group, so once-per-card effects (like a heal burst) happen once.
 static func on_spawn(sim: BattleSim, f: BattleSim.Fighter, first: bool) -> void:
 	match f.ability_id():
 		"stealth":
@@ -49,11 +51,6 @@ static func on_spawn(sim: BattleSim, f: BattleSim.Fighter, first: bool) -> void:
 			f.memory.burrowing = true
 		"deploy_haste":
 			f.memory.haste = ticks(sim, f.param("duration"))
-		"energy_steal":
-			if first:
-				var enemy: BattleSim.Team = sim.teams[1 - f.team]
-				enemy.energy = maxi(0, enemy.energy - int(f.param("amount")) * BattleSim.ENERGY_UNIT)
-				sim.events.append({"type": "steal", "team": f.team, "x": f.x, "y": f.y})
 		"heal_burst":
 			if first:
 				for ally in sim.allies_near(f.team, f.x, f.y, tiles(f.param("radius"))):
@@ -168,9 +165,6 @@ static func speed_bonus_pct(_sim: BattleSim, f: BattleSim.Fighter) -> int:
 	if int(f.memory.get("haste", 0)) > 0:
 		pct += int(f.param("speed_pct"))
 	match f.ability_id():
-		"water_speed":
-			if BattleSim.bank(f.y) == 0:
-				pct += int(f.param("pct"))
 		"charge":
 			if int(f.memory.get("run", 0)) >= tiles(f.param("distance")):
 				pct += 100
@@ -185,14 +179,13 @@ static func on_moved(sim: BattleSim, f: BattleSim.Fighter) -> void:
 				if not enemy.is_flying():
 					sim.deal_damage(enemy, per_tick, f)
 		"knockback":
-			# Tower-chasers like the Bison shove animals out of their way.
-			if f.targets == "buildings":
-				var cooldowns: Dictionary = f.memory.get("shoved", {})
-				for enemy in sim.enemies_near(f.team, f.x, f.y, f.radius + 150):
-					if not enemy.is_flying() and int(cooldowns.get(enemy.uid, -1)) <= sim.tick:
-						sim.knock_back(enemy, f.x, f.y, tiles(f.param("distance")))
-						cooldowns[enemy.uid] = sim.tick + sim.tps
-				f.memory.shoved = cooldowns
+			# Charging animals like the Bison shove anything in their way.
+			var cooldowns: Dictionary = f.memory.get("shoved", {})
+			for enemy in sim.enemies_near(f.team, f.x, f.y, f.radius + 150):
+				if enemy != f.target and not enemy.is_flying() and int(cooldowns.get(enemy.uid, -1)) <= sim.tick:
+					sim.knock_back(enemy, f.x, f.y, tiles(f.param("distance")))
+					cooldowns[enemy.uid] = sim.tick + sim.tps
+			f.memory.shoved = cooldowns
 
 
 # --- Attacking -------------------------------------------------------------
@@ -223,7 +216,8 @@ static func outgoing_damage(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.F
 			if t.has_tag(String(f.param("tag"))):
 				pct += int(f.param("damage_pct"))
 		"habitat_bonus":
-			if absi(f.y - (BattleSim.RIVER_TOP + BattleSim.RIVER_BOTTOM) / 2) <= 2 * BattleSim.TILE:
+			# Fiercer on its own half of the field, like a hippo guarding its pool.
+			if BattleSim.on_own_half(f.team, f.y):
 				pct += int(f.param("damage_pct"))
 		"colony_bonus":
 			if _group_complete(sim, f):
@@ -292,7 +286,7 @@ static func incoming_damage(sim: BattleSim, t: BattleSim.Fighter, amount: int, s
 			if t.param("below_hp_pct", 0) != 0:
 				applies = t.hp * 100 < t.max_hp * int(t.param("below_hp_pct"))
 			if String(t.param("vs", "")) == "ranged":
-				applies = source == null or source.kind == "tower" or source.attack_range > 1500
+				applies = source == null or source.attack_range > 1500
 			if applies:
 				amount = amount * (100 - int(t.param("pct"))) / 100
 		"colony_bonus":

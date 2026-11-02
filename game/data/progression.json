@@ -2,8 +2,6 @@
   "_note": "Tuning numbers for progression. Arrays marked 'by target level' are indexed by the level you are upgrading TO.",
   "starting_gold": 500,
   "starting_gems": 100,
-  "deck_size": 8,
-  "starter_deck": ["sewer_rats", "raccoon", "red_fox", "gray_squirrel", "peregrine_falcon", "cheetah", "net", "air_horn"],
   "cage_slots": 4,
 
   "card_max_level": 14,

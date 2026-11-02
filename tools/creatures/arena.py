@@ -1,21 +1,21 @@
-"""Renders the battle arenas: the ground the animals fight on, with its
-river, bridges, fence and scenery, one picture per arena, in the same 3D
-cartoon style as the animals and dens.
+"""Renders the battle arenas: an open field the herds fight on, with a
+fence around it and scenery outside, one picture per arena, in the same 3D
+cartoon style as the animals.
 
     python arena.py [--only whispering_woods] [--ppt 56] [--samples 32]
 
 Writes game/art/arenas/<arena>.webp and arenas.json (what part of the
 field each picture covers).
 
-The game draws the field flat, one square per tile, while the animals and
-dens are rendered from a camera 50 degrees up. The arena uses that same
-camera, with the ground stretched away from it (by 1 / sin 50) so the tiles
-still come out square. Trees, rocks and bridges are seen from the same
-angle as the animals, and every tile lands exactly where the game puts it.
+The game draws the field flat, one square per tile, while the animals are
+rendered from a camera 50 degrees up. The arena uses that same camera, with
+the ground stretched away from it (by 1 / sin 50) so the tiles still come
+out square. Trees, rocks and the fence are seen from the same angle as the
+animals, and every tile lands exactly where the game puts it.
 
-The ground's colors (grass, paths, banks, flowers) are painted into a
-texture with numpy; Blender adds the river channel, water, bridges, fence
-and scenery, and the light and shadows.
+The ground's colors (grass, tile stripes, the worn middle line and ring,
+flowers) are painted into a texture with numpy; Blender adds the fence and
+scenery, and the light and shadows.
 """
 import argparse
 import json
@@ -43,22 +43,16 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(ROOT, "game", "art", "arenas")
 SIN = math.sin(math.radians(ELEVATION))
 
-# The field, in tiles (as in battle_sim.gd): 18 wide, 30 long, y = 0 at the
-# far end. The river and bridges.
-FIELD_W, FIELD_H = 18.0, 30.0
-RIVER = (14.0, 16.0)
-BRIDGES = (4.0, 14.0)
-BRIDGE_HALF = 1.0
-DENS = [(4.0, 25.5, 1.5), (14.0, 25.5, 1.5), (9.0, 28.2, 1.9), (4.0, 4.5, 1.5), (14.0, 4.5, 1.5), (9.0, 1.8, 1.9)]
-# The picture covers these tiles: wide margins at the sides (phones show more
-# or less of them), the room above the far end the tall dens stand up into.
-X0, X1 = -6.0, 24.0
-T0, T1 = -5.0, 32.0
+# The field, in tiles (as in battle_sim.gd): 16 wide, 20 long, y = 0 at the
+# far end.
+FIELD_W, FIELD_H = 16.0, 20.0
+# The picture covers these tiles: wide margins all around (phones show more
+# or less of them).
+X0, X1 = -6.0, 22.0
+T0, T1 = -4.5, 24.0
 # The ground mesh and its color texture reach a bit past the picture.
 GX0, GX1, GT0, GT1 = X0 - 2.0, X1 + 2.0, T0 - 4.0, T1 + 2.0
 TEX_PPT = 32
-CHANNEL_DEPTH = 0.42
-WATER_Z = -0.14
 
 
 def wy(t):
@@ -75,8 +69,8 @@ def hexa(h):
 # --- Themes ------------------------------------------------------------------------------
 
 # grass: light and dark ground colors; edge: the ground outside the fence;
-# path, bank, water: their colors; props: scenery kinds and how often they
-# show up; flowers: colors dotted in the grass.
+# path: worn ground (the middle line and ring); props: scenery kinds and how
+# often they show up; flowers: colors dotted in the grass.
 THEMES = {
     "rescue_center": dict(grass=("#78b84f", "#5c9a3c"), edge="#4f8a35", path="#c9a46a", bank="#a88a5a",
                           water=("#3f9fd8", "#6fc4ee"), fence="#b07a45",
@@ -181,29 +175,14 @@ def paint_ground(theme, rng):
     out_mix = (~inside)[..., None] * (0.55 + 0.25 * np.clip(n2, -1, 1)[..., None])
     img = img * (1 - out_mix) + edge * out_mix
 
-    # Worn dirt: the two lanes, a path from each main den to its side dens,
-    # and a clearing under every den.
+    # Worn grass across the middle and in a ring around the center spot, so
+    # each side's half is easy to see.
     n3 = _noise((h, w), TEX_PPT * 0.9, rng) * 0.22
-    lane = np.minimum(np.abs(x - BRIDGES[0]), np.abs(x - BRIDGES[1]))
-    lanes = (lane < 0.55 + n3) & (t > 2.2) & (t < 27.8)
-    paths = lanes.astype(float)
-    for main_t, side_t in ((28.2, 25.5), (1.8, 4.5)):
-        for side_x in BRIDGES:
-            paths = np.maximum(paths, _segment(x, t, (9.0, main_t), (side_x, side_t)) < 0.42 + n3)
-    for dx, dt, r in DENS:
-        paths = np.maximum(paths, np.hypot(x - dx, t - dt) < r + n3 * 1.5)
-    soft = ndimage.gaussian_filter(paths, TEX_PPT * 0.08)
+    line = np.abs(t - FIELD_H / 2) < 0.12 + n3 * 0.25
+    ring = np.abs(np.hypot(x - FIELD_W / 2, t - FIELD_H / 2) - 2.2) < 0.13 + n3 * 0.25
+    marks = ndimage.gaussian_filter(((line | ring) & inside).astype(float), TEX_PPT * 0.05)
     path_col = hexa(theme["path"]) * (1 + 0.08 * n2[..., None])
-    img = img * (1 - soft[..., None]) + path_col * soft[..., None]
-
-    # River banks: wet sand down to the water, with a dark edge at the waterline.
-    bank_col = hexa(theme["bank"])
-    for edge_t, sign in ((RIVER[0], -1), (RIVER[1], 1)):
-        d = (t - edge_t) * sign  # 0 at the river edge, growing away from the water
-        bank = (1 - _smooth(d, 0.1 + n3 * 0.6, 0.35)) * (d > -(RIVER[1] - RIVER[0]))
-        img = img * (1 - bank[..., None]) + bank_col * bank[..., None]
-    river = (t > RIVER[0] + 0.05) & (t < RIVER[1] - 0.05)
-    img[river] = bank_col * 0.6
+    img = img * (1 - marks[..., None] * 0.6) + path_col * marks[..., None] * 0.6
 
     # Flowers and little tufts: sparse on the field, thicker outside.
     colors = [hexa(c) for c in theme["flowers"]]
@@ -212,7 +191,7 @@ def paint_ground(theme, rng):
     ft = rng.uniform(GT0, GT1, count)
     for i in range(count):
         ins = 0 <= fx[i] <= FIELD_W and 0 <= ft[i] <= FIELD_H
-        if (ins and rng.random() > 0.35) or RIVER[0] - 0.6 < ft[i] < RIVER[1] + 0.6:
+        if ins and rng.random() > 0.35:
             continue
         cx, cy = int((fx[i] - GX0) * TEX_PPT), int((ft[i] - GT0) * TEX_PPT)
         r = max(1, int(TEX_PPT * rng.uniform(0.04, 0.07)))
@@ -223,28 +202,6 @@ def paint_ground(theme, rng):
             yy, xx = np.ogrid[y0:y1, x0:x1]
             dot = (yy - oy) ** 2 + (xx - ox) ** 2 <= r * r
             img[y0:y1, x0:x1][dot] = col
-    return np.clip(img, 0, 1)
-
-
-def paint_water(theme, rng):
-    """The water's colors: deep in the middle, lighter toward the banks,
-    with streaks and a little foam at the edges."""
-    w = int((GX1 - GX0) * TEX_PPT)
-    h = int((RIVER[1] - RIVER[0] + 1.0) * TEX_PPT)
-    xs = GX0 + (np.arange(w) + 0.5) / TEX_PPT
-    ts = RIVER[0] - 0.5 + (np.arange(h) + 0.5) / TEX_PPT
-    x, t = np.meshgrid(xs, ts)
-    deep, light = hexa(theme["water"][0]), hexa(theme["water"][1])
-    mid = (RIVER[0] + RIVER[1]) / 2
-    shallow = np.clip(np.abs(t - mid) / ((RIVER[1] - RIVER[0]) / 2), 0, 1) ** 2
-    streak = _noise((h, w), TEX_PPT * 0.6, rng)
-    streak = ndimage.gaussian_filter1d(streak, TEX_PPT * 1.2, axis=1)
-    img = deep * (1 - shallow[..., None] * 0.7) + light * shallow[..., None] * 0.7
-    img = img * (1 + 0.1 * streak[..., None])
-    ripples = (np.sin(x * 2.6 + streak * 3) > 0.93) & (np.abs(np.sin(t * 9.0 + x * 0.4)) > 0.8)
-    img[ripples] = img[ripples] * 0.6 + 0.4
-    foam = _smooth(np.abs(t - mid), (RIVER[1] - RIVER[0]) / 2 - 0.12, 0.12)
-    img = img * (1 - foam[..., None] * 0.8) + np.array([1, 1, 1]) * foam[..., None] * 0.8
     return np.clip(img, 0, 1)
 
 
@@ -295,12 +252,6 @@ def _grid(name, x_range, t_range, per_tile, height_fn):
     obj = bpy.data.objects.new(name, me)
     bpy.context.scene.collection.objects.link(obj)
     return obj
-
-
-def _channel(x, t):
-    """The river bed: the ground dips down to below the water across the river."""
-    down = np.minimum(_smooth(t, RIVER[0] - 0.15, 0.4), 1 - _smooth(t, RIVER[1] - 0.25, 0.4))
-    return -CHANNEL_DEPTH * down
 
 
 # --- Scenery -----------------------------------------------------------------------------
@@ -524,7 +475,7 @@ class Library:
 
 def scatter(lib, theme, rng):
     """Scenery in the margins outside the fence. Tall pieces stay out of
-    the near end, where they would stand in front of the player's dens."""
+    the near end, where they would stand in front of the player's herd."""
     kinds = list(theme["props"].keys())
     weights = np.array([theme["props"][k] for k in kinds], float)
     weights /= weights.sum()
@@ -539,59 +490,35 @@ def scatter(lib, theme, rng):
         beyond = t < -0.8 or t > FIELD_H + 0.8
         if not (side or beyond):
             continue
-        if RIVER[0] - 0.4 < t < RIVER[1] + 0.4:
-            continue
         kind = kinds[rng.choice(len(kinds), p=weights)]
         tall = kind in TALL
-        if tall and (t > 25.0 or (not beyond and min(abs(x + 0.9), abs(x - FIELD_W - 0.9)) < 1.0)):
+        if tall and (t > FIELD_H - 3.0 or (not beyond and min(abs(x + 0.9), abs(x - FIELD_W - 0.9)) < 1.0)):
             kind = low_kinds[rng.integers(len(low_kinds))]
             tall = False
         gap = 1.5 if tall else 0.9
         if any((x - sx) ** 2 + (t - st) ** 2 < gap * gap for sx, st, _ in spots):
             continue
         spots.append((x, t, kind))
-    # Reeds and rocks along the river banks outside the fence.
-    for x in list(rng.uniform(X0, -1.2, 6)) + list(rng.uniform(FIELD_W + 1.2, X1, 6)):
-        t = RIVER[0] - 0.55 if rng.random() < 0.5 else RIVER[1] + 0.55
-        bank_kinds = theme.get("bank_props", ["reeds", "rock"])
-        spots.append((x, t, bank_kinds[rng.integers(len(bank_kinds))]))
     for x, t, kind in spots:
         _place(lib.copy(kind), x, t, scale=rng.uniform(0.85, 1.2), turn=rng.uniform(0, math.tau))
 
 
 def fence(theme):
-    """A low wooden fence along both sides of the field, open at the river."""
+    """A low wooden fence all the way around the field."""
     wood = _mat("fence", theme["fence"], roughness=0.8)
-    for x in (-0.25, FIELD_W + 0.25):
-        for t0, t1 in ((-0.4, RIVER[0] - 0.35), (RIVER[1] + 0.35, FIELD_H + 0.4)):
-            n = int(round(t1 - t0)) + 1
-            for i in range(n):
-                t = t0 + (t1 - t0) * i / (n - 1)
-                box((x, wy(t), 0.2), (0.11, 0.11, 0.42), wood, bevel=0.02)
-            length = (t1 - t0) / SIN
-            mid = wy((t0 + t1) / 2)
-            for z in (0.17, 0.33):
-                box((x, mid, z), (0.07, length, 0.07), wood, bevel=0.015)
-
-
-def bridges():
-    """Wooden bridges where the lanes cross the river."""
-    plank = [_mat(f"plank{i}", c, roughness=0.8) for i, c in enumerate(("#b07a48", "#a06c3c", "#bc8650"))]
-    rail = _mat("rail", "#7a5030", roughness=0.8)
-    rng = np.random.default_rng(3)
-    t0, t1 = RIVER[0] - 0.55, RIVER[1] + 0.55
-    for bx in BRIDGES:
-        n = 9
-        step = (t1 - t0) / n
+    left, right, top, bottom = -0.3, FIELD_W + 0.3, -0.3, FIELD_H + 0.3
+    for x in (left, right):
+        n = int(round(bottom - top)) + 1
         for i in range(n):
-            t = t0 + step * (i + 0.5)
-            box((bx + rng.uniform(-0.04, 0.04), wy(t), 0.06), (BRIDGE_HALF * 2.1, step / SIN * 0.86, 0.09),
-                plank[i % 3], bevel=0.02, rot_z=rng.uniform(-0.03, 0.03))
-        for side in (-1, 1):
-            x = bx + side * (BRIDGE_HALF + 0.08)
-            for t in np.linspace(t0 + 0.1, t1 - 0.1, 4):
-                box((x, wy(t), 0.24), (0.12, 0.12, 0.42), rail, bevel=0.02)
-            box((x, wy((t0 + t1) / 2), 0.42), (0.1, (t1 - t0 - 0.1) / SIN, 0.08), rail, bevel=0.02)
+            box((x, wy(top + (bottom - top) * i / (n - 1)), 0.2), (0.11, 0.11, 0.42), wood, bevel=0.02)
+        for z in (0.17, 0.33):
+            box((x, wy((top + bottom) / 2), z), (0.07, (bottom - top) / SIN, 0.07), wood, bevel=0.015)
+    for t in (top, bottom):
+        n = int(round(right - left)) + 1
+        for i in range(n):
+            box((left + (right - left) * i / (n - 1), wy(t), 0.2), (0.11, 0.11, 0.42), wood, bevel=0.02)
+        for z in (0.17, 0.33):
+            box(((left + right) / 2, wy(t), z), (right - left, 0.07, 0.07), wood, bevel=0.015)
 
 
 # --- Rendering -----------------------------------------------------------------------------
@@ -610,20 +537,15 @@ def render_arena(arena_id, ppt, samples, out_dir):
 
     keep_flat = bpy.data.collections.new("no_outline")
     sc.collection.children.link(keep_flat)
-    ground = _grid("ground", (GX0, GX1), (GT0, GT1), 4, _channel)
+    ground = _grid("ground", (GX0, GX1), (GT0, GT1), 2, lambda x, t: np.zeros_like(x))
     ground.data.materials.append(_textured("ground", _image(f"ground_{arena_id}", paint_ground(theme, rng))))
-    water = _grid("water", (GX0, GX1), (RIVER[0] - 0.5, RIVER[1] + 0.5), 1, lambda x, t: np.full_like(x, WATER_Z))
-    water.data.materials.append(_textured("water", _image(f"water_{arena_id}", paint_water(theme, rng)),
-                                          roughness=0.2, specular=0.6))
-    for obj in (ground, water):
-        for col in obj.users_collection:
-            col.objects.unlink(obj)
-        keep_flat.objects.link(obj)
+    for col in ground.users_collection:
+        col.objects.unlink(ground)
+    keep_flat.objects.link(ground)
 
     lib = Library(theme, rng)
     scatter(lib, theme, rng)
     fence(theme)
-    bridges()
     lib.hidden.hide_render = True
 
     S.lights(0.62)

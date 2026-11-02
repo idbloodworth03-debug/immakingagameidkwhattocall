@@ -14,7 +14,7 @@ func cleanup() -> void:
 
 
 func test_new_profile() -> void:
-	check_eq(profile.get_deck(), GameData.progression.starter_deck, "starter deck")
+	check(not profile.data.has("deck"), "no deck any more")
 	check_eq(profile.found_count(), GameData.cards_in_arena(0).size(), "owns every first-arena card")
 	check_eq(profile.get_trophies(), 0, "no trophies yet")
 	check_eq(profile.cage_slot_state(0), "locked", "starter cage waiting")
@@ -81,7 +81,7 @@ func test_skip_with_gems() -> void:
 
 
 func test_upgrade_card() -> void:
-	var id: String = profile.get_deck()[0]
+	var id: String = GameData.cards_in_arena(0)[0]
 	check(not profile.can_upgrade(id), "no spare copies yet")
 	profile.grant_rewards({"cards": [{"animal": id, "rarity": GameData.cards[id].rarity, "count": 50}]})
 	var level: int = profile.card_level(id)
@@ -101,12 +101,18 @@ func test_new_cards_are_flagged() -> void:
 	check(profile.is_card_new("tiger"), "shows NEW badge")
 
 
-func test_deck_swap() -> void:
-	var deck: Array = profile.get_deck()
-	profile.set_deck_slot(0, deck[3])
-	var after: Array = profile.get_deck()
-	check_eq(after[0], deck[3], "moved into slot 0")
-	check_eq(after[3], deck[0], "old card swapped out")
+func test_card_levels_for_draft_duel() -> void:
+	var id: String = GameData.cards_in_arena(0)[0]
+	profile.data.collection[id].level = 7
+	var levels: Dictionary = profile.card_levels()
+	check_eq(levels.size(), profile.found_count(), "every card you own")
+	check_eq(levels[id], 7, "at its level")
+
+
+func test_repair_drops_the_old_deck() -> void:
+	profile.data["deck"] = ["red_fox"]
+	profile._repair()
+	check(not profile.data.has("deck"), "Classic's deck is gone from old saves")
 
 
 func test_daily_offers_are_stable() -> void:

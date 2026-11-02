@@ -1,38 +1,38 @@
 class_name DraftMatch
 extends RefCounted
-## Draft Duel, the round-based mode. Each round has five parts:
+## Draft Duel. Each player starts with hearts (30), and the match goes round
+## by round until someone runs out. Each round has five parts:
 ##
 ##   1. Draft: cards sit face up at the Watering Hole (animals, a Ranger tool
-##      and a face-down Mystery Crate). The players take turns buying one
-##      with Acorns, or pass. Whoever lost the last round picks first.
-##   2. Place: each player arranges their whole herd on their own side.
-##      Nothing moves and there's no clock: this is the time to think.
+##      and a face-down Mystery Crate), drawn from the player's collection.
+##      The players take turns buying one with Acorns, or pass. Whoever lost
+##      the last round picks first. Herds carry over from round to round.
+##   2. Place: each player arranges their whole herd on their own half of the
+##      field. Nothing moves and there's no clock: this is the time to think.
 ##   3. Wager: the Bookie (see bookie.gd) posts the odds of the fight, and
 ##      each player may back their own herd at those odds. Long shots pay more.
 ##   4. Fight: the herds fight on their own (BattleSim does the fighting),
 ##      with some luck: every animal's mood, and every hit. Players can use
 ##      the tools they bought, and once a fight they can Rally the animals
-##      around a spot.
-##      At the halftime whistle the fight pauses for a round of betting on
-##      the Pot.
-##   5. Round over: the winner takes the Pot, and the Bookie pays winning
-##      wagers. Dens keep their damage from round to round, so they're the
-##      players' lives: lose your main den and you lose the match. After the
-##      last round, whoever destroyed more dens wins (then: whoever has more
-##      den health left).
+##      around a spot. At the halftime whistle the fight pauses for a round of
+##      betting on the Pot.
+##   5. Round over: the fight ends when a herd is wiped out (or at the bell:
+##      then the herd with more of itself left wins). The winner takes the
+##      Pot, the Bookie pays winning wagers, and the loser loses hearts: the
+##      round number, plus 1 for every enemy animal still standing.
 ##
 ## Acorns are the match's only money: spend them on animals and tools, or
 ## keep them to bet. Both players start with the same Acorns, and they're
-## gone when the match ends. Every animal fights at its starting level, so
-## the draft decides the match, not the collection.
+## gone when the match ends.
 ##
 ## The Pot: both players put in an ante when the fight starts. At halftime
 ## the player (team 0) may raise or check, then the opponent; a raise must
 ## be called or folded. Folding ends the round at once: the folder loses the
-## Pot, but their dens take no more damage this round. So the side that's
-## ahead chooses: raise to win Acorns (and offer a way out), or check and let
-## its herd at the dens. Which tools each player holds is hidden (only how
-## many shows), so a raise can be a bluff.
+## Pot and the round, but only the round's base hearts, not the extra for
+## the enemy animals still standing. So the side that's ahead chooses: raise
+## to win Acorns (and offer a way out), or check and let its herd finish the
+## job. Which tools each player holds is hidden (only how many shows), so a
+## raise can be a bluff.
 ##
 ## Like BattleSim, a match plays out the same way for the same seed and the
 ## same actions.
@@ -40,12 +40,12 @@ extends RefCounted
 ## Where new animals stand until they're moved, in tiles, for team 0 (team 1
 ## uses the same spots mirrored).
 const SPOTS := [
-	Vector2(4.5, 18.5), Vector2(13.5, 18.5), Vector2(9.0, 19.5),
-	Vector2(6.5, 21.5), Vector2(11.5, 21.5), Vector2(9.0, 23.5),
-	Vector2(3.0, 22.5), Vector2(15.0, 22.5),
+	Vector2(5.0, 12.5), Vector2(11.0, 12.5), Vector2(8.0, 13.5),
+	Vector2(3.0, 14.5), Vector2(13.0, 14.5), Vector2(6.0, 16.0),
+	Vector2(10.0, 16.0), Vector2(8.0, 17.5),
 ]
-## Spots in the river, for animals that must start there.
-const RIVER_SPOTS := [Vector2(9.0, 15.0), Vector2(7.0, 15.0), Vector2(11.0, 15.0)]
+## How close to the middle line animals may start, in field units.
+const START_GAP := 1000
 const NO_WINNER := -1
 
 var rules: Dictionary
@@ -54,11 +54,14 @@ var rng := RandomNumberGenerator.new()
 ## "draft", "place", "wager", "fight", "halftime", "round_over" or "over".
 var phase := ""
 var round_number := 0
+var hearts := [0, 0]
 var acorns := [0, 0]
 ## Each team's animals: {"id": String, "x": int, "y": int}, in field units.
 var herds := [[], []]
 ## Each team's Ranger tools, by card id. Hidden from the other player.
 var tools := [[], []]
+## The cards the Watering Hole draws from.
+var pool: Array = []
 ## The Watering Hole: {"id", "cost", "mystery": bool, "taken": team or -1}.
 var market: Array = []
 var turn := 0
@@ -79,11 +82,10 @@ var fight_ticks := 0
 var halftime_ticks := 0
 ## The fight tick each herd was wiped out (-1 while it still stands).
 var wiped_at := [-1, -1]
-## Each team's total den health when the fight started.
-var den_before := [0, 0]
-## What happened last round: {"round", "winner", "pot", "dealt": [team 0's
-## den damage dealt, team 1's], "folded": team or -1, "wagers": [int, int],
-## "paid": [Acorns the Bookie paid each team, stake included]}.
+## What happened last round: {"round", "winner", "pot", "folded": team or -1,
+## "standing": [team 0's animals still standing, team 1's], "hearts_lost":
+## [int, int], "wagers": [int, int], "paid": [Acorns the Bookie paid each
+## team, stake included], "stolen": [Acorns each team stole]}.
 var last_round: Dictionary = {}
 ## Things that happened, for the screen to show: buys, passes, bets, tools.
 var events: Array = []
@@ -91,19 +93,50 @@ var events: Array = []
 ## an animal finds its herd entry.
 var groups := [[], []]
 var _first_picker := 0
+var _stolen := [0, 0]
 
 
-func _init(seed_value: int, draft_rules: Dictionary = {}) -> void:
+## `setup` may hold "levels" (two dictionaries of card id -> level; a card
+## not listed fights at its rarity's starting level) and "pool" (the card
+## ids the Watering Hole draws from; every card if left out).
+func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}) -> void:
 	rules = draft_rules if not draft_rules.is_empty() else GameData.draft_rules
 	rng.seed = seed_value
-	var battle: Dictionary = GameData.battle_rules.duplicate(true)
-	battle.merge(rules.get("battle", {}), true)
-	sim = BattleSim.new([[], []], [{}, {}], seed_value, battle)
+	sim = BattleSim.new(setup.get("levels", [{}, {}]), seed_value)
+	pool = setup.get("pool", GameData.card_order).duplicate()
 	fight_ticks = roundi(float(rules.fight_seconds) * sim.tps)
 	halftime_ticks = roundi(float(rules.halftime_seconds) * sim.tps)
+	hearts = [int(rules.hearts), int(rules.hearts)]
 	acorns = [int(rules.acorns_start), int(rules.acorns_start)]
 	_first_picker = rng.randi_range(0, 1)
 	_start_round()
+
+
+## The cards a player's Watering Hole draws from: the animals and tools they
+## own, topped up with the first arena's cards if that's too few to fill it.
+static func pool_from_collection(owned: Callable, draft_rules: Dictionary = {}) -> Array:
+	var r: Dictionary = draft_rules if not draft_rules.is_empty() else GameData.draft_rules
+	var cards := []
+	var animals := 0
+	var tool_count := 0
+	for id in GameData.card_order:
+		if owned.call(id):
+			cards.append(id)
+			if GameData.is_tool(id):
+				tool_count += 1
+			else:
+				animals += 1
+	for id in GameData.card_order:
+		if cards.has(id) or int(GameData.cards[id].unlock_arena_index) > 0:
+			continue
+		var is_tool := GameData.is_tool(id)
+		if is_tool and tool_count < int(r.market_tools) + 1:
+			cards.append(id)
+			tool_count += 1
+		elif not is_tool and animals < int(r.market_animals) + 2:
+			cards.append(id)
+			animals += 1
+	return cards
 
 
 # --- Info ------------------------------------------------------------------
@@ -112,38 +145,21 @@ func is_over() -> bool:
 	return phase == "over"
 
 
-func rounds() -> int:
-	return int(rules.rounds)
-
-
-## Total den health a team has left.
-static func den_health(battle: BattleSim, team: int) -> int:
-	var total := 0
-	for t in battle.towers(team):
-		total += maxi(0, t.hp)
-	return total
+func max_rounds() -> int:
+	return int(rules.max_rounds)
 
 
 ## Who won the match: 0, 1 or NO_WINNER (a draw). Only meaningful when over.
 func match_winner() -> int:
-	if sim.is_over():
-		return sim.outcome if sim.outcome >= 0 else NO_WINNER
-	var crowns := [sim.teams[0].towers_destroyed, sim.teams[1].towers_destroyed]
-	if crowns[0] != crowns[1]:
-		return 0 if crowns[0] > crowns[1] else 1
-	var health := [den_health(sim, 0), den_health(sim, 1)]
-	if health[0] != health[1]:
-		return 0 if health[0] > health[1] else 1
+	if hearts[0] != hearts[1]:
+		return 0 if hearts[0] > hearts[1] else 1
 	return NO_WINNER
 
 
 ## Who wins a round, judged on `battle` (the real fight or one of the
 ## Bookie's tries): the herd that outlasts the other; if both are standing at
-## the bell, the one that did more den damage this round; then the one with
-## more of its herd left. NO_WINNER if they're level.
-static func judge(battle: BattleSim, wiped: Array, dens_at_start: Array) -> int:
-	if battle.is_over():
-		return battle.outcome if battle.outcome >= 0 else NO_WINNER
+## the bell, the one with more of its herd left. NO_WINNER if they're level.
+static func judge(battle: BattleSim, wiped: Array) -> int:
 	if wiped[0] >= 0 or wiped[1] >= 0:
 		if wiped[0] < 0:
 			return 0
@@ -151,13 +167,32 @@ static func judge(battle: BattleSim, wiped: Array, dens_at_start: Array) -> int:
 			return 1
 		if wiped[0] != wiped[1]:
 			return 0 if wiped[0] > wiped[1] else 1
-	var dealt := [dens_at_start[1] - den_health(battle, 1), dens_at_start[0] - den_health(battle, 0)]
-	if dealt[0] != dealt[1]:
-		return 0 if dealt[0] > dealt[1] else 1
+		return NO_WINNER
 	var left := [battle.herd_value(0), battle.herd_value(1)]
 	if left[0] != left[1]:
 		return 0 if left[0] > left[1] else 1
 	return NO_WINNER
+
+
+## How many of `team`'s herd (a pack counts once) are still standing.
+func standing(team: int) -> int:
+	var alive := {}
+	for f in sim.units(team):
+		alive[int(f.memory.get("group", -1))] = true
+	var count := 0
+	for g in groups[team]:
+		if alive.has(g):
+			count += 1
+	return count
+
+
+## The hearts the loser of this round loses: the round's base, plus the
+## winner's animals still standing (unless the loser folded).
+func heart_loss(winner_standing: int, folded: bool) -> int:
+	var lost := round_number * int(rules.heart_loss_per_round)
+	if not folded:
+		lost += winner_standing * int(rules.heart_loss_per_animal)
+	return lost
 
 
 func take_events() -> Array:
@@ -200,7 +235,7 @@ func buy(team: int, slot: int) -> bool:
 	if GameData.is_tool(item.id):
 		tools[team].append(item.id)
 	else:
-		var spot := default_spot(team, item.id)
+		var spot := default_spot(team)
 		herds[team].append({"id": item.id, "x": spot.x, "y": spot.y})
 		_lay_out_herds()
 	events.append({"type": "buy", "team": team, "slot": slot, "id": item.id, "mystery": item.mystery})
@@ -243,7 +278,7 @@ func _roll_market() -> Array:
 	var slots := []
 	var animals := []
 	var tool_ids := []
-	for id in GameData.card_order:
+	for id in pool:
 		if GameData.is_tool(id):
 			tool_ids.append(id)
 		else:
@@ -262,7 +297,8 @@ func _roll_market() -> Array:
 			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "mystery": false, "taken": -1})
 	for i in int(rules.mystery_crates):
 		var id := _weighted_pick(animals, [])
-		slots.append({"id": id, "cost": int(rules.mystery_cost), "mystery": true, "taken": -1})
+		if id != "":
+			slots.append({"id": id, "cost": int(rules.mystery_cost), "mystery": true, "taken": -1})
 	return slots
 
 
@@ -295,32 +331,20 @@ func _weighted_pick(ids: Array, exclude: Array) -> String:
 
 # --- Placing ---------------------------------------------------------------
 
-## Where an animal may stand at the start of a fight: on its own bank (not
-## in a pocket won from the enemy), or in the river if it must start there.
-func placement_problem(team: int, card_id: String, x: int, y: int) -> String:
-	var card := GameData.get_card(card_id)
-	var zone := "river"
-	if y >= BattleSim.RIVER_BOTTOM:
-		zone = "own_side" if team == 0 else "enemy_side"
-	elif y <= BattleSim.RIVER_TOP:
-		zone = "own_side" if team == 1 else "enemy_side"
-	if PlacementRules.allowed_zones(card).has(zone):
-		return ""
-	if zone == "enemy_side":
-		return "Start on your own side"
-	return "%s can't start %s" % [card.name, "in the river" if zone == "river" else "on land"]
+## Animals start on their own half, at least START_GAP from the middle line.
+static func can_start_at(team: int, y: int) -> bool:
+	if team == 0:
+		return y >= BattleSim.MIDDLE + START_GAP
+	return y <= BattleSim.MIDDLE - START_GAP
 
 
 ## The first free starting spot for a new animal.
-func default_spot(team: int, card_id: String) -> Vector2i:
-	var candidates: Array = SPOTS + RIVER_SPOTS
+func default_spot(team: int) -> Vector2i:
 	var fallback := Vector2i(-1, -1)
-	for tiles in candidates:
+	for tiles in SPOTS:
 		var spot := Vector2i(roundi(tiles.x * BattleSim.TILE), roundi(tiles.y * BattleSim.TILE))
 		if team == 1:
 			spot.y = BattleSim.HEIGHT - spot.y
-		if placement_problem(team, card_id, spot.x, spot.y) != "":
-			continue
 		if fallback.x < 0:
 			fallback = spot
 		var free := true
@@ -332,13 +356,16 @@ func default_spot(team: int, card_id: String) -> Vector2i:
 	return fallback
 
 
+## Moves a herd animal's starting spot, kept on its own half. False if it
+## can't be moved now.
 func move(team: int, index: int, x: int, y: int) -> bool:
 	if phase != "place" or ready[team] or index < 0 or index >= herds[team].size():
 		return false
 	x = clampi(x, 500, BattleSim.WIDTH - 500)
-	y = clampi(y, 500, BattleSim.HEIGHT - 500)
-	if placement_problem(team, herds[team][index].id, x, y) != "":
-		return false
+	if team == 0:
+		y = clampi(y, BattleSim.MIDDLE + START_GAP, BattleSim.HEIGHT - 500)
+	else:
+		y = clampi(y, 500, BattleSim.MIDDLE - START_GAP)
 	herds[team][index].x = x
 	herds[team][index].y = y
 	_lay_out_herds()
@@ -430,9 +457,9 @@ func step() -> void:
 	for team in 2:
 		if wiped_at[team] < 0 and sim.units(team).is_empty():
 			wiped_at[team] = fight_tick
-	if sim.is_over() or fight_tick >= fight_ticks or (wiped_at[0] >= 0 and wiped_at[1] >= 0):
+	if fight_tick >= fight_ticks or wiped_at[0] >= 0 or wiped_at[1] >= 0:
 		_end_round(-1)
-	elif fight_tick == halftime_ticks and wiped_at[0] < 0 and wiped_at[1] < 0:
+	elif fight_tick == halftime_ticks:
 		phase = "halftime"
 		halftime = {"turn": 0, "raise": 0, "raiser": -1, "checks": 0}
 		events.append({"type": "halftime"})
@@ -444,7 +471,7 @@ func use_tool(team: int, index: int, x: int, y: int) -> bool:
 	var id: String = tools[team][index]
 	var card := GameData.get_card(id)
 	tools[team].remove_at(index)
-	ToolEffects.use(sim, team, card, GameData.start_level(card.rarity), clampi(x, 0, BattleSim.WIDTH), clampi(y, 0, BattleSim.HEIGHT))
+	ToolEffects.use(sim, team, card, sim.level_of(team, id), clampi(x, 0, BattleSim.WIDTH), clampi(y, 0, BattleSim.HEIGHT))
 	events.append({"type": "tool", "team": team, "id": id, "x": x, "y": y})
 	return true
 
@@ -488,7 +515,7 @@ func _start_fight() -> void:
 		var paid := mini(ante, acorns[team])
 		acorns[team] -= paid
 		pot += paid
-	den_before = [den_health(sim, 0), den_health(sim, 1)]
+	_steal_acorns()
 	wiped_at = [-1, -1]
 	for team in 2:
 		if sim.units(team).is_empty():
@@ -496,9 +523,28 @@ func _start_fight() -> void:
 	fight_tick = 0
 	phase = "fight"
 	events.append({"type": "fight"})
-	if wiped_at[0] >= 0 and wiped_at[1] >= 0:
-		# Nobody has a herd: nothing to fight.
+	if wiped_at[0] >= 0 or wiped_at[1] >= 0:
+		# A herd with nothing in it loses at once (and if both are empty,
+		# nobody does).
 		_end_round(-1)
+
+
+## Animals with "acorn_steal" (the Raccoon) take Acorns from the other
+## player as the fight starts.
+func _steal_acorns() -> void:
+	_stolen = [0, 0]
+	for team in 2:
+		for entry in herds[team]:
+			var ability: Dictionary = GameData.get_card(entry.id).get("ability", {})
+			if ability.get("id", "") != "acorn_steal":
+				continue
+			var amount := mini(int(ability.get("params", {}).get("amount", 1)), acorns[1 - team])
+			if amount <= 0:
+				continue
+			acorns[1 - team] -= amount
+			acorns[team] += amount
+			_stolen[team] += amount
+			events.append({"type": "steal", "team": team, "id": entry.id, "amount": amount})
 
 
 # --- Halftime betting ------------------------------------------------------
@@ -546,7 +592,7 @@ func call_raise(team: int) -> bool:
 	return true
 
 
-## Gives up the round, in answer to a raise, to save your dens.
+## Gives up the round, in answer to a raise, to lose fewer hearts.
 func fold(team: int) -> bool:
 	if phase != "halftime" or int(halftime.turn) != team or int(halftime.raise) <= 0:
 		return false
@@ -587,7 +633,7 @@ func _start_placing() -> void:
 
 
 func _end_round(folder: int) -> void:
-	var winner := 1 - folder if folder >= 0 else judge(sim, wiped_at, den_before)
+	var winner := 1 - folder if folder >= 0 else judge(sim, wiped_at)
 	var paid := [0, 0]
 	for team in 2:
 		var stake := maxi(0, wagers[team])
@@ -596,21 +642,28 @@ func _end_round(folder: int) -> void:
 		elif winner == NO_WINNER:
 			paid[team] = stake
 		acorns[team] += paid[team]
+	var standing_now := [standing(0), standing(1)]
+	var lost := [0, 0]
 	var won_pot := pot
 	if winner != NO_WINNER:
 		acorns[winner] += pot
 		pot = 0
-		_first_picker = 1 - winner
+		var loser := 1 - winner
+		lost[loser] = mini(hearts[loser], heart_loss(standing_now[winner], folder >= 0))
+		hearts[loser] -= lost[loser]
+		_first_picker = loser
 	else:
 		won_pot = 0
 		_first_picker = 1 - _first_picker
 	last_round = {
 		"round": round_number, "winner": winner, "pot": won_pot, "folded": folder,
-		"dealt": [den_before[1] - den_health(sim, 1), den_before[0] - den_health(sim, 0)],
+		"standing": standing_now, "hearts_lost": lost,
 		"wagers": [maxi(0, wagers[0]), maxi(0, wagers[1])], "paid": paid,
+		"stolen": _stolen.duplicate(),
 	}
-	events.append({"type": "round_over", "winner": winner, "pot": won_pot, "folded": folder})
-	phase = "over" if sim.is_over() or round_number >= rounds() else "round_over"
+	events.append({"type": "round_over", "winner": winner, "pot": won_pot, "folded": folder, "hearts_lost": lost})
+	var out: bool = hearts[0] <= 0 or hearts[1] <= 0
+	phase = "over" if out or round_number >= max_rounds() else "round_over"
 	if phase == "over":
 		events.append({"type": "match_over", "winner": match_winner()})
 

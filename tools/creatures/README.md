@@ -1,7 +1,7 @@
 # Creature pipeline
 
 Makes the battle sprites and card portraits for each animal, and the
-treehouse dens, with Blender, from code: no hand modeling, so everything
+arena pictures, with Blender, from code: no hand modeling, so everything
 can be rebuilt or tweaked.
 
 Each species is modeled at its real proportions, then **turned into a
@@ -28,14 +28,14 @@ mane grows with its face).
 5. **Render** (`sprites.py`): Cycles with Freestyle outlines, an
    orthographic camera at the game's 50-degree angle, five directions (the
    game mirrors the other three).
-6. **Dens** (`treehouse.py`): the side and main treehouses in each team's
-   color and their ruins, from the same camera, into `game/art/towers/`.
-7. **Arenas** (`arena.py`): one picture per arena, from the same camera,
+6. **Arenas** (`arena.py`): one picture per arena, from the same camera,
    with the ground stretched so tiles come out square. The ground's colors
-   (grass, tile stripes, paths, banks, flowers) are painted with numpy;
-   Blender adds the river channel, water, bridges, fence and themed
-   scenery, into `game/art/arenas/`. Each arena's look is a theme at the
-   top of the file.
+   (grass, tile stripes, the halfway line and center ring, flowers) are
+   painted with numpy; Blender adds the fence and themed scenery, into
+   `game/art/arenas/`. Each arena's look is a theme at the top of the file.
+7. **Dens** (`treehouse.py`, not used by the game any more): side and main
+   treehouses in each team's color and their ruins. It writes into
+   `game/art/towers/`, which the game no longer has.
 
 Each animal is one file in `species/`.
 
@@ -57,9 +57,8 @@ python set_import.py                     # after Godot imports the new files
 ```
 
 `python sprites.py red_fox --style real` renders the real-proportioned
-animal with fur instead. `python treehouse.py` renders the dens, and
-`python arena.py` the arenas (about 5 minutes each; `--only <arena>` for
-one).
+animal with fur instead. `python arena.py` renders the arenas (about 5
+minutes each; `--only <arena>` for one).
 
 A full animal takes about 7-15 minutes on four CPU cores. To redo one
 animation after changing it in `motion.py`, keeping the rest of the sheet:

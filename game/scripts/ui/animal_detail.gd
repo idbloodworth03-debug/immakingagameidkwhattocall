@@ -1,22 +1,18 @@
 class_name AnimalDetail
 extends VBoxContainer
-## Everything about one card: stats at its current level, ability, release
-## requirements and (for animals) conservation status, plus Upgrade and Use
-## buttons. Works for Ranger tools too. Shown inside a Modal.
+## Everything about one card: stats at its current level, ability, how it
+## plays in Draft Duel and (for animals) conservation status, plus the
+## Upgrade button. Works for Ranger tools too. Shown inside a Modal.
 
-signal use_pressed(animal_id: String)
-
-const TARGET_NAMES := {"ground": "Ground", "air_ground": "Air & Ground", "buildings": "Dens only"}
+const TARGET_NAMES := {"ground": "Ground", "air_ground": "Air & Ground"}
 const SPEED_NAMES := {"slow": "Slow", "medium": "Medium", "fast": "Fast", "very_fast": "Very fast"}
 
 var animal_id := ""
-var show_use_button := true
 
 
-static func create(id: String, allow_use := true) -> AnimalDetail:
+static func create(id: String) -> AnimalDetail:
 	var detail := AnimalDetail.new()
 	detail.animal_id = id
-	detail.show_use_button = allow_use
 	detail.add_theme_constant_override("separation", 14)
 	detail._build()
 	return detail
@@ -76,15 +72,13 @@ func _build() -> void:
 	var growth := float(GameData.progression.stat_growth_per_level)
 	var start := GameData.start_level(rarity)
 	var stats: Dictionary = animal.stats
-	_add_stat(grid, "Energy cost", str(int(animal.cost)))
+	_add_stat(grid, "Acorn cost", str(int(animal.cost)))
 	if is_tool:
 		_add_stat(grid, "Area", "%s tiles" % str(stats.get("radius", 0)))
 		for key in ["damage", "heal", "hp"]:
 			if stats.has(key):
 				var label: String = {"damage": "Damage", "heal": "Healing", "hp": "Bait hitpoints"}[key]
 				_add_stat(grid, label, UIKit.format_number(CardRules.stat_at_level(stats[key], level, start, growth)))
-		if int(stats.get("tower_damage_pct", 0)) > 0:
-			_add_stat(grid, "Den damage", "%d%%" % int(stats.tower_damage_pct))
 		if stats.has("duration"):
 			_add_stat(grid, "Lasts", "%ss" % str(stats.duration))
 	else:
@@ -105,22 +99,21 @@ func _build() -> void:
 	ability_box.add_child(UIKit.label(("Effect: " if is_tool else "Ability: ") + String(animal.ability.name), 24, UIKit.YELLOW))
 	ability_box.add_child(UIKit.paragraph(animal.ability.text, 21, UIKit.TEXT))
 
-	# Release requirements
-	var req_panel := UIKit.well(16)
-	add_child(req_panel)
-	var req_box := UIKit.vbox(4)
-	req_panel.add_child(req_box)
-	req_box.add_child(UIKit.label("How to play it" if is_tool else "Release requirements", 24, UIKit.YELLOW))
-	var lines := ["Costs %d energy" % int(animal.cost)]
-	for req in animal.prerequisites:
-		lines.append(PlacementRules.describe(req))
-	var zones := PlacementRules.allowed_zones(animal)
-	if zones.size() == 3:
-		lines.append("Use it anywhere on the field")
-	elif zones == ["own_side", "river"]:
-		lines.append("Can also be released in the river")
+	# How it plays in Draft Duel
+	var play_panel := UIKit.well(16)
+	add_child(play_panel)
+	var play_box := UIKit.vbox(4)
+	play_panel.add_child(play_box)
+	play_box.add_child(UIKit.label("In Draft Duel", 24, UIKit.YELLOW))
+	var lines := ["Costs %d Acorns at the Watering Hole" % int(animal.cost)]
+	if is_tool:
+		lines.append("Use it once, anywhere on the field, during a fight")
+	else:
+		lines.append("Joins your herd for the rest of the match")
+	if not owned:
+		lines.append("Turns up in your draft once you've found it")
 	for line in lines:
-		req_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
+		play_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
 
 	# Traits, as little chips
 	if not is_tool:
@@ -136,10 +129,6 @@ func _build() -> void:
 		var row := UIKit.hbox(14)
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		add_child(row)
-		if show_use_button and not Profile.get_deck().has(animal_id):
-			var use := UIKit.button("Use in deck", UIKit.BLUE, 26, Vector2(230, 84))
-			use.pressed.connect(func() -> void: use_pressed.emit(animal_id))
-			row.add_child(use)
 		var cost := Profile.upgrade_cost(animal_id)
 		if cost.is_empty():
 			row.add_child(UIKit.label("Max level!", 28, UIKit.YELLOW))

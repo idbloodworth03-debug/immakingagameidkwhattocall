@@ -1,10 +1,8 @@
 extends Control
-## Animals tab: your 8-card battle deck on top, then every animal you've
-## found, the ones you haven't, and the ones that unlock in higher arenas.
+## Animals tab: every animal and tool you've found (your Draft Duel pool),
+## the ones you haven't, and the ones that unlock in higher arenas.
 
 var _content: VBoxContainer
-## Animal waiting to be swapped into the deck ("" when not swapping).
-var _swap_id := ""
 
 
 func _ready() -> void:
@@ -21,10 +19,6 @@ func _ready() -> void:
 	margin.add_child(_content)
 
 	Profile.changed.connect(_rebuild_later)
-	visibility_changed.connect(func() -> void:
-		if not visible:
-			_swap_id = ""
-	)
 	_rebuild()
 
 
@@ -37,51 +31,21 @@ func _rebuild() -> void:
 		_content.remove_child(child)
 		child.queue_free()
 
-	var deck := Profile.get_deck()
+	# How the collection plays: what you own is what you can draft.
+	var intro := UIKit.panel(UIKit.PANEL, 16, 20)
+	_content.add_child(intro)
+	var intro_row := UIKit.hbox(14)
+	intro.add_child(intro_row)
+	var watering_hole := UIKit.icon_rect(GameData.ui_icon("acorn"), UIKit.ACORN, 64)
+	intro_row.add_child(watering_hole)
+	var text := UIKit.paragraph("Every animal and tool you've found can turn up at the Watering Hole in Draft Duel, and it fights at its level. Find more in cages, and level them up with copies and gold.", 21, UIKit.TEXT)
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	intro_row.add_child(text)
 
-	# Deck
-	var deck_panel := UIKit.panel(UIKit.PANEL, 16, 22)
-	_content.add_child(deck_panel)
-	var deck_box := UIKit.vbox(12)
-	deck_panel.add_child(deck_box)
-	var title_row := UIKit.hbox(8)
-	deck_box.add_child(title_row)
-	var title := UIKit.label("Battle Deck", 32)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(title)
-	var average := UIKit.pill(GameData.ui_icon("energy"), UIKit.ENERGY.lightened(0.2), "%.1f avg" % Profile.average_deck_cost())
-	title_row.add_child(average)
-
-	if _swap_id != "":
-		var swap_row := UIKit.hbox(10)
-		deck_box.add_child(swap_row)
-		var hint := UIKit.paragraph("Tap a card in your deck to swap in the %s." % GameData.get_card(_swap_id).name, 22, UIKit.YELLOW)
-		hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		swap_row.add_child(hint)
-		var cancel := UIKit.button("Cancel", UIKit.GREY, 22, Vector2(130, 60))
-		cancel.pressed.connect(func() -> void:
-			_swap_id = ""
-			_rebuild()
-		)
-		swap_row.add_child(cancel)
-
-	var deck_well := UIKit.well(10, 18)
-	deck_box.add_child(deck_well)
-	var deck_grid := _grid()
-	deck_well.add_child(deck_grid)
-	for slot in deck.size():
-		var card := AnimalCard.create(deck[slot])
-		card.highlighted = _swap_id != ""
-		UIKit.on_tap(card, func() -> void: _on_deck_card_tapped(slot))
-		deck_grid.add_child(card)
-
-	# Collection
 	var found := []
 	var not_found := []
 	var locked := []
 	for id in _sorted_animals():
-		if deck.has(id):
-			continue
 		if Profile.has_card(id):
 			found.append(id)
 		elif int(GameData.cards[id].unlock_arena_index) <= Profile.highest_arena():
@@ -134,20 +98,5 @@ func _sorted_animals() -> Array:
 	return ids
 
 
-func _on_deck_card_tapped(slot: int) -> void:
-	if _swap_id != "":
-		Profile.set_deck_slot(slot, _swap_id)
-		_swap_id = ""
-		_rebuild()
-	else:
-		_show_detail(Profile.get_deck()[slot], false)
-
-
-func _show_detail(id: String, allow_use := true) -> void:
-	var detail := AnimalDetail.create(id, allow_use)
-	var modal := Modal.open(detail, "")
-	detail.use_pressed.connect(func(animal_id: String) -> void:
-		modal.close()
-		_swap_id = animal_id
-		_rebuild()
-	)
+func _show_detail(id: String) -> void:
+	Modal.open(AnimalDetail.create(id), "")

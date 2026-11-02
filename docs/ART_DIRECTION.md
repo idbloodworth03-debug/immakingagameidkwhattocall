@@ -36,27 +36,23 @@ place (`tools/creatures/cartoon.py`).
 - **Cards:** a rendered three-quarter portrait of each animal, framed so
   the whole animal fits.
 
-**Dens are 3D cartoon treehouses** in the same style, rendered by
-`tools/creatures/treehouse.py`: each side den is a stout tree with a round
-deck and a cabin under a roof in the team's color; the main den is a huge
-tree holding a two-story lodge with gold trim, a crown on top, lanterns
-and a tall flag. A fallen den leaves a broken stump, a toppled roof and
-scattered planks.
-
 **Arenas are rendered too** (`tools/creatures/arena.py`), one picture per
-arena: a grass field with faint tile stripes, worn dirt paths along the
-lanes and to the dens, the river in its channel with two wooden bridges, a
-low fence around the field, and themed scenery outside it (pines in the
-Whispering Woods, cacti and red rocks in the canyon, snowy pines in the
-tundra, palms on the coast...). They use the same 50-degree camera as the
-animals, with the ground stretched so tiles still land exactly where the
-game puts them. The menus show a window onto your arena with its dens.
+arena: an open grass field with faint tile stripes, a worn halfway line and
+center ring, a low fence all the way around, and themed scenery outside it
+(pines in the Whispering Woods, cacti and red rocks in the canyon, snowy
+pines in the tundra, palms on the coast...). They use the same 50-degree
+camera as the animals, with the ground stretched so tiles still land
+exactly where the game puts them. The menus show a window onto your arena
+with two animals from it squaring up on each side.
+
+(The old mode's treehouse dens, `tools/creatures/treehouse.py`, are no longer
+in the game; the script is kept in case dens come back as scenery.)
 
 **The menus** are a chunky cartoon style, built in code so the whole look
 lives in `scripts/ui/ui_kit.gd`:
 - **Buttons** have a pressable colored edge, a gloss and a soft shadow, and sink when pressed (`button_skin.gd`).
 - **Panels** are raised (a lighter rim and a drop shadow) or sunken for lists and stats. Text is bold and outlined in deep navy with a drop shadow.
-- **Cards** (`animal_card.gd`): a glossy rim in the rarity's color (silver Common, orange Rare, purple Epic, teal Legendary), the animal's portrait in a spotlight of its habitat color, a name plate, the energy cost in a gem, and a level badge with a progress bar that turns green when an upgrade is ready. Epic and Legendary cards glow and catch a sweep of light now and then.
+- **Cards** (`animal_card.gd`): a glossy rim in the rarity's color (silver Common, orange Rare, purple Epic, teal Legendary), the animal's portrait in a spotlight of its habitat color, a name plate, the Acorn cost in a gem, and a level badge with a progress bar that turns green when an upgrade is ready. Epic and Legendary cards glow and catch a sweep of light now and then.
 - **The menu background** is a deep blue gradient with faint paw prints; the bottom bar has an icon per tab, and the chosen tab lifts up.
 - **Icons:** white silhouettes from [game-icons.net](https://game-icons.net) (free to use with credit, see [CREDITS.md](../CREDITS.md)) for tools, emotes, player icons, tabs and buttons.
 - **Logo:** a wolf and a lion facing off in a den entrance, above "DEN DUEL" in Lilita One. The PNGs are in `game/art/logo/`, the editable SVGs in `game/art/logo/source/`.

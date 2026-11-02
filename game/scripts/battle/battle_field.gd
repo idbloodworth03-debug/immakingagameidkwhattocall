@@ -1,10 +1,10 @@
 class_name BattleField
 extends Control
-## Draws a running battle (field, towers, animals, effects) and turns taps
-## into field positions. It only reads the BattleSim; it never changes it.
-## Team 0 (the player) is at the bottom.
+## Draws a fight (the arena, animals, effects) and turns taps into field
+## positions. It only reads the BattleSim; it never changes it. Team 0 (the
+## player) is at the bottom.
 
-signal tapped(at: Vector2i, zone: String)
+signal tapped(at: Vector2i)
 
 const OWN_COLOR := Color("#3d7fd9")
 const ENEMY_COLOR := Color("#d94a4a")
@@ -21,10 +21,9 @@ var grass := Color("#5f9e4f")
 var arena_id := ""
 ## How far we are between the last tick and the next (0-1), for smooth motion.
 var blend := 0.0
-var highlight_zones: Array = []
-## The card being dragged, drawn where it would land:
-## {"card": Dictionary, "at": Vector2i, "valid": bool}. Empty when none.
-var preview: Dictionary = {}
+## What to light up: "" (nothing), "own_half" (where the player's animals
+## may start) or "field" (anywhere: aiming a tool or a Rally).
+var highlight := ""
 var effects: Array = []
 
 var _time := 0.0
@@ -54,12 +53,8 @@ const HURT_TIME := 0.16
 const THROW_FLIGHT := 0.28    # seconds an acorn is in the air
 const CORPSE_REST := 0.6      # seconds a fallen animal lies still before fading
 const CORPSE_FADE := 0.8
-const DEN_ART := "res://art/towers/"
-const HEADROOM := 2800.0      # field units above the far end, for the tall dens
-const DEN_SCALE := 0.92
-
-static var _den_meta := {}
-static var _den_textures := {}
+## How much of the arena around the field to show, in field units.
+const MARGIN := 600.0
 const ARENA_ART := "res://art/arenas/"
 static var _arena_meta := {}
 static var _arena_textures := {}
@@ -70,21 +65,20 @@ const DROP_HEIGHT := 2500.0   # field units a new unit drops from
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
-	# The arena and dens are drawn smaller than their pictures.
+	# The arena is drawn smaller than its picture.
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
 # --- Coordinates -----------------------------------------------------------
 
 func _scale() -> float:
-	return minf(size.x / BattleSim.WIDTH, size.y / (BattleSim.HEIGHT + HEADROOM))
+	return minf(size.x / (BattleSim.WIDTH + 2.0 * MARGIN), size.y / (BattleSim.HEIGHT + 2.0 * MARGIN))
 
 
-## Room left above the field for the enemy's treehouses to stand up into.
+## The field sits in the middle, with the arena's scenery around it.
 func _origin() -> Vector2:
 	var s := _scale()
-	var room := size - Vector2(BattleSim.WIDTH, BattleSim.HEIGHT + HEADROOM) * s
-	return Vector2(room.x / 2.0, room.y / 2.0 + HEADROOM * s)
+	return (size - Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s) / 2.0
 
 
 func to_screen(x: float, y: float) -> Vector2:
@@ -94,13 +88,6 @@ func to_screen(x: float, y: float) -> Vector2:
 func to_field(point: Vector2) -> Vector2i:
 	var p := (point - _origin()) / _scale()
 	return Vector2i(clampi(roundi(p.x), 0, BattleSim.WIDTH), clampi(roundi(p.y), 0, BattleSim.HEIGHT))
-
-
-func tower_screen_position(team: int, kind: String) -> Vector2:
-	for t in sim.towers(team):
-		if t.tower_kind == kind:
-			return to_screen(t.x, t.y)
-	return size / 2.0
 
 
 # --- Input -----------------------------------------------------------------
@@ -113,8 +100,7 @@ func _gui_input(event: InputEvent) -> void:
 		elif _pressed:
 			_pressed = false
 			if event.position.distance_to(_press_at) < 24.0:
-				var at := to_field(event.position)
-				tapped.emit(at, sim.zone_for(0, at.x, at.y))
+				tapped.emit(to_field(event.position))
 
 
 # --- Effects ---------------------------------------------------------------
@@ -126,8 +112,8 @@ func add_events(events: Array) -> void:
 			"tool":
 				_effect("ring", e.x, e.y, maxi(e.radius, 600), EFFECT_COLORS.get(e.effect, Color.WHITE), 0.6)
 				_effect("icon", e.x, e.y, maxi(e.radius, 900), EFFECT_COLORS.get(e.effect, Color.WHITE), 0.7, GameData.card_icon(e.card))
-			"release":
-				_effect("ring", e.x, e.y, 900, OWN_COLOR if e.team == 0 else ENEMY_COLOR, 0.35)
+				if e.effect in ["flare", "air_horn"]:
+					_shake = maxf(_shake, 0.25)
 			"hit":
 				_effect("flash", e.x, e.y, 260, Color(1, 1, 1, 0.9), 0.12)
 				if e.from_kind == "unit":
@@ -137,47 +123,32 @@ func add_events(events: Array) -> void:
 					_views[e.to].hurt = HURT_TIME
 				if _views.has(e.from):
 					_impact(UnitSprites.attack_style(_views[e.from].id), e)
-				if e.to_kind == "tower":
-					_effect("number", e.x + randi_range(-400, 400), e.y - 600, 0, Color("#ffd166"), 0.7, str(e.amount))
 			"death":
 				if _views.has(e.uid):
 					_add_corpse(e.uid)
 				else:
-					_effect("ring", e.x, e.y, 1600 if e.kind == "tower" else 700, Color(0.2, 0.2, 0.2), 0.5 if e.kind == "tower" else 0.35)
-				if e.kind == "tower":
-					_shake = 0.45
+					_effect("ring", e.x, e.y, 700, Color(0.2, 0.2, 0.2), 0.35)
 			"heal", "cloud", "scare", "stun_pulse", "rage":
 				_effect("ring", e.x, e.y, mini(e.radius, BattleSim.WIDTH), EFFECT_COLORS[e.type], 0.6)
 			"tree":
 				_effect("area", e.x, e.y, e.radius, EFFECT_COLORS.tree, e.seconds)
-			"dodge", "play_dead", "revive", "roll_up", "sleep", "steal", "pounce", "emerge":
+			"dodge", "play_dead", "revive", "roll_up", "sleep", "pounce", "emerge":
 				_effect("text", e.x, e.y, 0, Color.WHITE, 0.8, _event_word(e.type))
 
 
-## The sounds that go with battle events (releases, hits, deaths...).
+## The sounds that go with battle events (tools, hits, deaths...).
 static func play_sounds(events: Array) -> void:
 	for e in events:
 		match e.type:
-			"release":
-				if GameData.is_tool(e.card):
-					Sound.play("horn" if e.card == "air_horn" else "tool")
-				else:
-					Sound.play("release", -2.0, 0.08)
+			"tool":
+				Sound.play("horn" if e.card == "air_horn" else "tool")
 			"hit":
-				if e.from_kind == "tower":
-					Sound.play("zap", -10.0, 0.1)
-				elif e.to_kind == "tower":
-					Sound.play("tower_hit", -4.0, 0.1)
-				else:
-					Sound.play("hit", -7.0, 0.2)
+				Sound.play("hit", -7.0, 0.2)
 			"death":
-				if e.kind == "tower":
-					Sound.play("boom")
-				else:
-					Sound.play("death", -6.0, 0.15)
+				Sound.play("death", -6.0, 0.15)
 			"heal", "tree":
 				Sound.play("heal", -4.0)
-			"dodge", "play_dead", "pounce", "emerge", "sleep", "steal":
+			"dodge", "play_dead", "pounce", "emerge", "sleep":
 				Sound.play("pop", -6.0, 0.2)
 
 
@@ -189,7 +160,7 @@ func say(x: int, y: int, text: String, color := Color.WHITE, life := 1.2) -> voi
 func _event_word(kind: String) -> String:
 	return {
 		"dodge": "Dodge!", "play_dead": "Playing dead...", "revive": "Back up!", "roll_up": "Rolled up!",
-		"sleep": "Zzz", "steal": "-1 energy", "pounce": "Pounce!", "emerge": "Surprise!",
+		"sleep": "Zzz", "pounce": "Pounce!", "emerge": "Surprise!",
 	}.get(kind, "")
 
 
@@ -338,75 +309,49 @@ func _draw() -> void:
 	var s := _scale()
 	var origin := _origin()
 	var field := Rect2(origin, Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
-	var river_top := to_screen(0, BattleSim.RIVER_TOP).y
-	var river_bottom := to_screen(0, BattleSim.RIVER_BOTTOM).y
 
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#13240f"))
+	draw_rect(Rect2(Vector2.ZERO, size), grass.darkened(0.25))
 	_shake_offset = Vector2.ZERO
 	if _shake > 0.0:
-		# A destroyed tower shakes the whole field for a moment.
+		# A big blast or stomp shakes the whole field for a moment.
 		var strength := 10.0 * _shake / 0.45
 		_shake_offset = Vector2(randf_range(-strength, strength), randf_range(-strength, strength))
 	draw_set_transform(_shake_offset)
 	var ground := arena_art(arena_id)
 	if not ground.is_empty():
-		# The rendered arena: grass, paths, river, bridges and scenery.
+		# The rendered arena: the fenced field and themed scenery around it.
 		var top_left := to_screen(ground.area.position.x, ground.area.position.y)
 		var bottom_right := to_screen(ground.area.end.x, ground.area.end.y)
 		draw_texture_rect(ground.texture, Rect2(top_left, bottom_right - top_left), false)
-		_draw_highlight(field, river_top, river_bottom)
-		_draw_things(s)
-		return
-	# The meadow behind the enemy's dens, a shade darker than the field.
-	draw_rect(Rect2(field.position - Vector2(0, HEADROOM * s), Vector2(field.size.x, HEADROOM * s)), grass.darkened(0.22))
-	draw_rect(Rect2(field.position, Vector2(field.size.x, river_top - field.position.y)), grass.darkened(0.1))
-	draw_rect(Rect2(Vector2(field.position.x, river_bottom), Vector2(field.size.x, field.end.y - river_bottom)), grass)
-	var tile := BattleSim.TILE * s
-	for row in 30:
-		for col in 18:
-			if (row + col) % 2 == 0:
-				draw_rect(Rect2(origin + Vector2(col, row) * tile, Vector2(tile, tile)), Color(1, 1, 1, 0.035))
-
-	draw_rect(Rect2(field.position.x, river_top, field.size.x, river_bottom - river_top), Color("#3a8fd6"))
-	for i in 6:
-		var wave_x := field.position.x + field.size.x * (i + 0.5) / 6.0
-		var wave_y := (river_top + river_bottom) / 2.0
-		draw_line(Vector2(wave_x - tile * 0.6, wave_y), Vector2(wave_x + tile * 0.6, wave_y), Color(1, 1, 1, 0.3), 2.0)
-	for bridge_x in BattleSim.BRIDGE_XS:
-		var left := to_screen(bridge_x - BattleSim.BRIDGE_HALF_WIDTH, BattleSim.RIVER_TOP - 300)
-		var right := to_screen(bridge_x + BattleSim.BRIDGE_HALF_WIDTH, BattleSim.RIVER_BOTTOM + 300)
-		var bridge := Rect2(left, right - left)
-		draw_style_box(UIKit.box(Color("#9a6b3f"), 5), bridge)
-		for plank in 4:
-			var plank_y := bridge.position.y + bridge.size.y * (plank + 1) / 5.0
-			draw_line(Vector2(bridge.position.x + 3, plank_y), Vector2(bridge.end.x - 3, plank_y), Color("#6e4a2a"), 2.0)
-
-	_draw_highlight(field, river_top, river_bottom)
+	else:
+		# Plain grass: tile stripes, the halfway line and the center ring.
+		draw_rect(field, grass)
+		var tile := BattleSim.TILE * s
+		for row in BattleSim.HEIGHT / BattleSim.TILE:
+			for col in BattleSim.WIDTH / BattleSim.TILE:
+				if (row + col) % 2 == 0:
+					draw_rect(Rect2(origin + Vector2(col, row) * tile, Vector2(tile, tile)), Color(1, 1, 1, 0.035))
+		var middle := to_screen(0, BattleSim.MIDDLE).y
+		draw_line(Vector2(field.position.x, middle), Vector2(field.end.x, middle), Color(1, 1, 1, 0.35), 3.0)
+		draw_arc(field.get_center(), tile * 2.2, 0, TAU, 48, Color(1, 1, 1, 0.35), 3.0)
+		draw_rect(field, Color(0.25, 0.18, 0.1, 0.8), false, 4.0)
+	_draw_highlight(field)
 	_draw_things(s)
 
 
-## Dens, animals, bait, the placement preview and effects, over the ground.
+## Animals, bait and effects, over the ground.
 func _draw_things(s: float) -> void:
-	for f in sim.fighters:
-		if f.kind == "tower" and not f.alive:
-			_draw_tower(f, s)
 	for f in sim.fighters:
 		if f.kind == "bait" and f.alive:
 			_draw_bait(f, s)
 	for corpse in _corpses:
 		_draw_corpse(corpse, s)
 	for flying in [false, true]:
-		# Dens stand among the animals on the ground.
-		var row: Array = sim.fighters.filter(func(f): return _drawn_in_row(f, flying))
+		var row: Array = sim.fighters.filter(func(f): return f.is_unit() and f.alive and f.is_flying() == flying)
 		# Farther things first, so nearer ones overlap them.
 		row.sort_custom(func(a, b): return a.y < b.y)
 		for f in row:
-			if f.kind == "tower":
-				_draw_tower(f, s)
-			else:
-				_draw_unit(f, s)
-
-	_draw_preview(s)
+			_draw_unit(f, s)
 	for pr in _projectiles:
 		_draw_projectile(pr, s)
 	for fx in effects:
@@ -435,130 +380,23 @@ static func arena_art(id: String) -> Dictionary:
 	return {"texture": _arena_textures[id], "area": area}
 
 
-func _draw_highlight(field: Rect2, river_top: float, river_bottom: float) -> void:
-	var glow := Color(1, 1, 0.6, 0.16)
-	var edge := Color(1, 1, 0.6, 0.7)
-	var areas := []
-	if highlight_zones.has("enemy_side"):
-		areas.append(Rect2(field.position, Vector2(field.size.x, river_top - field.position.y)))
-	if highlight_zones.has("river"):
-		areas.append(Rect2(field.position.x, river_top, field.size.x, river_bottom - river_top))
-	if highlight_zones.has("own_side"):
-		areas.append(Rect2(field.position.x, river_bottom, field.size.x, field.end.y - river_bottom))
-		for pocket in sim.pocket_rects(0):
-			var top_left := to_screen(pocket.position.x, pocket.position.y)
-			areas.append(Rect2(top_left, to_screen(pocket.end.x, pocket.end.y) - top_left))
-	for area in areas:
-		draw_rect(area, glow)
-		draw_rect(area.grow(-2), edge, false, 3.0)
-
-
-## A see-through copy of the card where it would land: the tile, the
-## animals in their group formation (or a tool's area), and the attack range.
-## White when it can be released there, red when it can't.
-func _draw_preview(s: float) -> void:
-	if preview.is_empty():
-		return
-	var card: Dictionary = preview.card
-	var at: Vector2i = preview.at
-	var color := Color.WHITE if preview.valid else UIKit.RED.lightened(0.15)
-	var pulse := 0.5 + 0.5 * sin(_time * 8.0)
-	var tile := BattleSim.TILE * s
-	var center := to_screen(at.x, at.y)
-	var icon := UIKit.icon(GameData.card_icon(card.id))
-	if card.kind == "tool":
-		var radius := maxf(float(card.stats.get("radius", 1.0)), 0.6) * BattleSim.TILE * s
-		draw_circle(center, radius, Color(color, 0.18 + 0.08 * pulse))
-		draw_arc(center, radius, 0, TAU, 48, Color(color, 0.9), 4.0)
-		if icon != null:
-			var side := clampf(radius * 1.2, tile * 1.5, tile * 2.5)
-			draw_texture_rect(icon, Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 0.75))
-		return
-	# A glowing spot on the ground, bigger than the animals so it shows
-	# around a fingertip.
-	var spot := tile * 1.6
-	draw_circle(center, spot, Color(color, 0.2 + 0.1 * pulse))
-	draw_arc(center, spot, 0, TAU, 40, Color(color, 0.9), 3.0)
-	var range_tiles := float(card.stats.get("range", 1))
-	if range_tiles > 1.0:
-		draw_arc(center, range_tiles * tile, 0, TAU, 48, Color(color, 0.4), 2.0)
-	var count := int(card.get("count", 1))
-	var r := maxf(10.0, BattleSim.unit_radius(card) * s * 1.6)
-	var ring := OWN_COLOR if preview.valid else UIKit.RED
-	var fill := UIKit.habitat_color(card) if preview.valid else UIKit.RED.darkened(0.3)
-	for i in count:
-		var offset := BattleSim.formation(i, count)
-		var p := to_screen(at.x + offset.x, at.y + offset.y)
-		draw_circle(p, r + 3, Color(ring, 0.8))
-		draw_circle(p, r, Color(fill, 0.8))
-		if icon != null:
-			var side := r * 1.45
-			draw_texture_rect(icon, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.9))
+func _draw_highlight(field: Rect2) -> void:
+	var area := field
+	match highlight:
+		"own_half":
+			var top := to_screen(0, BattleSim.MIDDLE + DraftMatch.START_GAP).y
+			area = Rect2(field.position.x, top, field.size.x, field.end.y - top)
+		"field":
+			pass
+		_:
+			return
+	var pulse := 0.5 + 0.5 * sin(_time * 4.0)
+	draw_rect(area, Color(1, 1, 0.6, 0.1 + 0.06 * pulse))
+	draw_rect(area.grow(-2), Color(1, 1, 0.6, 0.7), false, 3.0)
 
 
 func _position(f: BattleSim.Fighter) -> Vector2:
 	return to_screen(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
-
-
-func _drawn_in_row(f: BattleSim.Fighter, flying: bool) -> bool:
-	if f.kind == "tower":
-		return f.alive and not flying
-	return f.is_unit() and f.alive and f.is_flying() == flying
-
-
-## The rendered treehouse for a den, or {} if there is none.
-static func _den_art(name: String) -> Dictionary:
-	if _den_meta.is_empty():
-		var text := FileAccess.get_file_as_string(DEN_ART + "towers.json")
-		_den_meta = JSON.parse_string(text) if text != "" else {"none": true}
-	if not _den_textures.has(name):
-		var path := DEN_ART + name + ".webp"
-		_den_textures[name] = load(path) if ResourceLoader.exists(path) else null
-	if _den_textures[name] == null or not _den_meta.has(name):
-		return {}
-	return {"texture": _den_textures[name], "anchor": Vector2(_den_meta[name].anchor[0], _den_meta[name].anchor[1]),
-		"top": float(_den_meta[name].top), "scale": 1000.0 / float(_den_meta.get("pixels_per_tile", 100))}
-
-
-func _draw_tower(t: BattleSim.Fighter, s: float) -> void:
-	var center := to_screen(t.x, t.y)
-	var half := t.radius * s
-	var team_name := "blue" if t.team == 0 else "red"
-	var art := _den_art(("main_" if t.tower_kind == "main" else "side_") + (team_name if t.alive else "ruin"))
-	if not art.is_empty():
-		var k: float = art.scale * s * DEN_SCALE
-		var texture: Texture2D = art.texture
-		draw_texture_rect(texture, Rect2(center - art.anchor * k, texture.get_size() * k), false)
-		if not t.alive:
-			return
-		var top: float = art.top * k
-		if t.target != null and t.target.alive:
-			var from := center - Vector2(0, top * 0.55)
-			draw_line(from, from.lerp(_position(t.target), 0.25), Color(1, 1, 1, 0.35), 2.0)
-		var color := OWN_COLOR if t.team == 0 else ENEMY_COLOR
-		# The far main den stands right under the top bar, so its bar goes below it.
-		var bar_y := center.y + half * 0.75 if t.team == 1 and t.tower_kind == "main" else center.y - top - 8
-		_draw_bar(Vector2(center.x, bar_y), half * 2.0, 10.0, float(t.hp) / t.max_hp, color.lightened(0.2), str(t.hp))
-		return
-	var rect := Rect2(center - Vector2(half, half), Vector2(half, half) * 2.0)
-	if not t.alive:
-		draw_style_box(UIKit.box(Color("#4a4a4a"), 8), rect.grow(-half * 0.25))
-		draw_style_box(UIKit.box(Color("#2f2f2f"), 6), rect.grow(-half * 0.5))
-		return
-	var color := OWN_COLOR if t.team == 0 else ENEMY_COLOR
-	var style := UIKit.box(color, int(half * 0.3))
-	style.set_border_width_all(4)
-	style.border_color = color.darkened(0.45)
-	draw_style_box(style, rect)
-	draw_style_box(UIKit.box(color.lightened(0.25), int(half * 0.2)), rect.grow(-half * 0.3))
-	var tower_icon := UIKit.icon(GameData.ui_icon("main_tower" if t.tower_kind == "main" else "side_tower"))
-	if tower_icon != null:
-		var side := half * 1.3
-		draw_texture_rect(tower_icon, Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.92))
-	if t.target != null and t.target.alive:
-		var aim := _position(t.target)
-		draw_line(center, center.lerp(aim, 0.25), Color(1, 1, 1, 0.35), 2.0)
-	_draw_bar(center + Vector2(0, -half - 12), half * 2.0, 10.0, float(t.hp) / t.max_hp, color.lightened(0.2), str(t.hp))
 
 
 func _draw_bait(f: BattleSim.Fighter, s: float) -> void:

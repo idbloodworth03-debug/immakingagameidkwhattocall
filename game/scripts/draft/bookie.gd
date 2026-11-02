@@ -17,7 +17,6 @@ var _tries: Array = []
 var _current := 0
 var _wins := [0.0, 0.0]
 var _fight_ticks := 0
-var _dens_at_start: Array = []
 
 
 ## Starts working out the odds of the fight in `match_` from where it is now.
@@ -31,11 +30,9 @@ static func study(match_: DraftMatch, seed_value: int) -> Bookie:
 	var starting := match_.phase == "wager"
 	var tick := 0 if starting else match_.fight_tick
 	var wiped: Array = match_.wiped_at.duplicate()
-	bookie._dens_at_start = match_.den_before.duplicate()
 	if starting:
 		wiped = [-1, -1]
 		for team in 2:
-			bookie._dens_at_start[team] = DraftMatch.den_health(match_.sim, team)
 			if match_.sim.units(team).is_empty():
 				wiped[team] = 0
 	# It only looks so far ahead; by then the fight is usually settled.
@@ -66,7 +63,7 @@ func advance(budget_usec := 1000000000) -> bool:
 		var t: Dictionary = _tries[_current]
 		var battle: BattleSim = t.sim
 		# Stop as soon as the round is decided: a herd wiped out decides it.
-		while not battle.is_over() and int(t.tick) < _fight_ticks and t.wiped[0] < 0 and t.wiped[1] < 0:
+		while int(t.tick) < _fight_ticks and t.wiped[0] < 0 and t.wiped[1] < 0:
 			battle.step()
 			t.tick = int(t.tick) + 1
 			for team in 2:
@@ -74,7 +71,7 @@ func advance(budget_usec := 1000000000) -> bool:
 					t.wiped[team] = int(t.tick)
 			if int(t.tick) % 5 == 0 and Time.get_ticks_usec() - start > budget_usec:
 				return false
-		var winner := DraftMatch.judge(battle, t.wiped, _dens_at_start)
+		var winner := DraftMatch.judge(battle, t.wiped)
 		if winner == DraftMatch.NO_WINNER:
 			_wins[0] += 0.5
 			_wins[1] += 0.5

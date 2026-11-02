@@ -17,11 +17,6 @@ const STATUS_NAMES := {
 	"CR": "Critically Endangered",
 }
 
-const PREREQUISITE_TYPES := [
-	"allies_with_tag", "no_allies_with_tag", "deployed_count", "match_time",
-	"own_tower_damaged", "allies_defeated", "unique", "zone",
-]
-
 const UNLOCK_TYPES := ["default", "ranger_level", "arena", "animal", "shop"]
 
 var rarities: Dictionary = {}        # rarity id -> rarity info
@@ -208,22 +203,18 @@ func find_by_id(list: Array, id: String) -> Dictionary:
 ## The tests run this, so a broken data file is caught before it ships.
 func validate() -> Array:
 	var problems := []
-	var deck_size := int(progression.get("deck_size", 8))
 
-	if cards_in_arena(0).size() < deck_size:
-		problems.append("The first arena must unlock at least %d cards for the starting deck" % deck_size)
-	var starter: Array = progression.get("starter_deck", [])
-	if starter.size() != deck_size:
-		problems.append("starter_deck must have exactly %d cards" % deck_size)
-	for id in starter:
-		if not cards.has(id) or cards[id].unlock_arena_index != 0:
-			problems.append("starter_deck: '%s' isn't a card from the first arena" % id)
-		elif starter.count(id) > 1:
-			problems.append("starter_deck: '%s' is listed twice" % id)
+	# New players own the first arena's cards, and draft from them.
+	var starters := cards_in_arena(0)
+	var starter_animals := starters.filter(func(id): return not is_tool(id)).size()
+	if starter_animals < int(draft_rules.get("market_animals", 4)):
+		problems.append("The first arena must unlock at least %d animals to fill the Watering Hole" % int(draft_rules.get("market_animals", 4)))
+	if starter_animals == starters.size():
+		problems.append("The first arena must unlock at least one tool")
 
 	for id in card_order:
 		var a: Dictionary = cards[id]
-		for field in ["name", "rarity", "cost", "count", "tags", "stats", "ability", "prerequisites"]:
+		for field in ["name", "rarity", "cost", "count", "tags", "stats", "ability"]:
 			if not a.has(field):
 				problems.append("%s: missing '%s'" % [id, field])
 		if not ["animal", "tool"].has(a.kind):
@@ -234,6 +225,8 @@ func validate() -> Array:
 			problems.append("%s: unknown arena '%s'" % [id, a.get("unlock_arena")])
 		if a.kind == "animal" and not STATUS_NAMES.has(a.get("status", "")):
 			problems.append("%s: unknown conservation status '%s'" % [id, a.get("status")])
+		if a.kind == "animal" and not ["ground", "air_ground"].has(a.get("stats", {}).get("targets", "")):
+			problems.append("%s: targets must be 'ground' or 'air_ground'" % id)
 		if a.kind == "animal" and not BattleAbilities.KNOWN.has(a.get("ability", {}).get("id", "")):
 			problems.append("%s: the battle engine doesn't know ability '%s'" % [id, a.get("ability", {}).get("id")])
 		if a.kind == "tool" and not ToolEffects.KNOWN.has(a.get("ability", {}).get("id", "")):
@@ -241,11 +234,6 @@ func validate() -> Array:
 		for tag in a.get("tags", []):
 			if not tags.has(tag):
 				problems.append("%s: unknown tag '%s' (add it to tags.json)" % [id, tag])
-		for req in a.get("prerequisites", []):
-			if not PREREQUISITE_TYPES.has(req.get("type", "")):
-				problems.append("%s: unknown prerequisite type '%s'" % [id, req.get("type")])
-			if req.has("tag") and not tags.has(req.tag):
-				problems.append("%s: prerequisite uses unknown tag '%s'" % [id, req.tag])
 
 	for cage_id in cage_order:
 		var cage: Dictionary = cages[cage_id]
@@ -266,6 +254,8 @@ func validate() -> Array:
 		problems.append("draft_rules: halftime must come before the end of the fight")
 	if draft_rules.get("stakes", []).is_empty():
 		problems.append("draft_rules: needs at least one stake")
+	if int(draft_rules.get("hearts", 0)) <= 0 or int(draft_rules.get("max_rounds", 0)) <= 0:
+		problems.append("draft_rules: hearts and max_rounds must be above zero")
 
 	for cage_id in progression.get("win_cage_cycle", []):
 		if not cages.has(cage_id):

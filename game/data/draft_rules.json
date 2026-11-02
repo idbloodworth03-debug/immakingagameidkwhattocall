@@ -1,6 +1,9 @@
 {
-  "_note": "Draft Duel tuning. Times are in seconds, distances in tiles. Anything about the fighting itself that isn't under \"battle\" here comes from battle_rules.json.",
-  "rounds": 7,
+  "_note": "Draft Duel tuning. Times are in seconds, distances in tiles. The fighting itself is tuned in battle_rules.json. A round's loser loses heart_loss_per_round hearts for each round played so far, plus heart_loss_per_animal for each of the winner's animals still standing; a player who folds loses only the first part.",
+  "hearts": 30,
+  "max_rounds": 15,
+  "heart_loss_per_round": 1,
+  "heart_loss_per_animal": 1,
   "acorns_start": 10,
   "acorns_per_round": 5,
   "market_animals": 4,
@@ -12,7 +15,7 @@
   "tools_max": 2,
   "rally": {"radius": 3.0, "seconds": 4, "damage_pct": 30, "speed_pct": 20, "attack_pct": 20},
   "fight_seconds": 40,
-  "mood_pct": 20,
+  "mood_pct": 30,
   "halftime_seconds": 8,
   "ante": 1,
   "raise_max": 3,
@@ -27,12 +30,5 @@
     {"id": "safe", "name": "Safe", "multiplier": 0.5, "text": "Half the trophies, win or lose."},
     {"id": "bold", "name": "Bold", "multiplier": 1.0, "text": "The usual trophies."},
     {"id": "all_in", "name": "All-in", "multiplier": 2.0, "text": "Double the trophies, win or lose."}
-  ],
-  "battle": {
-    "match_seconds": 100000, "overtime_seconds": 0, "damage_variance_pct": 25,
-    "towers": {
-      "side": {"hp": 1800, "damage": 50, "hit_speed": 0.8, "range": 7.0, "size": 1.4},
-      "main": {"hp": 3000, "damage": 80, "hit_speed": 1.0, "range": 7.5, "size": 1.9}
-    }
-  }
+  ]
 }

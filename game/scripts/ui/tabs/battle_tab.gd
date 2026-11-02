@@ -1,8 +1,7 @@
 extends Control
 ## Battle tab (the home screen): a window onto your arena, the Draft Duel
-## and Classic battle buttons, and the four cage slots.
+## button, and the four cage slots.
 
-const BATTLE_SCENE := "res://scenes/battle.tscn"
 const DRAFT_SCENE := "res://scenes/draft.tscn"
 
 var _arena_holder: PanelContainer
@@ -46,13 +45,7 @@ func _ready() -> void:
 	var pulse := battle.create_tween().set_loops()
 	pulse.tween_property(battle, "scale", Vector2(1.03, 1.03), 0.9).set_trans(Tween.TRANS_SINE)
 	pulse.tween_property(battle, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_SINE)
-	var modes := UIKit.hbox(12)
-	modes.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_child(modes)
-	modes.add_child(UIKit.label("Draft a herd, bet Acorns,\nknock down their dens.", 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	var classic := UIKit.button("Classic battle", UIKit.BLUE, 22, Vector2(230, 60))
-	classic.pressed.connect(func() -> void: get_tree().change_scene_to_file(BATTLE_SCENE))
-	modes.add_child(classic)
+	column.add_child(UIKit.label("Draft a herd, bet Acorns, take their hearts.", 20, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_slots_row = UIKit.hbox(10)
 	column.add_child(_slots_row)
@@ -72,8 +65,8 @@ func refresh() -> void:
 	_refresh_slots(true)
 
 
-## The current arena: a window onto it with its dens, its name, and your
-## trophies toward the next one.
+## The current arena: a window onto it, its name, and your trophies toward
+## the next one.
 func _build_arena() -> void:
 	for child in _arena_holder.get_children():
 		_arena_holder.remove_child(child)

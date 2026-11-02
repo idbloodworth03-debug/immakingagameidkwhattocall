@@ -63,7 +63,7 @@ func _add_daily_offers() -> void:
 		cell.add_child(column)
 		var card := AnimalCard.create(offer.animal)
 		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		UIKit.on_tap(card, func() -> void: Modal.open(AnimalDetail.create(offer.animal, false), ""))
+		UIKit.on_tap(card, func() -> void: Modal.open(AnimalDetail.create(offer.animal), ""))
 		column.add_child(card)
 		column.add_child(UIKit.label("x%d" % offer.amount, 28, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 		var buy := UIKit.button("Bought", UIKit.GREY, 20, Vector2(0, 62)) if offer.bought else \

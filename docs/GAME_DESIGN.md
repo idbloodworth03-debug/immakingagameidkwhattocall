@@ -2,40 +2,44 @@
 
 The working design for every system. Numbers are starting points for
 balancing and live in `game/data/*.json`, so they can change without code.
-Battle tuning (dens, timing, energy) is in `game/data/battle_rules.json`.
+Draft Duel's rules are in `game/data/draft_rules.json`, and the fighting
+itself (speeds, timing, luck) in `game/data/battle_rules.json`.
 
 ## The big idea
 
-An animal battler with two ways to play:
-
-- **Draft Duel** (the main mode, on the big button): a round-based duel.
-  Draft a herd from a shared pool, place it with no clock running, then
-  watch it fight on its own while you make a few well-timed calls: a Rally,
-  your tools and a bet. Dens are your lives. There's a gambling layer with
-  Acorns, which only exist inside a match.
-- **Classic battle**: a real-time card battler in the style of Clash Royale.
-  You release animals from an 8-card deck onto the field and they act on
-  their own; your skill is choosing *what* to release, *where* and *when*.
+An animal battler built around one mode, **Draft Duel**: a round-based duel.
+Draft a herd from a shared pool, place it with no clock running, then watch
+it fight on its own while you make a few well-timed calls: a Rally, your
+tools and a bet. Each player has 30 hearts; lose a fight and you lose
+hearts. There's a gambling layer with Acorns, which only exist inside a
+match.
 
 The theme is wildlife rescue: chests are **cages** you open to **free**
 animals, the player is a **Ranger**, and card rarity follows how endangered
-the animal is in real life.
+the animal is in real life. The animals you free are your draft pool.
+
+(Den Duel started as a real-time card battler with three dens per side and a
+river across the field. That mode, "Classic battle", and the dens, river and
+8-card deck were removed so Draft Duel is the whole game.)
 
 ## Draft Duel
 
 The goal: give players time to think, keep them involved during the fight,
 and add the thrill of a bet, while skill (reading the fight) still beats
-luck. Up to 7 rounds; each round has five parts:
+luck. Each player starts with **30 hearts**, and the match goes round by
+round until someone runs out (at most 15 rounds). Each round has five parts:
 
 1. **Draft at the Watering Hole.** Six cards sit face up: 4 animals, 1 Ranger
    tool and a face-down **Mystery Crate** (a random animal for 4 Acorns:
-   maybe a Legendary, maybe one rat). Players take turns buying one card or
+   maybe a Legendary, maybe one rat). They come from **your collection**:
+   the animals and tools you've freed (topped up with the first arena's
+   cards if you own too few). Players take turns buying one card or
    passing; whoever lost the last round picks first. Taking a card the other
    player wants is a real move. A herd holds up to 6 animals and 2 tools,
    and it carries over from round to round.
 2. **Place your herd.** Nothing moves and there's no clock. Both herds are on
    the field (the opponent places first, so you can answer it). Animals start
-   on your own bank; river animals (the Hippo) start in the river.
+   on your own half, at least a tile back from the middle line.
 3. **The Bookie's odds.** The Bookie (the raccoon) plays the fight out ahead 6
    times and posts how often your herd won, e.g. 25%. You may back your herd
    with up to 5 Acorns; if it wins, the Bookie pays back about 0.9 / chance
@@ -44,33 +48,41 @@ luck. Up to 7 rounds; each round has five parts:
    underdog holding a Net has a good bet.
 4. **The fight** (up to 40 seconds) runs on its own, with some luck:
    - **Moods:** at the whistle, after the bets, every animal rolls a mood for
-     the fight: up to 20% harder or softer bites ("Fired up!", "Sleepy").
+     the fight: up to 30% harder or softer bites ("Fired up!", "Sleepy").
    - **Hits** vary by up to 25% each.
    - **Rally:** once a fight, tap a spot and your animals there bite 30%
      harder, attack and move 20% faster for 4 seconds. Timing is everything.
    - **Tools** bought in the draft can be used anywhere, any time.
-   - **Halftime** (8 seconds in, while both herds stand): the fight pauses
-     for the **Pot**. Both players put a 1-Acorn ante in when the fight
-     starts. At halftime you may raise (up to 3, never more than the other
-     player can call) or check, then the opponent. A raise must be called
-     or folded. Folding ends the round at once: you lose the Pot but your
-     dens take no more damage. So the player who's ahead chooses: raise to
-     win Acorns and offer a way out, or check and let the herd at the dens.
-     Which tools you hold is hidden (only how many shows), so a raise can be
-     a bluff.
-5. **Round over.** The herd that outlasts the other wins the round (if both
-   stand at the bell: more den damage this round, then more herd left).
-   The winner takes the Pot; a tie carries it over.
+   - **The Raccoon** (Trash Panda) steals an Acorn from the other player as
+     the fight starts.
+   - **Halftime** (8 seconds in): the fight pauses for the **Pot**. Both
+     players put a 1-Acorn ante in when the fight starts. At halftime you
+     may raise (up to 3, never more than the other player can call) or
+     check, then the opponent. A raise must be called or folded. Folding
+     ends the round at once: you lose the round and the Pot, but only the
+     round's base hearts (see below), nothing for the enemy animals still
+     standing. So the player who's ahead chooses: raise to win Acorns and
+     offer a way out, or check and let the herd finish the job. Which tools
+     you hold is hidden (only how many shows), so a raise can be a bluff.
+5. **Round over.** The fight ends when a herd is wiped out; the other herd
+   wins the round. If both still stand at the bell, the one with more of
+   itself left wins (each animal counts its card's cost times the share of
+   health it has left). The winner takes the Pot; a tie carries it over.
 
-**Dens are lives.** Den damage stays from round to round. In Draft Duel dens
-are tougher (side 1,800, main 3,000). Lose your main den and the match is
-over. After round 7, more dens destroyed wins, then more den health left.
+**Hearts.** The loser of a round loses hearts: **the round number, plus 1
+for each of the winner's animals still standing** (a pack counts once). A
+round 4 loss to a herd with 3 animals left costs 7 hearts. A tie costs
+nobody anything. Run out of hearts and you lose; after round 15, more
+hearts wins.
 
 **Acorns** are the only money in a match: 10 to start, +5 each round, plus
-Pots and Bookie wins. Spend them on animals and tools, or keep them to bet.
-Everyone starts equal, every animal fights at its starting level, and the
-draft pool is all 20 animals (rarer ones show up less often), so your
-collection doesn't decide a Draft Duel.
+Pots, Bookie wins and Raccoon thefts. Spend them on animals and tools, or
+keep them to bet. Everyone starts with the same Acorns.
+
+**Your collection matters, a little.** You draft from the cards you own, and
+your animals and tools fight at their levels. The computer opponent's cards
+are leveled like yours on average, so leveling a few favorites helps without
+making the match one-sided.
 
 **Match stakes.** Before the match: Safe (half the trophies, win or lose),
 Bold (normal) or All-in (double).
@@ -81,19 +93,15 @@ your own tools), not blind luck. Keep it that way: if Acorns or bets ever
 connect to anything bought with money, the game becomes real gambling, with
 legal trouble in some countries and a higher App Store age rating.
 
-**The opponent** drafts by cost (it wants one tool, sometimes gambles on the
-Mystery Crate and saves Acorns once its herd has 3 animals), places tough
-animals in front and ranged ones behind, leaning toward your stronger lane,
-rallies when two of its animals are fighting, uses tools on groups, and bets
-from the Bookie's odds plus its own tools, sometimes bluffing.
-
 **Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
-bot-vs-bot matches with the real Bookie and prints match length, den damage,
-betting and how sure the Bookie's odds are. From the first runs (40 matches):
-- Matches last 4.3 rounds on average, and the main den falls in most of them. Wins split 20-20.
-- Without luck, fights were so predictable that the Bookie's odds were nearly always 0% or 100%, which made the bets pointless. Moods and hit luck fixed part of that; the rest comes from matchups, which decide a lot (that's the strategy).
-- Folding used to be allowed any time at halftime, and the losing side always folded to save its dens. Now you can only fold when someone raises.
-- The Bookie takes about 0.8 seconds on a computer (slower on phones). The screen spreads its work across frames and settles on the tries it has after 3 seconds.
+bot-vs-bot matches with the real Bookie and prints match length, hearts lost,
+betting and how sure the Bookie's odds are. From the first runs with hearts
+(30 matches):
+- Matches last 6.3 rounds on average. Wins split 14-16.
+- A fight lasts about 12 seconds, and 9 in 10 end with a herd wiped out. A loss costs 5.5 hearts on average.
+- With 2 hearts per standing animal, matches were over in 5.3 rounds, so it's 1 now. Moods went from 20% to 30% to make fights less certain; bets on own herds doubled.
+- On an open field the stronger herd usually wins, so the Bookie's odds are still mostly under 20% or over 80%. That's where the long-shot bets and the Rally come in.
+- The Bookie takes about 0.3 seconds on a computer (slower on phones). The screen spreads its work across frames and settles on the tries it has after 3 seconds.
 
 ## Rarity = how endangered the animal is
 
@@ -119,57 +127,39 @@ doesn't load.
 
 Each animal has:
 
-- **Energy cost** (2 to 8) and **count** (packs like the Wolf Pack release several)
-- **Stats** at its starting level: hitpoints, damage, hit speed, speed, range and what it targets (ground, air & ground, or dens only)
-- **Tags** like Canine, Big Cat, Aquatic or Savanna animal, used by abilities and requirements
-- **One ability**, e.g. *Pounce*, *Pack Hunters*, *Trash Panda* or *Apex Pounce*. Abilities are built from 38 reusable types (pounce, poison, stealth, shield...), so the battle code implements each type once and many animals share it.
-- **Release requirements** (the prerequisites). Commons have none. Rarer animals are stronger but harder to release.
+- **Acorn cost** (2 to 8): what it costs at the Watering Hole. Its **count** says how many come in a pack (the Wolf Pack is several wolves).
+- **Stats** at its starting level: hitpoints, damage, hit speed, speed, range and what it targets (ground, or air & ground)
+- **Tags** like Canine, Big Cat, Aquatic or Savanna animal, used by abilities
+- **One ability**, e.g. *Pounce*, *Pack Hunters*, *Trash Panda* or *Apex Pounce*. Abilities are built from reusable types (pounce, poison, stealth, shield...), so the battle code implements each type once and many animals share it.
 
 ### The roster
 
-| Animal | Rarity | Cost | Ability | Unlocks in | Requirements |
-|---|---|---|---|---|---|
-| Sewer Rats | Common | 2 | Scurry | 1. Rescue Center | - |
-| Raccoon | Common | 3 | Trash Panda | 1. Rescue Center | - |
-| Gray Squirrel | Common | 3 | Hidden Stash | 1. Rescue Center | - |
-| Red Fox | Common | 3 | Pounce | 1. Rescue Center | - |
-| Peregrine Falcon | Common | 3 | Stoop Dive | 1. Rescue Center | - |
-| Wild Boar | Common | 4 | Charge | 2. City Park | - |
-| Wolf Pack | Common | 5 | Pack Hunters | 4. Whispering Woods | - |
-| Brown Bear | Common | 6 | Maul | 4. Whispering Woods | - |
-| Cheetah | Rare | 4 | Sprint | 1. Rescue Center | - |
-| American Bison | Rare | 5 | Stampede | 3. Prairie Fields | - |
-| Hippopotamus | Rare | 6 | Territorial | 5. Misty Marsh | River only |
-| Lion | Rare | 5 | Roar | 6. Sunbaked Savanna | 1 allied Savanna animal |
-| Polar Bear | Rare | 6 | Thick Fur | 11. Coral Coast | - |
-| African Wild Dogs | Epic | 5 | Relentless | 6. Sunbaked Savanna | 1 allied Pack animal |
-| Tiger | Epic | 6 | Apex Pounce | 9. Emerald Jungle | after 1:00 |
-| Asian Elephant | Epic | 8 | Trample | 9. Emerald Jungle | your den damaged |
-| Red Panda | Epic | 3 | Stand Tall | 10. Cloudpeak Mountains | - |
-| California Condor | Legendary | 5 | Sky Scavenger | 7. Red Rock Canyon | Unique; 2 allies defeated |
-| Amur Leopard | Legendary | 5 | Phantom | 8. Frozen Tundra | Unique; no allied Big Cats |
-| Black Rhino | Legendary | 7 | Thunder Charge | 12. Last Sanctuary | Unique; after 1:00 |
+| Animal | Rarity | Cost | Ability | Unlocks in |
+|---|---|---|---|---|
+| Sewer Rats | Common | 2 | Scurry | 1. Rescue Center |
+| Raccoon | Common | 3 | Trash Panda | 1. Rescue Center |
+| Gray Squirrel | Common | 3 | Hidden Stash | 1. Rescue Center |
+| Red Fox | Common | 3 | Pounce | 1. Rescue Center |
+| Peregrine Falcon | Common | 3 | Stoop Dive | 1. Rescue Center |
+| Wild Boar | Common | 4 | Charge | 2. City Park |
+| Wolf Pack | Common | 5 | Pack Hunters | 4. Whispering Woods |
+| Brown Bear | Common | 6 | Maul | 4. Whispering Woods |
+| Cheetah | Rare | 4 | Sprint | 1. Rescue Center |
+| American Bison | Rare | 5 | Stampede | 3. Prairie Fields |
+| Hippopotamus | Rare | 6 | Territorial | 5. Misty Marsh |
+| Lion | Rare | 5 | Roar | 6. Sunbaked Savanna |
+| Polar Bear | Rare | 6 | Thick Fur | 11. Coral Coast |
+| African Wild Dogs | Epic | 5 | Relentless | 6. Sunbaked Savanna |
+| Tiger | Epic | 6 | Apex Pounce | 9. Emerald Jungle |
+| Asian Elephant | Epic | 8 | Trample | 9. Emerald Jungle |
+| Red Panda | Epic | 3 | Stand Tall | 10. Cloudpeak Mountains |
+| California Condor | Legendary | 5 | Sky Scavenger | 7. Red Rock Canyon |
+| Amur Leopard | Legendary | 5 | Phantom | 8. Frozen Tundra |
+| Black Rhino | Legendary | 7 | Thunder Charge | 12. Last Sanctuary |
 
-Every arena unlocks at least one animal; the six in the Rescue Center plus the
-Net and Air Horn are the starter deck.
-
-### Release requirement types
-
-| Type | Example |
-|---|---|
-| Energy | Every animal costs energy |
-| Allies with a tag | Lion: "Needs 1 allied Savanna animal on the field" |
-| No allies with a tag | Amur Leopard: "Can't be released while you have a Big Cat on the field" |
-| Releases so far | Black-footed Ferret (coming later): "Release 2 other animals first" |
-| Battle time | Tiger: "Available after 1:00 of battle" |
-| Your den took damage | Asian Elephant (protective): "Only after one of your dens takes damage" |
-| Allies defeated | California Condor (a scavenger): "Only after 2 of your animals are defeated" |
-| Only one at a time | Every Legendary |
-| River only | Hippopotamus must be released in the river |
-
-All **Aquatic** animals may also be released in the river; everyone else uses
-their own side. Ranger tools can be used anywhere (except Food Bait, which
-goes on your side).
+Every arena unlocks at least one animal. New players own the six Rescue
+Center animals plus the Net and Air Horn, which is enough to fill the
+Watering Hole.
 
 ## Arenas and trophies
 
@@ -194,7 +184,7 @@ you can't drop back below it. The top two arenas don't, to keep some stakes.
 | 11 | Coral Coast | 4,600 | no | Harbor Seal, Loggerhead Turtle (R), Sea Otter (E), Komodo Dragon (E), African Penguins (L) |
 | 12 | Last Sanctuary | 5,300 | no | Kakapo (L), Philippine Eagle (L), Sumatran Orangutan (L) |
 
-New players start with all 8 Rescue Center animals already in their deck.
+New players start owning every Rescue Center card.
 
 ### Ranking (with online play)
 
@@ -227,8 +217,7 @@ Each upgrade also gives **Ranger XP**. The full tables are in
 - XP comes from upgrading animals, +10 per win and +4 per loss.
 - 20 levels to start.
 - Levels unlock banners, icons and emotes. Later, gameplay boosts could be
-  added if wanted. (Clash Royale's King Level also boosts tower strength,
-  and we can decide whether dens level up the same way.)
+  added if wanted.
 
 ## Cages (chests)
 
@@ -295,111 +284,66 @@ with a big **NEW ANIMAL FREED!** for first finds, and a summary at the end.
 - **Friendly battles** with clanmates and friends, which don't change trophies.
 - **Clan Wars** (proposal): a weekly event where each member gets a few war battles a day. Wins earn points for the clan. Clans are matched in groups of about 5, and the final ranking gives Clan Cages to everyone who took part.
 
-## Battle rules
+## The fight
 
-Hands-off, real-time battles. You choose what to play and where; the
-animals walk, pick targets and fight on their own.
+The animals fight on their own: you choose what to draft, where it starts,
+and when to Rally or use a tool.
 
-**The field:** 18 tiles wide and 30 tall, with a river across the middle and
-two bridges. You play from the bottom. Every arena uses the same layout;
-only the look changes.
-
-**Dens** (the game's name for towers; the code still calls them towers):
-each player has 2 side dens and 1 main den. All three fight back against
-enemy animals. The main den is tougher and hits harder:
-
-| Den | Hitpoints | Damage | Hit speed | Range |
-|---|---|---|---|---|
-| Side den | 1,400 | 50 | 0.8s | 7 tiles |
-| Main den | 2,400 | 80 | 1.0s | 7.5 tiles |
-
-**Winning:**
-1. Destroy the enemy's **main den** and you win at once (its side dens fall with it, so that's a 3-0).
-2. Otherwise, after **3 minutes**, whoever destroyed more dens wins.
-3. Still tied: **1 minute of sudden-death overtime**. The first den to fall decides it.
-4. Still tied after overtime: the player whose weakest standing den has more hitpoints wins. If those are equal, the next weakest decides, and so on. Only if every den matches exactly is it a draw (no trophies change, no cage).
-
-**Energy:** start with 5, maximum 10, +1 every 2.8 seconds, and **twice as
-fast** in the last minute and in overtime.
-
-**Your hand:** 4 cards from your 8-card deck, plus a preview of the next one.
-A played card goes to the back of the deck.
-
-**Playing a card:** drag it onto the field, or tap it and then tap the field.
-While you drag, the spot under your finger shows the animals (or the tool's
-area) in white where they can go and in red where they can't, with the reason
-underneath. Cards snap to the middle of a tile. Cards you can't afford yet are
-shaded, and the shade drains as your energy fills up.
-
-**Where you can play:** animals go on your own side (Aquatic animals also in
-the river), tools anywhere. **Deeper placement:** once you destroy one of the
-enemy's side dens, the 6 rows of their side nearest the river in that lane
-count as your side too, so you can release animals right where the den stood.
-
-**Swapping:** if *none* of your 4 cards can be played because of their
-requirements (not counting energy), the Swap button sends one to the back of
-the deck for free. This stops a hand full of picky cards from getting stuck.
+**The field:** 16 tiles wide and 20 long, open, with a halfway line and a
+center ring, and a fence around it. You play from the bottom. Every arena
+uses the same field; only the look and scenery change.
 
 **How animals behave:**
-- Animals take 1 second to deploy, then walk toward the nearest enemy. They attack anything they can reach within 5.5 tiles, otherwise they head for the nearest enemy tower.
-- Walkers cross the river on the bridges. Flyers, Aquatic animals and the Mountain Goat cross anywhere.
-- "Dens only" animals (Bison, Elephant, Rhino) ignore everything but dens and Food Bait.
+- Each goes for the nearest enemy it can reach, anywhere on the field (Food Bait close by comes first). With no enemy left, it stands still.
+- Ground-only animals can't hit flyers (the Falcon and Condor); animals that target "air & ground" (the Squirrel's thrown acorns, the birds) can.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
+- Moods and hit luck make each fight a bit different (see Draft Duel above).
+
+**The end:** a fight is over when a herd is wiped out, or after 40 seconds.
+The fight engine is deterministic: the same herds, seed and actions always
+play out the same way, which online play will rely on.
 
 ## Ranger tools
 
-Spell-like cards that can be used anywhere on the field (Food Bait only on your side):
+Bought at the Watering Hole, kept on your tool belt (2 at most) and used
+once, anywhere on the field, during a fight:
 
 | Tool | Rarity | Cost | Unlocks | What it does |
 |---|---|---|---|---|
 | Net | Common | 2 | Arena 1 | Enemies in a 2-tile area are stuck for 2.5s and take 40 damage |
-| Air Horn | Common | 2 | Arena 1 | 145 damage in 2.5 tiles and knocks enemies back. Dens take 30% |
+| Air Horn | Common | 2 | Arena 1 | 145 damage in 2.5 tiles and knocks enemies back |
 | Food Bait | Rare | 2 | Arena 2 | A snack that enemy ground animals within 5 tiles go for, for up to 7s |
 | Medkit | Rare | 3 | Arena 3 | Heals your animals in 3 tiles for 440 |
 | Tranquilizer Dart | Epic | 3 | Arena 5 | Puts the closest enemy animal to sleep for 4s (Fearless ones are only slowed) |
-| Signal Flare | Epic | 4 | Arena 6 | 340 damage in 2.5 tiles, reveals hidden animals. Dens take 35% |
+| Signal Flare | Epic | 4 | Arena 6 | 340 damage in 2.5 tiles, reveals hidden animals |
 
 Tools level up like animals (+10% damage or healing per level). New players
-start with the Net and Air Horn in their deck.
+start with the Net and Air Horn.
 
 ## Computer opponent
 
-The bot plays by the same rules: same energy, same requirements, same
-release checks. It defends when your animals cross the river, uses tools on
-groups of enemies (or the Medkit on its hurt animals), and pushes a lane when
-it has energy to spare: tough animals start at the back, and it adds support
-behind them so the push arrives as a group. It gets a deck from your arena at
-about your card levels, and like a person it makes sure picky animals have
-their partners in the deck (a Lion comes with another Savanna animal). The same bot can later fill online matchmaking when few players are
-on.
+The opponent plays Draft Duel through the same calls as a person, so it
+follows the same rules:
 
-**Difficulty grows with your arena.** In the first arena the bot is slow to
-react (about 1.3-2.3 seconds between moves), defends less than half the time,
-rarely backs up its own attacks, only uses a tool on 4 or more enemies and
-waits for full energy before attacking.
-In the top arena it reacts in well under a second, always defends, uses tools
-on groups of 2 and attacks sooner, using the deeper placement when it has
-taken a side den.
+- **Drafting:** it buys by cost (pricier animals are stronger), wants one tool, sometimes gambles on the Mystery Crate, and once its herd has 3 animals it keeps some Acorns back to bet with.
+- **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
+- **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
+- **Betting:** from the Bookie's odds plus its own tools (it's braver with tools in hand), and it sometimes bluffs.
 
-**Balance report.** (Classic battle; Draft Duel has its own report, see
-above.) `tests/balance_report.tscn` plays hundreds of
-bot-vs-bot battles with random decks and prints each card's win rate and how
-often it gets played (see the instructions at the top of
-`tests/balance_report.gd`). Bots aren't people, so it's a guide for spotting
-outliers, not a verdict.
+**Difficulty grows with your arena:** it drafts less randomly, uses tools
+sooner and on smaller groups, and bets more sharply. Its cards are leveled
+like yours on average. The same bot can later fill online matchmaking when
+few players are on.
 
-**First balance pass.** Tuned from about 7,000 bot battles:
-- **Toned down:** California Condor (it also heals 220 instead of 300), Amur Leopard, Polar Bear, Tiger, Pigeon Flock, Air Horn, Chimpanzee, Mountain Gorilla, Black Rhino and Komodo Dragon.
-- **Boosted:** American Bison, Striped Skunk, Gila Monster (now walks at medium speed), Axolotl, Platypus, Rattlesnake, King Cobra, Jaguar, Mountain Goat, Harbor Seal, Sea Otter, Red Panda, Black-footed Ferret, Moose, Raccoon, Red Fox, Opossum, Medkit and Food Bait.
-- **Rares:** they were winning less often than Commons (47% against 50%), so every Rare animal got +5% hitpoints and damage. The Polar Bear, Hippo, Walrus and Lion were left out because they were already strong. That barely moved the Rare average: most of the gap comes from cheap Rares the bot sends in one at a time (Platypus, Gila Monster), so check them in real play.
-- **Left alone on purpose:** Legendaries still win more often (about 57%), because rarer animals are meant to be stronger. Animals that need a partner on the field (Lion, Red Wolf, African Wild Dogs) are hard for the bot to judge, so they wait for real playtesting.
-- **Result:** the spread of win rates shrank from 8.1 to 6.9 points, and cards outside 43-57% (with 100+ battles) went from 16 to 12. Still out of line: California Condor and Amur Leopard (strong), and cheap melee animals such as the Opossum, Rattlesnake and Mountain Goat (weak).
+**Balance.** All animal stats were first tuned from about 7,000 bot battles
+in the old Classic mode. Draft Duel's open field and herds change what's
+strong, so they need a new pass from real play, with the Draft Duel report
+as a guide.
 
 ## Still open
 
-1. **Draft Duel or Classic as the game?** Draft Duel is the main button for now; playtesting decides whether Classic stays.
-2. **Energy name** (Classic): keep "energy", or something like Stamina or Instinct?
-3. **Den levels:** should dens get stronger with Ranger Level, or stay fixed so only animal levels matter?
-4. **Balance:** all stats are first guesses. The balance report spots outliers, but playing a lot is the only way to really tune them.
+1. **Match length:** 30 hearts and the per-round loss give about 6 rounds against the bot. Real players may want shorter matches (25 hearts?) on a phone.
+2. **Balance:** all stats are first guesses from the old mode. Playing a lot of Draft Duel is the only way to really tune them.
+3. **The field:** one open field for every arena. Arena-specific features (a pond in Misty Marsh, rocks in Red Rock Canyon) could add variety later.
 
-Settled: deeper placement after taking a side den (yes), and a bot that gets harder as you climb (yes).
+Settled: the bot gets harder as you climb (yes); Classic battle, dens and the river are gone (Draft Duel is the game).

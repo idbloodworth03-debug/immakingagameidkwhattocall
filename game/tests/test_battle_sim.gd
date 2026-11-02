@@ -1,15 +1,12 @@
 extends TestCase
-## Battle engine tests. Most build a battle, place animals directly with
-## spawn() and run ticks, so they don't depend on deck shuffling.
+## Battle engine tests. Each builds a fight, puts animals on the field with
+## spawn() and runs ticks.
 
 const T := BattleSim.TILE
 
 
-func _sim(deck_a: Array = [], deck_b: Array = [], seed_value := 1) -> BattleSim:
-	var filler := ["raccoon", "red_fox", "net", "air_horn", "brown_bear", "peregrine_falcon", "lion", "tiger"]
-	var a := deck_a if not deck_a.is_empty() else filler
-	var b := deck_b if not deck_b.is_empty() else filler
-	return BattleSim.new([a, b], [{}, {}], seed_value)
+func _sim(seed_value := 1, levels: Array = [{}, {}]) -> BattleSim:
+	return BattleSim.new(levels, seed_value)
 
 
 func _run(sim: BattleSim, seconds: float) -> void:
@@ -17,208 +14,114 @@ func _run(sim: BattleSim, seconds: float) -> void:
 		sim.step()
 
 
-func _tower(sim: BattleSim, team: int, kind: String, x_side := 0) -> BattleSim.Fighter:
-	for t in sim.towers(team):
-		if t.tower_kind == kind and (kind == "main" or (x_side < 0) == (t.x < BattleSim.WIDTH / 2)):
-			return t
-	return null
+func _ready_now(made: Array) -> Array:
+	for f in made:
+		f.deploy_ticks = 0
+	return made
 
 
-func test_starting_state() -> void:
+func test_open_field_and_halves() -> void:
 	var sim := _sim()
-	check_eq(sim.towers(0).size(), 3, "three towers each")
-	check_eq(sim.hand(0).size(), 4, "four cards in hand")
-	check_eq(sim.energy(0), 5.0, "start with 5 energy")
-	var main := _tower(sim, 0, "main")
-	var side := _tower(sim, 0, "side", -1)
-	check(main.max_hp > side.max_hp and main.damage > side.damage, "main tower is tougher and hits harder")
+	check_eq(sim.fighters.size(), 0, "an empty field to start")
+	check_eq(BattleSim.WIDTH, 16 * T, "16 tiles wide")
+	check_eq(BattleSim.HEIGHT, 20 * T, "20 tiles long")
+	check(BattleSim.on_own_half(0, 15 * T) and not BattleSim.on_own_half(0, 5 * T), "team 0 has the near half")
+	check(BattleSim.on_own_half(1, 5 * T) and not BattleSim.on_own_half(1, 15 * T), "team 1 has the far half")
 
 
-func test_energy_refills_and_caps() -> void:
+func test_nothing_to_fight_means_standing_still() -> void:
 	var sim := _sim()
-	_run(sim, 2.85)
-	check_eq(floori(sim.energy(0)), 6, "one energy every 2.8 seconds")
-	_run(sim, 30)
-	check_eq(sim.energy(0), 10.0, "capped at 10")
+	var fox: BattleSim.Fighter = _ready_now(sim.spawn(0, "red_fox", 8 * T, 15 * T))[0]
+	_run(sim, 3)
+	check_eq(Vector2i(fox.x, fox.y), Vector2i(8 * T, 15 * T), "no enemies, no walking")
 
 
-func test_double_energy_in_last_minute() -> void:
+func test_animals_find_the_nearest_enemy_and_fight() -> void:
 	var sim := _sim()
-	sim.tick = sim.double_energy_tick
-	sim.teams[0].energy = 0
-	_run(sim, 1.45)
-	check_eq(floori(sim.energy(0)), 1, "twice as fast in the last minute")
-	check(sim.is_double_energy(), "flag on")
+	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
+	var near: BattleSim.Fighter = _ready_now(sim.spawn(1, "red_fox", 3 * T, 6 * T))[0]
+	var far: BattleSim.Fighter = _ready_now(sim.spawn(1, "raccoon", 15 * T, 1 * T))[0]
+	_run(sim, 0.2)
+	check(bear.target == near, "the bear goes for the closer fox")
+	_run(sim, 15)
+	check(not near.alive, "and beats it")
+	check(bear.target == far or not far.alive, "then goes after the raccoon")
 
 
-func test_release_rules_and_card_cycle() -> void:
-	var sim := _sim(["raccoon", "red_fox", "wild_boar", "gray_squirrel", "peregrine_falcon", "sewer_rats", "red_panda", "cheetah"])
-	var first: String = sim.hand(0)[0]
-	var next := sim.next_card(0)
-	check(not sim.release(0, 0, 9 * T, 5 * T), "can't release animals on the enemy side")
-	check(sim.release(0, 0, 9 * T, 22 * T), "own side is fine")
-	check_eq(sim.hand(0)[0], next, "next card slides into the hand")
-	check_eq(sim.teams[0].queue.back(), first, "played card goes to the back")
-	check(sim.energy(0) < 5.0, "energy spent")
-
-
-func test_tough_animal_walks_over_the_bridge_and_hits_a_tower() -> void:
+func test_ground_animals_cant_reach_flyers() -> void:
 	var sim := _sim()
-	sim.spawn(0, "brown_bear", 4 * T, 21 * T)
-	var tower := _tower(sim, 1, "side", -1)
-	_run(sim, 30)
-	check(tower.hp < tower.max_hp, "the bear reached the left enemy tower")
+	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T, 15 * T)[0]
+	var squirrel: BattleSim.Fighter = sim.spawn(0, "gray_squirrel", 6 * T, 15 * T)[0]
+	var falcon: BattleSim.Fighter = sim.spawn(1, "peregrine_falcon", 8 * T, 5 * T)[0]
+	check(falcon.is_flying(), "the falcon flies")
+	check(not sim.can_target(bear, falcon), "a bear can't reach it")
+	check(sim.can_target(squirrel, falcon), "a squirrel's acorns can")
 
 
-func test_towers_shoot_attackers() -> void:
-	var sim := _sim()
-	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 4 * T, 21 * T)[0]
-	_run(sim, 6)
-	check(bear.hp < bear.max_hp, "our tower is shooting the bear")
-
-
-func test_destroying_the_main_tower_wins() -> void:
-	var sim := _sim()
-	sim.deal_damage(_tower(sim, 1, "main"), 999999, null)
-	sim.step()
-	check_eq(sim.outcome, 0, "team 0 wins at once")
-	check_eq(sim.teams[0].towers_destroyed, 3, "the side towers fall with it")
-
-
-func test_more_towers_wins_at_time() -> void:
-	var sim := _sim()
-	sim.deal_damage(_tower(sim, 1, "side", -1), 999999, null)
-	sim.tick = sim.match_ticks - 1
-	sim.step()
-	check_eq(sim.outcome, 0, "one tower up wins when time runs out")
-
-
-func test_tie_goes_to_overtime_then_sudden_death() -> void:
-	var sim := _sim()
-	sim.tick = sim.match_ticks - 1
-	sim.step()
-	check(not sim.is_over() and sim.in_overtime(), "tied: overtime")
-	sim.deal_damage(_tower(sim, 0, "side", 1), 999999, null)
-	sim.step()
-	check_eq(sim.outcome, 1, "first tower in overtime wins")
-
-
-func test_untouched_battle_is_a_draw() -> void:
-	var sim := _sim()
-	sim.tick = sim.match_ticks + sim.overtime_ticks - 1
-	sim.step()
-	check_eq(sim.outcome, BattleSim.DRAW, "nothing happened: draw")
-
-
-func test_tiebreak_by_weakest_tower() -> void:
-	var sim := _sim()
-	sim.deal_damage(_tower(sim, 1, "side", -1), 300, null)
-	sim.tick = sim.match_ticks + sim.overtime_ticks - 1
-	sim.step()
-	check_eq(sim.outcome, 0, "team 1's weakest tower is lower")
-
-
-func test_tiebreak_moves_on_to_the_next_weakest_tower() -> void:
-	var sim := _sim()
-	# One side den each, then the main dens decide.
-	sim.deal_damage(_tower(sim, 0, "side", -1), 999999, null)
-	sim.deal_damage(_tower(sim, 1, "side", -1), 999999, null)
-	sim.deal_damage(_tower(sim, 0, "main"), 500, null)
-	sim.deal_damage(_tower(sim, 1, "main"), 400, null)
-	sim.tick = sim.match_ticks + sim.overtime_ticks - 1
-	sim.step()
-	check_eq(sim.outcome, 1, "same weakest den, team 0's main den is lower")
-
-
-func test_flyers_cross_the_river_anywhere_walkers_use_bridges() -> void:
-	var sim := _sim()
-	var bird: BattleSim.Fighter = sim.spawn(0, "peregrine_falcon", 9 * T, 18 * T)[0]
-	var boar: BattleSim.Fighter = sim.spawn(0, "wild_boar", 9 * T, 18 * T)[0]
-	var bird_crossed_mid := false
-	for i in 200:
+func test_everyone_stays_on_the_field() -> void:
+	var sim := _sim(9)
+	for i in 3:
+		sim.spawn(0, "wild_boar", (3 + 5 * i) * T, 18 * T)
+		sim.spawn(1, "american_bison", (3 + 5 * i) * T, 2 * T)
+	for i in 30 * sim.tps:
 		sim.step()
-		if BattleSim.bank(boar.y) == 0:
-			check(absi(boar.x - BattleSim.nearest_bridge(boar.x)) <= BattleSim.BRIDGE_HALF_WIDTH, "the boar is only in the river on a bridge")
-		if BattleSim.bank(bird.y) == 0 and absi(bird.x - 9 * T) < 3 * T:
-			bird_crossed_mid = true
-	check(bird_crossed_mid, "the falcon flew straight across the middle")
+		for f in sim.fighters:
+			if f.x < 0 or f.x > BattleSim.WIDTH or f.y < 0 or f.y > BattleSim.HEIGHT:
+				check(false, "%s left the field at (%d, %d)" % [f.card.id, f.x, f.y])
+				return
+	check(true, "nobody left the field")
 
 
-func test_same_seed_same_battle() -> void:
+func test_levels_make_animals_stronger() -> void:
+	var start := GameData.start_level("common")
+	var sim := _sim(1, [{"red_fox": start + 4}, {}])
+	var strong: BattleSim.Fighter = sim.spawn(0, "red_fox", 4 * T, 15 * T)[0]
+	var normal: BattleSim.Fighter = sim.spawn(1, "red_fox", 4 * T, 5 * T)[0]
+	check_eq(sim.level_of(1, "red_fox"), start, "unlisted cards fight at their starting level")
+	check(strong.max_hp > normal.max_hp and strong.damage > normal.damage, "four levels up: more health, harder bites")
+
+
+func test_herd_value_counts_health_left() -> void:
+	var sim := _sim()
+	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T, 15 * T)[0]
+	var cost := int(GameData.get_card("brown_bear").cost)
+	check_eq(sim.herd_value(0), cost * 1000, "a fresh bear counts its whole cost")
+	bear.hp = bear.max_hp / 2
+	check_eq(sim.herd_value(0), cost * 500, "half its health, half its value")
+	check_eq(sim.herd_value(1), 0, "an empty herd is worth nothing")
+
+
+func test_same_seed_same_fight() -> void:
 	var results := []
 	for run in 2:
-		var sim := _sim([], [], 77)
-		var bot_a := BattleBot.new(sim, 0, 5)
-		var bot_b := BattleBot.new(sim, 1, 6)
-		for i in 60 * sim.tps:
-			bot_a.update()
-			bot_b.update()
-			sim.step()
+		var sim := _sim(77)
+		for id in ["wolf_pack", "red_fox", "gray_squirrel"]:
+			sim.spawn(0, id, 8 * T, 14 * T)
+		for id in ["brown_bear", "sewer_rats", "peregrine_falcon"]:
+			sim.spawn(1, id, 8 * T, 6 * T)
+		_run(sim, 30)
 		results.append(sim.checksum())
-	check_eq(results[0], results[1], "identical battles from identical inputs")
+	check_eq(results[0], results[1], "identical fights from identical starts")
 
 
-func test_bots_can_finish_a_battle() -> void:
-	for seed_value in [3, 11]:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = seed_value
-		var deck_a := BattleBot.make_deck(GameData.arenas.size() - 1, 2, rng)
-		var deck_b := BattleBot.make_deck(GameData.arenas.size() - 1, 2, rng)
-		var sim := BattleSim.new([deck_a.deck, deck_b.deck], [deck_a.levels, deck_b.levels], seed_value)
-		var bot_a := BattleBot.new(sim, 0, seed_value + 1)
-		var bot_b := BattleBot.new(sim, 1, seed_value + 2)
-		var released := 0
-		while not sim.is_over():
-			bot_a.update()
-			bot_b.update()
-			sim.step()
-			for e in sim.take_events():
-				if e.type == "release":
-					released += 1
-		check(sim.outcome in [0, 1, BattleSim.DRAW], "battle %d ended with a result" % seed_value)
-		check(released > 10, "bots played cards in battle %d (%d)" % [seed_value, released])
+func test_a_clone_plays_out_the_same() -> void:
+	var sim := _sim(5)
+	sim.spawn(0, "lion", 6 * T, 14 * T)
+	sim.spawn(0, "cheetah", 10 * T, 14 * T)
+	sim.spawn(1, "tiger", 8 * T, 6 * T)
+	_run(sim, 2)
+	var copy := sim.clone()
+	_run(sim, 10)
+	_run(copy, 10)
+	check_eq(copy.checksum(), sim.checksum(), "the copy matches the original")
 
 
-func test_destroyed_side_den_opens_deeper_placement() -> void:
-	var sim := _sim(["raccoon", "raccoon", "raccoon", "raccoon", "raccoon", "raccoon", "raccoon", "raccoon"])
-	var deep := Vector2i(4 * T, 10 * T)
-	check_eq(sim.zone_for(0, deep.x, deep.y), "enemy_side", "enemy side before any den falls")
-	sim.deal_damage(_tower(sim, 1, "side", -1), 999999, null)
-	check_eq(sim.zone_for(0, deep.x, deep.y), "own_side", "left lane opens after the left den falls")
-	check_eq(sim.zone_for(0, 14 * T, 10 * T), "enemy_side", "the right lane stays closed")
-	check_eq(sim.zone_for(0, 4 * T, 5 * T), "enemy_side", "only near the river")
-	check(sim.release(0, 0, deep.x, deep.y), "can release a raccoon there now")
-
-
-func test_swap_only_when_stuck() -> void:
-	var picky := ["california_condor", "asian_elephant", "lion", "tiger", "california_condor", "asian_elephant", "lion", "tiger"]
-	var sim := _sim(picky)
-	check(sim.can_swap(0), "every card waits on a requirement")
-	var first: String = sim.hand(0)[0]
-	check(sim.swap(0, 0), "swapped")
-	check_eq(sim.teams[0].queue.back(), first, "swapped card goes to the back")
-	var normal := _sim()
-	check(not normal.can_swap(0), "no swapping when something is playable")
-	check(not normal.swap(0, 0), "swap refused")
-
-
-func test_bot_decks_bring_partners_for_picky_animals() -> void:
-	for seed_value in 40:
-		var rng := RandomNumberGenerator.new()
-		rng.seed = seed_value
-		var deck: Array = BattleBot.make_deck(GameData.arenas.size() - 1, 0, rng).deck
-		check_eq(deck.size(), int(GameData.progression.deck_size), "full deck")
-		for id in deck:
-			check(not BattleBot._partner_missing(id, deck), "%s has its partner in deck %d" % [id, seed_value])
-
-
-func test_bot_gets_sharper_with_difficulty() -> void:
+func test_clear_units_empties_the_field() -> void:
 	var sim := _sim()
-	var easy := BattleBot.new(sim, 1, 1, 0.0)
-	var hard := BattleBot.new(sim, 1, 1, 1.0)
-	check(easy._think_min > hard._think_min, "hard bot reacts faster")
-	check(easy._defend_chance < hard._defend_chance, "hard bot always defends")
-	check(easy._push_energy > hard._push_energy, "hard bot attacks sooner")
+	sim.spawn(0, "sewer_rats", 8 * T, 15 * T)
+	sim.make_bait(1, 8 * T, 5 * T, 100, 100, 3 * T)
+	sim.clear_units()
+	check_eq(sim.fighters.size(), 0, "nothing left")
 
 
 # --- Abilities -------------------------------------------------------------
@@ -226,7 +129,7 @@ func test_bot_gets_sharper_with_difficulty() -> void:
 func test_shield_absorbs_damage() -> void:
 	borrow_later_animals()
 	var sim := _sim()
-	var turtle: BattleSim.Fighter = sim.spawn(0, "snapping_turtle", 9 * T, 22 * T)[0]
+	var turtle: BattleSim.Fighter = sim.spawn(0, "snapping_turtle", 8 * T, 15 * T)[0]
 	sim.deal_damage(turtle, 200, null)
 	check_eq(turtle.hp, turtle.max_hp, "shell took it")
 	sim.deal_damage(turtle, 200, null)
@@ -236,13 +139,13 @@ func test_shield_absorbs_damage() -> void:
 func test_poison_keeps_hurting() -> void:
 	borrow_later_animals()
 	var sim := _sim()
-	var snake: BattleSim.Fighter = sim.spawn(0, "rattlesnake", 9 * T, 20 * T)[0]
-	var rat: BattleSim.Fighter = sim.spawn(1, "honey_badger", 9 * T, 20 * T + 900)[0]
-	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 9 * T, 20 * T - 900)[0]
+	var snake: BattleSim.Fighter = sim.spawn(0, "rattlesnake", 8 * T, 12 * T)[0]
+	var badger: BattleSim.Fighter = sim.spawn(1, "honey_badger", 8 * T, 12 * T + 900)[0]
+	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 12 * T - 900)[0]
 	BattleAbilities.after_hit(sim, snake, bear, 10)
-	BattleAbilities.after_hit(sim, snake, rat, 10)
+	BattleAbilities.after_hit(sim, snake, badger, 10)
 	check(bear.poison > 0, "bear poisoned")
-	check_eq(rat.poison, 0, "honey badger is fearless")
+	check_eq(badger.poison, 0, "honey badger is fearless")
 	var before := bear.hp
 	_run(sim, 1)
 	check(bear.hp < before, "poison hurts over time")
@@ -251,7 +154,7 @@ func test_poison_keeps_hurting() -> void:
 func test_opossum_plays_dead() -> void:
 	borrow_later_animals()
 	var sim := _sim()
-	var possum: BattleSim.Fighter = sim.spawn(0, "opossum", 9 * T, 22 * T)[0]
+	var possum: BattleSim.Fighter = sim.spawn(0, "opossum", 8 * T, 15 * T)[0]
 	sim.deal_damage(possum, 99999, null)
 	check(possum.alive, "playing dead, not defeated")
 	sim.deal_damage(possum, 99999, null)
@@ -263,93 +166,111 @@ func test_opossum_plays_dead() -> void:
 
 
 func test_pack_hunters_hit_harder_together() -> void:
-	borrow_later_animals()
 	var sim := _sim()
-	var wolves := sim.spawn(0, "wolf_pack", 9 * T, 22 * T)
-	var dummy: BattleSim.Fighter = sim.spawn(1, "brown_bear", 9 * T, 8 * T)[0]
+	var wolves := sim.spawn(0, "wolf_pack", 8 * T, 15 * T)
+	var dummy: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
 	var together := BattleAbilities.outgoing_damage(sim, wolves[0], dummy, 100)
-	var lone: BattleSim.Fighter = sim.spawn(0, "coyote_pack", 2 * T, 28 * T)[0]
-	sim.units(0).filter(func(f): return f != lone and f.card.id == "coyote_pack").map(func(f): f.alive = false)
-	var alone := BattleAbilities.outgoing_damage(sim, lone, dummy, 100)
-	check_eq(together, 130, "two other canines nearby: +30%")
+	wolves[1].alive = false
+	wolves[2].alive = false
+	var alone := BattleAbilities.outgoing_damage(sim, wolves[0], dummy, 100)
+	check(together > 100, "packmates nearby: a bonus")
 	check_eq(alone, 100, "alone: no bonus")
 
 
+func test_hippo_is_fiercer_on_its_own_half() -> void:
+	var sim := _sim()
+	var hippo: BattleSim.Fighter = sim.spawn(0, "hippopotamus", 8 * T, 15 * T)[0]
+	var dummy: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
+	var home := BattleAbilities.outgoing_damage(sim, hippo, dummy, 100)
+	hippo.y = 5 * T
+	var away := BattleAbilities.outgoing_damage(sim, hippo, dummy, 100)
+	check(home > away and away == 100, "a bonus at home only")
+
+
+func test_bison_shoves_animals_aside() -> void:
+	var sim := _sim()
+	var bison: BattleSim.Fighter = _ready_now(sim.spawn(0, "american_bison", 8 * T, 16 * T))[0]
+	var target: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 8 * T, 4 * T))[0]
+	var in_the_way: BattleSim.Fighter = _ready_now(sim.spawn(1, "sewer_rats", 8 * T, 12 * T))[0]
+	var start := Vector2(in_the_way.x, in_the_way.y)
+	bison.target = target
+	BattleAbilities.on_moved(sim, bison)
+	check_eq(Vector2(in_the_way.x, in_the_way.y), start, "too far away to shove")
+	in_the_way.x = bison.x
+	in_the_way.y = bison.y - bison.radius
+	BattleAbilities.on_moved(sim, bison)
+	check(in_the_way.y < bison.y - bison.radius, "shoved out of the way")
+	check_eq(target.y, 4 * T, "but not its target")
+
+
 func test_stealth_until_first_attack() -> void:
-	borrow_later_animals()
 	var sim := _sim()
-	var owl: BattleSim.Fighter = sim.spawn(0, "barn_owl", 9 * T, 22 * T)[0]
-	var tower := _tower(sim, 1, "main")
-	check(not sim.can_target(tower, owl), "hidden")
-	owl.revealed = 10
-	check(sim.can_target(tower, owl), "a flare reveals it")
-
-
-func test_raccoon_steals_energy() -> void:
-	var sim := _sim()
-	sim.spawn(0, "raccoon", 9 * T, 22 * T)
-	check_eq(sim.energy(1), 4.0, "enemy lost 1 energy")
+	var leopard: BattleSim.Fighter = sim.spawn(0, "amur_leopard", 8 * T, 15 * T)[0]
+	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
+	check(not sim.can_target(bear, leopard), "hidden")
+	leopard.revealed = 10
+	check(sim.can_target(bear, leopard), "a flare reveals it")
 
 
 func test_burrower_is_untargetable_then_emerges() -> void:
 	borrow_later_animals()
 	var sim := _sim()
-	var ferret: BattleSim.Fighter = sim.spawn(0, "black_footed_ferret", 4 * T, 22 * T)[0]
-	check(not sim.can_target(_tower(sim, 1, "side", -1), ferret), "underground")
+	var ferret: BattleSim.Fighter = _ready_now(sim.spawn(0, "black_footed_ferret", 4 * T, 16 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 4 * T, 4 * T))[0]
+	check(not sim.can_target(bear, ferret), "underground")
 	_run(sim, 20)
 	check(not ferret.memory.get("burrowing", true) or not ferret.alive, "popped up at the enemy")
 
 
 # --- Ranger tools ----------------------------------------------------------
 
-func _tool_sim(tool_id: String) -> BattleSim:
-	return _sim([tool_id, tool_id, tool_id, tool_id, tool_id, tool_id, tool_id, tool_id])
+func _use(sim: BattleSim, tool_id: String, x: int, y: int) -> void:
+	var card := GameData.get_card(tool_id)
+	ToolEffects.use(sim, 0, card, GameData.start_level(card.rarity), x, y)
 
 
 func test_net_stuns() -> void:
-	var sim := _tool_sim("net")
-	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 9 * T, 10 * T)[0]
-	check(sim.release(0, 0, 9 * T, 10 * T), "nets work on the enemy side")
+	var sim := _sim()
+	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 6 * T)[0]
+	_use(sim, "net", 8 * T, 6 * T)
 	check(bear.stun > 0, "stuck in the net")
 	check(bear.hp < bear.max_hp, "and slightly hurt")
 
 
 func test_air_horn_damages_and_knocks_back() -> void:
-	var sim := _tool_sim("air_horn")
-	var rat: BattleSim.Fighter = sim.spawn(1, "sewer_rats", 9 * T, 10 * T)[0]
-	var tower := _tower(sim, 1, "side", -1)
-	sim.release(0, 0, 9 * T, 10 * T)
+	var sim := _sim()
+	var rat: BattleSim.Fighter = sim.spawn(1, "sewer_rats", 8 * T, 6 * T)[0]
+	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T + 800, 6 * T)[0]
+	var ally: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T - 800, 6 * T)[0]
+	_use(sim, "air_horn", 8 * T, 6 * T)
 	check(not rat.alive, "rats can't take the blast")
-	var sim2 := _tool_sim("air_horn")
-	var tower2 := _tower(sim2, 1, "side", -1)
-	sim2.release(0, 0, tower2.x, tower2.y)
-	check(tower2.hp < tower2.max_hp and tower2.max_hp - tower2.hp < 180, "towers take only part of the damage")
-	check_eq(tower.hp, tower.max_hp, "first tower untouched")
+	check(bear.hp < bear.max_hp and bear.x > 8 * T + 800, "the bear is hurt and pushed back")
+	check_eq(ally.hp, ally.max_hp, "your own animals aren't hurt")
 
 
 func test_medkit_heals_allies() -> void:
-	var sim := _tool_sim("medkit")
-	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 9 * T, 22 * T)[0]
+	var sim := _sim()
+	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T, 15 * T)[0]
 	bear.hp = 100
-	sim.release(0, 0, 9 * T, 22 * T)
+	_use(sim, "medkit", 8 * T, 15 * T)
 	var heal := int(GameData.get_card("medkit").stats.heal)
 	check_eq(bear.hp, 100 + heal, "healed by the Medkit's amount")
 
 
 func test_food_bait_lures_enemies() -> void:
-	var sim := _tool_sim("food_bait")
-	var boar: BattleSim.Fighter = sim.spawn(1, "wild_boar", 4 * T, 18 * T)[0]
-	check(not sim.release(0, 0, 9 * T, 8 * T), "bait only on your own side")
-	check(sim.release(0, 0, 6 * T, 20 * T), "bait on your side")
-	_run(sim, 1.5)
+	var sim := _sim()
+	var boar: BattleSim.Fighter = _ready_now(sim.spawn(1, "wild_boar", 4 * T, 8 * T))[0]
+	_ready_now(sim.spawn(0, "red_fox", 12 * T, 16 * T))
+	_use(sim, "food_bait", 5 * T, 10 * T)
+	_run(sim, 1.0)
 	check(boar.target != null and boar.target.kind == "bait", "the boar goes for the snack")
 
 
 func test_tranq_dart_puts_the_closest_to_sleep() -> void:
 	borrow_later_animals()
-	var sim := _tool_sim("tranq_dart")
-	var near: BattleSim.Fighter = sim.spawn(1, "brown_bear", 9 * T, 10 * T)[0]
-	var far: BattleSim.Fighter = sim.spawn(1, "moose", 12 * T, 10 * T)[0]
-	sim.release(0, 0, 9 * T, 10 * T)
+	var sim := _sim()
+	var near: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 6 * T)[0]
+	var far: BattleSim.Fighter = sim.spawn(1, "moose", 12 * T, 6 * T)[0]
+	_use(sim, "tranq_dart", 8 * T, 6 * T)
 	check(near.stun > 0, "closest is asleep")
 	check_eq(far.stun, 0, "only one target")

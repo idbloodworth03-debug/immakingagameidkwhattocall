@@ -26,6 +26,8 @@ const BLUE := Color("#3b8ff0")
 const RED := Color("#ec4b52")
 const GREY := Color("#7f8ba0")
 const TROPHY := Color("#ffb51f")
+const ACORN := Color("#c98b4a")
+const HEART := Color("#ff4f6d")
 
 const DISPLAY_FONT := preload("res://art/fonts/LilitaOne-Regular.ttf")
 const BODY_FONT := preload("res://art/fonts/Nunito.ttf")

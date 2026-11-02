@@ -164,10 +164,8 @@
     "gold": "delapouite/two-coins",
     "gems": "lorc/cut-diamond",
     "trophy": "delapouite/trophy-cup",
-    "energy": "delapouite/bolt-drop",
+    "heart": "skoll/hearts",
     "cage": "delapouite/bird-cage",
-    "side_tower": "delapouite/tree-door",
-    "main_tower": "delapouite/hut",
     "bait": "lorc/meat",
     "paw": "lorc/flat-paw-print",
     "locked": "lorc/padlock", "acorn": "lorc/acorn", "mystery": "delapouite/wooden-crate", "whistle": "delapouite/whistle", "dice": "delapouite/rolling-dices", "bookie": "delapouite/raccoon-head", "pot": "lorc/swap-bag", "close": "lorc/cross-mark", "info": "delapouite/info", "upgrade": "delapouite/upgrade", "tab_shop": "delapouite/shop", "tab_animals": "lorc/flat-paw-print", "tab_battle": "lorc/crossed-swords", "tab_clan": "delapouite/three-friends", "tab_events": "lorc/laurel-crown", "chat": "lorc/conversation", "trade": "delapouite/card-exchange", "wars": "lorc/swords-emblem", "roles": "lorc/crown", "calendar": "delapouite/calendar", "podium": "delapouite/podium", "sparkles": "delapouite/sparkles", "present": "delapouite/present"

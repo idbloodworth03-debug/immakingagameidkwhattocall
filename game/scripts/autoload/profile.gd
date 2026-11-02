@@ -1,6 +1,6 @@
 extends Node
-## The player's own progress: currencies, trophies, animal collection, deck,
-## cages and cosmetics.
+## The player's own progress: currencies, trophies, animal collection, cages
+## and cosmetics.
 ##
 ## For now this is saved on the device (user://profile.json) so the game can
 ## be built and tested offline. Once online play is added, the server becomes
@@ -74,7 +74,6 @@ func _new_profile() -> Dictionary:
 		"losses": 0,
 		"draws": 0,
 		"collection": {},
-		"deck": [],
 		"cage_slots": [],
 		"cage_cycle_index": 0,
 		"banner": _first_default(GameData.banners),
@@ -86,11 +85,9 @@ func _new_profile() -> Dictionary:
 	}
 	for i in int(prog.cage_slots):
 		profile.cage_slots.append(null)
-	# Starter cards: everything from the first arena. The deck comes from
-	# "starter_deck" in progression.json.
+	# Starter cards: everything from the first arena.
 	for id in GameData.cards_in_arena(0):
 		profile.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": false}
-	profile.deck = prog.starter_deck.duplicate()
 	# A first cage so new players can try freeing animals right away.
 	profile.cage_slots[0] = {"cage_id": "twig", "arena": 0, "unlock_at": 0.0}
 	return profile
@@ -113,13 +110,8 @@ func _repair() -> void:
 		if not data.collection.has(id):
 			data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": true}
 
-	var deck: Array = data.deck.filter(func(id): return data.collection.has(id))
-	for id in GameData.card_order:
-		if deck.size() >= int(GameData.progression.deck_size):
-			break
-		if data.collection.has(id) and not deck.has(id):
-			deck.append(id)
-	data.deck = deck
+	# Classic battle's deck is gone.
+	data.erase("deck")
 
 	var slot_count := int(GameData.progression.cage_slots)
 	while data.cage_slots.size() < slot_count:
@@ -300,35 +292,14 @@ func _add_cards(id: String, count: int) -> bool:
 	return true
 
 
-# --- Deck ------------------------------------------------------------------
+# --- Draft Duel ------------------------------------------------------------
 
-func get_deck() -> Array:
-	return data.deck.duplicate()
-
-
-## Puts an animal into a deck slot. If it was already in another slot, the
-## two cards swap places.
-func set_deck_slot(slot: int, id: String) -> void:
-	if not has_card(id) or slot < 0 or slot >= data.deck.size():
-		return
-	var deck: Array = data.deck
-	var current_slot := deck.find(id)
-	if current_slot == slot:
-		return
-	if current_slot >= 0:
-		deck[current_slot] = deck[slot]
-	deck[slot] = id
-	_changed()
-
-
-func average_deck_cost() -> float:
-	var deck := get_deck()
-	if deck.is_empty():
-		return 0.0
-	var total := 0.0
-	for id in deck:
-		total += float(GameData.cards[id].cost)
-	return total / deck.size()
+## The level of every card you own, for your animals and tools in Draft Duel.
+func card_levels() -> Dictionary:
+	var levels := {}
+	for id in data.collection:
+		levels[id] = int(data.collection[id].level)
+	return levels
 
 
 # --- Battles ---------------------------------------------------------------

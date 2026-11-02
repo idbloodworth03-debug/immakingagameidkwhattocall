@@ -9,21 +9,19 @@
 - [x] Menus in the usual mobile card game layout: Shop, Animals, Battle, Clan and Events tabs; profile; Trophy Road; cage opening
 - [x] Battle sandbox: energy, 4-card hand rotation, release requirements, emotes, quick chat and mute
 
-## Phase 1: Battle rules (mostly done)
+## Phase 1: Battle rules (done; this real-time mode was later replaced by Draft Duel)
 
 - [x] Decide the rules: 3 dens each, 3 minutes plus overtime, Ranger tools, same map everywhere
 - [x] Battle engine: movement and bridges, targeting, attacks, dens that fight back, win/lose/draw, overtime, double energy
 - [x] **Deterministic** engine (whole numbers, fixed 20 ticks per second), tested to give identical battles from identical inputs
 - [x] All 38 ability types and 6 Ranger tools, with release requirements checked against the real battle
 - [x] Computer opponent that plays by the same rules
-- [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
 - [x] Bot difficulty that scales with your arena
 - [x] Drag-to-play cards with a placement preview (tap the card, then the field, still works)
 - [x] Deeper placement after destroying a side den
 - [x] Segmented energy bar, and hand cards that fill up as energy comes in
 - [x] Balance report: hundreds of bot-vs-bot battles, win rate and play rate per card
 - [x] First balance pass from bot-vs-bot battles (see "Computer opponent" in [GAME_DESIGN.md](GAME_DESIGN.md))
-- [ ] Playtest a lot with real people and keep balancing
 
 ## Phase 1b: Draft Duel (first version done)
 
@@ -36,9 +34,19 @@
 - [x] Match stakes (Safe, Bold, All-in) for trophies
 - [x] Computer opponent that drafts, places, rallies, uses tools and bets (with bluffs)
 - [x] Draft Duel report: bot-vs-bot matches with the real Bookie
+
+## Phase 1c: Draft Duel is the game (done)
+
+- [x] Hearts instead of dens: 30 each; a lost fight costs the round number plus 1 per enemy animal still standing
+- [x] An open 16x20 field with no river, bridges or dens; animals go for the nearest enemy
+- [x] Classic battle removed, with its bot, the 8-card deck, energy and release requirements
+- [x] Your collection is your draft pool, and your cards fight at their levels (the opponent's are leveled to match)
+- [x] Abilities reworked for the new field (the Raccoon steals Acorns, the Hippo guards its own half, the Bison shoves)
+- [x] 12 arenas re-rendered as open, fenced fields
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] Check the Bookie's speed on real phones (it settles early if it's slow)
-- [ ] Decide whether Classic battle stays (see the end of [GAME_DESIGN.md](GAME_DESIGN.md))
+- [ ] A balance pass for the open field, from real play
+- [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
 - [ ] Online Draft Duel: picks and bets are turns, so it suits online play well
 
 ## Phase 2: Look and feel (first pass done)
@@ -53,10 +61,10 @@
 - [x] Web version that runs in Safari and installs to the iPhone home screen
 - [x] Publishing: every push runs the tests, builds the web version and publishes it with GitHub Pages (free, no deploy limits; Netlify's free credits ran out)
 - [x] 3D-rendered animals with fur, real markings and walk, attack and death animations (Blender pipeline in `tools/creatures/`)
-- [x] Rendered arenas: 12 themed battlefields with river, bridges and scenery (`tools/creatures/arena.py`)
+- [x] Rendered arenas: 12 themed battlefields, each an open fenced field with scenery around it (`tools/creatures/arena.py`)
 - [x] Menu facelift: glossy buttons, raised panels, redesigned cards, icon tab bar, arena preview, popup and screen animations
 - [ ] Render the tools' effects and the cages in the same style
-- [ ] Bring back more animals from `animals_later.json` once the first 20 feel right
+- [ ] Bring back more animals from `animals_later.json` once the first 20 feel right (their release requirements, energy abilities and "dens only" targets need reworking for Draft Duel first)
 
 ## Phase 3: Online play
 
@@ -73,7 +81,7 @@ game server with an official Godot 4 client. It already has most of what we need
 | Clans and clan chat | Groups and chat |
 
 - [ ] Move rewards to the server. Cage rolls, trophies and purchases must be decided there so nobody can cheat by editing their save. The rules in `scripts/rules/` and the JSON data are written to be shared with the server for exactly this.
-- [ ] Battles: both phones run the deterministic simulation; the server relays and checks every release (energy, requirements, timing) and confirms the result
+- [ ] Draft Duel online: both phones run the deterministic fight; the server deals the Watering Hole, relays picks, placements, bets, Rallies and tools, and confirms the result
 - [ ] Matchmaking with bots as backup, plus leaderboards
 - [ ] Hosting: a small server is about $10-20 a month for testing. Heroic Labs also offers paid managed hosting.
 
@@ -101,7 +109,7 @@ game server with an official Godot 4 client. It already has most of what we need
 
 1. **Install Godot 4.7** (Standard, not .NET) and **GitHub Desktop**, then run the project (see the [README](../README.md)).
 2. **Play with it and react.** Change anything you like: animal names, which animals are in the game, rarities, arena names, cage names and prices. It's all in `game/data/`, or just tell me.
-3. **Play battles and tell me how they feel.** Too easy or too hard? Which animals feel too strong or useless? Is it fun to watch? And answer the remaining questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md).
+3. **Play Draft Duel and tell me how it feels.** Too easy or too hard? Which animals feel too strong or useless? Is it fun to watch? And answer the remaining questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md).
 4. **Tell me what devices you have:**
    - **Mac?** Building for iPhone needs a Mac with Xcode. Without one, we can build iOS in the cloud (for example GitHub Actions' macOS machines or Codemagic) or launch on Android first.
    - **Android phone?** It's the easiest way to try the game on a real device early, over a USB cable.

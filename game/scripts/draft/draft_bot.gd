@@ -81,13 +81,14 @@ func place() -> void:
 		var card := GameData.get_card(herd[i].id)
 		if float(card.stats.range) > 1.0:
 			back.append(i)
-		elif float(card.stats.hp) >= 1500.0 or card.stats.targets == "buildings":
+		elif float(card.stats.hp) >= 1500.0:
 			front.append(i)
 		else:
 			middle.append(i)
 	var strong_left := _enemy_strength(true) >= _enemy_strength(false)
-	var lanes := [4.5, 13.5, 9.0, 6.5, 11.5, 3.0, 15.0] if strong_left else [13.5, 4.5, 9.0, 11.5, 6.5, 15.0, 3.0]
-	var rows := [[front, 11.0], [middle, 9.0], [back, 6.5]]
+	var lanes := [4.0, 12.0, 8.0, 6.0, 10.0, 2.5, 13.5] if strong_left else [12.0, 4.0, 8.0, 10.0, 6.0, 13.5, 2.5]
+	# Rows in tiles from the far end (team 1's side; team 0 mirrors them).
+	var rows := [[front, 7.5], [middle, 5.5], [back, 3.5]]
 	var slot := 0
 	for row in rows:
 		for i in row[0]:
@@ -96,7 +97,7 @@ func place() -> void:
 			if team == 0:
 				y = BattleSim.HEIGHT - y
 			if not duel.move(team, i, x, y):
-				var spot := duel.default_spot(team, herd[i].id)
+				var spot := duel.default_spot(team)
 				duel.move(team, i, spot.x, spot.y)
 			slot += 1
 	duel.set_ready(team)
@@ -181,20 +182,17 @@ func _aim(tool_id: String) -> Dictionary:
 					biggest = f
 			return {"x": biggest.x, "y": biggest.y} if biggest != null and biggest.max_hp >= 1000 else {}
 		"bait":
-			var near := enemies.filter(func(f): return _on_own_side(f.y))
+			var near := enemies.filter(func(f): return BattleSim.on_own_half(team, f.y))
 			var lure := _best_cluster(near, radius, func(f): return float(f.card.cost) / int(f.card.get("count", 1)))
 			if float(lure.get("value", 0)) < 4.0:
 				return {}
-			# Drop it between them and our dens.
-			var toward_dens := -2 * T if team == 1 else 2 * T
-			return {"x": lure.x, "y": lure.y + toward_dens}
+			# Drop it just ahead of them, toward our herd: they stop to eat
+			# while our animals get at them.
+			var ahead := -2 * T if team == 1 else 2 * T
+			return {"x": lure.x, "y": clampi(lure.y + ahead, 0, BattleSim.HEIGHT)}
 		_:
 			var hit := _best_cluster(enemies, radius, func(f): return float(f.card.cost) / int(f.card.get("count", 1)))
 			return hit if float(hit.get("value", 0)) >= lerpf(5.0, 3.5, difficulty) else {}
-
-
-func _on_own_side(y: int) -> bool:
-	return y < BattleSim.RIVER_TOP if team == 1 else y > BattleSim.RIVER_BOTTOM
 
 
 ## The fighter whose surroundings (within `radius`) add up to the most
@@ -232,8 +230,9 @@ func bet(odds: float) -> void:
 		return
 	var most := duel.max_raise(team)
 	var bluff: bool = not duel.tools[team].is_empty() and hope > 0.3 and rng.randf() < 0.1 + 0.2 * difficulty
-	# Far ahead, it would rather let its herd hit the dens than offer a way
-	# out; a little ahead, it raises to win Acorns.
+	# Far ahead, it would rather let its herd finish the job (each animal
+	# still standing costs the loser hearts) than offer a way out; a little
+	# ahead, it raises to win Acorns.
 	var value_raise := hope > 0.6 and hope < lerpf(1.01, 0.9, difficulty)
 	if most > 0 and (value_raise or bluff):
 		var amount := clampi(roundi(lerpf(1.0, float(most), clampf((hope - 0.5) * 2.5, 0.0, 1.0))), 1, most)

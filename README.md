@@ -70,14 +70,17 @@ The site is https://idbloodworth03-debug.github.io/immakingagameidkwhattocall/
 
 1. **Switch on GitHub Pages:** *Settings*, then *Pages* (left side). Under
    *Build and deployment*, set *Source* to **GitHub Actions**.
-2. **Publish now:** open the *Actions* tab, click the latest *Web version*
-   run, then *Re-run all jobs*. From then on, every push publishes by itself.
-   You can also click *Web version* on the left, then *Run workflow*.
+2. **Let the work branches publish:** switching Pages on only lets `main`
+   publish, and the work happens on `claude/...` branches. *Settings*, then
+   *Environments* (left side), then **github-pages**. Under *Deployment
+   branches and tags*, choose **No restriction** (or add a rule for
+   `claude/*`).
+3. **Publish now:** open the *Actions* tab, click the top *Web version* run,
+   then *Re-run jobs* (top right; on a phone it's under the "..." menu).
+   From then on, every push publishes by itself.
 
-If a publish fails, the run's *publish* job says why. If it says the branch
-isn't allowed to deploy to `github-pages`, go to *Settings*, *Environments*,
-**github-pages**, and under *Deployment branches and tags* add a rule for
-`claude/*` (or choose *No restriction*), then re-run.
+If a publish fails, the run's *publish* job says why. If it has no log at
+all, GitHub refused to start it: that's step 2.
 
 **Moving from Netlify:** the old site (denduel.netlify.app) no longer gets
 updates. Saves belong to the website they were made on, so the new site

@@ -1,12 +1,19 @@
 class_name DraftMatch
 extends RefCounted
 ## Draft Duel. Each player starts with hearts (30), and the match goes round
-## by round until someone runs out. Each round has five parts:
+## by round until someone runs out.
 ##
-##   1. Draft: cards sit face up at the Watering Hole (animals, a Ranger tool
-##      and a face-down Mystery Crate), drawn from the player's collection.
-##      The players take turns buying one with Acorns, or pass. Whoever lost
-##      the last round picks first. Herds carry over from round to round.
+## Before the first round, each player picks starters: up to 3 animals they
+## own, within an Acorn budget. They start the match in the herd.
+##
+## Each round has five parts:
+##
+##   1. Shop: each player has their own Watering Hole, drawn from the cards
+##      they own: animals, a Ranger tool and a face-down Mystery Crate. Both
+##      shop at the same time: buy cards, reroll the shop for an Acorn, or
+##      train an animal in the herd up a star (1 to 3; every star adds
+##      health and bite). Buying a copy of an animal you already have gives
+##      it a free star instead. Herds carry over from round to round.
 ##   2. Place: each player arranges their whole herd on their own half of the
 ##      field. Nothing moves and there's no clock: this is the time to think.
 ##   3. Wager: the Bookie (see bookie.gd) posts the odds of the fight, and
@@ -19,11 +26,12 @@ extends RefCounted
 ##   5. Round over: the fight ends when a herd is wiped out (or at the bell:
 ##      then the herd with more of itself left wins). The winner takes the
 ##      Pot, the Bookie pays winning wagers, and the loser loses hearts: the
-##      round number, plus 1 for every enemy animal still standing.
+##      round number, plus 1 for every enemy animal still standing. The loser
+##      gets a few extra Acorns next round, to help it catch up.
 ##
-## Acorns are the match's only money: spend them on animals and tools, or
-## keep them to bet. Both players start with the same Acorns, and they're
-## gone when the match ends.
+## Acorns are the match's only money: spend them on animals, tools and
+## training, or keep them to bet. Both players start with the same Acorns,
+## and they're gone when the match ends.
 ##
 ## The Pot: both players put in an ante when the fight starts. At halftime
 ## the player (team 0) may raise or check, then the opponent; a raise must
@@ -51,21 +59,26 @@ const NO_WINNER := -1
 var rules: Dictionary
 var sim: BattleSim
 var rng := RandomNumberGenerator.new()
-## "draft", "place", "wager", "fight", "halftime", "round_over" or "over".
+## "starters", "draft" (shopping), "place", "wager", "fight", "halftime",
+## "round_over" or "over".
 var phase := ""
 var round_number := 0
 var hearts := [0, 0]
 var acorns := [0, 0]
-## Each team's animals: {"id": String, "x": int, "y": int}, in field units.
+## Each team's animals: {"id": String, "x": int, "y": int (field units),
+## "stars": 1 to star_max}.
 var herds := [[], []]
 ## Each team's Ranger tools, by card id. Hidden from the other player.
 var tools := [[], []]
-## The cards the Watering Hole draws from.
+## The cards the Watering Holes draw from.
 var pool: Array = []
-## The Watering Hole: {"id", "cost", "mystery": bool, "taken": team or -1}.
-var market: Array = []
-var turn := 0
-var passed := [false, false]
+## Each team's own Watering Hole: {"id", "cost", "mystery": bool, "taken":
+## team or -1}.
+var shops := [[], []]
+## Each team's starters, once picked.
+var starters := [[], []]
+var starters_picked := [false, false]
+var done_shopping := [false, false]
 var ready := [false, false]
 ## Each player's Rally for this fight (true until used).
 var rally_ready := [true, true]
@@ -92,8 +105,12 @@ var events: Array = []
 ## The battle-field groups of each herd's animals, in herd order, so a tap on
 ## an animal finds its herd entry.
 var groups := [[], []]
-var _first_picker := 0
+## The loser of the last round (-1 for none), who gets bonus Acorns.
+var _last_loser := -1
 var _stolen := [0, 0]
+## Each team's own dice for its shop, so one player's rerolls never change
+## what the other is offered.
+var _shop_dice := [RandomNumberGenerator.new(), RandomNumberGenerator.new()]
 
 
 ## `setup` may hold "levels" (two dictionaries of card id -> level; a card
@@ -108,8 +125,9 @@ func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}
 	halftime_ticks = roundi(float(rules.halftime_seconds) * sim.tps)
 	hearts = [int(rules.hearts), int(rules.hearts)]
 	acorns = [int(rules.acorns_start), int(rules.acorns_start)]
-	_first_picker = rng.randi_range(0, 1)
-	_start_round()
+	for team in 2:
+		_shop_dice[team].seed = seed_value * 31 + team + 1
+	phase = "starters"
 
 
 ## The cards a player's Watering Hole draws from: the animals and tools they
@@ -201,80 +219,166 @@ func take_events() -> Array:
 	return taken
 
 
-# --- Draft -----------------------------------------------------------------
+# --- Starters --------------------------------------------------------------
 
-## Why `team` can't buy market slot `slot` right now. Empty means it can.
+## Why `ids` can't be `team`'s starters. Empty means they can.
+func starter_problem(ids: Array) -> String:
+	if ids.size() > int(rules.starters):
+		return "Pick up to %d" % int(rules.starters)
+	var total := 0
+	for i in ids.size():
+		var id: String = ids[i]
+		if not pool.has(id) or GameData.is_tool(id):
+			return "Starters must be animals you own"
+		if ids.find(id) != i:
+			return "Pick different animals"
+		total += int(GameData.get_card(id).cost)
+	if total > int(rules.starter_budget):
+		return "Over budget: %d of %d Acorns" % [total, int(rules.starter_budget)]
+	return ""
+
+
+## Picks `team`'s starters. When both players have, the first round starts.
+func pick_starters(team: int, ids: Array) -> bool:
+	if phase != "starters" or starters_picked[team] or starter_problem(ids) != "":
+		return false
+	starters[team] = ids.duplicate()
+	starters_picked[team] = true
+	for id in ids:
+		var spot := default_spot(team)
+		herds[team].append({"id": id, "x": spot.x, "y": spot.y, "stars": 1})
+	events.append({"type": "starters", "team": team})
+	if starters_picked[0] and starters_picked[1]:
+		_start_round()
+	else:
+		_lay_out_herds()
+	return true
+
+
+# --- Shopping --------------------------------------------------------------
+
+## Why `team` can't buy slot `slot` of its shop right now. Empty means it can.
 func can_buy(team: int, slot: int) -> String:
 	if phase != "draft":
-		return "The draft is over"
-	if turn != team or passed[team]:
-		return "Not your turn"
-	return _buy_problem(team, slot)
-
-
-func _buy_problem(team: int, slot: int) -> String:
-	if slot < 0 or slot >= market.size() or int(market[slot].taken) >= 0:
-		return "Already taken"
-	var item: Dictionary = market[slot]
+		return "The shop is closed"
+	if done_shopping[team]:
+		return "You're done shopping"
+	if slot < 0 or slot >= shops[team].size() or int(shops[team][slot].taken) >= 0:
+		return "Already bought"
+	var item: Dictionary = shops[team][slot]
 	if acorns[team] < int(item.cost):
 		return "Not enough Acorns"
 	if GameData.is_tool(item.id):
 		if tools[team].size() >= int(rules.tools_max):
 			return "Your tool belt is full"
-	elif herds[team].size() >= int(rules.herd_max):
+	elif herds[team].size() >= int(rules.herd_max) and (item.mystery or merge_target(team, item.id) < 0):
 		return "Your herd is full"
 	return ""
+
+
+## The herd animal a bought copy of `id` would upgrade (the one with the
+## fewest stars that can still go up), or -1 if it would join as a new one.
+func merge_target(team: int, id: String) -> int:
+	var best := -1
+	for i in herds[team].size():
+		var entry: Dictionary = herds[team][i]
+		if entry.id == id and int(entry.stars) < int(rules.star_max):
+			if best < 0 or int(entry.stars) < int(herds[team][best].stars):
+				best = i
+	return best
 
 
 func buy(team: int, slot: int) -> bool:
 	if can_buy(team, slot) != "":
 		return false
-	var item: Dictionary = market[slot]
+	var item: Dictionary = shops[team][slot]
 	acorns[team] -= int(item.cost)
 	item.taken = team
+	var merged := -1
 	if GameData.is_tool(item.id):
 		tools[team].append(item.id)
 	else:
-		var spot := default_spot(team)
-		herds[team].append({"id": item.id, "x": spot.x, "y": spot.y})
+		merged = merge_target(team, item.id)
+		if merged >= 0:
+			herds[team][merged].stars = int(herds[team][merged].stars) + 1
+		else:
+			var spot := default_spot(team)
+			herds[team].append({"id": item.id, "x": spot.x, "y": spot.y, "stars": 1})
 		_lay_out_herds()
-	events.append({"type": "buy", "team": team, "slot": slot, "id": item.id, "mystery": item.mystery})
-	_next_turn()
+	events.append({"type": "buy", "team": team, "slot": slot, "id": item.id, "mystery": item.mystery,
+		"merged": merged >= 0, "stars": int(herds[team][merged].stars) if merged >= 0 else 1})
 	return true
 
 
-## Done buying for this round.
-func pass_turn(team: int) -> bool:
-	if phase != "draft" or turn != team or passed[team]:
+## What training herd animal `index` up a star costs, or -1 if it can't go
+## higher: its card's cost times the stars it has, plus train_extra.
+func train_cost(team: int, index: int) -> int:
+	if index < 0 or index >= herds[team].size():
+		return -1
+	var stars := int(herds[team][index].stars)
+	if stars >= int(rules.star_max):
+		return -1
+	return int(GameData.get_card(herds[team][index].id).cost) * stars + int(rules.train_extra)
+
+
+## Why `team` can't train herd animal `index` now. Empty means it can.
+func can_train(team: int, index: int) -> String:
+	if phase != "draft":
+		return "Train while shopping"
+	if done_shopping[team]:
+		return "You're done shopping"
+	var price := train_cost(team, index)
+	if price < 0:
+		return "Already %d stars" % int(rules.star_max)
+	if acorns[team] < price:
+		return "Not enough Acorns"
+	return ""
+
+
+func train(team: int, index: int) -> bool:
+	if can_train(team, index) != "":
 		return false
-	passed[team] = true
-	events.append({"type": "pass", "team": team})
-	_next_turn()
+	acorns[team] -= train_cost(team, index)
+	herds[team][index].stars = int(herds[team][index].stars) + 1
+	_lay_out_herds()
+	events.append({"type": "train", "team": team, "id": herds[team][index].id, "stars": herds[team][index].stars})
 	return true
 
 
-func can_buy_anything(team: int) -> bool:
-	for i in market.size():
-		if _buy_problem(team, i) == "":
+## A fresh shop for `reroll_cost` Acorns.
+func reroll(team: int) -> bool:
+	if phase != "draft" or done_shopping[team] or acorns[team] < int(rules.reroll_cost):
+		return false
+	acorns[team] -= int(rules.reroll_cost)
+	shops[team] = _roll_shop(team)
+	events.append({"type": "reroll", "team": team})
+	return true
+
+
+## Done shopping for this round. When both are, it's time to place.
+func finish_shopping(team: int) -> bool:
+	if phase != "draft" or done_shopping[team]:
+		return false
+	done_shopping[team] = true
+	events.append({"type": "done", "team": team})
+	if done_shopping[0] and done_shopping[1]:
+		_start_placing()
+	return true
+
+
+## Something `team` could still buy or train this round.
+func can_shop_more(team: int) -> bool:
+	for i in shops[team].size():
+		if can_buy(team, i) == "":
+			return true
+	for i in herds[team].size():
+		if can_train(team, i) == "":
 			return true
 	return false
 
 
-## Hands the turn to the other player, skipping anyone who has passed or
-## can't buy anything. When nobody can go on, the draft ends.
-func _next_turn() -> void:
-	for i in 2:
-		turn = 1 - turn
-		if passed[turn]:
-			continue
-		if can_buy_anything(turn):
-			return
-		passed[turn] = true
-		events.append({"type": "pass", "team": turn, "auto": true})
-	_start_placing()
-
-
-func _roll_market() -> Array:
+func _roll_shop(team: int) -> Array:
+	var dice: RandomNumberGenerator = _shop_dice[team]
 	var slots := []
 	var animals := []
 	var tool_ids := []
@@ -285,18 +389,18 @@ func _roll_market() -> Array:
 			animals.append(id)
 	var shown := []
 	for i in int(rules.market_animals):
-		var id := _weighted_pick(animals, shown)
+		var id := _weighted_pick(animals, shown, dice)
 		if id != "":
 			shown.append(id)
 			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "mystery": false, "taken": -1})
 	for i in int(rules.market_tools):
 		var choices := tool_ids.filter(func(t): return not shown.has(t))
 		if not choices.is_empty():
-			var id: String = choices[rng.randi_range(0, choices.size() - 1)]
+			var id: String = choices[dice.randi_range(0, choices.size() - 1)]
 			shown.append(id)
 			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "mystery": false, "taken": -1})
 	for i in int(rules.mystery_crates):
-		var id := _weighted_pick(animals, [])
+		var id := _weighted_pick(animals, [], dice)
 		if id != "":
 			slots.append({"id": id, "cost": int(rules.mystery_cost), "mystery": true, "taken": -1})
 	return slots
@@ -304,7 +408,7 @@ func _roll_market() -> Array:
 
 ## A random animal, rarer ones less often. Each rarity's weight in
 ## draft_rules is shared among its animals.
-func _weighted_pick(ids: Array, exclude: Array) -> String:
+func _weighted_pick(ids: Array, exclude: Array, dice: RandomNumberGenerator) -> String:
 	var per_rarity := {}
 	for id in ids:
 		var rarity: String = GameData.get_card(id).rarity
@@ -315,7 +419,7 @@ func _weighted_pick(ids: Array, exclude: Array) -> String:
 		if not exclude.has(id):
 			var rarity: String = GameData.get_card(id).rarity
 			total += float(weights.get(rarity, 0)) / per_rarity[rarity]
-	var roll := rng.randf() * total
+	var roll := dice.randf() * total
 	for id in ids:
 		if exclude.has(id):
 			continue
@@ -404,8 +508,21 @@ func _lay_out_herds() -> void:
 			var made := sim.spawn(team, entry.id, int(entry.x), int(entry.y))
 			for f in made:
 				f.deploy_ticks = 0
+				apply_stars(f, int(entry.get("stars", 1)), rules)
 			groups[team].append(int(made[0].memory.group) if not made.is_empty() else -1)
 	sim.take_events()
+
+
+## Every star after the first adds star_bonus_pct to an animal's health
+## and bite.
+static func apply_stars(f: BattleSim.Fighter, stars: int, draft_rules: Dictionary) -> void:
+	f.memory.stars = stars
+	if stars <= 1:
+		return
+	var pct := 100 + int(draft_rules.star_bonus_pct) * (stars - 1)
+	f.max_hp = f.max_hp * pct / 100
+	f.hp = f.max_hp
+	f.damage = f.damage * pct / 100
 
 
 # --- Backing your herd -----------------------------------------------------
@@ -611,19 +728,22 @@ func _resume() -> void:
 
 func _start_round() -> void:
 	round_number += 1
+	var bonus_team := -1
 	if round_number > 1:
 		for team in 2:
 			acorns[team] += int(rules.acorns_per_round)
-	market = _roll_market()
+		if _last_loser >= 0:
+			acorns[_last_loser] += int(rules.loser_bonus)
+			bonus_team = _last_loser
+	for team in 2:
+		shops[team] = _roll_shop(team)
 	_lay_out_herds()
-	passed = [false, false]
+	done_shopping = [false, false]
 	ready = [false, false]
 	line = -1.0
 	wagers = [-1, -1]
 	phase = "draft"
-	events.append({"type": "round", "round": round_number, "first": _first_picker})
-	turn = 1 - _first_picker
-	_next_turn()
+	events.append({"type": "round", "round": round_number, "bonus_team": bonus_team, "bonus": int(rules.loser_bonus)})
 
 
 func _start_placing() -> void:
@@ -651,10 +771,10 @@ func _end_round(folder: int) -> void:
 		var loser := 1 - winner
 		lost[loser] = mini(hearts[loser], heart_loss(standing_now[winner], folder >= 0))
 		hearts[loser] -= lost[loser]
-		_first_picker = loser
+		_last_loser = loser
 	else:
 		won_pot = 0
-		_first_picker = 1 - _first_picker
+		_last_loser = -1
 	last_round = {
 		"round": round_number, "winner": winner, "pot": won_pot, "folded": folder,
 		"standing": standing_now, "hearts_lost": lost,

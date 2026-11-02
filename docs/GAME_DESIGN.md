@@ -8,9 +8,10 @@ itself (speeds, timing, luck) in `game/data/battle_rules.json`.
 ## The big idea
 
 An animal battler built around one mode, **Draft Duel**: a round-based duel.
-Draft a herd from a shared pool, place it with no clock running, then watch
-it fight on its own while you make a few well-timed calls: a Rally, your
-tools and a bet. Each player has 30 hearts; lose a fight and you lose
+Pick a few starters from your collection, then each round shop for more
+animals and train them up, place your herd with no clock running, and
+watch it fight on its own while you make a few well-timed calls: a Rally,
+your tools and a bet. Each player has 30 hearts; lose a fight and you lose
 hearts. There's a gambling layer with Acorns, which only exist inside a
 match.
 
@@ -27,16 +28,29 @@ river across the field. That mode, "Classic battle", and the dens, river and
 The goal: give players time to think, keep them involved during the fight,
 and add the thrill of a bet, while skill (reading the fight) still beats
 luck. Each player starts with **30 hearts**, and the match goes round by
-round until someone runs out (at most 15 rounds). Each round has five parts:
+round until someone runs out (at most 15 rounds).
 
-1. **Draft at the Watering Hole.** Six cards sit face up: 4 animals, 1 Ranger
+**Starters.** Before the first round, each player picks up to **3 animals**
+they own to start with, worth up to **12 Acorns** together (so not just
+the three strongest). They start the match in the herd.
+
+Then each round has five parts:
+
+1. **Shop.** Each player has their own Watering Hole: 4 animals, 1 Ranger
    tool and a face-down **Mystery Crate** (a random animal for 4 Acorns:
-   maybe a Legendary, maybe one rat). They come from **your collection**:
-   the animals and tools you've freed (topped up with the first arena's
-   cards if you own too few). Players take turns buying one card or
-   passing; whoever lost the last round picks first. Taking a card the other
-   player wants is a real move. A herd holds up to 6 animals and 2 tools,
-   and it carries over from round to round.
+   maybe a Legendary, maybe one rat), all from **your collection** (topped
+   up with the first arena's cards if you own too few). Both players shop
+   at the same time, and each can:
+   - **Buy** cards. A herd holds up to 6 animals and 2 tools, and it carries over from round to round.
+   - **Buy a copy** of an animal already in the herd: instead of joining, it gives that animal a **star** (and a copy still fits when the herd is full).
+   - **Train** a herd animal up a star for Acorns: its card cost times the stars it has, plus 1 (a Brown Bear costs 7 to reach 2 stars, 13 to reach 3).
+   - **Reroll** the shop for 1 Acorn.
+   - Press **Done**. When both are done, it's time to place.
+
+   **Stars:** every animal starts with 1 and can reach 3. Each star after
+   the first adds 60% health and bite, and stars count at the bell.
+   Each player's shop has its own dice, so one player's rerolls never
+   change what the other is offered.
 2. **Place your herd.** Nothing moves and there's no clock. Both herds are on
    the field (the opponent places first, so you can answer it). Animals start
    on your own half, at least a tile back from the middle line.
@@ -75,12 +89,13 @@ round 4 loss to a herd with 3 animals left costs 7 hearts. A tie costs
 nobody anything. Run out of hearts and you lose; after round 15, more
 hearts wins.
 
-**Acorns** are the only money in a match: 10 to start, +5 each round, plus
-Pots, Bookie wins and Raccoon thefts. Spend them on animals and tools, or
-keep them to bet. Everyone starts with the same Acorns.
+**Acorns** are the only money in a match: 6 to start, +6 each round, +2
+more for the loser of the last round (to help it catch up), plus Pots,
+Bookie wins and Raccoon thefts. Spend them on animals, tools, training and
+rerolls, or keep them to bet. Everyone starts with the same Acorns.
 
-**Your collection matters, a little.** You draft from the cards you own, and
-your animals and tools fight at their levels. The computer opponent's cards
+**Your collection matters, a little.** Your starters and shop come from the
+cards you own, and your animals and tools fight at their levels. The computer opponent's cards
 are leveled like yours on average, so leveling a few favorites helps without
 making the match one-sided.
 
@@ -95,13 +110,14 @@ legal trouble in some countries and a higher App Store age rating.
 
 **Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
 bot-vs-bot matches with the real Bookie and prints match length, hearts lost,
-betting and how sure the Bookie's odds are. From the first runs with hearts
-(30 matches):
-- Matches last 6.3 rounds on average. Wins split 14-16.
-- A fight lasts about 12 seconds, and 9 in 10 end with a herd wiped out. A loss costs 5.5 hearts on average.
-- With 2 hearts per standing animal, matches were over in 5.3 rounds, so it's 1 now. Moods went from 20% to 30% to make fights less certain; bets on own herds doubled.
-- On an open field the stronger herd usually wins, so the Bookie's odds are still mostly under 20% or over 80%. That's where the long-shot bets and the Rally come in.
-- The Bookie takes about 0.3 seconds on a computer (slower on phones). The screen spreads its work across frames and settles on the tries it has after 3 seconds.
+shopping, betting and how sure the Bookie's odds are. From the first runs
+with starters and shops (30 matches):
+- Matches last 7 rounds on average. Wins split 14-16.
+- A fight lasts about 15 seconds, and about 3 in 4 end with a herd wiped out. A loss costs 5.6 hearts on average.
+- Herds average 5 animals with 1.3 stars each. A bot buys about 16 cards a match (a third of them copies for a star) and trains about 3 times.
+- With herds growing and stars in play, the Bookie's odds spread out more than before (about 40% of fights are 20-80%), and the bots bet three times as often.
+- Before this, with one shared, take-turns Watering Hole and no stars: 6.3 rounds, with the odds nearly always under 20% or over 80%.
+- The Bookie takes about half a second on a computer with bigger herds (slower on phones). The screen spreads its work across frames and settles on the tries it has after 3 seconds.
 
 ## Rarity = how endangered the animal is
 
@@ -325,7 +341,8 @@ start with the Net and Air Horn.
 The opponent plays Draft Duel through the same calls as a person, so it
 follows the same rules:
 
-- **Drafting:** it buys by cost (pricier animals are stronger), wants one tool, sometimes gambles on the Mystery Crate, and once its herd has 3 animals it keeps some Acorns back to bet with.
+- **Starters:** it tries random sets within the budget and keeps the one worth the most.
+- **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, sometimes gambles on the Mystery Crate, rerolls a weak shop when it has Acorns to spare, and once its herd has 3 animals it keeps some Acorns back to bet with.
 - **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
 - **Betting:** from the Bookie's odds plus its own tools (it's braver with tools in hand), and it sometimes bluffs.

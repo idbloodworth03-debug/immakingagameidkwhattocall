@@ -1,24 +1,33 @@
 extends TestCase
-## Draft Duel tests: the draft, placing, the Pot and halftime betting, rounds
-## and hearts, the Bookie's odds and the computer opponent.
+## Draft Duel tests: starters, shopping and stars, placing, the Pot and
+## halftime betting, rounds and hearts, the Bookie's odds and the computer
+## opponent.
 
 const T := BattleSim.TILE
 
 
-## Ends the draft with nobody buying anything.
+## A match past the starters (none unless given), shopping in round 1.
+func _new_match(seed_value: int, starters_0: Array = [], starters_1: Array = []) -> DraftMatch:
+	var m := DraftMatch.new(seed_value)
+	m.pick_starters(0, starters_0)
+	m.pick_starters(1, starters_1)
+	return m
+
+
+## Ends the shopping with nobody buying anything.
 func _skip_draft(m: DraftMatch) -> void:
-	while m.phase == "draft":
-		m.pass_turn(m.turn)
+	m.finish_shopping(0)
+	m.finish_shopping(1)
 
 
 ## Skips to placing and gives each team the herd listed, at its default spots.
 func _with_herds(herd_0: Array, herd_1: Array, seed_value := 3) -> DraftMatch:
-	var m := DraftMatch.new(seed_value)
+	var m := _new_match(seed_value)
 	_skip_draft(m)
 	for team in 2:
 		for id in [herd_0, herd_1][team]:
 			var spot := m.default_spot(team)
-			m.herds[team].append({"id": id, "x": spot.x, "y": spot.y})
+			m.herds[team].append({"id": id, "x": spot.x, "y": spot.y, "stars": 1})
 	m._lay_out_herds()
 	return m
 
@@ -42,64 +51,164 @@ func _fight(m: DraftMatch) -> void:
 			m.step()
 
 
-func test_a_match_starts_with_a_draft() -> void:
+func test_a_match_starts_with_starters() -> void:
 	var m := DraftMatch.new(1)
 	var rules := GameData.draft_rules
-	check_eq(m.phase, "draft", "starts at the Watering Hole")
-	check_eq(m.round_number, 1, "round 1")
+	check_eq(m.phase, "starters", "starters first")
+	check_eq(m.round_number, 0, "before round 1")
 	check_eq(m.acorns, [int(rules.acorns_start), int(rules.acorns_start)], "same Acorns for both")
-	check_eq(m.market.size(), int(rules.market_animals) + int(rules.market_tools) + int(rules.mystery_crates), "a full Watering Hole")
-	check_eq(m.market.filter(func(s): return s.mystery).size(), int(rules.mystery_crates), "a Mystery Crate")
-	check_eq(m.market.filter(func(s): return GameData.is_tool(s.id) and not s.mystery).size(), int(rules.market_tools), "a tool")
 	check_eq(m.hearts, [int(rules.hearts), int(rules.hearts)], "same hearts for both")
-	check(m.sim.fighters.is_empty(), "an empty field")
+	check(m.pick_starters(0, ["red_fox", "raccoon"]), "the player picks")
+	check_eq(m.phase, "starters", "waiting for the opponent")
+	check(not m.pick_starters(0, ["cheetah"]), "only once")
+	check(m.pick_starters(1, ["sewer_rats", "cheetah", "gray_squirrel"]), "the opponent picks")
+	check_eq(m.phase, "draft", "then round 1's shopping")
+	check_eq(m.round_number, 1, "round 1")
+	check_eq(m.herds[0].map(func(e): return e.id), ["red_fox", "raccoon"], "starters are in the herd")
+	check(m.herds[1].all(func(e): return int(e.stars) == 1), "with one star each")
+	check_eq(m.sim.units(1).size(), 1 + 1 + int(GameData.get_card("sewer_rats").count), "and on the field")
+	for team in 2:
+		var shop: Array = m.shops[team]
+		check_eq(shop.size(), int(rules.market_animals) + int(rules.market_tools) + int(rules.mystery_crates), "a full shop")
+		check_eq(shop.filter(func(item): return item.mystery).size(), int(rules.mystery_crates), "a Mystery Crate")
+		check_eq(shop.filter(func(item): return GameData.is_tool(item.id) and not item.mystery).size(), int(rules.market_tools), "a tool")
 
 
-func test_players_take_turns_buying() -> void:
-	var m := DraftMatch.new(2)
-	var first := m.turn
+func test_starter_rules() -> void:
+	var m := DraftMatch.new(1, {"pool": ["red_fox", "raccoon", "cheetah", "brown_bear", "lion", "sewer_rats", "net"]})
+	var budget := int(GameData.draft_rules.starter_budget)
+	check_eq(m.starter_problem(["red_fox", "raccoon", "cheetah"]), "", "three within the budget")
+	check(m.starter_problem(["red_fox", "raccoon", "cheetah", "sewer_rats"]) != "", "no more than three")
+	check(m.starter_problem(["red_fox", "red_fox"]) != "", "no doubles")
+	check(m.starter_problem(["tiger"]) != "", "only animals you own")
+	check(m.starter_problem(["net"]) != "", "no tools")
+	check(int(GameData.get_card("brown_bear").cost) + int(GameData.get_card("lion").cost) + int(GameData.get_card("cheetah").cost) > budget, "(these three are over budget)")
+	check(m.starter_problem(["brown_bear", "lion", "cheetah"]).begins_with("Over budget"), "the budget counts")
+
+
+func test_each_player_has_their_own_shop() -> void:
+	var m := _new_match(2)
 	var slot := -1
-	for i in m.market.size():
-		if m.can_buy(first, i) == "":
+	for i in m.shops[0].size():
+		if m.can_buy(0, i) == "":
 			slot = i
 			break
 	check(slot >= 0, "something affordable")
-	check(m.can_buy(1 - first, slot) != "", "can't buy out of turn")
-	var before: int = m.acorns[first]
-	check(m.buy(first, slot), "buy")
-	check_eq(m.acorns[first], before - int(m.market[slot].cost), "pays the price")
-	check_eq(m.herds[first].size() + m.tools[first].size(), 1, "the card joins the herd or tool belt")
-	check_eq(m.turn, 1 - first, "then it's the other player's turn")
-	check(m.can_buy(1 - first, slot) != "", "a taken card can't be bought again")
+	check(m.can_buy(1, 0) == "" or m.can_buy(1, 0) == "Not enough Acorns", "the opponent can shop at the same time")
+	var before: int = m.acorns[0]
+	check(m.buy(0, slot), "buy")
+	check_eq(m.acorns[0], before - int(m.shops[0][slot].cost), "pays the price")
+	check_eq(m.herds[0].size() + m.tools[0].size(), 1, "the card joins the herd or tool belt")
+	check(m.can_buy(0, slot) != "", "a bought card can't be bought again")
+	check_eq(m.phase, "draft", "still shopping")
+	var other: Array = m.shops[1].duplicate(true)
+	before = m.acorns[0]
+	check(m.reroll(0), "reroll")
+	check_eq(m.acorns[0], before - int(GameData.draft_rules.reroll_cost), "a reroll costs an Acorn")
+	check(m.shops[0].all(func(item): return int(item.taken) < 0), "a fresh shop")
+	check_eq(m.shops[1], other, "the other player's shop doesn't change")
+	check(m.finish_shopping(0), "done")
+	check(m.can_buy(0, 0) != "" and not m.reroll(0), "no more shopping once done")
+	check_eq(m.phase, "draft", "waiting for the other player")
+	check(m.finish_shopping(1), "they're done too")
+	check_eq(m.phase, "place", "on to placing")
+
+
+func test_shops_are_independent_of_the_other_players_rerolls() -> void:
+	var a := _new_match(7)
+	var b := _new_match(7)
+	a.acorns[1] = 9
+	a.reroll(1)
+	a.reroll(1)
+	_skip_draft(a)
+	_skip_draft(b)
+	for m in [a, b]:
+		_fight(m)
+		m.next_round()
+	check_eq(a.shops[0], b.shops[0], "team 0's next shop is the same either way")
 
 
 func test_acorns_herd_and_tool_belt_limits() -> void:
-	var m := DraftMatch.new(4)
-	var team := m.turn
-	m.market = [
+	var m := _new_match(4)
+	var team := 0
+	m.shops[team] = [
 		{"id": "asian_elephant", "cost": 8, "mystery": false, "taken": -1},
 		{"id": "red_fox", "cost": 3, "mystery": false, "taken": -1},
 		{"id": "net", "cost": 2, "mystery": false, "taken": -1},
+		{"id": "wild_boar", "cost": 4, "mystery": true, "taken": -1},
 	]
 	m.acorns[team] = 5
 	check_eq(m.can_buy(team, 0), "Not enough Acorns", "too pricey")
 	for i in int(GameData.draft_rules.herd_max):
-		m.herds[team].append({"id": "sewer_rats", "x": 0, "y": 0})
+		m.herds[team].append({"id": "sewer_rats", "x": 0, "y": 0, "stars": 1})
 	check_eq(m.can_buy(team, 1), "Your herd is full", "herd limit")
+	check_eq(m.can_buy(team, 3), "Your herd is full", "a Mystery Crate needs room too")
+	m.herds[team][0].id = "red_fox"
+	check_eq(m.can_buy(team, 1), "", "but a copy of a herd animal still fits: it adds a star")
 	for i in int(GameData.draft_rules.tools_max):
 		m.tools[team].append("net")
 	check_eq(m.can_buy(team, 2), "Your tool belt is full", "tool limit")
 
 
-func test_draft_ends_when_nobody_can_go_on() -> void:
-	var m := DraftMatch.new(5)
-	_skip_draft(m)
-	check_eq(m.phase, "place", "on to placing")
-	m = DraftMatch.new(5)
-	m.acorns = [0, 0]
-	m.passed = [false, false]
-	m._next_turn()
-	check_eq(m.phase, "place", "nobody can afford anything: the draft ends by itself")
+func test_buying_a_copy_adds_a_star() -> void:
+	var m := _new_match(5, ["red_fox"])
+	var star_max := int(GameData.draft_rules.star_max)
+	m.acorns[0] = 99
+	m.shops[0] = []
+	for i in star_max + 1:
+		m.shops[0].append({"id": "red_fox", "cost": 3, "mystery": false, "taken": -1})
+	check(m.buy(0, 0), "buy a second fox")
+	check_eq(m.herds[0].size(), 1, "it doesn't join as a new animal...")
+	check_eq(int(m.herds[0][0].stars), 2, "...it gives the fox a star")
+	check(m.take_events().any(func(e): return e.type == "buy" and e.merged and e.stars == 2), "the screen hears it merged")
+	for i in range(1, star_max - 1):
+		m.buy(0, i)
+	check_eq(int(m.herds[0][0].stars), star_max, "up to the most stars")
+	check(m.buy(0, star_max - 1), "one more fox...")
+	check_eq(m.herds[0].size(), 2, "...joins as a new animal")
+	check_eq(int(m.herds[0][1].stars), 1, "with one star")
+
+
+func test_training() -> void:
+	var m := _new_match(6, ["brown_bear"])
+	var rules := GameData.draft_rules
+	var cost := int(GameData.get_card("brown_bear").cost)
+	check_eq(m.train_cost(0, 0), cost + int(rules.train_extra), "one star to two: the card's cost plus a bit")
+	m.acorns[0] = 1
+	check_eq(m.can_train(0, 0), "Not enough Acorns", "needs the Acorns")
+	m.acorns[0] = 99
+	check(m.train(0, 0), "train")
+	check_eq(m.acorns[0], 99 - cost - int(rules.train_extra), "paid")
+	check_eq(int(m.herds[0][0].stars), 2, "two stars")
+	check_eq(m.train_cost(0, 0), cost * 2 + int(rules.train_extra), "the next star costs more")
+	m.train(0, 0)
+	check_eq(m.train_cost(0, 0), -1, "no more stars to give")
+	check(m.can_train(0, 0) != "", "can't train past the top")
+	m.finish_shopping(0)
+	check(m.can_train(0, 0) != "", "only while shopping")
+
+
+func test_stars_make_animals_stronger() -> void:
+	var m := _new_match(8, ["brown_bear"], ["brown_bear"])
+	m.acorns[0] = 99
+	m.train(0, 0)
+	var mine: BattleSim.Fighter = m.sim.units(0)[0]
+	var theirs: BattleSim.Fighter = m.sim.units(1)[0]
+	var pct := 100 + int(GameData.draft_rules.star_bonus_pct)
+	check_eq(mine.max_hp, theirs.max_hp * pct / 100, "more health")
+	check_eq(mine.damage, theirs.damage * pct / 100, "a harder bite")
+	check_eq(int(mine.memory.stars), 2, "the field knows to draw two stars")
+	check(m.sim.herd_value(0) > m.sim.herd_value(1), "and it counts for more at the bell")
+
+
+func test_the_loser_gets_bonus_acorns() -> void:
+	var m := _with_herds(["brown_bear"], [])
+	_fight(m)
+	var acorns := m.acorns.duplicate()
+	m.next_round()
+	var rules := GameData.draft_rules
+	check_eq(m.acorns[0], int(acorns[0]) + int(rules.acorns_per_round), "the winner gets the usual income")
+	check_eq(m.acorns[1], int(acorns[1]) + int(rules.acorns_per_round) + int(rules.loser_bonus), "the loser gets a little extra")
 
 
 func test_herds_start_on_their_own_half() -> void:
@@ -134,7 +243,7 @@ func test_fight_pays_the_pot_to_the_winner() -> void:
 
 
 func test_heart_loss_grows_with_the_round_and_survivors() -> void:
-	var m := DraftMatch.new(1)
+	var m := _new_match(1)
 	var rules := GameData.draft_rules
 	check_eq(m.heart_loss(0, false), int(rules.heart_loss_per_round), "round 1, nobody standing")
 	check_eq(m.heart_loss(3, false), int(rules.heart_loss_per_round) + 3 * int(rules.heart_loss_per_animal), "plus each animal still standing")
@@ -255,7 +364,7 @@ func test_rally_once_a_fight() -> void:
 
 
 func test_the_match_ends_after_the_last_round() -> void:
-	var m := DraftMatch.new(6)
+	var m := _new_match(6)
 	for r in m.max_rounds():
 		_skip_draft(m)
 		_fight(m)
@@ -287,11 +396,13 @@ func test_raccoon_steals_acorns() -> void:
 	check(m.take_events().any(func(e): return e.type == "steal" and e.team == 0), "and the screen hears about it")
 
 
-func test_the_watering_hole_draws_from_the_pool() -> void:
+func test_the_shop_draws_from_the_pool() -> void:
 	var pool := ["red_fox", "raccoon", "wild_boar", "brown_bear", "sewer_rats", "net"]
 	for seed_value in 5:
 		var m := DraftMatch.new(seed_value, {"pool": pool})
-		check(m.market.all(func(item): return pool.has(item.id)), "seed %d: only cards from the pool" % seed_value)
+		m.pick_starters(0, [])
+		m.pick_starters(1, [])
+		check(m.shops[0].all(func(item): return pool.has(item.id)), "seed %d: only cards from the pool" % seed_value)
 
 
 func test_pool_from_a_collection() -> void:
@@ -381,8 +492,12 @@ func _bot_match(seed_value: int) -> DraftMatch:
 	while not m.is_over() and guard < 200000:
 		guard += 1
 		match m.phase:
+			"starters":
+				for b in bots:
+					b.pick_starters()
 			"draft":
-				bots[m.turn].pick()
+				for b in bots:
+					b.shop()
 			"place":
 				for b in bots:
 					if not m.ready[b.team]:
@@ -407,7 +522,8 @@ func test_bots_play_whole_matches() -> void:
 	for seed_value in [11, 12]:
 		var m := _bot_match(seed_value)
 		check(m.is_over(), "seed %d: the match finishes" % seed_value)
-		check(m.herds[0].size() > 0 and m.herds[1].size() > 0, "seed %d: both drafted a herd" % seed_value)
+		check(m.herds[0].size() > 0 and m.herds[1].size() > 0, "seed %d: both have a herd" % seed_value)
+		check(m.herds[0].size() + m.herds[1].size() > 2 * int(GameData.draft_rules.starters), "seed %d: and bought more" % seed_value)
 
 
 func test_same_seed_same_match() -> void:

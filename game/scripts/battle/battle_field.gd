@@ -531,6 +531,10 @@ func _draw_sprite_unit(f: BattleSim.Fighter, s: float) -> void:
 		draw_circle(p + Vector2(ring * 0.8, -ring * 1.6), maxf(3.0, ring * 0.2), Color("#7bd34a"))
 	if f.hp < f.max_hp:
 		_draw_bar(Vector2(p.x, p.y - UnitSprites.top(id) * k - 7.0), maxf(ring * 1.6, 26.0), 6.0, float(f.hp) / f.max_hp, team_color.lightened(0.3))
+	var stars := int(f.memory.get("stars", 1))
+	if stars > 1 and alpha > 0.5:
+		# Draft Duel stars, over its head (above the health bar).
+		UIKit.draw_stars(self, Vector2(p.x, p.y - UnitSprites.top(id) * k - 18.0), stars, 6.0)
 
 
 func _draw_corpse(corpse: Dictionary, s: float) -> void:

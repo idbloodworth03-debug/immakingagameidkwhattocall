@@ -105,13 +105,14 @@ func _build() -> void:
 	var play_box := UIKit.vbox(4)
 	play_panel.add_child(play_box)
 	play_box.add_child(UIKit.label("In Draft Duel", 24, UIKit.YELLOW))
-	var lines := ["Costs %d Acorns at the Watering Hole" % int(animal.cost)]
+	var lines := ["Costs %d Acorns in your shop" % int(animal.cost)]
 	if is_tool:
 		lines.append("Use it once, anywhere on the field, during a fight")
 	else:
-		lines.append("Joins your herd for the rest of the match")
+		lines.append("Joins your herd for the rest of the match, or can be one of your starters")
+		lines.append("Train it to 2 and 3 stars for more health and bite, or buy a second copy for a free star")
 	if not owned:
-		lines.append("Turns up in your draft once you've found it")
+		lines.append("Turns up in your shop once you've found it")
 	for line in lines:
 		play_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
 

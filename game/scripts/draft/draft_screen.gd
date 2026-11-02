@@ -1,9 +1,10 @@
 extends Control
 ## Draft Duel against the computer opponent (the rules are in DraftMatch).
-## The field in the middle shows both herds for the whole match. The panel
-## under it changes with each part of a round: the Watering Hole, placing
-## your herd, the Bookie's odds, your tools in the fight, the halftime bet
-## and the round's results.
+## Before the match: the stake, then your starters. The field in the middle
+## shows both herds for the whole match. The panel under it changes with
+## each part of a round: your shop (buy, reroll, train), placing your herd,
+## the Bookie's odds, your tools in the fight, the halftime bet and the
+## round's results.
 
 const MENU_SCENE := "res://scenes/main.tscn"
 ## How long the Bookie may think each frame (nothing else moves while it
@@ -22,7 +23,10 @@ var stake: Dictionary = {}
 
 var _rng := RandomNumberGenerator.new()
 var _selected_market := -1
+## A herd animal picked: to train while shopping, to move while placing.
 var _selected_herd := -1
+## The starters being picked, before the match.
+var _starter_ids: Array = []
 var _selected_tool := -1
 var _rally_selected := false
 var _fast := false
@@ -178,7 +182,7 @@ func _build() -> void:
 func _choose_stake() -> void:
 	var box := UIKit.vbox(12)
 	box.add_child(UIKit.label("Draft Duel", 44, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-	var intro := UIKit.paragraph("Take turns drafting animals at the Watering Hole, place your herd, and bet Acorns on the fight. You both start with %d hearts. Lose a fight and you lose hearts: more for every enemy animal still standing. Run out and you're out. Choose your stake:" % int(duel.rules.hearts), 20, UIKit.TEXT)
+	var intro := UIKit.paragraph("Pick your starters, then each round shop for more animals, train them up to 3 stars, place your herd and bet Acorns on the fight. You both start with %d hearts. Lose a fight and you lose hearts: more for every enemy animal still standing. Run out and you're out. Choose your stake:" % int(duel.rules.hearts), 20, UIKit.TEXT)
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(intro)
 	var overlay := _overlay(box)
@@ -191,8 +195,75 @@ func _choose_stake() -> void:
 			stake = s
 			overlay.queue_free()
 			Sound.play("select")
+			_choose_starters()
 		)
 		box.add_child(b)
+
+
+## Before the first round: up to 3 of your animals to start with, within
+## the Acorn budget.
+func _choose_starters() -> void:
+	var box := UIKit.vbox(10)
+	var overlay := _overlay(box)
+	var rebuild := func(again: Callable) -> void:
+		for child in box.get_children():
+			box.remove_child(child)
+			child.queue_free()
+		box.add_child(UIKit.label("Pick your starters", 38, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
+		var total := 0
+		for id in _starter_ids:
+			total += int(GameData.get_card(id).cost)
+		var budget := int(duel.rules.starter_budget)
+		var note := UIKit.paragraph("Up to %d animals, worth up to %d Acorns. You'll buy more in the shop each round." % [int(duel.rules.starters), budget], 19, UIKit.TEXT)
+		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(note)
+		var grid := GridContainer.new()
+		grid.columns = 5
+		grid.add_theme_constant_override("h_separation", 6)
+		grid.add_theme_constant_override("v_separation", 6)
+		var scroll := ScrollContainer.new()
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		var animal_ids: Array = duel.pool.filter(func(id): return not GameData.is_tool(id))
+		# As tall as the cards need, up to 3 rows; more scroll.
+		var rows := ceili(animal_ids.size() / 5.0)
+		scroll.custom_minimum_size = Vector2(530, mini(rows, 3) * 140)
+		scroll.add_child(grid)
+		box.add_child(scroll)
+		for id in animal_ids:
+			var card := AnimalCard.create(id, true)
+			card.custom_minimum_size = Vector2(100, 134)
+			card.info = AnimalCard.Info.LEVEL
+			var picked := _starter_ids.has(id)
+			card.highlighted = picked
+			if picked:
+				card.stamp = "PICKED"
+			elif duel.starter_problem(_starter_ids + [id]) != "":
+				card.modulate = Color(1, 1, 1, 0.45)
+			UIKit.on_tap(card, func() -> void:
+				if _starter_ids.has(id):
+					_starter_ids.erase(id)
+				elif duel.starter_problem(_starter_ids + [id]) == "":
+					_starter_ids.append(id)
+				else:
+					Sound.play("error")
+					UIKit.toast(duel.starter_problem(_starter_ids + [id]))
+					return
+				Sound.play("select")
+				again.call(again)
+			)
+			grid.add_child(card)
+		var count_text := "%d of %d picked  ·  %d of %d Acorns" % [_starter_ids.size(), int(duel.rules.starters), total, budget]
+		box.add_child(UIKit.label(count_text, 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+		var go := UIKit.button("Start!", UIKit.GREEN, 28, Vector2(260, 76))
+		go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		go.disabled = _starter_ids.is_empty()
+		go.pressed.connect(func() -> void:
+			if duel.pick_starters(0, _starter_ids):
+				Sound.play("horn")
+				overlay.queue_free()
+		)
+		box.add_child(go)
+	rebuild.call(rebuild)
 
 
 ## A dimmed full-screen layer with a panel in the middle holding `content`.
@@ -217,9 +288,9 @@ func _overlay(content: Control) -> Control:
 # --- Every frame -----------------------------------------------------------
 
 func _update_hud() -> void:
-	_round_label.text = "Round %d" % duel.round_number
+	_round_label.text = "Round %d" % duel.round_number if duel.round_number > 0 else "Draft Duel"
 	var phase_names := {
-		"draft": "Draft", "place": "Place your herd", "wager": "The Bookie's odds",
+		"starters": "Pick your starters", "draft": "Shopping", "place": "Place your herd", "wager": "The Bookie's odds",
 		"halftime": "Halftime!", "round_over": "Round over", "over": "Match over",
 	}
 	if duel.phase == "fight":
@@ -258,10 +329,13 @@ func _bump(pill: Control) -> void:
 ## Changes whenever the panel under the field needs redrawing.
 func _panel_signature() -> String:
 	var taken := []
-	for item in duel.market:
-		taken.append(item.taken)
-	return str([duel.phase, duel.round_number, duel.turn, duel.passed, taken, duel.acorns, duel.tools[0],
-		duel.herds[0].size(), duel.wagers, duel.line >= 0.0, duel.halftime, _halftime_line >= 0.0,
+	for item in duel.shops[0]:
+		taken.append([item.id, item.taken])
+	var stars := []
+	for entry in duel.herds[0]:
+		stars.append(entry.stars)
+	return str([duel.phase, duel.round_number, duel.done_shopping, taken, stars, duel.acorns, duel.tools[0],
+		duel.wagers, duel.line >= 0.0, duel.halftime, _halftime_line >= 0.0,
 		_selected_market, _selected_herd, _selected_tool, _rally_selected, duel.rally_ready[0], _fast, duel.ready,
 		duel.fight_tick > duel.halftime_ticks])
 
@@ -290,10 +364,13 @@ func _think_bookie(delta: float) -> void:
 func _opponent_moves(delta: float) -> void:
 	_bot_wait -= delta
 	match duel.phase:
+		"starters":
+			if not duel.starters_picked[bot.team]:
+				bot.pick_starters()
 		"draft":
-			if duel.turn == bot.team and not duel.passed[bot.team] and _bot_wait <= 0.0:
-				bot.pick()
-				_bot_wait = _rng.randf_range(0.7, 1.3)
+			if not duel.done_shopping[bot.team] and _bot_wait <= 0.0:
+				bot.shop()
+				_bot_wait = _rng.randf_range(0.5, 1.0)
 		"place":
 			if not duel.ready[bot.team]:
 				bot.place()
@@ -328,20 +405,36 @@ func _handle_events(events: Array) -> void:
 		match e.type:
 			"round":
 				_selected_market = -1
-				_announce_round(int(e.first))
-				_bot_wait = 1.6  # let the player read who picks first
+				_selected_herd = -1
+				_announce_round(int(e.bonus_team), int(e.bonus))
+				_bot_wait = 1.2
 			"buy":
-				Sound.play("reveal" if e.mystery else "coin")
+				Sound.play("reveal" if e.mystery else ("upgrade" if e.merged else "coin"))
 				var card := GameData.get_card(e.id)
 				if e.mystery:
 					UIKit.toast("%s Mystery Crate: %s!" % ["Their" if theirs else "Your", card.name], UIKit.ACORN.darkened(0.4))
 				if theirs:
-					_set_status("%s took the %s." % [opponent.name, card.name])
+					_set_status("%s's %s is now %s" % [opponent.name, card.name, _stars_text(e.stars)] if e.merged else "%s bought a %s." % [opponent.name, card.name])
 				else:
 					_selected_market = -1
-			"pass":
-				if theirs and not e.get("auto", false):
-					_set_status("%s is done picking." % opponent.name)
+					if e.merged:
+						_set_status("A second %s! Yours is now %s" % [card.name, _stars_text(e.stars)], UIKit.YELLOW)
+			"train":
+				Sound.play("upgrade")
+				var trained: String = GameData.get_card(e.id).name
+				if theirs:
+					_set_status("%s trained its %s to %s" % [opponent.name, trained, _stars_text(e.stars)])
+				else:
+					_set_status("Your %s is now %s" % [trained, _stars_text(e.stars)], UIKit.YELLOW)
+			"reroll":
+				Sound.play("pop", -4.0)
+				if theirs:
+					_set_status("%s rerolls its shop." % opponent.name)
+				else:
+					_selected_market = -1
+			"done":
+				if theirs:
+					_set_status("%s is done shopping." % opponent.name)
 			"place":
 				Sound.play("pop")
 				_set_status("Place your herd: tap an animal, then where it should start. No rush.")
@@ -403,10 +496,19 @@ func _handle_events(events: Array) -> void:
 					_set_status("%s loses %d heart%s!" % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s"], UIKit.YELLOW)
 
 
-func _announce_round(first_picker: int) -> void:
-	var first := "You pick first." if first_picker == 0 else "%s picks first." % opponent.name
-	UIKit.toast("Round %d! %s" % [duel.round_number, first])
-	_set_status("The Watering Hole: tap a card to see it, tap again to buy it.")
+func _announce_round(bonus_team: int, bonus: int) -> void:
+	var extra := ""
+	if bonus_team == 0:
+		extra = " +%d bonus Acorns." % bonus
+	elif bonus_team == 1:
+		extra = " %s gets %d bonus Acorns." % [opponent.name, bonus]
+	UIKit.toast("Round %d!%s" % [duel.round_number, extra])
+	_set_status("Your shop: tap a card to see it, tap again to buy. Tap a herd animal to train it.")
+
+
+## "★★" for 2 stars.
+static func _stars_text(stars: int) -> String:
+	return "★".repeat(stars)
 
 
 ## Shows which animals came to this fight fired up, and which are sleepy.
@@ -464,55 +566,88 @@ func _buttons(row_items: Array) -> HBoxContainer:
 	return row
 
 
-# Draft: the Watering Hole.
+# Shopping: your own Watering Hole, and training your herd.
 
 func _draft_panel() -> void:
-	var mine: bool = duel.turn == 0 and not duel.passed[0]
-	var who := "Your pick!" if mine else ("%s is picking..." % opponent.name if not duel.passed[1] else "")
-	if duel.passed[0]:
-		who = "You're done picking. %s" % ("%s is still picking..." % opponent.name if not duel.passed[1] else "")
-	_heading("The Watering Hole", "%s  Herd %d/%d · Tools %d/%d" % [who, duel.herds[0].size(), int(duel.rules.herd_max),
-		duel.tools[0].size(), int(duel.rules.tools_max)])
+	var done: bool = duel.done_shopping[0]
+	var who := "Waiting for %s to finish shopping..." % opponent.name if done else ("%s is shopping too." % opponent.name if not duel.done_shopping[1] else "%s is done shopping." % opponent.name)
+	_heading("Your Watering Hole", "Herd %d/%d · Tools %d/%d · %s" % [duel.herds[0].size(), int(duel.rules.herd_max),
+		duel.tools[0].size(), int(duel.rules.tools_max), who])
 	var row := UIKit.hbox(6)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	for i in duel.market.size():
+	for i in duel.shops[0].size():
 		row.add_child(_market_card(i))
 	_panel.add_child(row)
 
-	if _selected_market >= 0 and int(duel.market[_selected_market].taken) < 0:
-		_panel.add_child(_market_details(duel.market[_selected_market]))
+	var herd_row := UIKit.hbox(6)
+	herd_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	herd_row.add_child(UIKit.label("Herd", 18, UIKit.TEXT_DIM))
+	for i in duel.herds[0].size():
+		herd_row.add_child(_herd_chip(i, Vector2(70, 94)))
+	_panel.add_child(herd_row)
+
 	var actions := []
-	if _selected_market >= 0 and int(duel.market[_selected_market].taken) < 0:
+	if _selected_market >= 0 and int(duel.shops[0][_selected_market].taken) < 0:
+		var item: Dictionary = duel.shops[0][_selected_market]
+		_panel.add_child(_market_details(item))
 		var problem := duel.can_buy(0, _selected_market)
-		var buy := UIKit.button("Buy for %d" % int(duel.market[_selected_market].cost) if problem == "" else problem, UIKit.GREEN, 22, Vector2(280, 64))
+		var label := "Buy for %d" % int(item.cost)
+		if not item.mystery and not GameData.is_tool(item.id):
+			var target := duel.merge_target(0, item.id)
+			if target >= 0:
+				label = "Make it %s for %d" % [_stars_text(int(duel.herds[0][target].stars) + 1), int(item.cost)]
+		var buy := UIKit.button(label if problem == "" else problem, UIKit.GREEN, 22, Vector2(230, 64))
 		buy.disabled = problem != ""
 		buy.pressed.connect(func() -> void: _buy(_selected_market))
 		actions.append(buy)
-	var done := UIKit.button("Done picking", UIKit.GREY, 22, Vector2(240, 64))
-	done.disabled = not mine
-	done.pressed.connect(func() -> void:
+	elif _selected_herd >= 0 and _selected_herd < duel.herds[0].size():
+		var entry: Dictionary = duel.herds[0][_selected_herd]
+		var card := GameData.get_card(entry.id)
+		var stars := int(entry.stars)
+		var price := duel.train_cost(0, _selected_herd)
+		var info := "%s %s" % [card.name, _stars_text(stars)]
+		if price >= 0:
+			info += "  ·  Train to %s: +%d%% health and bite" % [_stars_text(stars + 1), int(duel.rules.star_bonus_pct)]
+		_panel.add_child(UIKit.label(info, 18, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+		var problem := duel.can_train(0, _selected_herd)
+		var train := UIKit.button("Train for %d" % price if problem == "" else problem, UIKit.YELLOW.darkened(0.15), 22, Vector2(230, 64))
+		train.disabled = problem != ""
+		train.pressed.connect(func() -> void:
+			duel.train(0, _selected_herd)
+		)
+		actions.append(train)
+	var reroll := UIKit.button("Reroll (%d)" % int(duel.rules.reroll_cost), UIKit.BLUE, 22, Vector2(150, 64))
+	reroll.disabled = done or duel.acorns[0] < int(duel.rules.reroll_cost)
+	reroll.pressed.connect(func() -> void: duel.reroll(0))
+	actions.append(reroll)
+	var finish := UIKit.button("Done", UIKit.GREY, 22, Vector2(130, 64))
+	finish.disabled = done
+	finish.pressed.connect(func() -> void:
 		_selected_market = -1
-		duel.pass_turn(0)
-		_bot_wait = _rng.randf_range(0.6, 1.0)
+		_selected_herd = -1
+		duel.finish_shopping(0)
 	)
-	actions.append(done)
+	actions.append(finish)
 	_buttons(actions)
 
 
 func _market_card(slot: int) -> Control:
-	var item: Dictionary = duel.market[slot]
+	var item: Dictionary = duel.shops[0][slot]
 	var taken := int(item.taken)
 	var card := AnimalCard.create(item.id, true)
-	card.custom_minimum_size = Vector2(108, 144)
+	card.custom_minimum_size = Vector2(104, 138)
 	card.info = AnimalCard.Info.NONE
 	card.mystery = item.mystery and taken < 0
 	card.price = int(item.cost)
 	card.price_color = UIKit.ACORN if duel.acorns[0] >= int(item.cost) or taken >= 0 else UIKit.RED
 	card.highlighted = slot == _selected_market
 	if taken >= 0:
-		card.stamp = "YOURS" if taken == 0 else "THEIRS"
-		card.stamp_color = UIKit.GREEN if taken == 0 else UIKit.RED
-		card.modulate = Color(1, 1, 1, 0.75)
+		card.stamp = "BOUGHT"
+		card.stamp_color = UIKit.GREEN
+		card.modulate = Color(1, 1, 1, 0.6)
+	elif not item.mystery and duel.merge_target(0, item.id) >= 0:
+		# A copy of one you have: buying it adds a star.
+		card.stars = int(duel.herds[0][duel.merge_target(0, item.id)].stars) + 1
 	UIKit.on_tap(card, func() -> void: _on_market_tapped(slot))
 	return card
 
@@ -532,18 +667,21 @@ func _market_details(item: Dictionary) -> Control:
 			var level := duel.sim.level_of(0, item.id)
 			text = "%s%s  ·  %s, level %d  ·  Health %d, Bite %d\n%s: %s" % [card.name, pack, GameData.rarity_name(card.rarity), level,
 				int(stats.hp), int(stats.damage), card.ability.name, card.ability.text]
+			if duel.merge_target(0, item.id) >= 0:
+				text += "\nYou have one: buying this gives it a star instead."
 	var l := UIKit.paragraph(text, 18, UIKit.TEXT)
 	return l
 
 
 func _on_market_tapped(slot: int) -> void:
-	if int(duel.market[slot].taken) >= 0:
+	if duel.phase != "draft" or int(duel.shops[0][slot].taken) >= 0:
 		return
 	if _selected_market == slot and duel.can_buy(0, slot) == "":
 		_buy(slot)
 		return
 	Sound.play("select")
 	_selected_market = slot
+	_selected_herd = -1
 
 
 func _buy(slot: int) -> void:
@@ -553,7 +691,6 @@ func _buy(slot: int) -> void:
 		_set_status(problem, UIKit.RED.lightened(0.3))
 		return
 	duel.buy(0, slot)
-	_bot_wait = _rng.randf_range(0.7, 1.3)
 
 
 # Placing.
@@ -564,7 +701,7 @@ func _place_panel() -> void:
 	var row := UIKit.hbox(8)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	for i in duel.herds[0].size():
-		row.add_child(_herd_chip(i))
+		row.add_child(_herd_chip(i, Vector2(92, 122)))
 	if duel.herds[0].is_empty():
 		row.add_child(UIKit.label("No animals this round!", 20, UIKit.TEXT_DIM))
 	_panel.add_child(row)
@@ -584,16 +721,23 @@ func _place_panel() -> void:
 	_buttons([go])
 
 
-func _herd_chip(index: int) -> Control:
+func _herd_chip(index: int, chip_size: Vector2) -> Control:
 	var card := AnimalCard.create(duel.herds[0][index].id, true)
-	card.custom_minimum_size = Vector2(96, 128)
+	card.custom_minimum_size = chip_size
 	card.info = AnimalCard.Info.NONE
+	card.stars = int(duel.herds[0][index].stars)
 	card.highlighted = index == _selected_herd
 	UIKit.on_tap(card, func() -> void: _select_herd(index))
 	return card
 
 
 func _select_herd(index: int) -> void:
+	if duel.phase == "draft" and not duel.done_shopping[0]:
+		# While shopping, a herd animal is picked to train.
+		Sound.play("select")
+		_selected_herd = -1 if _selected_herd == index else index
+		_selected_market = -1
+		return
 	if duel.phase != "place" or duel.ready[0]:
 		return
 	Sound.play("select")

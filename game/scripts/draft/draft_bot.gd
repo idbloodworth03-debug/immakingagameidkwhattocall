@@ -1,10 +1,11 @@
 class_name DraftBot
 extends RefCounted
-## The computer opponent in Draft Duel. It drafts, places its herd, uses its
-## tools in the fight and bets at halftime, all through DraftMatch's public
-## calls, so it follows the same rules as a person.
+## The computer opponent in Draft Duel. It picks starters, shops (buying,
+## training and rerolling), places its herd, uses its tools in the fight and
+## bets at halftime, all through DraftMatch's public calls, so it follows the
+## same rules as a person.
 ##
-## `difficulty` (0 = first arena, 1 = top arena) sets how well it drafts
+## `difficulty` (0 = first arena, 1 = top arena) sets how well it shops
 ## (less random), how quickly and how well it uses tools, and how it bets.
 
 const T := BattleSim.TILE
@@ -14,6 +15,7 @@ var team := 1
 var rng := RandomNumberGenerator.new()
 var difficulty := 0.5
 var _tool_wait := 0
+var _rerolls := 0
 
 
 func _init(draft_match: DraftMatch, bot_team: int, seed_value: int, bot_difficulty := 0.5) -> void:
@@ -24,46 +26,113 @@ func _init(draft_match: DraftMatch, bot_team: int, seed_value: int, bot_difficul
 	_tool_wait = _reaction()
 
 
-# --- Draft -----------------------------------------------------------------
+# --- Starters ------------------------------------------------------------
 
-## Makes one draft decision on the bot's turn: buys the card it wants most,
-## or passes.
-func pick() -> void:
-	if duel.phase != "draft" or duel.turn != team:
+## Picks its starters: a few tries at random sets within the budget, keeping
+## the one worth the most (with some noise, less at higher difficulty).
+func pick_starters() -> void:
+	if duel.phase != "starters" or duel.starters_picked[team]:
 		return
-	var best := -1
-	var best_score := 1.5
-	for i in duel.market.size():
-		if duel.can_buy(team, i) != "":
-			continue
-		var score := _want(duel.market[i])
+	var animals: Array = duel.pool.filter(func(id): return not GameData.is_tool(id))
+	var best: Array = []
+	var best_score := -1.0
+	for attempt in 40:
+		var pick: Array = []
+		var shuffled := animals.duplicate()
+		for i in range(shuffled.size() - 1, 0, -1):
+			var j := rng.randi_range(0, i)
+			var held: String = shuffled[i]
+			shuffled[i] = shuffled[j]
+			shuffled[j] = held
+		for id in shuffled:
+			if pick.size() < int(duel.rules.starters) and duel.starter_problem(pick + [id]) == "":
+				pick.append(id)
+		var score := 0.0
+		for id in pick:
+			score += float(GameData.get_card(id).cost)
+		score += rng.randf() * lerpf(4.0, 1.0, difficulty)
 		if score > best_score:
-			best = i
+			best = pick
 			best_score = score
-	if best >= 0:
-		duel.buy(team, best)
-	else:
-		duel.pass_turn(team)
+	duel.pick_starters(team, best)
 
 
-## How much it wants a market card. Pricier animals are stronger; it wants
-## one tool, sometimes gambles on the Mystery Crate, and once its herd is
-## decent it keeps some Acorns back to bet with.
+# --- Shopping --------------------------------------------------------------
+
+## Makes one shopping decision: buys the card it wants most, trains an
+## animal, rerolls, or finishes shopping. Call it again until it's done.
+func shop() -> void:
+	if duel.phase != "draft" or duel.done_shopping[team]:
+		return
+	var keep := _keep()
+	var best_score := 1.5
+	var best_action := Callable()
+	for i in duel.shops[team].size():
+		var item: Dictionary = duel.shops[team][i]
+		if duel.can_buy(team, i) != "" or duel.acorns[team] - int(item.cost) < keep:
+			continue
+		var score := _want(item)
+		if score > best_score:
+			best_score = score
+			best_action = duel.buy.bind(team, i)
+	for i in duel.herds[team].size():
+		var price := duel.train_cost(team, i)
+		if duel.can_train(team, i) != "" or duel.acorns[team] - price < keep:
+			continue
+		var score := _train_value(i, price)
+		if score > best_score:
+			best_score = score
+			best_action = duel.train.bind(team, i)
+	# Only weak picks and Acorns to spare: try a fresh shop first.
+	var rich: bool = duel.acorns[team] - int(duel.rules.reroll_cost) >= keep + 4
+	if _rerolls < 2 and rich and best_score < 4.0:
+		_rerolls += 1
+		duel.reroll(team)
+		return
+	if best_action.is_valid():
+		best_action.call()
+		return
+	if _rerolls < 2 and rich:
+		_rerolls += 1
+		duel.reroll(team)
+		return
+	_rerolls = 0
+	duel.finish_shopping(team)
+
+
+## Acorns it holds back for betting once its herd is decent.
+func _keep() -> int:
+	var herd_size: int = duel.herds[team].size()
+	return 0 if herd_size < 3 else int(duel.rules.ante) + (1 if herd_size < 5 else 3)
+
+
+## How much it wants a shop card. Pricier animals are stronger; a copy of
+## one it has upgrades it, which matters most once the herd is full; it
+## wants one tool and sometimes gambles on the Mystery Crate.
 func _want(item: Dictionary) -> float:
 	var cost := int(item.cost)
-	var left: int = duel.acorns[team] - cost
 	var herd_size: int = duel.herds[team].size()
+	var full := herd_size >= int(duel.rules.herd_max)
 	var noise := rng.randf() * lerpf(3.0, 0.8, difficulty)
-	var keep := 0 if herd_size < 3 else int(duel.rules.ante) + (2 if herd_size < 5 else 4)
-	if left < keep:
-		return 0.0
 	if GameData.is_tool(item.id):
 		return (3.0 + 2.0 * difficulty if duel.tools[team].is_empty() else 0.5) + noise
 	if item.mystery:
-		return 3.5 + noise
+		return (1.0 if full else 3.5) + noise
+	if duel.merge_target(team, item.id) >= 0:
+		# A star for the price of a copy: good value, and it saves a herd spot.
+		return float(cost) * (1.3 if full or herd_size >= 4 else 0.8) + noise
 	# Early on, numbers matter more than size: two cheap animals can beat one big one.
-	var size_need := 1.5 if herd_size < 2 else 0.0
+	var size_need := 1.5 if herd_size < 4 else 0.0
 	return float(cost) + size_need + noise
+
+
+## How much it wants to train herd animal `index` for `price` Acorns: worth
+## more once the herd is full, and for animals that cost more.
+func _train_value(index: int, price: int) -> float:
+	var cost := float(GameData.get_card(duel.herds[team][index].id).cost)
+	var full: bool = duel.herds[team].size() >= int(duel.rules.herd_max)
+	var value := cost * float(duel.rules.star_bonus_pct) / 100.0 * (2.0 if full else 1.0)
+	return value * 5.0 / maxf(5.0, float(price)) + rng.randf() * lerpf(2.0, 0.5, difficulty)
 
 
 # --- Placing ---------------------------------------------------------------

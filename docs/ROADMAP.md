@@ -43,6 +43,10 @@
 - [x] Your collection is your draft pool, and your cards fight at their levels (the opponent's are leveled to match)
 - [x] Abilities reworked for the new field (the Raccoon steals Acorns, the Hippo guards its own half, the Bison shoves)
 - [x] 12 arenas re-rendered as open, fenced fields
+- [x] Starters: pick up to 3 animals you own (within a 12-Acorn budget) to start the match with
+- [x] Your own shop each round, from your collection, with rerolls; both players shop at once
+- [x] Stars: train an animal for Acorns, or buy a copy for a free star (up to 3, +60% health and bite each)
+- [x] Bonus Acorns for the loser of a round
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] Check the Bookie's speed on real phones (it settles early if it's slow)
 - [ ] A balance pass for the open field, from real play

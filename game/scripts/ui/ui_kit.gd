@@ -399,6 +399,26 @@ static func on_tap(control: Control, callback: Callable) -> void:
 
 
 ## A tinted icon from res://art/icons/ as a plain control.
+## Draws `count` gold stars in a row centered on `center` (an animal's stars
+## in Draft Duel), each `radius` across, with a navy outline.
+static func draw_stars(canvas: CanvasItem, center: Vector2, count: int, radius: float) -> void:
+	var gap := radius * 1.9
+	for i in count:
+		var c := center + Vector2((i - (count - 1) / 2.0) * gap, 0)
+		canvas.draw_colored_polygon(_star_points(c, radius + 2.0), INK)
+		canvas.draw_colored_polygon(_star_points(c, radius), GOLD)
+		canvas.draw_colored_polygon(_star_points(c - Vector2(0, radius * 0.12), radius * 0.45), Color(1, 1, 1, 0.45))
+
+
+static func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
+	var points := PackedVector2Array()
+	for i in 10:
+		var r := radius if i % 2 == 0 else radius * 0.45
+		var angle := -PI / 2.0 + i * PI / 5.0
+		points.append(center + Vector2(cos(angle), sin(angle)) * r)
+	return points
+
+
 static func icon_rect(icon_name: String, tint: Color, side: int) -> TextureRect:
 	var rect := TextureRect.new()
 	rect.texture = icon(icon_name)

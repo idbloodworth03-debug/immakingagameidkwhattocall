@@ -145,13 +145,14 @@ static func on_own_half(team: int, y: int) -> bool:
 
 
 ## How much of a team's herd is still standing: each animal counts its card's
-## cost (split among a pack) times the share of health it has left, in
-## thousandths of a cost point.
+## cost (split among a pack, and times its stars in Draft Duel) times the
+## share of health it has left, in thousandths of a cost point.
 func herd_value(team: int) -> int:
 	var total := 0
 	for f in units(team):
 		var count := maxi(1, int(f.card.get("count", 1)))
-		total += int(f.card.cost) * 1000 * f.hp / maxi(1, f.max_hp) / count
+		var stars := maxi(1, int(f.memory.get("stars", 1)))
+		total += int(f.card.cost) * stars * 1000 * f.hp / maxi(1, f.max_hp) / count
 	return total
 
 

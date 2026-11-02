@@ -29,6 +29,8 @@ var mystery := false
 ## A word stamped across the card, like "YOURS" ("" for none).
 var stamp := ""
 var stamp_color := UIKit.GREEN
+## Draft Duel stars (2 or 3 show over the name; 0 or 1 show nothing).
+var stars := 0
 
 var _owned := false
 var _level := 1
@@ -147,6 +149,9 @@ func _draw() -> void:
 	var plate_style := UIKit.box(Color(UIKit.INK, 0.78), int(plate_h * 0.35))
 	draw_style_box(plate_style, plate)
 	_text(font, "Mystery" if mystery else String(animal.get("name", "?")), plate, int(h * (0.075 if small else 0.072)), Color.WHITE)
+
+	if stars > 1:
+		UIKit.draw_stars(self, Vector2(w / 2.0, plate.position.y - h * 0.035), stars, w * 0.07)
 
 	# Bottom: level and copies, or where to find it.
 	if info != Info.NONE:

@@ -18,7 +18,8 @@ func _ready() -> void:
 		matches = maxi(1, args[0].to_int())
 
 	var totals := {"rounds": 0, "knockouts": 0, "fights": 0, "fight_seconds": 0.0, "hearts_lost": 0,
-		"wipes": 0, "bets": 0, "raises": 0, "folds": 0, "halftimes": 0, "herd": 0}
+		"wipes": 0, "bets": 0, "raises": 0, "folds": 0, "halftimes": 0, "herd": 0, "stars": 0,
+		"buys": 0, "merges": 0, "trains": 0, "rerolls": 0}
 	var wins := [0, 0, 0]          # draws, team 0, team 1
 	var odds := [0, 0, 0, 0, 0]    # Bookie's pre-fight odds in fifths: 0-20% ... 80-100%
 	var think_ms := []
@@ -30,8 +31,12 @@ func _ready() -> void:
 		var halftime_line := -1.0
 		while not m.is_over():
 			match m.phase:
+				"starters":
+					for b in bots:
+						b.pick_starters()
 				"draft":
-					bots[m.turn].pick()
+					for b in bots:
+						b.shop()
 				"place":
 					for b in bots:
 						if not m.ready[b.team]:
@@ -64,6 +69,13 @@ func _ready() -> void:
 					m.next_round()
 			for e in m.take_events():
 				match e.type:
+					"buy":
+						totals.buys += 1
+						totals.merges += int(e.merged)
+					"train":
+						totals.trains += 1
+					"reroll":
+						totals.rerolls += 1
 					"raise":
 						totals.raises += 1
 					"fold":
@@ -74,6 +86,9 @@ func _ready() -> void:
 						totals.hearts_lost += int(m.last_round.hearts_lost[0]) + int(m.last_round.hearts_lost[1])
 						totals.wipes += int(m.wiped_at[0] >= 0 or m.wiped_at[1] >= 0)
 						totals.herd += m.herds[0].size() + m.herds[1].size()
+						for herd in m.herds:
+							for entry in herd:
+								totals.stars += int(entry.stars)
 		totals.rounds += m.round_number
 		totals.knockouts += int(m.hearts[0] <= 0 or m.hearts[1] <= 0)
 		wins[m.match_winner() + 1] += 1
@@ -83,7 +98,9 @@ func _ready() -> void:
 	print("  rounds per match     %.1f (someone ran out of hearts in %d)" % [float(totals.rounds) / matches, totals.knockouts])
 	print("  wins                 team 0: %d, team 1: %d, draws: %d" % [wins[1], wins[2], wins[0]])
 	print("  per fight            %.1f s, %.1f hearts lost, %d%% ended in a wipe-out" % [totals.fight_seconds / fights, totals.hearts_lost / fights, roundi(100.0 * totals.wipes / fights)])
-	print("  herd size            %.1f animals each, on average" % (totals.herd / fights / 2.0))
+	print("  herd size            %.1f animals each, %.2f stars per animal, on average" % [totals.herd / fights / 2.0, totals.stars / maxf(1.0, float(totals.herd))])
+	print("  shopping             per match: %.1f buys (%.1f were copies for a star), %.1f trainings, %.1f rerolls" % [
+		float(totals.buys) / matches, float(totals.merges) / matches, float(totals.trains) / matches, float(totals.rerolls) / matches])
 	print("  betting              %d bets on own herd, %d raises, %d folds in %d halftimes" % [totals.bets, totals.raises, totals.folds, totals.halftimes])
 	print("  Bookie's odds        0-20%%: %d, 20-40%%: %d, 40-60%%: %d, 60-80%%: %d, 80-100%%: %d" % odds)
 	think_ms.sort()

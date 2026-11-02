@@ -791,7 +791,6 @@ func _handle_events(events: Array) -> void:
 					_selected_market = -1
 			"place":
 				Sound.play("pop")
-				_set_status("Place your herd: tap an animal, then where it should start. No rush.")
 			"fight":
 				Sound.play("horn")
 				_set_status("Fight! Rally your herd once, at just the right moment.")
@@ -1141,7 +1140,7 @@ func _place_panel() -> void:
 		for id in duel.tools[0]:
 			names.append(GameData.get_card(id).name)
 		_panel.add_child(UIKit.label("Tools for the fight: " + ", ".join(names), 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	var go := UIKit.button("Ready!", UIKit.GREEN, 28, Vector2(260, 72))
+	var go := UIStyle.button("Ready!", "primary")
 	go.disabled = waiting
 	go.pressed.connect(func() -> void:
 		_selected_herd = -1
@@ -1190,7 +1189,7 @@ func _fight_panel() -> void:
 	for i in duel.tools[0].size():
 		row.add_child(_tool_chip(i))
 	_panel.add_child(row)
-	var speed := UIKit.button("Speed x2" if not _fast else "Normal speed", UIKit.BLUE, 20, Vector2(200, 56))
+	var speed := UIStyle.button("Speed ×2" if not _fast else "Normal speed", "secondary", "", -1, "body")
 	speed.pressed.connect(func() -> void: _fast = not _fast)
 	_buttons([speed])
 
@@ -1281,7 +1280,7 @@ func _round_panel() -> void:
 		lines.append("Last round next! Then whoever has more hearts wins.")
 	for line in lines:
 		_panel.add_child(UIKit.label(line, 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	var next := UIKit.button("Next round", UIKit.GREEN, 26, Vector2(260, 68))
+	var next := UIStyle.button("Next round", "primary")
 	next.pressed.connect(func() -> void:
 		Sound.play("select")
 		duel.next_round()
@@ -1335,15 +1334,26 @@ func _set_status(text: String, color := Color.WHITE) -> void:
 		return
 	_toast_label.text = text
 	_toast_label.add_theme_color_override("font_color", color)
-	var width := minf(_field.size.x - UIStyle.space("l"), 600.0)
-	_toast_label.custom_minimum_size.x = 0.0
+	# As wide as the text, up to most of the field; longer text wraps.
+	var font := _toast_label.get_theme_font("font")
+	var px := _toast_label.get_theme_font_size("font_size")
+	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x + UIStyle.outline_for(px) * 2.0
+	var widest := minf(_field.size.x - UIStyle.space("l") * 2.0, 600.0)
+	_toast_label.custom_minimum_size.x = minf(text_width, widest)
+	_toast.size = Vector2.ZERO
 	_toast.reset_size()
-	if _toast.size.x > width:
-		_toast_label.custom_minimum_size.x = width - 40.0
-		_toast.size = Vector2.ZERO
-		_toast.reset_size()
-	_toast.position = Vector2((_field.size.x - _toast.size.x) / 2.0, _field.size.y - _toast.size.y - UIStyle.space("s"))
-	_toast.pivot_offset = _toast.size / 2.0
+	# Pinned to the bottom middle of the field, even as the field resizes.
+	var toast_size := _toast.size
+	var gap := float(UIStyle.space("s"))
+	_toast.anchor_left = 0.5
+	_toast.anchor_right = 0.5
+	_toast.anchor_top = 1.0
+	_toast.anchor_bottom = 1.0
+	_toast.offset_left = -toast_size.x / 2.0
+	_toast.offset_right = toast_size.x / 2.0
+	_toast.offset_top = -toast_size.y - gap
+	_toast.offset_bottom = -gap
+	_toast.pivot_offset = toast_size / 2.0
 	if _toast_tween != null and _toast_tween.is_valid():
 		_toast_tween.kill()
 	_toast.scale = Vector2(0.85, 0.85)

@@ -30,6 +30,12 @@ mane grows with its face).
    game mirrors the other three).
 6. **Dens** (`treehouse.py`): the side and main treehouses in each team's
    color and their ruins, from the same camera, into `game/art/towers/`.
+7. **Arenas** (`arena.py`): one picture per arena, from the same camera,
+   with the ground stretched so tiles come out square. The ground's colors
+   (grass, tile stripes, paths, banks, flowers) are painted with numpy;
+   Blender adds the river channel, water, bridges, fence and themed
+   scenery, into `game/art/arenas/`. Each arena's look is a theme at the
+   top of the file.
 
 Each animal is one file in `species/`.
 
@@ -51,7 +57,9 @@ python set_import.py                     # after Godot imports the new files
 ```
 
 `python sprites.py red_fox --style real` renders the real-proportioned
-animal with fur instead. `python treehouse.py` renders the dens.
+animal with fur instead. `python treehouse.py` renders the dens, and
+`python arena.py` the arenas (about 5 minutes each; `--only <arena>` for
+one).
 
 A full animal takes about 7-15 minutes on four CPU cores. To redo one
 animation after changing it in `motion.py`, keeping the rest of the sheet:

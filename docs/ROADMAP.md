@@ -53,7 +53,9 @@
 - [x] Web version that runs in Safari and installs to the iPhone home screen
 - [x] Publishing: every push runs the tests and builds the web version; a re-run (or *Run workflow*) updates the Netlify site
 - [x] 3D-rendered animals with fur, real markings and walk, attack and death animations (Blender pipeline in `tools/creatures/`)
-- [ ] Render the arena ground and tools in the same style (the dens are 3D treehouses now)
+- [x] Rendered arenas: 12 themed battlefields with river, bridges and scenery (`tools/creatures/arena.py`)
+- [x] Menu facelift: glossy buttons, raised panels, redesigned cards, icon tab bar, arena preview, popup and screen animations
+- [ ] Render the tools' effects and the cages in the same style
 - [ ] Bring back more animals from `animals_later.json` once the first 20 feel right
 
 ## Phase 3: Online play

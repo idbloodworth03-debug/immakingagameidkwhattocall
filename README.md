@@ -25,16 +25,17 @@ Everything runs offline on your computer, saved on the device:
 - **Classic battles** against a computer opponent that gets tougher as you climb: drag a card onto the field (or tap it, then tap the field) and the animals walk and fight on their own, use their abilities, and attack the enemy's dens, which fight back. Matches last 3 minutes, with double energy in the last minute and sudden-death overtime. Take a side den and you can release animals deeper on the enemy's side. Emotes and quick chat work.
 - **Look and feel:**
   - every animal is a 3D render, with fur, real markings and its own walk and attack animations (made by our Blender pipeline in `tools/creatures/`)
-  - rendered card portraits, icons for tools and emotes, arena scenery, and dens (side dens and a main den)
+  - 12 rendered arenas (river, bridges, paths and themed scenery) and treehouse dens
+  - polished cartoon menus: glossy pressable buttons, raised panels, cards with rarity rims and portraits, an icon tab bar, and popups that pop in
   - chunky mobile-game fonts
-  - animations: walking, attacks, screen shake and bouncy buttons
+  - animations: walking, attacks, screen shake, bouncy buttons and smooth screen fades
   - sound effects and music, which players can switch off
 - **Tests:** 100 automated tests for the rules, the battle engine and Draft Duel, plus reports that play hundreds of bot-vs-bot battles
 
 Not built yet:
 
 - online play and clans
-- 3D-rendered dens, arenas and tools to match the animals (see [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md))
+- 3D-rendered tool effects and cages to match the animals (see [docs/ART_DIRECTION.md](docs/ART_DIRECTION.md))
 - store purchases
 
 See [docs/ROADMAP.md](docs/ROADMAP.md).

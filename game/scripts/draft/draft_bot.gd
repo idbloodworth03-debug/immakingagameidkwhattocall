@@ -64,6 +64,8 @@ func pick_starters() -> void:
 func shop() -> void:
 	if duel.phase != "draft" or duel.done_shopping[team]:
 		return
+	var reserve := _reserve()
+	var spendable: int = duel.acorns[team] - reserve
 	var best_score := 1.5
 	var best_action := Callable()
 	for i in duel.shops[team].size():
@@ -71,19 +73,22 @@ func shop() -> void:
 		if duel.can_buy(team, i) != "":
 			continue
 		var score := _want(item)
+		# Dipping into the savings costs interest: only for a great buy.
+		if int(item.cost) > spendable and score < float(item.cost) + 3.0:
+			continue
 		if score > best_score:
 			best_score = score
 			best_action = duel.buy.bind(team, i)
 	for i in duel.herds[team].size():
 		var price := duel.train_cost(team, i)
-		if duel.can_train(team, i) != "":
+		if duel.can_train(team, i) != "" or price > spendable:
 			continue
 		var score := _train_value(i, price)
 		if score > best_score:
 			best_score = score
 			best_action = duel.train.bind(team, i)
 	# Only weak picks and Acorns to spare: try a fresh shop first.
-	var rich: bool = duel.acorns[team] - int(duel.rules.reroll_cost) >= 4
+	var rich: bool = spendable - int(duel.rules.reroll_cost) >= 4
 	if _rerolls < 2 and rich and best_score < 4.0:
 		_rerolls += 1
 		duel.reroll(team)
@@ -97,6 +102,22 @@ func shop() -> void:
 		return
 	_rerolls = 0
 	duel.finish_shopping(team)
+
+
+## Acorns it keeps back to earn interest: once its herd is decent and it
+## isn't in danger, it holds on to whole steps of interest (5, 10, ... up to
+## the cap). Sharper opponents save more steadily.
+func _reserve() -> int:
+	var herd: int = duel.herds[team].size()
+	var hearts: int = duel.hearts[team]
+	if herd < 3 or hearts <= int(duel.rules.hearts) / 3:
+		return 0
+	var per := maxi(1, int(duel.rules.interest_per))
+	var steps := mini(int(duel.rules.interest_cap), duel.acorns[team] / per)
+	# Still building its herd: keep fewer steps.
+	if herd < int(duel.rules.herd_max) - 1:
+		steps = mini(steps, 2)
+	return roundi(steps * clampf(0.3 + difficulty * 0.7, 0.0, 1.0)) * per
 
 
 ## How much it wants a shop card. Pricier animals are stronger; a copy of

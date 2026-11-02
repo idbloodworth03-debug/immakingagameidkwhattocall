@@ -192,6 +192,67 @@ func test_stars_make_animals_stronger() -> void:
 	check(m.sim.herd_value(0) > m.sim.herd_value(1), "and it counts for more at the bell")
 
 
+func test_interest_on_saved_acorns() -> void:
+	var m := _with_herds(["brown_bear"], ["red_fox"])
+	var rules := GameData.draft_rules
+	var per := int(rules.interest_per)
+	var cap := int(rules.interest_cap)
+	m.acorns = [per * 2 + per - 1, per * (cap + 4)]
+	check_eq(m.interest_on(0), 2, "1 Acorn for every %d saved, rounded down" % per)
+	check_eq(m.interest_on(1), cap, "never more than the cap")
+	var before := m.acorns.duplicate()
+	_fight(m)
+	check_eq(m.last_round.interest, [2, cap], "paid at the end of the round")
+	check_eq(m.acorns, [before[0] + 2, before[1] + cap], "into each player's Acorns")
+
+
+func test_win_streaks_pay_a_bonus() -> void:
+	var m := _new_match(9)
+	var rules := GameData.draft_rules
+	var bonuses: Array = rules.win_streak_bonus
+	var first := int(rules.win_streak_from)
+	check_eq(m.streak_bonus(first - 1), 0, "no bonus before the streak counts")
+	check_eq(m.streak_bonus(first), int(bonuses[0]), "the first streak bonus")
+	check_eq(m.streak_bonus(first + 1), int(bonuses[1]), "more for a longer streak")
+	check_eq(m.streak_bonus(first + 20), int(bonuses[-1]), "the top bonus for any long streak")
+	# Win rounds in a row with a herd against nothing.
+	for r in first:
+		_skip_draft(m)
+		if m.herds[0].is_empty():
+			var spot := m.default_spot(0)
+			m.herds[0].append({"id": "brown_bear", "x": spot.x, "y": spot.y, "stars": 1})
+			m._lay_out_herds()
+		m.herds[1].clear()
+		m._lay_out_herds()
+		_fight(m)
+		check_eq(m.last_round.winner, 0, "round %d won" % (r + 1))
+		m.next_round()
+	check_eq(m.streak, [first, 0], "the streak counts wins in a row, the loser's resets")
+	var log := m.take_events().filter(func(e): return e.type == "round")
+	check_eq(int(log[-1].streak_bonus[0]), int(bonuses[0]), "the bonus is paid as the next round starts")
+
+
+func test_flawless_rounds_are_noted() -> void:
+	var m := _with_herds(["brown_bear", "lion"], ["sewer_rats"])
+	_fight(m)
+	check_eq(m.last_round.winner, 0, "the big herd wins")
+	check_eq(int(m.last_round.animals_lost[1]), int(GameData.get_card("sewer_rats").count), "the loser's animals lost are counted")
+	check(int(m.last_round.animals_lost[0]) >= 0, "and the winner's")
+
+
+func test_the_bot_saves_for_interest() -> void:
+	var m := _with_herds(["brown_bear", "lion", "wolf_pack", "cheetah"], ["brown_bear", "lion", "wolf_pack", "cheetah"])
+	var sharp := DraftBot.new(m, 1, 3, 1.0)
+	m.acorns[1] = 23
+	var per := int(GameData.draft_rules.interest_per)
+	check(sharp._reserve() >= 2 * per, "a sharp opponent with a decent herd keeps interest steps (%d)" % sharp._reserve())
+	m.herds[1] = m.herds[1].slice(0, 1)
+	check_eq(sharp._reserve(), 0, "but spends freely while its herd is small")
+	m.herds[1] = [{"id": "lion", "x": 0, "y": 0, "stars": 1}, {"id": "cheetah", "x": 0, "y": 0, "stars": 1}, {"id": "brown_bear", "x": 0, "y": 0, "stars": 1}]
+	m.hearts[1] = 3
+	check_eq(sharp._reserve(), 0, "and when it's about to lose")
+
+
 func test_the_loser_gets_bonus_acorns() -> void:
 	var m := _with_herds(["brown_bear"], [])
 	_fight(m)
@@ -222,7 +283,8 @@ func test_the_loser_of_a_fight_loses_hearts() -> void:
 	_fight(m)
 	check_eq(m.phase, "round_over", "round over")
 	check_eq(m.last_round.winner, 0, "the big herd wins")
-	check_eq(m.acorns, before, "no Acorns change hands in a fight")
+	var per := int(GameData.draft_rules.interest_per)
+	check_eq(m.acorns, [before[0] + before[0] / per, before[1] + before[1] / per], "no Acorns change hands in a fight, only interest is paid")
 	var standing := int(m.last_round.standing[0])
 	check(standing > 0, "some of the winners still stand")
 	check_eq(m.last_round.hearts_lost, [0, m.heart_loss(standing)], "the loser loses hearts")
@@ -256,7 +318,8 @@ func test_herds_and_hearts_carry_over() -> void:
 	check_eq(m.round_number, 2, "next round")
 	check_eq(m.hearts, hearts, "lost hearts stay lost")
 	check(m.sim.units(0).size() == 1 and m.sim.units(0)[0].hp == m.sim.units(0)[0].max_hp, "the herd stands ready again, fully healed")
-	check_eq(m.acorns[0], int(GameData.draft_rules.acorns_start) + int(GameData.draft_rules.acorns_per_round), "income each round")
+	var start := int(GameData.draft_rules.acorns_start)
+	check_eq(m.acorns[0], start + start / int(GameData.draft_rules.interest_per) + int(GameData.draft_rules.acorns_per_round), "interest, then income each round")
 
 
 func test_tools_work_in_the_fight() -> void:

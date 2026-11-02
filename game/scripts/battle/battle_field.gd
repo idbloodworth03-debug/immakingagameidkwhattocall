@@ -52,6 +52,8 @@ var _units: Node2D
 var _views := {}
 var _by_uid := {}
 var _time := 0.0
+## A celebration close-up: {"view", "age"} while zooming on an animal.
+var _focus := {}
 var _freeze := 0.0
 var _freeze_ready := 0.0
 var _trauma := 0.0
@@ -140,6 +142,10 @@ func view_for_uid(uid: int) -> UnitView:
 	return _by_uid.get(uid, null)
 
 
+func view_for_key(key: Variant) -> UnitView:
+	return _views.get(key, null)
+
+
 # --- Hit-stop and shake ----------------------------------------------------
 
 ## True during a hit-stop: the fight should not step.
@@ -160,9 +166,45 @@ func shake(amount: float) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
 
 
+## A slow-motion close-up on one animal (its view key): zoom in, hold,
+## zoom out (data/feel.json, "celebrations"). False if it isn't on the field.
+func celebrate(key: Variant) -> bool:
+	var v: UnitView = _views.get(key, null)
+	if v == null:
+		return false
+	_focus = {"view": v, "age": 0.0}
+	return true
+
+
+func is_celebrating() -> bool:
+	return not _focus.is_empty()
+
+
+## How far into the close-up we are (0 to 1 and back) this frame.
+func _focus_amount(delta: float) -> float:
+	if _focus.is_empty():
+		return 0.0
+	var c := "celebrations"
+	var zoom_in := Feel.num(c, "star3_zoom_in_seconds", 0.28)
+	var hold := Feel.num(c, "star3_hold_seconds", 0.9)
+	var zoom_out := Feel.num(c, "star3_zoom_out_seconds", 0.4)
+	_focus.age += delta
+	var age: float = _focus.age
+	if age < zoom_in:
+		return Ease.out_cubic(age / zoom_in)
+	if age < zoom_in + hold:
+		return 1.0
+	if age < zoom_in + hold + zoom_out:
+		return 1.0 - Ease.in_out_sine((age - zoom_in - hold) / zoom_out)
+	_focus = {}
+	return 0.0
+
+
 # --- Input -----------------------------------------------------------------
 
 func _gui_input(event: InputEvent) -> void:
+	if is_celebrating():
+		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_press_at = event.position
@@ -181,10 +223,23 @@ func _process(delta: float) -> void:
 	if _freeze > 0.0:
 		_freeze -= delta
 		dt = 0.0
+	# A celebration close-up slows everything down while it zooms in.
+	var focus := _focus_amount(delta)
+	dt *= lerpf(1.0, Feel.num("celebrations", "star3_slow_motion", 0.3), focus)
 	_time += dt
 	_trauma = maxf(0.0, _trauma - delta / maxf(0.05, Feel.num("combat", "shake_seconds", 0.3)))
 	var strength := Feel.num("combat", "shake_pixels", 8.0) * _trauma * _trauma
-	_world.position = Vector2(randf_range(-strength, strength), randf_range(-strength, strength)) if strength > 0.1 else Vector2.ZERO
+	var shake_offset := Vector2(randf_range(-strength, strength), randf_range(-strength, strength)) if strength > 0.1 else Vector2.ZERO
+	var zoom := 1.0
+	var pan := Vector2.ZERO
+	if focus > 0.0 and is_instance_valid(_focus.get("view")):
+		var v: UnitView = _focus.view
+		var target := v.position + Vector2(0, -UnitSprites.top(v.id) * v.body.k * 0.4)
+		zoom = lerpf(1.0, Feel.num("celebrations", "star3_zoom", 1.45), focus)
+		# Bring the animal toward the middle as we zoom in on it.
+		pan = target.lerp(size / 2.0, focus) - target * zoom
+	_world.scale = Vector2(zoom, zoom)
+	_world.position = pan + shake_offset
 	if sim != null:
 		_sync_views(dt)
 	fx._process_fx(dt)

@@ -23,7 +23,9 @@ extends RefCounted
 ##   4. Round over: the fight ends when a herd is wiped out (or at the bell:
 ##      then the herd with more of itself left wins). The loser loses hearts:
 ##      the round number, plus 1 for every enemy animal still standing, and
-##      gets a few extra Acorns next round, to help it catch up.
+##      gets a few extra Acorns next round, to help it catch up. Both players
+##      earn interest on the Acorns they saved (1 for every 5, up to a cap),
+##      and a winning streak of 2 or more rounds pays a bonus next round.
 ##
 ## Acorns are the match's only money, for animals, tools, training and
 ## rerolls. Both players start with the same Acorns, and they're gone when
@@ -81,6 +83,10 @@ var events: Array = []
 var groups := [[], []]
 ## The loser of the last round (-1 for none), who gets bonus Acorns.
 var _last_loser := -1
+## Rounds each team has won in a row (0 after a loss or a tie).
+var streak := [0, 0]
+## Each team's animals defeated so far, when this fight started.
+var _defeated_at_start := [0, 0]
 var _stolen := [0, 0]
 ## Each team's own dice for its shop, so one player's rerolls never change
 ## what the other is offered.
@@ -175,6 +181,21 @@ func standing(team: int) -> int:
 		if alive.has(g):
 			count += 1
 	return count
+
+
+## The interest `team` would earn on the Acorns it holds now: 1 for every
+## interest_per saved, up to interest_cap.
+func interest_on(team: int) -> int:
+	return mini(int(rules.interest_cap), acorns[team] / maxi(1, int(rules.interest_per)))
+
+
+## The bonus Acorns a winning streak of `wins` rounds pays next round.
+func streak_bonus(wins: int) -> int:
+	var bonuses: Array = rules.win_streak_bonus
+	var first := int(rules.win_streak_from)
+	if wins < first or bonuses.is_empty():
+		return 0
+	return int(bonuses[mini(wins - first, bonuses.size() - 1)])
 
 
 ## The hearts the loser of this round loses: the round's base, plus the
@@ -276,6 +297,7 @@ func buy(team: int, slot: int) -> bool:
 			herds[team].append({"id": item.id, "x": spot.x, "y": spot.y, "stars": 1})
 		_lay_out_herds()
 	events.append({"type": "buy", "team": team, "slot": slot, "id": item.id,
+		"index": merged if merged >= 0 else herds[team].size() - 1,
 		"merged": merged >= 0, "stars": int(herds[team][merged].stars) if merged >= 0 else 1})
 	return true
 
@@ -311,7 +333,7 @@ func train(team: int, index: int) -> bool:
 	acorns[team] -= train_cost(team, index)
 	herds[team][index].stars = int(herds[team][index].stars) + 1
 	_lay_out_herds()
-	events.append({"type": "train", "team": team, "id": herds[team][index].id, "stars": herds[team][index].stars})
+	events.append({"type": "train", "team": team, "index": index, "id": herds[team][index].id, "stars": herds[team][index].stars})
 	return true
 
 
@@ -551,6 +573,7 @@ func rally(team: int, x: int, y: int) -> bool:
 
 func _start_fight() -> void:
 	_lay_out_herds()
+	_defeated_at_start = [int(sim.teams[0].defeated), int(sim.teams[1].defeated)]
 	rally_ready = [true, true]
 	roll_moods(sim, rng, int(rules.get("mood_pct", 0)))
 	_steal_acorns()
@@ -590,9 +613,12 @@ func _steal_acorns() -> void:
 func _start_round() -> void:
 	round_number += 1
 	var bonus_team := -1
+	var streak_paid := [0, 0]
 	if round_number > 1:
 		for team in 2:
 			acorns[team] += int(rules.acorns_per_round)
+			streak_paid[team] = streak_bonus(streak[team])
+			acorns[team] += streak_paid[team]
 		if _last_loser >= 0:
 			acorns[_last_loser] += int(rules.loser_bonus)
 			bonus_team = _last_loser
@@ -602,7 +628,8 @@ func _start_round() -> void:
 	done_shopping = [false, false]
 	ready = [false, false]
 	phase = "draft"
-	events.append({"type": "round", "round": round_number, "bonus_team": bonus_team, "bonus": int(rules.loser_bonus)})
+	events.append({"type": "round", "round": round_number, "bonus_team": bonus_team, "bonus": int(rules.loser_bonus),
+		"streak_bonus": streak_paid})
 
 
 func _start_placing() -> void:
@@ -620,11 +647,22 @@ func _end_round() -> void:
 		lost[loser] = mini(hearts[loser], heart_loss(standing_now[winner]))
 		hearts[loser] -= lost[loser]
 		_last_loser = loser
+		streak[winner] += 1
+		streak[loser] = 0
 	else:
 		_last_loser = -1
+		streak = [0, 0]
+	# Interest on what each player saved.
+	var interest := [interest_on(0), interest_on(1)]
+	for team in 2:
+		acorns[team] += interest[team]
+	var defeated := [0, 0]
+	for team in 2:
+		defeated[team] = int(sim.teams[team].defeated) - int(_defeated_at_start[team])
 	last_round = {
 		"round": round_number, "winner": winner, "standing": standing_now,
-		"hearts_lost": lost, "stolen": _stolen.duplicate(),
+		"hearts_lost": lost, "stolen": _stolen.duplicate(), "interest": interest,
+		"streak": streak.duplicate(), "animals_lost": defeated,
 	}
 	events.append({"type": "round_over", "winner": winner, "hearts_lost": lost})
 	var out: bool = hearts[0] <= 0 or hearts[1] <= 0

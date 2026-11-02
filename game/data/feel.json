@@ -90,6 +90,25 @@
     "projectile_glow": 0.55
   },
 
+  "celebrations": {
+    "_note": "Big moments. A 3-star animal gets a slow-motion zoom (zoom in, hold, zoom out, with the field's animation slowed by star3_slow_motion), stars, confetti and a bouncy 3 STARS!, then keeps a gold glow (gold_glow) with a sparkle every gold_sparkle_seconds. Comeback: winning a round at comeback_hearts hearts or fewer. Flawless: winning a round without losing an animal.",
+    "star3_zoom": 1.45,
+    "star3_zoom_in_seconds": 0.28,
+    "star3_hold_seconds": 0.9,
+    "star3_zoom_out_seconds": 0.4,
+    "star3_slow_motion": 0.3,
+    "star3_stars": 22,
+    "star3_confetti": 36,
+    "star3_text_size": 64,
+    "gold_glow": 0.85,
+    "gold_sparkle_seconds": 0.7,
+    "comeback_hearts": 5,
+    "comeback_confetti": 30,
+    "flawless_sparkles": 18,
+    "banner_size": 54,
+    "banner_seconds": 1.4
+  },
+
   "ui": {
     "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in.",
     "press_scale": 0.9,

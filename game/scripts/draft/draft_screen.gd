@@ -42,6 +42,10 @@ var _their_hearts: PanelContainer
 var _their_tools: Label
 var _my_acorns: PanelContainer
 var _my_hearts: PanelContainer
+## "+2 interest" next to your Acorns while shopping, and the win streak flames.
+var _interest_label: Label
+var _my_streak: Control
+var _their_streak: Control
 var _hearts_shown := [-1, -1]
 var _status: Label
 var _panel: VBoxContainer
@@ -129,6 +133,8 @@ func _build() -> void:
 	theirs.add_child(_their_hearts)
 	_their_acorns = UIKit.pill(GameData.ui_icon("acorn"), UIKit.ACORN, "0")
 	theirs.add_child(_their_acorns)
+	_their_streak = _streak_chip()
+	theirs.add_child(_their_streak)
 	_their_tools = UIKit.label("", 18, UIKit.TEXT_DIM)
 	_their_tools.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	theirs.add_child(_their_tools)
@@ -159,7 +165,11 @@ func _build() -> void:
 	bottom.add_child(_my_hearts)
 	_my_acorns = UIKit.pill(GameData.ui_icon("acorn"), UIKit.ACORN, "0")
 	bottom.add_child(_my_acorns)
-	bottom.add_child(UIKit.label("You", 18, UIKit.TEXT_DIM))
+	_interest_label = UIKit.label("", 18, Color("#ffe08a"))
+	_interest_label.add_theme_constant_override("outline_size", 5)
+	bottom.add_child(_interest_label)
+	_my_streak = _streak_chip()
+	bottom.add_child(_my_streak)
 	bottom.add_child(UIKit.spacer())
 	var leave := UIKit.button("Leave", UIKit.GREY.darkened(0.25), 20, Vector2(110, 56))
 	leave.pressed.connect(_on_leave)
@@ -182,7 +192,7 @@ func _choose_starters() -> void:
 			box.remove_child(child)
 			child.queue_free()
 		box.add_child(UIKit.label("Draft Duel", 40, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-		var intro := UIKit.paragraph("Each round: shop for animals, train them up to 3 stars, place your herd and watch it fight. You both start with %d hearts; lose a fight and you lose hearts, more for every enemy animal still standing. Run out and you're out." % int(duel.rules.hearts), 19, UIKit.TEXT)
+		var intro := UIKit.paragraph("Each round: shop for animals, train them up to 3 stars, place your herd and watch it fight. Save Acorns to earn interest, and win rounds in a row for a streak bonus. You both start with %d hearts; lose a fight and you lose hearts, more for every enemy animal still standing. Run out and you're out." % int(duel.rules.hearts), 19, UIKit.TEXT)
 		intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		box.add_child(intro)
 		box.add_child(UIKit.label("Pick your starters", 30, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
@@ -292,6 +302,107 @@ func _update_hud() -> void:
 			_hearts_shown[team] = duel.hearts[team]
 	var their_tools: int = duel.tools[1].size()
 	_their_tools.text = "%s  ·  %d tool%s hidden" % [opponent.name, their_tools, "" if their_tools == 1 else "s"]
+	# Interest: what you'd earn if you stopped spending now.
+	var shopping: bool = duel.phase in ["draft", "place"]
+	var interest := duel.interest_on(0)
+	_interest_label.text = "+%d interest" % interest if shopping and interest > 0 else ""
+	_set_streak(_my_streak, duel.streak[0])
+	_set_streak(_their_streak, duel.streak[1])
+
+
+## A little flame with the number of rounds won in a row (hidden until 2).
+func _streak_chip() -> Control:
+	var chip := UIKit.hbox(2)
+	chip.add_child(UIKit.icon_rect(GameData.ui_icon("flame"), Color("#ff8a2b"), 26))
+	var count := UIKit.label("", 20, Color("#ffb347"))
+	count.name = "Count"
+	count.add_theme_constant_override("outline_size", 5)
+	chip.add_child(count)
+	chip.visible = false
+	chip.tooltip_text = "Win streak"
+	return chip
+
+
+func _set_streak(chip: Control, wins: int) -> void:
+	var active := wins >= int(duel.rules.win_streak_from)
+	if active and not chip.visible:
+		chip.visible = true
+		(func() -> void: UIKit.pop_in(chip, 0.4, 0.35)).call_deferred()
+	chip.visible = active
+	(chip.find_child("Count", true, false) as Label).text = str(wins)
+
+
+# --- Big moments --------------------------------------------------------------
+
+## Herd animal `index` just reached 3 stars: a slow-motion close-up, stars
+## and confetti, a sound sting and a bouncy 3 STARS!
+func _celebrate_three_stars(index: int, animal_name: String) -> void:
+	var c := "celebrations"
+	var key := "0/%d/0" % index
+	if _field.celebrate(key):
+		Sound.play("whoosh", -4.0)
+	Sound.play("star3")
+	var view := _field.view_for_key(key)
+	if view != null:
+		var at := view.position + Vector2(0, -UnitSprites.top(view.id) * view.body.k * 0.5)
+		_field.fx.burst("star", at, Feel.count(c, "star3_stars", 22), 260.0, 0.9, 9.0, [Color("#ffe14d"), Color("#ffb03b"), Color.WHITE], 380.0, 1.2, 180.0)
+		_field.fx.burst_confetti(at, Feel.count(c, "star3_confetti", 36))
+	_banner("3 STARS!", Color("#ffe14d"), Feel.count(c, "star3_text_size", 64), animal_name)
+
+
+## Smaller celebrations after a round you won: a comeback (at few hearts)
+## and a flawless round (no animals lost).
+func _celebrate_round() -> void:
+	var c := "celebrations"
+	var r := duel.last_round
+	var lost: Array = r.get("animals_lost", [1, 1])
+	var at := _field.get_global_rect().get_center()
+	var delay := 0.0
+	if duel.hearts[0] <= Feel.count(c, "comeback_hearts", 5):
+		_banner("COMEBACK!", Color("#ff9f43"), Feel.count(c, "banner_size", 54), "Still in it!")
+		_ui_fx.burst_confetti(at, Feel.count(c, "comeback_confetti", 30))
+		Sound.play("fanfare")
+		delay = 1.0
+	if int(lost[0]) == 0 and not duel.herds[0].is_empty():
+		var show_flawless := func() -> void:
+			_banner("FLAWLESS!", Color("#7fe0ff"), Feel.count(c, "banner_size", 54), "Not a single animal lost")
+			_ui_fx.burst("sparkle", at, Feel.count(c, "flawless_sparkles", 18), 260.0, 0.8, 10.0, [Color.WHITE, Color("#bff0ff"), Color("#ffe14d")], -40.0, 2.0)
+			Sound.play("fanfare", 2.0)
+		if delay > 0.0:
+			get_tree().create_timer(delay).timeout.connect(show_flawless)
+		else:
+			show_flawless.call()
+
+
+## Big bouncy words over the field, with a small line under them.
+func _banner(text: String, color: Color, font_size: int, subtitle := "") -> void:
+	var holder := VBoxContainer.new()
+	holder.alignment = BoxContainer.ALIGNMENT_CENTER
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var title := UIKit.label(text, font_size, color, HORIZONTAL_ALIGNMENT_CENTER)
+	title.add_theme_constant_override("outline_size", maxi(8, font_size / 5))
+	title.add_theme_color_override("font_outline_color", UIKit.INK)
+	title.add_theme_constant_override("shadow_offset_y", 5)
+	holder.add_child(title)
+	if subtitle != "":
+		holder.add_child(UIKit.label(subtitle, 24, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+	_ui_fx.get_parent().add_child(holder)
+	var field_rect := _field.get_global_rect()
+	holder.size = Vector2(field_rect.size.x, 0)
+	holder.reset_size()
+	holder.position = Vector2(field_rect.position.x, field_rect.position.y + field_rect.size.y * 0.3)
+	holder.size.x = field_rect.size.x
+	holder.pivot_offset = holder.size / 2.0
+	holder.scale = Vector2(0.2, 0.2)
+	var seconds := Feel.num("celebrations", "banner_seconds", 1.4)
+	var tween := holder.create_tween()
+	tween.tween_property(holder, "scale", Vector2(1.15, 1.15), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(holder, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_SINE)
+	tween.tween_interval(maxf(0.1, seconds - 0.7))
+	tween.set_parallel()
+	tween.tween_property(holder, "modulate:a", 0.0, 0.3)
+	tween.tween_property(holder, "position:y", holder.position.y - 40.0, 0.3)
+	tween.chain().tween_callback(holder.queue_free)
 
 
 ## The middle of one of the panel's cards on screen (or the screen's middle).
@@ -371,7 +482,7 @@ func _handle_events(events: Array) -> void:
 			"round":
 				_selected_market = -1
 				_selected_herd = -1
-				_announce_round(int(e.bonus_team), int(e.bonus))
+				_announce_round(int(e.bonus_team), int(e.bonus), int(e.streak_bonus[0]))
 				_bot_wait = 1.2
 			"buy":
 				Sound.play("upgrade" if e.merged else "coin")
@@ -382,6 +493,8 @@ func _handle_events(events: Array) -> void:
 					_selected_market = -1
 					if e.merged:
 						_set_status("A second %s! Yours is now %s" % [card.name, _stars_text(e.stars)], UIKit.YELLOW)
+						if int(e.stars) >= int(duel.rules.star_max):
+							_celebrate_three_stars(int(e.index), card.name)
 			"train":
 				Sound.play("upgrade")
 				var trained: String = GameData.get_card(e.id).name
@@ -389,6 +502,8 @@ func _handle_events(events: Array) -> void:
 					_set_status("%s trained its %s to %s" % [opponent.name, trained, _stars_text(e.stars)])
 				else:
 					_set_status("Your %s is now %s" % [trained, _stars_text(e.stars)], UIKit.YELLOW)
+					if int(e.stars) >= int(duel.rules.star_max):
+						_celebrate_three_stars(int(e.index), trained)
 			"reroll":
 				Sound.play("pop", -4.0)
 				if theirs:
@@ -430,6 +545,8 @@ func _handle_events(events: Array) -> void:
 					var half := Feel.count("effects", "win_confetti", 60) / 2
 					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.25, field_rect.size.y * 0.35), half)
 					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.75, field_rect.size.y * 0.35), half)
+				if e.winner == 0:
+					_celebrate_round()
 				var lost: Array = e.hearts_lost
 				if int(lost[0]) > 0:
 					_set_status("You lose %d heart%s." % [lost[0], "" if int(lost[0]) == 1 else "s"], UIKit.HEART)
@@ -437,12 +554,14 @@ func _handle_events(events: Array) -> void:
 					_set_status("%s loses %d heart%s!" % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s"], UIKit.YELLOW)
 
 
-func _announce_round(bonus_team: int, bonus: int) -> void:
+func _announce_round(bonus_team: int, bonus: int, streak_paid: int) -> void:
 	var extra := ""
 	if bonus_team == 0:
 		extra = " +%d bonus Acorns." % bonus
 	elif bonus_team == 1:
 		extra = " %s gets %d bonus Acorns." % [opponent.name, bonus]
+	if streak_paid > 0:
+		extra += " Win streak: +%d Acorns!" % streak_paid
 	UIKit.toast("Round %d!%s" % [duel.round_number, extra])
 	_set_status("Your shop: tap a card to see it, tap again to buy. Tap a herd animal to train it.")
 
@@ -789,6 +908,12 @@ func _round_panel() -> void:
 		lines.append("Nobody loses hearts.")
 	if int(r.stolen[1]) > 0:
 		lines.append("%s's Raccoon stole %d of your Acorns." % [opponent.name, int(r.stolen[1])])
+	var interest: Array = r.get("interest", [0, 0])
+	if int(interest[0]) > 0:
+		lines.append("Interest on your savings: +%d Acorns." % int(interest[0]))
+	var wins := int(duel.streak[0])
+	if duel.streak_bonus(wins) > 0:
+		lines.append("Win streak %d: +%d Acorns next round!" % [wins, duel.streak_bonus(wins)])
 	if duel.round_number + 1 == duel.max_rounds():
 		lines.append("Last round next! Then whoever has more hearts wins.")
 	for line in lines:
@@ -858,6 +983,8 @@ func _end_match() -> void:
 	Sound.play({"win": "victory", "loss": "defeat", "draw": "reveal"}[outcome])
 	var box := UIKit.vbox(14)
 	var titles := {"win": "Victory!", "loss": "Defeat", "draw": "Draw"}
+	if outcome == "win" and duel.hearts[0] <= Feel.count("celebrations", "comeback_hearts", 5):
+		titles.win = "Comeback Victory!"
 	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
 	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("Hearts left  %d - %d" % [duel.hearts[0], duel.hearts[1]], 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))

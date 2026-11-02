@@ -1,5 +1,5 @@
 {
-  "_note": "Draft Duel tuning. Times are in seconds, distances in tiles. The fighting itself is tuned in battle_rules.json. Starters: up to `starters` animals worth up to `starter_budget` Acorns. Training an animal up a star costs its card cost times its current stars, plus train_extra; each star after the first adds star_bonus_pct to health and bite. A round's loser loses heart_loss_per_round hearts for each round played so far, plus heart_loss_per_animal for each of the winner's animals still standing; a player who folds loses only the first part.",
+  "_note": "Draft Duel tuning. Times are in seconds, distances in tiles. The fighting itself is tuned in battle_rules.json. Starters: up to `starters` animals worth up to `starter_budget` Acorns. Training an animal up a star costs its card cost times its current stars, plus train_extra; each star after the first adds star_bonus_pct to health and bite. Interest: at the end of each round every player earns 1 Acorn for each interest_per Acorns saved, up to interest_cap. Win streaks: winning win_streak_from rounds in a row pays win_streak_bonus[0] at the start of the next round, one more win pays the next value, and so on (the last value for any longer streak). A round's loser loses heart_loss_per_round hearts for each round played so far, plus heart_loss_per_animal for each of the winner's animals still standing; a player who folds loses only the first part.",
   "hearts": 30,
   "max_rounds": 15,
   "heart_loss_per_round": 1,
@@ -9,6 +9,10 @@
   "acorns_start": 6,
   "acorns_per_round": 6,
   "loser_bonus": 2,
+  "interest_per": 5,
+  "interest_cap": 5,
+  "win_streak_from": 2,
+  "win_streak_bonus": [1, 2, 3],
   "reroll_cost": 1,
   "star_max": 3,
   "star_bonus_pct": 60,

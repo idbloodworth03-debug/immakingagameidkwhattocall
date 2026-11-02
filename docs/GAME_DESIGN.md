@@ -79,6 +79,28 @@ more for the loser of the last round (to help it catch up), plus Raccoon
 thefts. Spend them on animals, tools, training and rerolls. Everyone starts
 with the same Acorns, and they can't be bought or carried out of a match.
 
+**Saving vs. spending:**
+- **Interest:** at the end of each round you earn 1 Acorn for every 5 you
+  saved, up to 5. The shop shows "+2 interest" next to your Acorns, and it
+  updates as you spend, so you can see what a purchase costs you later.
+- **Win streaks:** winning 2, 3 or 4+ rounds in a row pays +1, +2 or +3
+  Acorns at the start of the next round (a flame shows your streak). This
+  sits alongside the loser's bonus, so both streaks have something going
+  for them. A tie resets both streaks.
+- The numbers are in `draft_rules.json` (`interest_per`, `interest_cap`,
+  `win_streak_from`, `win_streak_bonus`).
+
+**Big moments:**
+- **3 stars:** when one of your animals reaches 3 stars, the field slows down
+  and zooms in on it, stars and confetti burst, a sting plays and a bouncy
+  "3 STARS!" pops up. It keeps a golden outline, rim and an occasional
+  sparkle for the rest of the match.
+- **Comeback:** winning a round at 5 hearts or fewer ("COMEBACK!", confetti),
+  and the match ends on "Comeback Victory!".
+- **Flawless:** winning a round without losing an animal ("FLAWLESS!").
+- Timings, zoom, slow motion and particle counts are in `feel.json`
+  ("celebrations").
+
 **Your collection matters, a little.** Your starters and shop come from the
 cards you own, and your animals and tools fight at their levels. The computer opponent's cards
 are leveled like yours on average, so leveling a few favorites helps without
@@ -87,7 +109,8 @@ making the match one-sided.
 **Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
 bot-vs-bot matches and prints match length, hearts lost, shopping and how
 close fights are 8 seconds in. From the latest runs (30 matches):
-- Matches last about 7 rounds. Wins split 14-16.
+- Matches last about 7 rounds. Wins split 18-22 (40 matches, with interest and streaks).
+- Interest pays about 0.6 Acorns per player per round and streaks about 0.3; bots hold about 5 Acorns at the end of a round. About 2.7 animals reach 3 stars in a match (both players together).
 - A fight lasts about 17 seconds, and 9 in 10 end with a herd wiped out. A loss costs 5.8 hearts on average.
 - Herds average 5 animals with 1.4 stars each. A bot buys about 18 cards a match (almost half of them copies for a star) and trains about twice.
 - 8 seconds into a fight, about 80% are still fairly close (each side has 20-80% of the strength left).
@@ -323,6 +346,7 @@ follows the same rules:
 
 - **Starters:** it tries random sets within the budget and keeps the one worth the most.
 - **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, and rerolls a weak shop when it has Acorns to spare.
+- **Saving:** once its herd has 3 animals and it isn't in danger (more than a third of its hearts left), it keeps whole steps of interest (5, 10...), fewer while its herd is still growing; it only dips into savings for a great buy. Sharper opponents save more steadily.
 - **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
 

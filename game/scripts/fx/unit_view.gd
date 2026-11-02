@@ -49,6 +49,7 @@ var upgrade := 0.0            # counts down after a star is added
 var defeat := -1.0            # 0 to 1 while being defeated; -1 while fine
 var defeat_spin := 1.0
 var idle_phase := 0.0
+var _sparkle_in := 0.0        # a 3-star animal's next sparkle
 
 # Health bar
 var hp_ratio := 1.0
@@ -340,8 +341,18 @@ func animate(dt: float, now: float) -> void:
 		tint = Color(0.6, 0.6, 0.6)
 	elif f != null and f.stun > 0:
 		tint = Color(1.0, 1.0, 0.8)
+	# Three stars: a gentle golden glow, and a sparkle now and then.
+	var golden := stars >= int(GameData.draft_rules.get("star_max", 3)) and defeat < 0.0
+	if golden and dt > 0.0:
+		_sparkle_in -= dt
+		if _sparkle_in <= 0.0:
+			_sparkle_in = Feel.num("celebrations", "gold_sparkle_seconds", 0.7) * randf_range(0.7, 1.3)
+			var spot := position + body.position + Vector2(randf_range(-0.5, 0.5) * UnitSprites.top(id) * k, -randf() * UnitSprites.top(id) * k)
+			field.fx.particle("sparkle", spot, Vector2(0, -24), 0.6, 6.0, Color("#ffe58a"), 0.0, 1.0)
 	var m := body.material as ShaderMaterial
 	if m != null:
+		var glow := Feel.num("celebrations", "gold_glow", 0.85) * (0.8 + 0.2 * sin(now * 3.0 + idle_phase)) if golden else 0.0
+		m.set_shader_parameter("gold", glow)
 		m.set_shader_parameter("flash", flash)
 		m.set_shader_parameter("flip", 1.0 if body.frame.get("flip", false) else 0.0)
 		m.set_shader_parameter("region", region_uv(body.frame))

@@ -31,6 +31,9 @@ uniform float opacity = 1.0;
 // (x, y, width, height) so the gradient fits the animal.
 uniform float gradient = 0.12;
 uniform vec4 region = vec4(0.0, 0.0, 1.0, 1.0);
+// A 3-star animal's golden glow: gold outline and rim (0 = none).
+uniform float gold = 0.0;
+uniform vec4 gold_color : source_color = vec4(1.0, 0.82, 0.25, 1.0);
 
 const float LINE_LUMA = 0.16;
 
@@ -75,6 +78,7 @@ void fragment() {
 	best = luma(n6.rgb) * n6.a > luma(best.rgb) * best.a ? n6 : best;
 	best = luma(n7.rgb) * n7.a > luma(best.rgb) * best.a ? n7 : best;
 	vec3 line_color = best.rgb * outline_darkness;
+	line_color = mix(line_color, gold_color.rgb * 0.95, gold * 0.75);
 
 	float a = texture(TEXTURE, UV).a;
 	float is_line = solid(a) * (1.0 - step(LINE_LUMA, luma(c.rgb)));
@@ -106,8 +110,8 @@ void fragment() {
 		float me = body_of(texture(TEXTURE, UV));
 		float lit = me * (1.0 - body_of(texture(TEXTURE, UV + to_light)));
 		float back = me * (1.0 - body_of(texture(TEXTURE, UV - to_light)));
-		c.rgb += highlight_color.rgb * lit * highlight * 0.6;
-		c.rgb = mix(c.rgb, rim_color.rgb, back * rim * 0.55);
+		c.rgb += mix(highlight_color.rgb, gold_color.rgb, gold * 0.6) * lit * (highlight + gold * 0.4) * 0.6;
+		c.rgb = mix(c.rgb, mix(rim_color.rgb, gold_color.rgb, gold), back * (rim + gold * 0.3) * 0.55);
 	}
 	c.rgb = mix(c.rgb, flash_color.rgb, clamp(flash, 0.0, 1.0));
 	COLOR = vec4(clamp(c.rgb, 0.0, 1.0), c.a * opacity);

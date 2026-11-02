@@ -18,7 +18,8 @@ func _ready() -> void:
 
 	var totals := {"rounds": 0, "knockouts": 0, "fights": 0, "fight_seconds": 0.0, "hearts_lost": 0,
 		"wipes": 0, "halfway": 0, "herd": 0, "stars": 0,
-		"buys": 0, "merges": 0, "trains": 0, "rerolls": 0}
+		"buys": 0, "merges": 0, "trains": 0, "rerolls": 0, "interest": 0, "streak_paid": 0,
+		"three_stars": 0, "acorns_left": 0}
 	var wins := [0, 0, 0]          # draws, team 0, team 1
 	# Team 0's share of the strength left 8 seconds into a fight, in fifths:
 	# 0-20% ... 80-100%.
@@ -56,8 +57,12 @@ func _ready() -> void:
 					"buy":
 						totals.buys += 1
 						totals.merges += int(e.merged)
+						totals.three_stars += int(e.merged and int(e.stars) >= int(m.rules.star_max))
 					"train":
 						totals.trains += 1
+						totals.three_stars += int(int(e.stars) >= int(m.rules.star_max))
+					"round":
+						totals.streak_paid += int(e.streak_bonus[0]) + int(e.streak_bonus[1])
 					"reroll":
 						totals.rerolls += 1
 					"round_over":
@@ -65,6 +70,8 @@ func _ready() -> void:
 						totals.fight_seconds += float(m.fight_tick) / m.sim.tps
 						totals.hearts_lost += int(m.last_round.hearts_lost[0]) + int(m.last_round.hearts_lost[1])
 						totals.wipes += int(m.wiped_at[0] >= 0 or m.wiped_at[1] >= 0)
+						totals.interest += int(m.last_round.interest[0]) + int(m.last_round.interest[1])
+						totals.acorns_left += m.acorns[0] + m.acorns[1]
 						totals.herd += m.herds[0].size() + m.herds[1].size()
 						for herd in m.herds:
 							for entry in herd:
@@ -79,7 +86,10 @@ func _ready() -> void:
 	print("  wins                 team 0: %d, team 1: %d, draws: %d" % [wins[1], wins[2], wins[0]])
 	print("  per fight            %.1f s, %.1f hearts lost, %d%% ended in a wipe-out" % [totals.fight_seconds / fights, totals.hearts_lost / fights, roundi(100.0 * totals.wipes / fights)])
 	print("  herd size            %.1f animals each, %.2f stars per animal, on average" % [totals.herd / fights / 2.0, totals.stars / maxf(1.0, float(totals.herd))])
-	print("  shopping             per match: %.1f buys (%.1f were copies for a star), %.1f trainings, %.1f rerolls" % [
-		float(totals.buys) / matches, float(totals.merges) / matches, float(totals.trains) / matches, float(totals.rerolls) / matches])
+	print("  shopping             per match: %.1f buys (%.1f were copies for a star), %.1f trainings, %.1f rerolls, %.1f 3-star animals" % [
+		float(totals.buys) / matches, float(totals.merges) / matches, float(totals.trains) / matches, float(totals.rerolls) / matches,
+		float(totals.three_stars) / matches])
+	print("  economy              per player per round: %.1f interest, %.1f streak bonus; %.1f Acorns held at the end of a round" % [
+		totals.interest / fights / 2.0, totals.streak_paid / fights / 2.0, totals.acorns_left / fights / 2.0])
 	print("  strength at 8 s      0-20%%: %d, 20-40%%: %d, 40-60%%: %d, 60-80%%: %d, 80-100%%: %d (team 0's share, %d fights)" % (close + [totals.halfway]))
 	get_tree().quit()

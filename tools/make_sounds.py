@@ -8,6 +8,7 @@ repository root after changing anything here:
 Requires numpy. Output is 16-bit mono WAV at 22,050 Hz.
 """
 import os
+import sys
 import wave
 
 import numpy as np
@@ -142,6 +143,17 @@ SFX = {
         at(envelope(mix(tone(1047, 0.9, "square"), tone(784, 0.9, "triangle"), tone(659, 0.9, "triangle")), decay=0.5), 0.38, 1.4),
     ),
     "defeat": lambda: mix(*[at(envelope(tone(f, 0.35, "triangle"), decay=0.3), i * 0.28, 1.4) for i, f in enumerate([392, 330, 262, 196])]),
+    # Big moments
+    "star3": lambda: mix(
+        chime([784, 988, 1175, 1568, 1976, 2349], 0.055, 0.3, "triangle", 0.12),
+        at(envelope(mix(tone(1568, 1.0, "square") * 0.6, tone(1175, 1.0, "triangle"), tone(784, 1.0, "triangle")), decay=0.55), 0.34, 1.5),
+        at(0.25 * envelope(tone(3136, 0.8, "sine") * (0.6 + 0.4 * np.sin(2 * np.pi * 14 * t_axis(0.8))), decay=0.4), 0.4, 1.5),
+    ),
+    "fanfare": lambda: mix(
+        chime([659, 784, 1047], 0.07, 0.22, "square", 0.1),
+        at(envelope(mix(tone(1319, 0.5, "triangle"), tone(1047, 0.5, "triangle")), decay=0.3), 0.22, 0.8),
+    ),
+    "whoosh": lambda: envelope(lowpass(noise(0.45), 0.85) * np.sin(np.pi * t_axis(0.45) / 0.45), attack=0.05, release=0.1),
 }
 
 
@@ -252,8 +264,14 @@ def battle_music():
 
 
 def main():
+    # `python make_sounds.py star3 fanfare` writes just those sounds.
+    only = sys.argv[1:]
     for name, make in SFX.items():
-        save(os.path.join(SFX_DIR, name + ".wav"), make())
+        if not only or name in only:
+            save(os.path.join(SFX_DIR, name + ".wav"), make())
+    if only:
+        print(f"{len(only)} sound effects written")
+        return
     save(os.path.join(MUSIC_DIR, "menu.wav"), menu_music(), peak=0.7)
     save(os.path.join(MUSIC_DIR, "battle.wav"), battle_music(), peak=0.7)
     print(f"{len(SFX)} sound effects and 2 music loops written")

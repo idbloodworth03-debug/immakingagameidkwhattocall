@@ -13,22 +13,12 @@
   "star_max": 3,
   "star_bonus_pct": 60,
   "train_extra": 1,
-  "market_animals": 4,
+  "market_animals": 5,
   "market_tools": 1,
-  "mystery_crates": 1,
-  "mystery_cost": 4,
   "rarity_weights": {"common": 55, "rare": 27, "epic": 13, "legendary": 5},
   "herd_max": 6,
   "tools_max": 2,
   "rally": {"radius": 3.0, "seconds": 4, "damage_pct": 30, "speed_pct": 20, "attack_pct": 20},
   "fight_seconds": 40,
-  "mood_pct": 30,
-  "halftime_seconds": 8,
-  "ante": 1,
-  "raise_max": 3,
-  "stakes": [
-    {"id": "safe", "name": "Safe", "multiplier": 0.5, "text": "Half the trophies, win or lose."},
-    {"id": "bold", "name": "Bold", "multiplier": 1.0, "text": "The usual trophies."},
-    {"id": "all_in", "name": "All-in", "multiplier": 2.0, "text": "Double the trophies, win or lose."}
-  ]
+  "mood_pct": 30
 }

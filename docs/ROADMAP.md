@@ -47,11 +47,11 @@
 - [x] Your own shop each round, from your collection, with rerolls; both players shop at once
 - [x] Stars: train an animal for Acorns, or buy a copy for a free star (up to 3, +60% health and bite each)
 - [x] Bonus Acorns for the loser of a round
-- [x] The Bookie (odds and bets on your own herd) removed for now, to keep rounds simpler
+- [x] All the gambling removed for now: the Bookie's odds and bets, the halftime Pot, the Mystery Crate and the trophy stakes
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] A balance pass for the open field, from real play
 - [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
-- [ ] Online Draft Duel: shopping, placing and halftime bets are turns, so it suits online play well
+- [ ] Online Draft Duel: shopping and placing are turns, so it suits online play well
 
 ## Phase 2: Look and feel (first pass done)
 
@@ -85,7 +85,7 @@ game server with an official Godot 4 client. It already has most of what we need
 | Clans and clan chat | Groups and chat |
 
 - [ ] Move rewards to the server. Cage rolls, trophies and purchases must be decided there so nobody can cheat by editing their save. The rules in `scripts/rules/` and the JSON data are written to be shared with the server for exactly this.
-- [ ] Draft Duel online: both phones run the deterministic fight; the server deals the Watering Hole, relays purchases, placements, halftime bets, Rallies and tools, and confirms the result
+- [ ] Draft Duel online: both phones run the deterministic fight; the server deals the Watering Hole, relays purchases, placements, Rallies and tools, and confirms the result
 - [ ] Matchmaking with bots as backup, plus leaderboards
 - [ ] Hosting: a small server is about $10-20 a month for testing. Heroic Labs also offers paid managed hosting.
 

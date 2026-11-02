@@ -1,10 +1,9 @@
 extends Control
 ## Draft Duel against the computer opponent (the rules are in DraftMatch).
-## Before the match: the stake, then your starters. The field in the middle
+## Before the match: your starters. The field in the middle
 ## shows both herds for the whole match. The panel under it changes with
 ## each part of a round: your shop (buy, reroll, train), placing your herd,
-## your Rally and tools in the fight, the halftime bet and the round's
-## results.
+## your Rally and tools in the fight, and the round's results.
 
 const MENU_SCENE := "res://scenes/main.tscn"
 ## Moods this strong or more show over the animals when a fight starts.
@@ -13,8 +12,6 @@ const MOOD_SHOWN := 12
 var duel: DraftMatch
 var bot: DraftBot
 var opponent: Dictionary = {}
-## The match stake from draft_rules.json, chosen before the match.
-var stake: Dictionary = {}
 
 var _rng := RandomNumberGenerator.new()
 var _selected_market := -1
@@ -33,7 +30,6 @@ var _result: Dictionary = {}
 var _field: BattleField
 var _round_label: Label
 var _phase_label: Label
-var _pot_pill: PanelContainer
 var _their_acorns: PanelContainer
 var _their_hearts: PanelContainer
 var _their_tools: Label
@@ -57,7 +53,7 @@ func _ready() -> void:
 	opponent = Opponents.random(_rng)
 	_build()
 	Sound.play_music("battle")
-	_choose_stake()
+	_choose_starters()
 	UIKit.fade_in(self)
 
 
@@ -75,7 +71,7 @@ static func _opponent_levels(pool: Array) -> Dictionary:
 
 
 func _process(delta: float) -> void:
-	if stake.is_empty() or not _result.is_empty():
+	if not _result.is_empty():
 		return
 	_opponent_moves(delta)
 	if duel.phase == "fight":
@@ -119,11 +115,6 @@ func _build() -> void:
 	var round_pill := UIKit.hud_pill(middle)
 	round_pill.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(round_pill)
-	var pot_box := UIKit.vbox(0)
-	top.add_child(pot_box)
-	pot_box.add_child(UIKit.label("Pot", 16, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	_pot_pill = UIKit.pill(GameData.ui_icon("pot"), UIKit.GOLD, "0")
-	pot_box.add_child(_pot_pill)
 
 	var theirs := UIKit.hbox(10)
 	column.add_child(theirs)
@@ -168,28 +159,6 @@ func _build() -> void:
 	_update_hud()
 
 
-## Before the first draft: how many trophies to play for.
-func _choose_stake() -> void:
-	var box := UIKit.vbox(12)
-	box.add_child(UIKit.label("Draft Duel", 44, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-	var intro := UIKit.paragraph("Pick your starters, then each round shop for more animals, train them up to 3 stars, place your herd and watch it fight (with a bet on the Pot at halftime). You both start with %d hearts. Lose a fight and you lose hearts: more for every enemy animal still standing. Run out and you're out. Choose your stake:" % int(duel.rules.hearts), 20, UIKit.TEXT)
-	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(intro)
-	var overlay := _overlay(box)
-	var colors := [UIKit.GREEN, UIKit.BLUE, UIKit.RED]
-	var stakes: Array = duel.rules.stakes
-	for i in stakes.size():
-		var s: Dictionary = stakes[i]
-		var b := UIKit.button("%s\n%s" % [s.name, s.text], colors[i % colors.size()], 22, Vector2(0, 92))
-		b.pressed.connect(func() -> void:
-			stake = s
-			overlay.queue_free()
-			Sound.play("select")
-			_choose_starters()
-		)
-		box.add_child(b)
-
-
 ## Before the first round: up to 3 of your animals to start with, within
 ## the Acorn budget.
 func _choose_starters() -> void:
@@ -199,7 +168,11 @@ func _choose_starters() -> void:
 		for child in box.get_children():
 			box.remove_child(child)
 			child.queue_free()
-		box.add_child(UIKit.label("Pick your starters", 38, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
+		box.add_child(UIKit.label("Draft Duel", 40, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
+		var intro := UIKit.paragraph("Each round: shop for animals, train them up to 3 stars, place your herd and watch it fight. You both start with %d hearts; lose a fight and you lose hearts, more for every enemy animal still standing. Run out and you're out." % int(duel.rules.hearts), 19, UIKit.TEXT)
+		intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(intro)
+		box.add_child(UIKit.label("Pick your starters", 30, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 		var total := 0
 		for id in _starter_ids:
 			total += int(GameData.get_card(id).cost)
@@ -281,14 +254,13 @@ func _update_hud() -> void:
 	_round_label.text = "Round %d" % duel.round_number if duel.round_number > 0 else "Draft Duel"
 	var phase_names := {
 		"starters": "Pick your starters", "draft": "Shopping", "place": "Place your herd",
-		"halftime": "Halftime!", "round_over": "Round over", "over": "Match over",
+		"round_over": "Round over", "over": "Match over",
 	}
 	if duel.phase == "fight":
 		var left := float(duel.fight_ticks - duel.fight_tick) / duel.sim.tps
 		_phase_label.text = "Fight  %d:%02d" % [floori(left / 60.0), int(left) % 60]
 	else:
 		_phase_label.text = phase_names.get(duel.phase, "")
-	_set_amount(_pot_pill, duel.pot)
 	_set_amount(_their_acorns, duel.acorns[1])
 	_set_amount(_my_acorns, duel.acorns[0])
 	for team in 2:
@@ -325,9 +297,8 @@ func _panel_signature() -> String:
 	for entry in duel.herds[0]:
 		stars.append(entry.stars)
 	return str([duel.phase, duel.round_number, duel.done_shopping, taken, stars, duel.acorns, duel.tools[0],
-		duel.halftime,
 		_selected_market, _selected_herd, _selected_tool, _rally_selected, duel.rally_ready[0], _fast, duel.ready,
-		duel.fight_tick > duel.halftime_ticks])
+		])
 
 
 ## The opponent takes a moment over each decision, like a person would.
@@ -344,9 +315,6 @@ func _opponent_moves(delta: float) -> void:
 		"place":
 			if not duel.ready[bot.team]:
 				bot.place()
-		"halftime":
-			if int(duel.halftime.get("turn", -1)) == bot.team and _bot_wait <= 0.0:
-				bot.bet()
 				_bot_wait = _rng.randf_range(0.6, 1.0)
 
 
@@ -376,10 +344,8 @@ func _handle_events(events: Array) -> void:
 				_announce_round(int(e.bonus_team), int(e.bonus))
 				_bot_wait = 1.2
 			"buy":
-				Sound.play("reveal" if e.mystery else ("upgrade" if e.merged else "coin"))
+				Sound.play("upgrade" if e.merged else "coin")
 				var card := GameData.get_card(e.id)
-				if e.mystery:
-					UIKit.toast("%s Mystery Crate: %s!" % ["Their" if theirs else "Your", card.name], UIKit.ACORN.darkened(0.4))
 				if theirs:
 					_set_status("%s's %s is now %s" % [opponent.name, card.name, _stars_text(e.stars)] if e.merged else "%s bought a %s." % [opponent.name, card.name])
 				else:
@@ -424,27 +390,6 @@ func _handle_events(events: Array) -> void:
 				Sound.play("horn" if e.id == "air_horn" else "tool")
 				if theirs:
 					_set_status("%s used a %s!" % [opponent.name, GameData.get_card(e.id).name], UIKit.YELLOW)
-			"halftime":
-				Sound.play("alert")
-				_bot_wait = _rng.randf_range(0.8, 1.4)
-				_selected_tool = -1
-				_rally_selected = false
-				_field.highlight = ""
-				_set_status("Halftime! The fight pauses for a bet.")
-			"raise":
-				Sound.play("coin")
-				if theirs:
-					_set_status("%s raises %d!" % [opponent.name, e.amount], UIKit.YELLOW)
-			"check":
-				if theirs:
-					_set_status("%s checks." % opponent.name)
-			"call":
-				Sound.play("coin")
-				if theirs:
-					_set_status("%s calls." % opponent.name)
-			"fold":
-				if theirs:
-					_set_status("%s folds and pulls its herd back!" % opponent.name, UIKit.YELLOW)
 			"round_over":
 				_selected_tool = -1
 				_rally_selected = false
@@ -497,8 +442,6 @@ func _rebuild_panel() -> void:
 			_place_panel()
 		"fight":
 			_fight_panel()
-		"halftime":
-			_halftime_panel()
 		"round_over":
 			_round_panel()
 
@@ -551,7 +494,7 @@ func _draft_panel() -> void:
 		_panel.add_child(_market_details(item))
 		var problem := duel.can_buy(0, _selected_market)
 		var label := "Buy for %d" % int(item.cost)
-		if not item.mystery and not GameData.is_tool(item.id):
+		if not GameData.is_tool(item.id):
 			var target := duel.merge_target(0, item.id)
 			if target >= 0:
 				label = "Make it %s for %d" % [_stars_text(int(duel.herds[0][target].stars) + 1), int(item.cost)]
@@ -596,7 +539,6 @@ func _market_card(slot: int) -> Control:
 	var card := AnimalCard.create(item.id, true)
 	card.custom_minimum_size = Vector2(104, 138)
 	card.info = AnimalCard.Info.NONE
-	card.mystery = item.mystery and taken < 0
 	card.price = int(item.cost)
 	card.price_color = UIKit.ACORN if duel.acorns[0] >= int(item.cost) or taken >= 0 else UIKit.RED
 	card.highlighted = slot == _selected_market
@@ -604,32 +546,28 @@ func _market_card(slot: int) -> Control:
 		card.stamp = "BOUGHT"
 		card.stamp_color = UIKit.GREEN
 		card.modulate = Color(1, 1, 1, 0.6)
-	elif not item.mystery and duel.merge_target(0, item.id) >= 0:
+	elif duel.merge_target(0, item.id) >= 0:
 		# A copy of one you have: buying it adds a star.
 		card.stars = int(duel.herds[0][duel.merge_target(0, item.id)].stars) + 1
 	UIKit.on_tap(card, func() -> void: _on_market_tapped(slot))
 	return card
 
 
-## What the picked card does: its stats and ability, or the crate's odds.
+## What the picked card does: its stats and ability.
 func _market_details(item: Dictionary) -> Control:
 	var text := ""
-	if item.mystery:
-		text = "A random animal for %d Acorns. Could be a Legendary... or a single rat." % int(item.cost)
+	var card := GameData.get_card(item.id)
+	if card.kind == "tool":
+		text = "%s (tool): %s" % [card.name, card.ability.text]
 	else:
-		var card := GameData.get_card(item.id)
-		if card.kind == "tool":
-			text = "%s (tool): %s" % [card.name, card.ability.text]
-		else:
-			var stats: Dictionary = card.stats
-			var pack := " x%d" % int(card.count) if int(card.count) > 1 else ""
-			var level := duel.sim.level_of(0, item.id)
-			text = "%s%s  ·  %s, level %d  ·  Health %d, Bite %d\n%s: %s" % [card.name, pack, GameData.rarity_name(card.rarity), level,
-				int(stats.hp), int(stats.damage), card.ability.name, card.ability.text]
-			if duel.merge_target(0, item.id) >= 0:
-				text += "\nYou have one: buying this gives it a star instead."
-	var l := UIKit.paragraph(text, 18, UIKit.TEXT)
-	return l
+		var stats: Dictionary = card.stats
+		var pack := " x%d" % int(card.count) if int(card.count) > 1 else ""
+		var level := duel.sim.level_of(0, item.id)
+		text = "%s%s  ·  %s, level %d  ·  Health %d, Bite %d\n%s: %s" % [card.name, pack, GameData.rarity_name(card.rarity), level,
+			int(stats.hp), int(stats.damage), card.ability.name, card.ability.text]
+		if duel.merge_target(0, item.id) >= 0:
+			text += "\nYou have one: buying this gives it a star instead."
+	return UIKit.paragraph(text, 18, UIKit.TEXT)
 
 
 func _on_market_tapped(slot: int) -> void:
@@ -712,8 +650,7 @@ func _select_herd(index: int) -> void:
 # The fight.
 
 func _fight_panel() -> void:
-	var to_halftime := duel.halftime_ticks - duel.fight_tick
-	_heading("Fight!", "Halftime bet soon" if to_halftime > 0 else "Tap Rally or a tool, then the field", "dice")
+	_heading("Fight!", "Tap Rally or a tool, then the field", "tab_battle")
 	var row := UIKit.hbox(8)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_child(_rally_chip())
@@ -781,52 +718,6 @@ func _tool_chip(index: int) -> Control:
 	return box
 
 
-# Halftime betting.
-
-func _halftime_panel() -> void:
-	var h := duel.halftime
-	var mine := float(duel.sim.herd_value(0))
-	var theirs := float(duel.sim.herd_value(1))
-	var share := roundi(100.0 * mine / maxf(1.0, mine + theirs))
-	_heading("Halftime!  Pot: %d" % duel.pot, "Your herd has %d%% of the strength left on the field." % share, "whistle")
-	if h.is_empty():
-		return
-	if int(h.turn) != 0:
-		_panel.add_child(UIKit.label("%s is deciding..." % opponent.name, 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		return
-	if int(h.raise) > 0:
-		var ask := UIKit.paragraph("%s raises %d! Call to keep fighting for the Pot, or fold: you give up the round and the Pot, but lose only %d hearts, nothing extra for their animals still standing." % [opponent.name, int(h.raise), duel.heart_loss(0, true)], 20, UIKit.TEXT)
-		ask.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_panel.add_child(ask)
-		var call_button := UIKit.button("Call %d" % mini(int(h.raise), duel.acorns[0]), UIKit.GREEN, 24, Vector2(200, 68))
-		call_button.pressed.connect(func() -> void:
-			Sound.play("coin")
-			duel.call_raise(0)
-		)
-		var fold_button := UIKit.button("Fold", UIKit.RED, 24, Vector2(200, 68))
-		fold_button.pressed.connect(func() -> void: duel.fold(0))
-		_buttons([call_button, fold_button])
-		return
-	var tip := UIKit.paragraph("Raise to win more Acorns: %s must match it or fold. Or check and play on." % opponent.name, 19, UIKit.TEXT)
-	tip.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_panel.add_child(tip)
-	var choices := []
-	var check_button := UIKit.button("Check", UIKit.GREY, 22, Vector2(150, 64))
-	check_button.pressed.connect(func() -> void:
-		duel.check(0)
-		_bot_wait = _rng.randf_range(0.6, 1.0)
-	)
-	choices.append(check_button)
-	for amount in range(1, duel.max_raise(0) + 1):
-		var b := UIKit.button("Raise %d" % amount, UIKit.YELLOW.darkened(0.15), 22, Vector2(130, 64))
-		b.pressed.connect(func() -> void:
-			duel.raise_pot(0, amount)
-			_bot_wait = _rng.randf_range(0.6, 1.0)
-		)
-		choices.append(b)
-	_buttons(choices)
-
-
 # The round's results.
 
 func _round_panel() -> void:
@@ -835,24 +726,16 @@ func _round_panel() -> void:
 	var title := "You won round %d!" % int(r.round) if winner == 0 else ("%s won round %d" % [opponent.name, int(r.round)] if winner == 1 else "Round %d: a tie" % int(r.round))
 	_heading(title, "", "trophy" if winner == 0 else "")
 	var lines := []
-	if int(r.folded) == 0:
-		lines.append("You folded.")
-	elif int(r.folded) == 1:
-		lines.append("%s folded!" % opponent.name)
 	var lost: Array = r.hearts_lost
 	var standing: Array = r.standing
 	if winner == 0:
-		lines.append("%s loses %d heart%s (%d of your animals still standing)." % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s", standing[0]] if int(r.folded) < 0 else "%s loses %d heart%s." % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s"])
+		lines.append("%s loses %d heart%s (%d of your animals still standing)." % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s", standing[0]])
+		lines.append("%s gets %d bonus Acorns next round." % [opponent.name, int(duel.rules.loser_bonus)])
 	elif winner == 1:
-		lines.append("You lose %d heart%s (%d of theirs still standing)." % [lost[0], "" if int(lost[0]) == 1 else "s", standing[1]] if int(r.folded) < 0 else "You lose %d heart%s." % [lost[0], "" if int(lost[0]) == 1 else "s"])
+		lines.append("You lose %d heart%s (%d of theirs still standing)." % [lost[0], "" if int(lost[0]) == 1 else "s", standing[1]])
+		lines.append("You get %d bonus Acorns next round." % int(duel.rules.loser_bonus))
 	else:
 		lines.append("Nobody loses hearts.")
-	if winner == 0:
-		lines.append("You won the Pot: +%d Acorns." % int(r.pot))
-	elif winner == 1:
-		lines.append("%s won the Pot (%d)." % [opponent.name, int(r.pot)])
-	else:
-		lines.append("The Pot carries over: %d." % duel.pot)
 	if int(r.stolen[1]) > 0:
 		lines.append("%s's Raccoon stole %d of your Acorns." % [opponent.name, int(r.stolen[1])])
 	if duel.round_number + 1 == duel.max_rounds():
@@ -928,7 +811,6 @@ func _end_match() -> void:
 	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("Hearts left  %d - %d" % [duel.hearts[0], duel.hearts[1]], 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("%d rounds" % duel.round_number, 22, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	box.add_child(UIKit.label("Stake: %s" % stake.name, 22, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	var ok := UIKit.button("OK", UIKit.GREEN, 28, Vector2(220, 84))
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(_back_to_menu)
@@ -937,7 +819,7 @@ func _end_match() -> void:
 
 
 func _record(outcome: String) -> void:
-	_result = Profile.record_match(outcome, int(opponent.trophies), float(stake.get("multiplier", 1.0)))
+	_result = Profile.record_match(outcome, int(opponent.trophies))
 	_result["hearts"] = duel.hearts.duplicate()
 
 
@@ -952,7 +834,5 @@ func _on_leave() -> void:
 
 func _leave_now() -> void:
 	if _result.is_empty():
-		if stake.is_empty():
-			stake = duel.rules.stakes[0]
 		_record("loss")
 	_back_to_menu()

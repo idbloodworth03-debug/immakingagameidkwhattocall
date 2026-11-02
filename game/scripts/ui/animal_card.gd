@@ -24,8 +24,6 @@ var highlighted := false:
 ## in its own color, e.g. red when it's more Acorns than you have.
 var price := -1
 var price_color := UIKit.ACORN
-## A face-down card: a crate instead of the animal.
-var mystery := false
 ## A word stamped across the card, like "YOURS" ("" for none).
 var stamp := ""
 var stamp_color := UIKit.GREEN
@@ -88,7 +86,7 @@ func _draw() -> void:
 	var h := size.y
 	var rect := Rect2(Vector2.ZERO, size)
 	var radius := int(w * 0.11)
-	var rarity_color := Color("#c98b4a") if mystery else GameData.rarity_color(animal.get("rarity", "common"))
+	var rarity_color := GameData.rarity_color(animal.get("rarity", "common"))
 	var dim := info == Info.COLLECTION and not _owned
 	var rim := rarity_color.darkened(0.35) if dim else rarity_color
 	var margin := w * 0.055
@@ -117,7 +115,7 @@ func _draw() -> void:
 
 	# The art window with a spotlight in the habitat's color.
 	var art := Rect2(margin, margin, w - margin * 2, h * (0.66 if info != Info.NONE else 0.76) - margin)
-	var habitat := Color("#a0703a") if mystery else UIKit.habitat_color(animal)
+	var habitat := UIKit.habitat_color(animal)
 	if dim:
 		habitat = habitat.darkened(0.55).lerp(Color(0.15, 0.17, 0.24), 0.5)
 	var art_radius := int(radius * 0.75)
@@ -130,16 +128,13 @@ func _draw() -> void:
 	draw_set_transform(feet, 0.0, Vector2(1.0, 0.28))
 	draw_circle(Vector2.ZERO, art.size.x * 0.36, Color(UIKit.INK, 0.28))
 	draw_set_transform(Vector2.ZERO)
-	if mystery:
-		_draw_crate(art)
-	else:
-		_draw_animal(animal, art, dim)
+	_draw_animal(animal, art, dim)
 	var frame := UIKit.box(Color(0, 0, 0, 0), art_radius)
 	frame.draw_center = false
 	frame.set_border_width_all(2)
 	frame.border_color = Color(UIKit.INK, 0.45)
 	draw_style_box(frame, art)
-	if not dim and not mystery:
+	if not dim:
 		_draw_sheen(art)
 
 	# Name plate across the bottom of the art.
@@ -148,7 +143,7 @@ func _draw() -> void:
 	var plate := Rect2(art.position.x, art.end.y - plate_h * 0.55, art.size.x, plate_h)
 	var plate_style := UIKit.box(Color(UIKit.INK, 0.78), int(plate_h * 0.35))
 	draw_style_box(plate_style, plate)
-	_text(font, "Mystery" if mystery else String(animal.get("name", "?")), plate, int(h * (0.075 if small else 0.072)), Color.WHITE)
+	_text(font, String(animal.get("name", "?")), plate, int(h * (0.075 if small else 0.072)), Color.WHITE)
 
 	if stars > 1:
 		UIKit.draw_stars(self, Vector2(w / 2.0, plate.position.y - h * 0.035), stars, w * 0.07)
@@ -197,17 +192,6 @@ func _draw_animal(animal: Dictionary, art: Rect2, dim: bool) -> void:
 		if lock != null and not _reachable:
 			var side := art.size.x * 0.34
 			draw_texture_rect(lock, Rect2(art.get_center() - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.85))
-
-
-## A wooden crate with a question mark, for cards still face down.
-func _draw_crate(art: Rect2) -> void:
-	var crate := UIKit.icon(GameData.ui_icon("mystery"))
-	var side := minf(art.size.x, art.size.y) * 0.72
-	var at := art.get_center() - Vector2(side, side) / 2.0
-	if crate != null:
-		draw_texture_rect(crate, Rect2(at + Vector2(0, side * 0.05), Vector2(side, side)), false, Color(UIKit.INK, 0.45))
-		draw_texture_rect(crate, Rect2(at, Vector2(side, side)), false, Color("#ffe2b0"))
-	_text(get_theme_default_font(), "?", Rect2(art.get_center() - Vector2(side, side) * 0.3, Vector2(side, side) * 0.6), int(side * 0.5), UIKit.YELLOW)
 
 
 ## A word stamped at an angle across the card.

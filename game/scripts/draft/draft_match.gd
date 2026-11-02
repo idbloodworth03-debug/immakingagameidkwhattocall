@@ -9,36 +9,25 @@ extends RefCounted
 ## Each round has four parts:
 ##
 ##   1. Shop: each player has their own Watering Hole, drawn from the cards
-##      they own: animals, a Ranger tool and a face-down Mystery Crate. Both
-##      shop at the same time: buy cards, reroll the shop for an Acorn, or
-##      train an animal in the herd up a star (1 to 3; every star adds
-##      health and bite). Buying a copy of an animal you already have gives
-##      it a free star instead. Herds carry over from round to round.
+##      they own: animals and a Ranger tool. Both shop at the same time: buy
+##      cards, reroll the shop for an Acorn, or train an animal in the herd
+##      up a star (1 to 3; every star adds health and bite). Buying a copy
+##      of an animal you already have gives it a free star instead. Herds
+##      carry over from round to round.
 ##   2. Place: each player arranges their whole herd on their own half of the
 ##      field. Nothing moves and there's no clock: this is the time to think.
 ##   3. Fight: the herds fight on their own (BattleSim does the fighting),
 ##      with some luck: every animal's mood, and every hit. Players can use
 ##      the tools they bought, and once a fight they can Rally the animals
-##      around a spot. At the halftime whistle the fight pauses for a round of
-##      betting on the Pot.
+##      around a spot.
 ##   4. Round over: the fight ends when a herd is wiped out (or at the bell:
-##      then the herd with more of itself left wins). The winner takes the
-##      Pot, and the loser loses hearts: the
-##      round number, plus 1 for every enemy animal still standing. The loser
+##      then the herd with more of itself left wins). The loser loses hearts:
+##      the round number, plus 1 for every enemy animal still standing, and
 ##      gets a few extra Acorns next round, to help it catch up.
 ##
-## Acorns are the match's only money: spend them on animals, tools and
-## training, or keep them for the halftime Pot. Both players start with the same Acorns,
-## and they're gone when the match ends.
-##
-## The Pot: both players put in an ante when the fight starts. At halftime
-## the player (team 0) may raise or check, then the opponent; a raise must
-## be called or folded. Folding ends the round at once: the folder loses the
-## Pot and the round, but only the round's base hearts, not the extra for
-## the enemy animals still standing. So the side that's ahead chooses: raise
-## to win Acorns (and offer a way out), or check and let its herd finish the
-## job. Which tools each player holds is hidden (only how many shows), so a
-## raise can be a bluff.
+## Acorns are the match's only money, for animals, tools, training and
+## rerolls. Both players start with the same Acorns, and they're gone when
+## the match ends.
 ##
 ## Like BattleSim, a match plays out the same way for the same seed and the
 ## same actions.
@@ -57,8 +46,7 @@ const NO_WINNER := -1
 var rules: Dictionary
 var sim: BattleSim
 var rng := RandomNumberGenerator.new()
-## "starters", "draft" (shopping), "place", "fight", "halftime",
-## "round_over" or "over".
+## "starters", "draft" (shopping), "place", "fight", "round_over" or "over".
 var phase := ""
 var round_number := 0
 var hearts := [0, 0]
@@ -70,8 +58,7 @@ var herds := [[], []]
 var tools := [[], []]
 ## The cards the Watering Holes draw from.
 var pool: Array = []
-## Each team's own Watering Hole: {"id", "cost", "mystery": bool, "taken":
-## team or -1}.
+## Each team's own Watering Hole: {"id", "cost", "taken": team or -1}.
 var shops := [[], []]
 ## Each team's starters, once picked.
 var starters := [[], []]
@@ -80,20 +67,14 @@ var done_shopping := [false, false]
 var ready := [false, false]
 ## Each player's Rally for this fight (true until used).
 var rally_ready := [true, true]
-var pot := 0
-## While the halftime betting is open: {"turn": team to act, "raise": the
-## raise waiting for an answer (0 when none), "raiser": team, "checks": int}.
-var halftime := {}
 var fight_tick := 0
 var fight_ticks := 0
-var halftime_ticks := 0
 ## The fight tick each herd was wiped out (-1 while it still stands).
 var wiped_at := [-1, -1]
-## What happened last round: {"round", "winner", "pot", "folded": team or -1,
-## "standing": [team 0's animals still standing, team 1's], "hearts_lost":
+## What happened last round: {"round", "winner", "standing": [team 0's animals still standing, team 1's], "hearts_lost":
 ## [int, int], "stolen": [Acorns each team stole]}.
 var last_round: Dictionary = {}
-## Things that happened, for the screen to show: buys, passes, bets, tools.
+## Things that happened, for the screen to show: buys, training, tools...
 var events: Array = []
 ## The battle-field groups of each herd's animals, in herd order, so a tap on
 ## an animal finds its herd entry.
@@ -115,7 +96,6 @@ func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}
 	sim = BattleSim.new(setup.get("levels", [{}, {}]), seed_value)
 	pool = setup.get("pool", GameData.card_order).duplicate()
 	fight_ticks = roundi(float(rules.fight_seconds) * sim.tps)
-	halftime_ticks = roundi(float(rules.halftime_seconds) * sim.tps)
 	hearts = [int(rules.hearts), int(rules.hearts)]
 	acorns = [int(rules.acorns_start), int(rules.acorns_start)]
 	for team in 2:
@@ -198,12 +178,9 @@ func standing(team: int) -> int:
 
 
 ## The hearts the loser of this round loses: the round's base, plus the
-## winner's animals still standing (unless the loser folded).
-func heart_loss(winner_standing: int, folded: bool) -> int:
-	var lost := round_number * int(rules.heart_loss_per_round)
-	if not folded:
-		lost += winner_standing * int(rules.heart_loss_per_animal)
-	return lost
+## winner's animals still standing.
+func heart_loss(winner_standing: int) -> int:
+	return round_number * int(rules.heart_loss_per_round) + winner_standing * int(rules.heart_loss_per_animal)
 
 
 func take_events() -> Array:
@@ -264,7 +241,7 @@ func can_buy(team: int, slot: int) -> String:
 	if GameData.is_tool(item.id):
 		if tools[team].size() >= int(rules.tools_max):
 			return "Your tool belt is full"
-	elif herds[team].size() >= int(rules.herd_max) and (item.mystery or merge_target(team, item.id) < 0):
+	elif herds[team].size() >= int(rules.herd_max) and merge_target(team, item.id) < 0:
 		return "Your herd is full"
 	return ""
 
@@ -298,7 +275,7 @@ func buy(team: int, slot: int) -> bool:
 			var spot := default_spot(team)
 			herds[team].append({"id": item.id, "x": spot.x, "y": spot.y, "stars": 1})
 		_lay_out_herds()
-	events.append({"type": "buy", "team": team, "slot": slot, "id": item.id, "mystery": item.mystery,
+	events.append({"type": "buy", "team": team, "slot": slot, "id": item.id,
 		"merged": merged >= 0, "stars": int(herds[team][merged].stars) if merged >= 0 else 1})
 	return true
 
@@ -385,17 +362,13 @@ func _roll_shop(team: int) -> Array:
 		var id := _weighted_pick(animals, shown, dice)
 		if id != "":
 			shown.append(id)
-			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "mystery": false, "taken": -1})
+			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "taken": -1})
 	for i in int(rules.market_tools):
 		var choices := tool_ids.filter(func(t): return not shown.has(t))
 		if not choices.is_empty():
 			var id: String = choices[dice.randi_range(0, choices.size() - 1)]
 			shown.append(id)
-			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "mystery": false, "taken": -1})
-	for i in int(rules.mystery_crates):
-		var id := _weighted_pick(animals, [], dice)
-		if id != "":
-			slots.append({"id": id, "cost": int(rules.mystery_cost), "mystery": true, "taken": -1})
+			slots.append({"id": id, "cost": int(GameData.get_card(id).cost), "taken": -1})
 	return slots
 
 
@@ -527,11 +500,7 @@ func step() -> void:
 		if wiped_at[team] < 0 and sim.units(team).is_empty():
 			wiped_at[team] = fight_tick
 	if fight_tick >= fight_ticks or wiped_at[0] >= 0 or wiped_at[1] >= 0:
-		_end_round(-1)
-	elif fight_tick == halftime_ticks:
-		phase = "halftime"
-		halftime = {"turn": 0, "raise": 0, "raiser": -1, "checks": 0}
-		events.append({"type": "halftime"})
+		_end_round()
 
 
 func use_tool(team: int, index: int, x: int, y: int) -> bool:
@@ -579,11 +548,6 @@ func _start_fight() -> void:
 	_lay_out_herds()
 	rally_ready = [true, true]
 	roll_moods(sim, rng, int(rules.get("mood_pct", 0)))
-	var ante := int(rules.ante)
-	for team in 2:
-		var paid := mini(ante, acorns[team])
-		acorns[team] -= paid
-		pot += paid
 	_steal_acorns()
 	wiped_at = [-1, -1]
 	for team in 2:
@@ -595,7 +559,7 @@ func _start_fight() -> void:
 	if wiped_at[0] >= 0 or wiped_at[1] >= 0:
 		# A herd with nothing in it loses at once (and if both are empty,
 		# nobody does).
-		_end_round(-1)
+		_end_round()
 
 
 ## Animals with "acorn_steal" (the Raccoon) take Acorns from the other
@@ -614,66 +578,6 @@ func _steal_acorns() -> void:
 			acorns[team] += amount
 			_stolen[team] += amount
 			events.append({"type": "steal", "team": team, "id": entry.id, "amount": amount})
-
-
-# --- Halftime betting ------------------------------------------------------
-
-## The most `team` may raise right now (0 if it can't). A raise is never more
-## than the other player can call.
-func max_raise(team: int) -> int:
-	if phase != "halftime" or int(halftime.turn) != team or int(halftime.raise) > 0:
-		return 0
-	return mini(int(rules.raise_max), mini(acorns[team], acorns[1 - team]))
-
-
-func raise_pot(team: int, amount: int) -> bool:
-	if amount < 1 or amount > max_raise(team):
-		return false
-	acorns[team] -= amount
-	pot += amount
-	halftime.raise = amount
-	halftime.raiser = team
-	halftime.turn = 1 - team
-	events.append({"type": "raise", "team": team, "amount": amount})
-	return true
-
-
-func check(team: int) -> bool:
-	if phase != "halftime" or int(halftime.turn) != team or int(halftime.raise) > 0:
-		return false
-	halftime.checks = int(halftime.checks) + 1
-	events.append({"type": "check", "team": team})
-	if int(halftime.checks) >= 2:
-		_resume()
-	else:
-		halftime.turn = 1 - team
-	return true
-
-
-func call_raise(team: int) -> bool:
-	if phase != "halftime" or int(halftime.turn) != team or int(halftime.raise) <= 0:
-		return false
-	var paid := mini(int(halftime.raise), acorns[team])
-	acorns[team] -= paid
-	pot += paid
-	events.append({"type": "call", "team": team, "amount": paid})
-	_resume()
-	return true
-
-
-## Gives up the round, in answer to a raise, to lose fewer hearts.
-func fold(team: int) -> bool:
-	if phase != "halftime" or int(halftime.turn) != team or int(halftime.raise) <= 0:
-		return false
-	events.append({"type": "fold", "team": team})
-	halftime = {}
-	_end_round(team)
-	return true
-
-
-func _resume() -> void:
-	halftime = {}
-	phase = "fight"
 
 
 # --- Rounds ----------------------------------------------------------------
@@ -702,26 +606,22 @@ func _start_placing() -> void:
 	events.append({"type": "place"})
 
 
-func _end_round(folder: int) -> void:
-	var winner := 1 - folder if folder >= 0 else judge(sim, wiped_at)
+func _end_round() -> void:
+	var winner := judge(sim, wiped_at)
 	var standing_now := [standing(0), standing(1)]
 	var lost := [0, 0]
-	var won_pot := pot
 	if winner != NO_WINNER:
-		acorns[winner] += pot
-		pot = 0
 		var loser := 1 - winner
-		lost[loser] = mini(hearts[loser], heart_loss(standing_now[winner], folder >= 0))
+		lost[loser] = mini(hearts[loser], heart_loss(standing_now[winner]))
 		hearts[loser] -= lost[loser]
 		_last_loser = loser
 	else:
-		won_pot = 0
 		_last_loser = -1
 	last_round = {
-		"round": round_number, "winner": winner, "pot": won_pot, "folded": folder,
-		"standing": standing_now, "hearts_lost": lost, "stolen": _stolen.duplicate(),
+		"round": round_number, "winner": winner, "standing": standing_now,
+		"hearts_lost": lost, "stolen": _stolen.duplicate(),
 	}
-	events.append({"type": "round_over", "winner": winner, "pot": won_pot, "folded": folder, "hearts_lost": lost})
+	events.append({"type": "round_over", "winner": winner, "hearts_lost": lost})
 	var out: bool = hearts[0] <= 0 or hearts[1] <= 0
 	phase = "over" if out or round_number >= max_rounds() else "round_over"
 	if phase == "over":

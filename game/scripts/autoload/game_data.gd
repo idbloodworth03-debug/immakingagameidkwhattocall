@@ -250,10 +250,6 @@ func validate() -> Array:
 	for rarity in draft_rules.get("rarity_weights", {}):
 		if not rarities.has(rarity):
 			problems.append("draft_rules: unknown rarity '%s'" % rarity)
-	if int(draft_rules.get("halftime_seconds", 0)) >= int(draft_rules.get("fight_seconds", 0)):
-		problems.append("draft_rules: halftime must come before the end of the fight")
-	if draft_rules.get("stakes", []).is_empty():
-		problems.append("draft_rules: needs at least one stake")
 	if int(draft_rules.get("hearts", 0)) <= 0 or int(draft_rules.get("max_rounds", 0)) <= 0:
 		problems.append("draft_rules: hearts and max_rounds must be above zero")
 

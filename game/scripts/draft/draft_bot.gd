@@ -1,12 +1,12 @@
 class_name DraftBot
 extends RefCounted
 ## The computer opponent in Draft Duel. It picks starters, shops (buying,
-## training and rerolling), places its herd, uses its tools in the fight and
-## bets on the halftime Pot, all through DraftMatch's public calls, so it follows the
+## training and rerolling), places its herd, and rallies and uses its tools
+## in the fight, all through DraftMatch's public calls, so it follows the
 ## same rules as a person.
 ##
 ## `difficulty` (0 = first arena, 1 = top arena) sets how well it shops
-## (less random), how quickly and how well it uses tools, and how it bets.
+## (less random), and how quickly and how well it uses tools.
 
 const T := BattleSim.TILE
 
@@ -64,12 +64,11 @@ func pick_starters() -> void:
 func shop() -> void:
 	if duel.phase != "draft" or duel.done_shopping[team]:
 		return
-	var keep := _keep()
 	var best_score := 1.5
 	var best_action := Callable()
 	for i in duel.shops[team].size():
 		var item: Dictionary = duel.shops[team][i]
-		if duel.can_buy(team, i) != "" or duel.acorns[team] - int(item.cost) < keep:
+		if duel.can_buy(team, i) != "":
 			continue
 		var score := _want(item)
 		if score > best_score:
@@ -77,14 +76,14 @@ func shop() -> void:
 			best_action = duel.buy.bind(team, i)
 	for i in duel.herds[team].size():
 		var price := duel.train_cost(team, i)
-		if duel.can_train(team, i) != "" or duel.acorns[team] - price < keep:
+		if duel.can_train(team, i) != "":
 			continue
 		var score := _train_value(i, price)
 		if score > best_score:
 			best_score = score
 			best_action = duel.train.bind(team, i)
 	# Only weak picks and Acorns to spare: try a fresh shop first.
-	var rich: bool = duel.acorns[team] - int(duel.rules.reroll_cost) >= keep + 4
+	var rich: bool = duel.acorns[team] - int(duel.rules.reroll_cost) >= 4
 	if _rerolls < 2 and rich and best_score < 4.0:
 		_rerolls += 1
 		duel.reroll(team)
@@ -100,15 +99,9 @@ func shop() -> void:
 	duel.finish_shopping(team)
 
 
-## Acorns it holds back for the halftime Pot once its herd is decent.
-func _keep() -> int:
-	var herd_size: int = duel.herds[team].size()
-	return 0 if herd_size < 3 else int(duel.rules.ante) + (1 if herd_size < 5 else 3)
-
-
 ## How much it wants a shop card. Pricier animals are stronger; a copy of
-## one it has upgrades it, which matters most once the herd is full; it
-## wants one tool and sometimes gambles on the Mystery Crate.
+## one it has upgrades it, which matters most once the herd is full; and it
+## wants one tool.
 func _want(item: Dictionary) -> float:
 	var cost := int(item.cost)
 	var herd_size: int = duel.herds[team].size()
@@ -116,8 +109,6 @@ func _want(item: Dictionary) -> float:
 	var noise := rng.randf() * lerpf(3.0, 0.8, difficulty)
 	if GameData.is_tool(item.id):
 		return (3.0 + 2.0 * difficulty if duel.tools[team].is_empty() else 0.5) + noise
-	if item.mystery:
-		return (1.0 if full else 3.5) + noise
 	if duel.merge_target(team, item.id) >= 0:
 		# A star for the price of a copy: good value, and it saves a herd spot.
 		return float(cost) * (1.3 if full or herd_size >= 4 else 0.8) + noise
@@ -257,45 +248,3 @@ func _best_cluster(candidates: Array, radius: int, value_of: Callable) -> Dictio
 		if best.is_empty() or value > float(best.value):
 			best = {"x": center.x, "y": center.y, "value": value}
 	return best
-
-
-# --- Halftime betting ------------------------------------------------------
-
-## Its rough chance of winning the fight: its share of what's left of both
-## herds (each animal's cost and stars, times the health it has left).
-func chances() -> float:
-	var mine := float(duel.sim.herd_value(team))
-	var theirs := float(duel.sim.herd_value(1 - team))
-	if mine + theirs <= 0.0:
-		return 0.5
-	return mine / (mine + theirs)
-
-## Makes its halftime move when it's the bot's turn. It judges its chances
-## by how much of each herd is left, it knows its own tools, so it's braver
-## with tools in hand, and it sometimes bluffs.
-func bet() -> void:
-	var h := duel.halftime
-	if h.is_empty() or int(h.turn) != team:
-		return
-	# Its own tools give it hope; the other side's (it can count them) take some away.
-	var hope := clampf(chances() + 0.12 * duel.tools[team].size() - 0.08 * duel.tools[1 - team].size(), 0.0, 1.0)
-	if int(h.raise) > 0:
-		# Worth calling if the chance of winning beats the price of staying in.
-		var price := float(h.raise) / float(duel.pot + int(h.raise))
-		# Only folds when clearly beaten: most fights are worth seeing out.
-		if hope < 0.22 and hope < price + 0.1:
-			duel.fold(team)
-		else:
-			duel.call_raise(team)
-		return
-	var most := duel.max_raise(team)
-	var bluff: bool = not duel.tools[team].is_empty() and hope > 0.3 and rng.randf() < 0.1 + 0.2 * difficulty
-	# Far ahead, it would rather let its herd finish the job (each animal
-	# still standing costs the loser hearts) than offer a way out; a little
-	# ahead, it raises to win Acorns.
-	var value_raise := hope > 0.62 and hope < lerpf(1.01, 0.9, difficulty)
-	if most > 0 and (value_raise or bluff):
-		var amount := clampi(roundi(lerpf(1.0, float(most), clampf((hope - 0.5) * 2.5, 0.0, 1.0))), 1, most)
-		duel.raise_pot(team, amount)
-	else:
-		duel.check(team)

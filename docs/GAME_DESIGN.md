@@ -10,10 +10,9 @@ itself (speeds, timing, luck) in `game/data/battle_rules.json`.
 An animal battler built around one mode, **Draft Duel**: a round-based duel.
 Pick a few starters from your collection, then each round shop for more
 animals and train them up, place your herd with no clock running, and
-watch it fight on its own while you make a few well-timed calls: a Rally,
-your tools and a bet. Each player has 30 hearts; lose a fight and you lose
-hearts. There's a gambling layer with Acorns, which only exist inside a
-match.
+watch it fight on its own while you make a few well-timed calls: a Rally
+and your tools. Each player has 30 hearts; lose a fight and you lose
+hearts. Acorns, the shop money, only exist inside a match.
 
 The theme is wildlife rescue: chests are **cages** you open to **free**
 animals, the player is a **Ranger**, and card rarity follows how endangered
@@ -25,8 +24,8 @@ river across the field. That mode, "Classic battle", and the dens, river and
 
 ## Draft Duel
 
-The goal: give players time to think, keep them involved during the fight,
-and add the thrill of a bet, while skill (reading the fight) still beats
+The goal: give players time to think and keep them involved during the
+fight, with skill (building and placing a herd, timing a Rally) beating
 luck. Each player starts with **30 hearts**, and the match goes round by
 round until someone runs out (at most 15 rounds).
 
@@ -36,10 +35,9 @@ the three strongest). They start the match in the herd.
 
 Then each round has four parts:
 
-1. **Shop.** Each player has their own Watering Hole: 4 animals, 1 Ranger
-   tool and a face-down **Mystery Crate** (a random animal for 4 Acorns:
-   maybe a Legendary, maybe one rat), all from **your collection** (topped
-   up with the first arena's cards if you own too few). Both players shop
+1. **Shop.** Each player has their own Watering Hole: 5 animals and 1 Ranger
+   tool, all from **your collection** (topped up with the first arena's
+   cards if you own too few). Both players shop
    at the same time, and each can:
    - **Buy** cards. A herd holds up to 6 animals and 2 tools, and it carries over from round to round.
    - **Buy a copy** of an animal already in the herd: instead of joining, it gives that animal a **star** (and a copy still fits when the herd is full).
@@ -64,19 +62,11 @@ Then each round has four parts:
    - **Tools** bought in the draft can be used anywhere, any time.
    - **The Raccoon** (Trash Panda) steals an Acorn from the other player as
      the fight starts.
-   - **Halftime** (8 seconds in): the fight pauses for the **Pot**. Both
-     players put a 1-Acorn ante in when the fight starts. At halftime you
-     may raise (up to 3, never more than the other player can call) or
-     check, then the opponent. A raise must be called or folded. Folding
-     ends the round at once: you lose the round and the Pot, but only the
-     round's base hearts (see below), nothing for the enemy animals still
-     standing. So the player who's ahead chooses: raise to win Acorns and
-     offer a way out, or check and let the herd finish the job. Which tools
-     you hold is hidden (only how many shows), so a raise can be a bluff.
+   - Which tools each player holds is hidden (only how many shows).
 4. **Round over.** The fight ends when a herd is wiped out; the other herd
    wins the round. If both still stand at the bell, the one with more of
    itself left wins (each animal counts its card's cost times the share of
-   health it has left). The winner takes the Pot; a tie carries it over.
+   health it has left).
 
 **Hearts.** The loser of a round loses hearts: **the round number, plus 1
 for each of the winner's animals still standing** (a pack counts once). A
@@ -85,39 +75,29 @@ nobody anything. Run out of hearts and you lose; after round 15, more
 hearts wins.
 
 **Acorns** are the only money in a match: 6 to start, +6 each round, +2
-more for the loser of the last round (to help it catch up), plus Pots and
-Raccoon thefts. Spend them on animals, tools, training and rerolls, or keep
-them for the halftime Pot. Everyone starts with the same Acorns.
+more for the loser of the last round (to help it catch up), plus Raccoon
+thefts. Spend them on animals, tools, training and rerolls. Everyone starts
+with the same Acorns, and they can't be bought or carried out of a match.
 
 **Your collection matters, a little.** Your starters and shop come from the
 cards you own, and your animals and tools fight at their levels. The computer opponent's cards
 are leveled like yours on average, so leveling a few favorites helps without
 making the match one-sided.
 
-**Match stakes.** Before the match: Safe (half the trophies, win or lose),
-Bold (normal) or All-in (double).
-
-**Gambling without harm.** Acorns can't be bought, carry nothing out of a
-match and reset every time. The Pot rewards reading the fight (and knowing
-your own tools), not blind luck. Keep it that way: if Acorns or bets ever
-connect to anything bought with money, the game becomes real gambling, with
-legal trouble in some countries and a higher App Store age rating.
-
 **Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
-bot-vs-bot matches and prints match length, hearts lost, shopping, the
-halftime Pot and how close fights are at halftime. From the latest runs
-(30 matches):
-- Matches last about 7 rounds. Wins split 13-17.
-- A fight lasts about 17 seconds, and 3 in 4 end with a herd wiped out. A loss costs 5.4 hearts on average.
-- Herds average 5 animals with 1.3 stars each. A bot buys about 16 cards a match (a third of them copies for a star) and trains 2 or 3 times.
-- At halftime, about 60% of fights are still fairly close (each side has 20-80% of the strength left). The bots fold in about 1 halftime in 5.
+bot-vs-bot matches and prints match length, hearts lost, shopping and how
+close fights are 8 seconds in. From the latest runs (30 matches):
+- Matches last about 7 rounds. Wins split 14-16.
+- A fight lasts about 17 seconds, and 9 in 10 end with a herd wiped out. A loss costs 5.8 hearts on average.
+- Herds average 5 animals with 1.4 stars each. A bot buys about 18 cards a match (almost half of them copies for a star) and trains about twice.
+- 8 seconds into a fight, about 80% are still fairly close (each side has 20-80% of the strength left).
 - Before starters and shops, with one shared, take-turns Watering Hole and no stars, fights were much more one-sided.
 
-**The Bookie (removed for now).** There used to be a betting step between
-placing and the fight: a raccoon Bookie played the fight out ahead a few
-times, posted the odds, and you could bet Acorns on your own herd at those
-odds. It was taken out to keep rounds simpler; it's in the git history
-(before the commit that removed it) if it comes back.
+**Gambling (removed for now).** Draft Duel used to have a gambling layer
+with Acorns: a raccoon Bookie who posted odds before each fight so you
+could bet on your own herd, a halftime Pot (ante, raise, call or fold), a
+face-down Mystery Crate in the shop, and Safe/Bold/All-in trophy stakes.
+All of it was taken out; it's in the git history if any of it comes back.
 
 ## Rarity = how endangered the animal is
 
@@ -342,14 +322,12 @@ The opponent plays Draft Duel through the same calls as a person, so it
 follows the same rules:
 
 - **Starters:** it tries random sets within the budget and keeps the one worth the most.
-- **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, sometimes gambles on the Mystery Crate, rerolls a weak shop when it has Acorns to spare, and once its herd has 3 animals it keeps some Acorns back to bet with.
+- **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, and rerolls a weak shop when it has Acorns to spare.
 - **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
-- **The halftime Pot:** it judges its chances by its share of the strength left on the field, plus its own tools (it's braver with tools in hand), raises when clearly ahead, folds only when clearly beaten, and sometimes bluffs.
 
-**Difficulty grows with your arena:** it drafts less randomly, uses tools
-sooner and on smaller groups, and bluffs more. Its cards are leveled
-like yours on average. The same bot can later fill online matchmaking when
+**Difficulty grows with your arena:** it shops less randomly and uses tools
+sooner and on smaller groups. Its cards are leveled like yours on average. The same bot can later fill online matchmaking when
 few players are on.
 
 **Balance.** All animal stats were first tuned from about 7,000 bot battles

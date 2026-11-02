@@ -29,9 +29,8 @@ static func arena_index_for(trophies: int, arenas: Array) -> int:
 
 ## Trophies after a match. You never drop below zero, and arenas with
 ## "trophy_floor" stop you from falling back into the arena before them.
-## `stake` scales the change either way (Draft Duel's match stakes).
-static func trophies_after_match(trophies: int, opponent_trophies: int, won: bool, settings: Dictionary, arenas: Array, stake := 1.0) -> int:
-	var change := roundi(change_for_match(trophies, opponent_trophies, won, settings) * stake)
+static func trophies_after_match(trophies: int, opponent_trophies: int, won: bool, settings: Dictionary, arenas: Array) -> int:
+	var change := change_for_match(trophies, opponent_trophies, won, settings)
 	var result := maxi(0, trophies + change)
 	if not won:
 		var arena: Dictionary = arenas[arena_index_for(trophies, arenas)]

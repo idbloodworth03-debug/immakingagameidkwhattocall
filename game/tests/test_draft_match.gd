@@ -1,6 +1,6 @@
 extends TestCase
-## Draft Duel tests: starters, shopping and stars, placing, the Pot and
-## halftime betting, rounds and hearts, and the computer opponent.
+## Draft Duel tests: starters, shopping and stars, placing, fights, rounds
+## and hearts, and the computer opponent.
 
 const T := BattleSim.TILE
 
@@ -37,14 +37,11 @@ func _start(m: DraftMatch) -> void:
 	m.set_ready(1)
 
 
-## Runs the fight to the end of the round, checking at halftime.
+## Runs the fight to the end of the round.
 func _fight(m: DraftMatch) -> void:
 	_start(m)
-	while m.phase == "fight" or m.phase == "halftime":
-		if m.phase == "halftime":
-			m.check(int(m.halftime.turn))
-		else:
-			m.step()
+	while m.phase == "fight":
+		m.step()
 
 
 func test_a_match_starts_with_starters() -> void:
@@ -65,9 +62,9 @@ func test_a_match_starts_with_starters() -> void:
 	check_eq(m.sim.units(1).size(), 1 + 1 + int(GameData.get_card("sewer_rats").count), "and on the field")
 	for team in 2:
 		var shop: Array = m.shops[team]
-		check_eq(shop.size(), int(rules.market_animals) + int(rules.market_tools) + int(rules.mystery_crates), "a full shop")
-		check_eq(shop.filter(func(item): return item.mystery).size(), int(rules.mystery_crates), "a Mystery Crate")
-		check_eq(shop.filter(func(item): return GameData.is_tool(item.id) and not item.mystery).size(), int(rules.market_tools), "a tool")
+		check_eq(shop.size(), int(rules.market_animals) + int(rules.market_tools), "a full shop")
+		check_eq(shop.filter(func(item): return GameData.is_tool(item.id)).size(), int(rules.market_tools), "a tool")
+		check(shop.all(func(item): return int(item.cost) == int(GameData.get_card(item.id).cost)), "at the card's own price")
 
 
 func test_starter_rules() -> void:
@@ -128,17 +125,15 @@ func test_acorns_herd_and_tool_belt_limits() -> void:
 	var m := _new_match(4)
 	var team := 0
 	m.shops[team] = [
-		{"id": "asian_elephant", "cost": 8, "mystery": false, "taken": -1},
-		{"id": "red_fox", "cost": 3, "mystery": false, "taken": -1},
-		{"id": "net", "cost": 2, "mystery": false, "taken": -1},
-		{"id": "wild_boar", "cost": 4, "mystery": true, "taken": -1},
+		{"id": "asian_elephant", "cost": 8, "taken": -1},
+		{"id": "red_fox", "cost": 3, "taken": -1},
+		{"id": "net", "cost": 2, "taken": -1},
 	]
 	m.acorns[team] = 5
 	check_eq(m.can_buy(team, 0), "Not enough Acorns", "too pricey")
 	for i in int(GameData.draft_rules.herd_max):
 		m.herds[team].append({"id": "sewer_rats", "x": 0, "y": 0, "stars": 1})
 	check_eq(m.can_buy(team, 1), "Your herd is full", "herd limit")
-	check_eq(m.can_buy(team, 3), "Your herd is full", "a Mystery Crate needs room too")
 	m.herds[team][0].id = "red_fox"
 	check_eq(m.can_buy(team, 1), "", "but a copy of a herd animal still fits: it adds a star")
 	for i in int(GameData.draft_rules.tools_max):
@@ -152,7 +147,7 @@ func test_buying_a_copy_adds_a_star() -> void:
 	m.acorns[0] = 99
 	m.shops[0] = []
 	for i in star_max + 1:
-		m.shops[0].append({"id": "red_fox", "cost": 3, "mystery": false, "taken": -1})
+		m.shops[0].append({"id": "red_fox", "cost": 3, "taken": -1})
 	check(m.buy(0, 0), "buy a second fox")
 	check_eq(m.herds[0].size(), 1, "it doesn't join as a new animal...")
 	check_eq(int(m.herds[0][0].stars), 2, "...it gives the fox a star")
@@ -221,31 +216,27 @@ func test_herds_start_on_their_own_half() -> void:
 	check_eq(m.herd_index_at(0, m.herds[0][0].x, m.herds[0][0].y), 0, "tapping the fox finds it")
 
 
-func test_fight_pays_the_pot_to_the_winner() -> void:
+func test_the_loser_of_a_fight_loses_hearts() -> void:
 	var m := _with_herds(["brown_bear", "lion", "wolf_pack"], ["sewer_rats"])
 	var before := m.acorns.duplicate()
 	_fight(m)
 	check_eq(m.phase, "round_over", "round over")
 	check_eq(m.last_round.winner, 0, "the big herd wins")
-	var ante := int(GameData.draft_rules.ante)
-	check_eq(m.acorns[0], before[0] + ante, "winner takes both antes")
-	check_eq(m.acorns[1], before[1] - ante, "loser loses its ante")
-	check_eq(m.pot, 0, "pot paid out")
+	check_eq(m.acorns, before, "no Acorns change hands in a fight")
 	var standing := int(m.last_round.standing[0])
 	check(standing > 0, "some of the winners still stand")
-	check_eq(m.last_round.hearts_lost, [0, m.heart_loss(standing, false)], "the loser loses hearts")
-	check_eq(m.hearts[1], int(GameData.draft_rules.hearts) - m.heart_loss(standing, false), "off its total")
+	check_eq(m.last_round.hearts_lost, [0, m.heart_loss(standing)], "the loser loses hearts")
+	check_eq(m.hearts[1], int(GameData.draft_rules.hearts) - m.heart_loss(standing), "off its total")
 	check_eq(m.hearts[0], int(GameData.draft_rules.hearts), "the winner keeps them all")
 
 
 func test_heart_loss_grows_with_the_round_and_survivors() -> void:
 	var m := _new_match(1)
 	var rules := GameData.draft_rules
-	check_eq(m.heart_loss(0, false), int(rules.heart_loss_per_round), "round 1, nobody standing")
-	check_eq(m.heart_loss(3, false), int(rules.heart_loss_per_round) + 3 * int(rules.heart_loss_per_animal), "plus each animal still standing")
-	check_eq(m.heart_loss(3, true), int(rules.heart_loss_per_round), "folding saves the extra")
+	check_eq(m.heart_loss(0), int(rules.heart_loss_per_round), "round 1, nobody standing")
+	check_eq(m.heart_loss(3), int(rules.heart_loss_per_round) + 3 * int(rules.heart_loss_per_animal), "plus each animal still standing")
 	m.round_number = 4
-	check_eq(m.heart_loss(0, false), 4 * int(rules.heart_loss_per_round), "more each round")
+	check_eq(m.heart_loss(0), 4 * int(rules.heart_loss_per_round), "more each round")
 
 
 func test_an_empty_herd_loses_at_once() -> void:
@@ -265,64 +256,7 @@ func test_herds_and_hearts_carry_over() -> void:
 	check_eq(m.round_number, 2, "next round")
 	check_eq(m.hearts, hearts, "lost hearts stay lost")
 	check(m.sim.units(0).size() == 1 and m.sim.units(0)[0].hp == m.sim.units(0)[0].max_hp, "the herd stands ready again, fully healed")
-	check_eq(m.acorns[0], int(GameData.draft_rules.acorns_start) + int(GameData.draft_rules.ante) + int(GameData.draft_rules.acorns_per_round), "income each round")
-
-
-func test_halftime_raise_and_fold() -> void:
-	var m := _with_herds(["brown_bear", "red_fox"], ["brown_bear", "red_fox"])
-	_start(m)
-	while m.phase == "fight":
-		m.step()
-	check_eq(m.phase, "halftime", "the whistle blows")
-	check_eq(m.fight_tick, m.halftime_ticks, "at halftime")
-	check_eq(int(m.halftime.turn), 0, "the player acts first")
-	check(m.max_raise(1) == 0, "not the opponent's turn yet")
-	var acorns := m.acorns.duplicate()
-	var pot := m.pot
-	check(m.raise_pot(0, 2), "raise 2")
-	check_eq(m.acorns[0], acorns[0] - 2, "the raise is paid")
-	check_eq(m.pot, pot + 2, "into the pot")
-	check(not m.check(1), "a raise can't be checked")
-	check(not m.fold(0), "only the one facing the raise can fold")
-	check(m.fold(1), "fold")
-	check_eq(m.phase, "round_over", "folding ends the round")
-	check_eq(m.last_round.winner, 0, "the raiser wins")
-	check_eq(m.last_round.folded, 1, "noted who folded")
-	check_eq(m.acorns[0], acorns[0] + pot, "and takes the pot")
-	check_eq(m.last_round.hearts_lost, [0, m.heart_loss(0, true)], "the folder loses only the round's base hearts")
-
-
-func test_halftime_call_and_checks_resume_the_fight() -> void:
-	var m := _with_herds(["brown_bear"], ["brown_bear"])
-	_start(m)
-	while m.phase == "fight":
-		m.step()
-	check(m.check(0), "player checks")
-	check_eq(int(m.halftime.turn), 1, "opponent's turn")
-	check(m.raise_pot(1, 1), "opponent raises")
-	var pot := m.pot
-	check(m.call_raise(0), "player calls")
-	check_eq(m.pot, pot + 1, "the call goes in")
-	check_eq(m.phase, "fight", "and the fight goes on")
-	m = _with_herds(["brown_bear"], ["brown_bear"])
-	_start(m)
-	while m.phase == "fight":
-		m.step()
-	check(not m.fold(0), "no folding without a raise to answer")
-	m.check(0)
-	m.check(1)
-	check_eq(m.phase, "fight", "two checks: play on")
-
-
-func test_a_raise_is_never_more_than_the_other_can_call() -> void:
-	var m := _with_herds(["brown_bear"], ["brown_bear"])
-	_start(m)
-	while m.phase == "fight":
-		m.step()
-	m.acorns = [9, 1]
-	check_eq(m.max_raise(0), 1, "capped by the opponent's Acorns")
-	m.acorns = [0, 9]
-	check_eq(m.max_raise(0), 0, "can't raise with nothing")
+	check_eq(m.acorns[0], int(GameData.draft_rules.acorns_start) + int(GameData.draft_rules.acorns_per_round), "income each round")
 
 
 func test_tools_work_in_the_fight() -> void:
@@ -347,11 +281,8 @@ func test_rally_once_a_fight() -> void:
 	check(m.sim.units(1)[0].rage == 0, "not the enemy's")
 	check(not m.rally(0, wolf.x, wolf.y), "only once a fight")
 	check(m.rally(1, 9 * T, 10 * T), "the other player has their own")
-	while m.phase == "fight" or m.phase == "halftime":
-		if m.phase == "halftime":
-			m.check(int(m.halftime.turn))
-		else:
-			m.step()
+	while m.phase == "fight":
+		m.step()
 	if m.phase == "round_over":
 		m.next_round()
 		_skip_draft(m)
@@ -386,9 +317,8 @@ func test_raccoon_steals_acorns() -> void:
 	var m := _with_herds(["raccoon"], ["red_fox"])
 	m.acorns = [5, 5]
 	_start(m)
-	var ante := int(GameData.draft_rules.ante)
 	var amount := int(GameData.get_card("raccoon").ability.params.amount)
-	check_eq(m.acorns, [5 - ante + amount, 5 - ante - amount], "one Acorn changes hands as the fight starts")
+	check_eq(m.acorns, [5 + amount, 5 - amount], "one Acorn changes hands as the fight starts")
 	check(m.take_events().any(func(e): return e.type == "steal" and e.team == 0), "and the screen hears about it")
 
 
@@ -428,15 +358,6 @@ func test_ready_starts_the_fight() -> void:
 	check(m.take_events().any(func(e): return e.type == "fight"), "with a whistle")
 
 
-func test_the_bot_judges_halftime_by_what_is_left() -> void:
-	var m := _with_herds(["brown_bear", "lion", "wolf_pack"], ["sewer_rats"])
-	var bot := DraftBot.new(m, 1, 1)
-	check(bot.chances() < 0.3, "the small herd knows it's behind (%.2f)" % bot.chances())
-	var other := DraftBot.new(m, 0, 1)
-	check(other.chances() > 0.7, "the big herd knows it's ahead (%.2f)" % other.chances())
-	check(is_equal_approx(bot.chances() + other.chances(), 1.0), "the two add up")
-
-
 func test_a_copy_of_a_battle_plays_out_the_same() -> void:
 	var m := _with_herds(["wolf_pack", "gray_squirrel", "red_panda"], ["cheetah", "peregrine_falcon", "raccoon"])
 	_start(m)
@@ -470,8 +391,6 @@ func _bot_match(seed_value: int) -> DraftMatch:
 				for b in bots:
 					b.update()
 				m.step()
-			"halftime":
-				bots[int(m.halftime.turn)].bet()
 			"round_over":
 				m.next_round()
 		check(m.acorns[0] >= 0 and m.acorns[1] >= 0, "Acorns never go below zero")
@@ -491,12 +410,3 @@ func test_same_seed_same_match() -> void:
 	var b := _bot_match(21)
 	check_eq(a.sim.checksum(), b.sim.checksum(), "deterministic")
 	check_eq(a.acorns, b.acorns, "same Acorns")
-
-
-func test_stakes_scale_trophies() -> void:
-	var settings: Dictionary = GameData.progression.trophies
-	var arenas := GameData.arenas
-	# 1200 trophies: well above the arena's floor, so a loss isn't cut short.
-	var normal := TrophyRules.trophies_after_match(1200, 1200, true, settings, arenas) - 1200
-	check_eq(TrophyRules.trophies_after_match(1200, 1200, true, settings, arenas, 2.0) - 1200, normal * 2, "all-in doubles a win")
-	check_eq(TrophyRules.trophies_after_match(1200, 1200, false, settings, arenas, 0.5) - 1200, -roundi(normal * 0.5), "safe halves a loss")

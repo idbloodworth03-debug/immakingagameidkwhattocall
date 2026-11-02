@@ -101,7 +101,8 @@ func _build() -> void:
 	credits.pressed.connect(_show_credits)
 	settings_row.add_child(credits)
 
-	if OS.is_debug_build():
+	# Testing switch (data/testing.json) shows them in release builds too.
+	if OS.is_debug_build() or GameData.testing.get("show_dev_tools", false):
 		add_child(_dev_tools())
 
 
@@ -172,7 +173,7 @@ func _on_cosmetic_tapped(item: Dictionary, equip: Callable) -> void:
 func _dev_tools() -> Control:
 	var box := UIKit.vbox(10)
 	box.add_child(UIKit.heading("Developer tools"))
-	box.add_child(UIKit.paragraph("Only in debug builds. Use these to test progression quickly.", 19))
+	box.add_child(UIKit.paragraph("For testing only (debug builds, or show_dev_tools in testing.json). Use these to test progression quickly.", 19))
 	var grid := GridContainer.new()
 	grid.columns = 2
 	grid.add_theme_constant_override("h_separation", 10)

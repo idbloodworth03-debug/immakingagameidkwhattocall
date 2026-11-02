@@ -96,7 +96,7 @@ Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Testing switches (on right now):** `game/data/testing.json` unlocks every animal and tool, keeps gold and gems topped up at 999,999, and keeps your Acorns at 99 in Draft Duel (the opponent plays normally). Set each switch to `false` to play normally again, and before any real release.
+- **Testing switches (on right now):** `game/data/testing.json` unlocks every animal and tool, keeps gold and gems topped up at 999,999, keeps your Acorns at 99 in Draft Duel (the opponent plays normally), and shows the Developer tools (+300 trophies and more) at the bottom of your Profile, even on the website. Set each switch to `false` to play normally again, and before any real release.
 - **Every run's build** is also under *Artifacts* on the run's page (`den-duel-web`), to download or host anywhere else.
 - **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 

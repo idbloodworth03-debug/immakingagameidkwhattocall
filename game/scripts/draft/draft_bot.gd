@@ -2,7 +2,7 @@ class_name DraftBot
 extends RefCounted
 ## The computer opponent in Draft Duel. It picks starters, shops (buying,
 ## training and rerolling), places its herd, uses its tools in the fight and
-## bets at halftime, all through DraftMatch's public calls, so it follows the
+## bets on the halftime Pot, all through DraftMatch's public calls, so it follows the
 ## same rules as a person.
 ##
 ## `difficulty` (0 = first arena, 1 = top arena) sets how well it shops
@@ -100,7 +100,7 @@ func shop() -> void:
 	duel.finish_shopping(team)
 
 
-## Acorns it holds back for betting once its herd is decent.
+## Acorns it holds back for the halftime Pot once its herd is decent.
 func _keep() -> int:
 	var herd_size: int = duel.herds[team].size()
 	return 0 if herd_size < 3 else int(duel.rules.ante) + (1 if herd_size < 5 else 3)
@@ -178,25 +178,6 @@ func _enemy_strength(left: bool) -> float:
 		if (int(entry.x) < BattleSim.WIDTH / 2) == left:
 			total += float(GameData.get_card(entry.id).cost)
 	return total
-
-
-# --- Backing its herd ------------------------------------------------------
-
-## Bets on its own herd when the Bookie's price is better than it thinks the
-## odds are. `odds` is the Bookie's chance that the bot wins; its own tools
-## make it more hopeful than the Bookie, the other side's less.
-func back_herd(odds: float) -> void:
-	if duel.phase != "wager" or duel.wagers[team] >= 0:
-		return
-	var hope := clampf(odds + 0.1 * duel.tools[team].size() - 0.06 * duel.tools[1 - team].size(), 0.0, 1.0)
-	var gain := hope * float(duel.payout(team)) / 100.0 - 1.0
-	var most := duel.max_wager(team)
-	var amount := 0
-	if gain > 0.1 and most > 0:
-		amount = clampi(roundi(gain * float(most)), 1, most)
-	elif most > 0 and rng.randf() < 0.15 * (1.0 - difficulty):
-		amount = 1  # a hunch
-	duel.wager(team, amount)
 
 
 # --- Fighting --------------------------------------------------------------
@@ -280,19 +261,29 @@ func _best_cluster(candidates: Array, radius: int, value_of: Callable) -> Dictio
 
 # --- Halftime betting ------------------------------------------------------
 
-## Makes its halftime move when it's the bot's turn. `odds` is the Bookie's
-## chance that the bot wins the round. It knows its own tools, so it's
-## braver with tools in hand, and it sometimes bluffs.
-func bet(odds: float) -> void:
+## Its rough chance of winning the fight: its share of what's left of both
+## herds (each animal's cost and stars, times the health it has left).
+func chances() -> float:
+	var mine := float(duel.sim.herd_value(team))
+	var theirs := float(duel.sim.herd_value(1 - team))
+	if mine + theirs <= 0.0:
+		return 0.5
+	return mine / (mine + theirs)
+
+## Makes its halftime move when it's the bot's turn. It judges its chances
+## by how much of each herd is left, it knows its own tools, so it's braver
+## with tools in hand, and it sometimes bluffs.
+func bet() -> void:
 	var h := duel.halftime
 	if h.is_empty() or int(h.turn) != team:
 		return
 	# Its own tools give it hope; the other side's (it can count them) take some away.
-	var hope := clampf(odds + 0.12 * duel.tools[team].size() - 0.08 * duel.tools[1 - team].size(), 0.0, 1.0)
+	var hope := clampf(chances() + 0.12 * duel.tools[team].size() - 0.08 * duel.tools[1 - team].size(), 0.0, 1.0)
 	if int(h.raise) > 0:
 		# Worth calling if the chance of winning beats the price of staying in.
 		var price := float(h.raise) / float(duel.pot + int(h.raise))
-		if hope < 0.3 and hope < price + 0.1:
+		# Only folds when clearly beaten: most fights are worth seeing out.
+		if hope < 0.22 and hope < price + 0.1:
 			duel.fold(team)
 		else:
 			duel.call_raise(team)
@@ -302,7 +293,7 @@ func bet(odds: float) -> void:
 	# Far ahead, it would rather let its herd finish the job (each animal
 	# still standing costs the loser hearts) than offer a way out; a little
 	# ahead, it raises to win Acorns.
-	var value_raise := hope > 0.6 and hope < lerpf(1.01, 0.9, difficulty)
+	var value_raise := hope > 0.62 and hope < lerpf(1.01, 0.9, difficulty)
 	if most > 0 and (value_raise or bluff):
 		var amount := clampi(roundi(lerpf(1.0, float(most), clampf((hope - 0.5) * 2.5, 0.0, 1.0))), 1, most)
 		duel.raise_pot(team, amount)

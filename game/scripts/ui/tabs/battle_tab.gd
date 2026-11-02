@@ -45,7 +45,7 @@ func _ready() -> void:
 	var pulse := battle.create_tween().set_loops()
 	pulse.tween_property(battle, "scale", Vector2(1.03, 1.03), 0.9).set_trans(Tween.TRANS_SINE)
 	pulse.tween_property(battle, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_SINE)
-	column.add_child(UIKit.label("Draft a herd, bet Acorns, take their hearts.", 20, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(UIKit.label("Build a herd, train it up, take their hearts.", 20, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_slots_row = UIKit.hbox(10)
 	column.add_child(_slots_row)

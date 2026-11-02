@@ -1,7 +1,6 @@
 extends TestCase
 ## Draft Duel tests: starters, shopping and stars, placing, the Pot and
-## halftime betting, rounds and hearts, the Bookie's odds and the computer
-## opponent.
+## halftime betting, rounds and hearts, and the computer opponent.
 
 const T := BattleSim.TILE
 
@@ -32,13 +31,10 @@ func _with_herds(herd_0: Array, herd_1: Array, seed_value := 3) -> DraftMatch:
 	return m
 
 
-## Both players ready, even odds, no bets: the fight starts.
+## Both players ready: the fight starts.
 func _start(m: DraftMatch) -> void:
 	m.set_ready(0)
 	m.set_ready(1)
-	m.post_line(0.5)
-	m.wager(0, 0)
-	m.wager(1, 0)
 
 
 ## Runs the fight to the end of the round, checking at halftime.
@@ -422,55 +418,23 @@ func test_card_levels_carry_into_the_fight() -> void:
 	check_eq(m.sim.level_of(1, "red_fox"), GameData.start_level("common"), "theirs at the start level")
 
 
-func test_backing_your_herd() -> void:
+func test_ready_starts_the_fight() -> void:
 	var m := _with_herds(["red_fox"], ["brown_bear"])
 	m.set_ready(0)
+	check_eq(m.phase, "place", "waiting for the other player")
+	check(not m.move(0, 0, 4 * T, 15 * T), "no moving once ready")
 	m.set_ready(1)
-	check_eq(m.phase, "wager", "the Bookie's turn after placing")
-	check_eq(m.max_wager(0), 0, "no bets before the odds are posted")
-	m.post_line(0.2)
-	check(m.payout(0) > 300, "the long shot pays well (x%.2f)" % (m.payout(0) / 100.0))
-	check(m.payout(1) < 130, "the favorite pays little (x%.2f)" % (m.payout(1) / 100.0))
-	var rules := GameData.draft_rules
-	check_eq(m.max_wager(0), mini(int(rules.wager_max), m.acorns[0] - int(rules.ante)), "keeps enough for the ante")
-	var acorns: int = m.acorns[0]
-	check(not m.wager(0, m.max_wager(0) + 1), "can't bet more than allowed")
-	check(m.wager(0, 3), "bet 3 on the fox")
-	check_eq(m.acorns[0], acorns - 3, "the stake is taken")
-	check_eq(m.phase, "wager", "waiting for the other player")
-	check(m.wager(1, 0), "no bet")
-	check_eq(m.phase, "fight", "then the fight starts")
-	m.sim.units(1)[0].hp = 1  # the bear is nearly beaten already
-	while m.phase == "fight" or m.phase == "halftime":
-		if m.phase == "halftime":
-			m.check(int(m.halftime.turn))
-		else:
-			m.step()
-	check_eq(m.last_round.winner, 0, "the fox wins")
-	check_eq(m.last_round.paid[0], 3 * m.payout(0) / 100, "the Bookie pays the long shot")
+	check_eq(m.phase, "fight", "both ready: the fight starts")
+	check(m.take_events().any(func(e): return e.type == "fight"), "with a whistle")
 
 
-func test_no_bets_on_a_sure_thing() -> void:
-	var m := _with_herds(["brown_bear"], ["sewer_rats"])
-	m.set_ready(0)
-	m.set_ready(1)
-	m.post_line(0.97)
-	check_eq(m.max_wager(0), 0, "the Bookie won't take it")
-	check(m.max_wager(1) > 0, "but the long shot may bet")
-
-
-func test_bookie_odds() -> void:
-	var m := _with_herds(["brown_bear", "lion", "wolf_pack", "tiger"], ["sewer_rats"])
-	m.set_ready(0)
-	m.set_ready(1)
-	var checksum := m.sim.checksum()
-	var bookie := Bookie.study(m, 1)
-	check(not bookie.is_ready(), "takes some thinking")
-	bookie.advance()
-	check(bookie.is_ready(), "ready")
-	check(bookie.chance(0) > 0.75, "favors the big herd (%.2f)" % bookie.chance(0))
-	check(is_equal_approx(bookie.chance(0) + bookie.chance(1), 1.0), "the chances add up")
-	check_eq(m.sim.checksum(), checksum, "thinking ahead doesn't change the real fight")
+func test_the_bot_judges_halftime_by_what_is_left() -> void:
+	var m := _with_herds(["brown_bear", "lion", "wolf_pack"], ["sewer_rats"])
+	var bot := DraftBot.new(m, 1, 1)
+	check(bot.chances() < 0.3, "the small herd knows it's behind (%.2f)" % bot.chances())
+	var other := DraftBot.new(m, 0, 1)
+	check(other.chances() > 0.7, "the big herd knows it's ahead (%.2f)" % other.chances())
+	check(is_equal_approx(bot.chances() + other.chances(), 1.0), "the two add up")
 
 
 func test_a_copy_of_a_battle_plays_out_the_same() -> void:
@@ -502,16 +466,12 @@ func _bot_match(seed_value: int) -> DraftMatch:
 				for b in bots:
 					if not m.ready[b.team]:
 						b.place()
-			"wager":
-				m.post_line(0.5)
-				for b in bots:
-					b.back_herd(0.5)
 			"fight":
 				for b in bots:
 					b.update()
 				m.step()
 			"halftime":
-				bots[int(m.halftime.turn)].bet(0.5)
+				bots[int(m.halftime.turn)].bet()
 			"round_over":
 				m.next_round()
 		check(m.acorns[0] >= 0 and m.acorns[1] >= 0, "Acorns never go below zero")

@@ -6,7 +6,7 @@ extends RefCounted
 ## Before the first round, each player picks starters: up to 3 animals they
 ## own, within an Acorn budget. They start the match in the herd.
 ##
-## Each round has five parts:
+## Each round has four parts:
 ##
 ##   1. Shop: each player has their own Watering Hole, drawn from the cards
 ##      they own: animals, a Ranger tool and a face-down Mystery Crate. Both
@@ -16,21 +16,19 @@ extends RefCounted
 ##      it a free star instead. Herds carry over from round to round.
 ##   2. Place: each player arranges their whole herd on their own half of the
 ##      field. Nothing moves and there's no clock: this is the time to think.
-##   3. Wager: the Bookie (see bookie.gd) posts the odds of the fight, and
-##      each player may back their own herd at those odds. Long shots pay more.
-##   4. Fight: the herds fight on their own (BattleSim does the fighting),
+##   3. Fight: the herds fight on their own (BattleSim does the fighting),
 ##      with some luck: every animal's mood, and every hit. Players can use
 ##      the tools they bought, and once a fight they can Rally the animals
 ##      around a spot. At the halftime whistle the fight pauses for a round of
 ##      betting on the Pot.
-##   5. Round over: the fight ends when a herd is wiped out (or at the bell:
+##   4. Round over: the fight ends when a herd is wiped out (or at the bell:
 ##      then the herd with more of itself left wins). The winner takes the
-##      Pot, the Bookie pays winning wagers, and the loser loses hearts: the
+##      Pot, and the loser loses hearts: the
 ##      round number, plus 1 for every enemy animal still standing. The loser
 ##      gets a few extra Acorns next round, to help it catch up.
 ##
 ## Acorns are the match's only money: spend them on animals, tools and
-## training, or keep them to bet. Both players start with the same Acorns,
+## training, or keep them for the halftime Pot. Both players start with the same Acorns,
 ## and they're gone when the match ends.
 ##
 ## The Pot: both players put in an ante when the fight starts. At halftime
@@ -59,7 +57,7 @@ const NO_WINNER := -1
 var rules: Dictionary
 var sim: BattleSim
 var rng := RandomNumberGenerator.new()
-## "starters", "draft" (shopping), "place", "wager", "fight", "halftime",
+## "starters", "draft" (shopping), "place", "fight", "halftime",
 ## "round_over" or "over".
 var phase := ""
 var round_number := 0
@@ -83,10 +81,6 @@ var ready := [false, false]
 ## Each player's Rally for this fight (true until used).
 var rally_ready := [true, true]
 var pot := 0
-## The Bookie's chance that team 0 wins this round's fight (-1 until posted).
-var line := -1.0
-## Acorns each team has bet on its own herd this round (-1 until it decides).
-var wagers := [-1, -1]
 ## While the halftime betting is open: {"turn": team to act, "raise": the
 ## raise waiting for an answer (0 when none), "raiser": team, "checks": int}.
 var halftime := {}
@@ -97,8 +91,7 @@ var halftime_ticks := 0
 var wiped_at := [-1, -1]
 ## What happened last round: {"round", "winner", "pot", "folded": team or -1,
 ## "standing": [team 0's animals still standing, team 1's], "hearts_lost":
-## [int, int], "wagers": [int, int], "paid": [Acorns the Bookie paid each
-## team, stake included], "stolen": [Acorns each team stole]}.
+## [int, int], "stolen": [Acorns each team stole]}.
 var last_round: Dictionary = {}
 ## Things that happened, for the screen to show: buys, passes, bets, tools.
 var events: Array = []
@@ -174,8 +167,8 @@ func match_winner() -> int:
 	return NO_WINNER
 
 
-## Who wins a round, judged on `battle` (the real fight or one of the
-## Bookie's tries): the herd that outlasts the other; if both are standing at
+## Who wins a round, judged on `battle` (the real fight or a copy of it):
+## the herd that outlasts the other; if both are standing at
 ## the bell, the one with more of its herd left. NO_WINNER if they're level.
 static func judge(battle: BattleSim, wiped: Array) -> int:
 	if wiped[0] >= 0 or wiped[1] >= 0:
@@ -493,9 +486,7 @@ func set_ready(team: int) -> void:
 		return
 	ready[team] = true
 	if ready[0] and ready[1]:
-		phase = "wager"
-		_lay_out_herds()
-		events.append({"type": "wager"})
+		_start_fight()
 
 
 ## Puts both herds on the field where they'll start, standing still, so the
@@ -523,45 +514,6 @@ static func apply_stars(f: BattleSim.Fighter, stars: int, draft_rules: Dictionar
 	f.max_hp = f.max_hp * pct / 100
 	f.hp = f.max_hp
 	f.damage = f.damage * pct / 100
-
-
-# --- Backing your herd -----------------------------------------------------
-
-## Sets the Bookie's odds: `chance` is how likely team 0 is to win the fight.
-func post_line(chance: float) -> void:
-	if phase == "wager" and line < 0.0:
-		line = clampf(chance, 0.0, 1.0)
-
-
-## How much a winning bet of 1 Acorn on `team` pays back, stake included,
-## in hundredths. Long shots pay more; the Bookie keeps a small edge.
-func payout(team: int) -> int:
-	var chance := line if team == 0 else 1.0 - line
-	var fair := (1.0 - float(rules.bookie_edge)) / maxf(chance, 0.01)
-	return roundi(clampf(fair, 1.1, float(rules.payout_max)) * 100.0)
-
-
-## The most `team` may bet on its herd. Never so much it can't pay the
-## ante, and nothing on a sure thing.
-func max_wager(team: int) -> int:
-	if phase != "wager" or line < 0.0 or wagers[team] >= 0:
-		return 0
-	var chance := line if team == 0 else 1.0 - line
-	if chance > float(rules.no_bets_above):
-		return 0
-	return clampi(acorns[team] - int(rules.ante), 0, int(rules.wager_max))
-
-
-## Bets `amount` Acorns (0 for no bet) on `team`'s own herd.
-func wager(team: int, amount: int) -> bool:
-	if phase != "wager" or line < 0.0 or wagers[team] >= 0 or amount < 0 or amount > max_wager(team):
-		return false
-	wagers[team] = amount
-	acorns[team] -= amount
-	events.append({"type": "bet", "team": team, "amount": amount})
-	if wagers[0] >= 0 and wagers[1] >= 0:
-		_start_fight()
-	return true
 
 
 # --- Fighting --------------------------------------------------------------
@@ -740,8 +692,6 @@ func _start_round() -> void:
 	_lay_out_herds()
 	done_shopping = [false, false]
 	ready = [false, false]
-	line = -1.0
-	wagers = [-1, -1]
 	phase = "draft"
 	events.append({"type": "round", "round": round_number, "bonus_team": bonus_team, "bonus": int(rules.loser_bonus)})
 
@@ -754,14 +704,6 @@ func _start_placing() -> void:
 
 func _end_round(folder: int) -> void:
 	var winner := 1 - folder if folder >= 0 else judge(sim, wiped_at)
-	var paid := [0, 0]
-	for team in 2:
-		var stake := maxi(0, wagers[team])
-		if winner == team:
-			paid[team] = stake * payout(team) / 100
-		elif winner == NO_WINNER:
-			paid[team] = stake
-		acorns[team] += paid[team]
 	var standing_now := [standing(0), standing(1)]
 	var lost := [0, 0]
 	var won_pot := pot
@@ -777,9 +719,7 @@ func _end_round(folder: int) -> void:
 		_last_loser = -1
 	last_round = {
 		"round": round_number, "winner": winner, "pot": won_pot, "folded": folder,
-		"standing": standing_now, "hearts_lost": lost,
-		"wagers": [maxi(0, wagers[0]), maxi(0, wagers[1])], "paid": paid,
-		"stolen": _stolen.duplicate(),
+		"standing": standing_now, "hearts_lost": lost, "stolen": _stolen.duplicate(),
 	}
 	events.append({"type": "round_over", "winner": winner, "pot": won_pot, "folded": folder, "hearts_lost": lost})
 	var out: bool = hearts[0] <= 0 or hearts[1] <= 0

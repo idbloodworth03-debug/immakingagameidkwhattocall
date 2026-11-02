@@ -26,13 +26,6 @@
   "halftime_seconds": 8,
   "ante": 1,
   "raise_max": 3,
-  "wager_max": 5,
-  "bookie_edge": 0.1,
-  "payout_max": 8,
-  "no_bets_above": 0.9,
-  "bookie_trials": 6,
-  "bookie_jitter": 0.4,
-  "bookie_lookahead_seconds": 25,
   "stakes": [
     {"id": "safe", "name": "Safe", "multiplier": 0.5, "text": "Half the trophies, win or lose."},
     {"id": "bold", "name": "Bold", "multiplier": 1.0, "text": "The usual trophies."},

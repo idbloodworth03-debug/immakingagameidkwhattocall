@@ -563,9 +563,8 @@ func clear_units() -> void:
 	zones.clear()
 
 
-## A separate copy of the fight as it stands, to try out what happens next
-## (Draft Duel's Bookie plays fights out ahead to set its odds). Running the
-## copy never changes this fight.
+## A separate copy of the fight as it stands, to try out what happens next.
+## Running the copy never changes this fight.
 func clone() -> BattleSim:
 	var copy := BattleSim.new([{}, {}], 0, rules)
 	copy.tick = tick

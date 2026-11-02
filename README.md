@@ -7,8 +7,8 @@
 
 Den Duel is an animal battler for iOS and Android, made with Godot 4. In
 **Draft Duel** you pick a few starter animals, shop for more each round and
-train them up to 3 stars, place your herd, bet Acorns on the fight, and
-watch the herds battle it out on an open field. Lose a fight and you lose hearts; whoever runs out first loses. You
+train them up to 3 stars, place your herd, and watch the herds battle it out
+on an open field, with a bet on the Pot at halftime. Lose a fight and you lose hearts; whoever runs out first loses. You
 free animals from cages (they become your draft pool) and climb through
 arenas. The rarer the card, the rarer the animal in real life: Commons are
 Least Concern species, Legendaries are Critically Endangered.
@@ -24,7 +24,7 @@ Everything runs offline on your computer, saved on the device:
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
 - **Ranger level:** an account level, plus player banners, icons and emotes to unlock
 - **Shop:** daily animal offers, cages, gold packs and cosmetics
-- **Draft Duel** against a computer opponent that gets tougher as you climb: pick 3 starters, then each round shop at your own Watering Hole (with a Mystery Crate and rerolls), train animals up to 3 stars or buy copies for a free star, place your herd on your half with no clock running, back it at the Bookie's odds, Rally once a fight, use your tools, and raise, call or fold at halftime. Each player has 30 hearts; a lost fight costs the round number plus 1 for each enemy animal still standing. Choose Safe, Bold or All-in trophy stakes. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
+- **Draft Duel** against a computer opponent that gets tougher as you climb: pick 3 starters, then each round shop at your own Watering Hole (with a Mystery Crate and rerolls), train animals up to 3 stars or buy copies for a free star, place your herd on your half with no clock running, Rally once a fight, use your tools, and raise, call or fold at halftime. Each player has 30 hearts; a lost fight costs the round number plus 1 for each enemy animal still standing. Choose Safe, Bold or All-in trophy stakes. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
 - **Look and feel:**
   - every animal is a 3D render, with fur, real markings and its own walk and attack animations (made by our Blender pipeline in `tools/creatures/`)
   - 12 rendered arenas: an open, fenced field with themed scenery around it
@@ -32,7 +32,7 @@ Everything runs offline on your computer, saved on the device:
   - chunky mobile-game fonts
   - animations: walking, attacks, screen shake, bouncy buttons and smooth screen fades
   - sound effects and music, which players can switch off
-- **Tests:** 97 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
+- **Tests:** 96 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
 
 Not built yet:
 
@@ -105,7 +105,7 @@ godot --headless --path game res://tests/test_runner.tscn
 ```
 
 To see how Draft Duel plays out between two bots (match length, hearts lost,
-shopping, betting and the Bookie's odds; takes a few minutes):
+shopping and the halftime Pot; takes under a minute):
 
 ```bash
 godot --headless --path game res://tests/draft_report.tscn -- 40
@@ -125,7 +125,7 @@ game/
     rules/             Pure game rules: trophies, leveling, cages, Ranger level
     ui/                Menu screens, popups, cards, the cage opening
     battle/            Fight engine, abilities, tools, and drawing the fight
-    draft/             Draft Duel: the match rules, the Bookie, the bot and the screen
+    draft/             Draft Duel: the match rules, the bot and the screen
   tests/               Automated tests, and the Draft Duel report
 .github/workflows/     web.yml: tests, builds and publishes the web version on every push
 docs/
@@ -149,7 +149,7 @@ files in `game/data/`:
 - **New animal:** copy an entry in `animals.json` and change it. Its `unlock_arena` must be an arena id from `arenas.json`, and its tags must exist in `tags.json`. The ability `id` must be one of the types the battle engine knows (listed in `scripts/battle/battle_abilities.gd`).
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
-- **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, bets, moods, Rally): `draft_rules.json`
+- **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, the Pot, moods, Rally): `draft_rules.json`
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`
 - **Emotes, quick chats, banners and icons:** their own files

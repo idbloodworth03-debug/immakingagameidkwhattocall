@@ -34,7 +34,7 @@ round until someone runs out (at most 15 rounds).
 they own to start with, worth up to **12 Acorns** together (so not just
 the three strongest). They start the match in the herd.
 
-Then each round has five parts:
+Then each round has four parts:
 
 1. **Shop.** Each player has their own Watering Hole: 4 animals, 1 Ranger
    tool and a face-down **Mystery Crate** (a random animal for 4 Acorns:
@@ -54,14 +54,9 @@ Then each round has five parts:
 2. **Place your herd.** Nothing moves and there's no clock. Both herds are on
    the field (the opponent places first, so you can answer it). Animals start
    on your own half, at least a tile back from the middle line.
-3. **The Bookie's odds.** The Bookie (the raccoon) plays the fight out ahead 6
-   times and posts how often your herd won, e.g. 25%. You may back your herd
-   with up to 5 Acorns; if it wins, the Bookie pays back about 0.9 / chance
-   per Acorn (x3.6 at 25%, up to x8). There are no bets on a sure thing
-   (over 90%). The Bookie can't see the tools in anyone's hand, so an
-   underdog holding a Net has a good bet.
-4. **The fight** (up to 40 seconds) runs on its own, with some luck:
-   - **Moods:** at the whistle, after the bets, every animal rolls a mood for
+   When both players press Ready, the fight starts.
+3. **The fight** (up to 40 seconds) runs on its own, with some luck:
+   - **Moods:** at the whistle, every animal rolls a mood for
      the fight: up to 30% harder or softer bites ("Fired up!", "Sleepy").
    - **Hits** vary by up to 25% each.
    - **Rally:** once a fight, tap a spot and your animals there bite 30%
@@ -78,7 +73,7 @@ Then each round has five parts:
      standing. So the player who's ahead chooses: raise to win Acorns and
      offer a way out, or check and let the herd finish the job. Which tools
      you hold is hidden (only how many shows), so a raise can be a bluff.
-5. **Round over.** The fight ends when a herd is wiped out; the other herd
+4. **Round over.** The fight ends when a herd is wiped out; the other herd
    wins the round. If both still stand at the bell, the one with more of
    itself left wins (each animal counts its card's cost times the share of
    health it has left). The winner takes the Pot; a tie carries it over.
@@ -90,9 +85,9 @@ nobody anything. Run out of hearts and you lose; after round 15, more
 hearts wins.
 
 **Acorns** are the only money in a match: 6 to start, +6 each round, +2
-more for the loser of the last round (to help it catch up), plus Pots,
-Bookie wins and Raccoon thefts. Spend them on animals, tools, training and
-rerolls, or keep them to bet. Everyone starts with the same Acorns.
+more for the loser of the last round (to help it catch up), plus Pots and
+Raccoon thefts. Spend them on animals, tools, training and rerolls, or keep
+them for the halftime Pot. Everyone starts with the same Acorns.
 
 **Your collection matters, a little.** Your starters and shop come from the
 cards you own, and your animals and tools fight at their levels. The computer opponent's cards
@@ -103,21 +98,26 @@ making the match one-sided.
 Bold (normal) or All-in (double).
 
 **Gambling without harm.** Acorns can't be bought, carry nothing out of a
-match and reset every time. The bets reward reading the fight (and knowing
+match and reset every time. The Pot rewards reading the fight (and knowing
 your own tools), not blind luck. Keep it that way: if Acorns or bets ever
 connect to anything bought with money, the game becomes real gambling, with
 legal trouble in some countries and a higher App Store age rating.
 
 **Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
-bot-vs-bot matches with the real Bookie and prints match length, hearts lost,
-shopping, betting and how sure the Bookie's odds are. From the first runs
-with starters and shops (30 matches):
-- Matches last 7 rounds on average. Wins split 14-16.
-- A fight lasts about 15 seconds, and about 3 in 4 end with a herd wiped out. A loss costs 5.6 hearts on average.
-- Herds average 5 animals with 1.3 stars each. A bot buys about 16 cards a match (a third of them copies for a star) and trains about 3 times.
-- With herds growing and stars in play, the Bookie's odds spread out more than before (about 40% of fights are 20-80%), and the bots bet three times as often.
-- Before this, with one shared, take-turns Watering Hole and no stars: 6.3 rounds, with the odds nearly always under 20% or over 80%.
-- The Bookie takes about half a second on a computer with bigger herds (slower on phones). The screen spreads its work across frames and settles on the tries it has after 3 seconds.
+bot-vs-bot matches and prints match length, hearts lost, shopping, the
+halftime Pot and how close fights are at halftime. From the latest runs
+(30 matches):
+- Matches last about 7 rounds. Wins split 13-17.
+- A fight lasts about 17 seconds, and 3 in 4 end with a herd wiped out. A loss costs 5.4 hearts on average.
+- Herds average 5 animals with 1.3 stars each. A bot buys about 16 cards a match (a third of them copies for a star) and trains 2 or 3 times.
+- At halftime, about 60% of fights are still fairly close (each side has 20-80% of the strength left). The bots fold in about 1 halftime in 5.
+- Before starters and shops, with one shared, take-turns Watering Hole and no stars, fights were much more one-sided.
+
+**The Bookie (removed for now).** There used to be a betting step between
+placing and the fight: a raccoon Bookie played the fight out ahead a few
+times, posted the odds, and you could bet Acorns on your own herd at those
+odds. It was taken out to keep rounds simpler; it's in the git history
+(before the commit that removed it) if it comes back.
 
 ## Rarity = how endangered the animal is
 
@@ -345,10 +345,10 @@ follows the same rules:
 - **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, sometimes gambles on the Mystery Crate, rerolls a weak shop when it has Acorns to spare, and once its herd has 3 animals it keeps some Acorns back to bet with.
 - **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
-- **Betting:** from the Bookie's odds plus its own tools (it's braver with tools in hand), and it sometimes bluffs.
+- **The halftime Pot:** it judges its chances by its share of the strength left on the field, plus its own tools (it's braver with tools in hand), raises when clearly ahead, folds only when clearly beaten, and sometimes bluffs.
 
 **Difficulty grows with your arena:** it drafts less randomly, uses tools
-sooner and on smaller groups, and bets more sharply. Its cards are leveled
+sooner and on smaller groups, and bluffs more. Its cards are leveled
 like yours on average. The same bot can later fill online matchmaking when
 few players are on.
 

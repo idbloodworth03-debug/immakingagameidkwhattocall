@@ -3,15 +3,10 @@ extends Control
 ## Before the match: the stake, then your starters. The field in the middle
 ## shows both herds for the whole match. The panel under it changes with
 ## each part of a round: your shop (buy, reroll, train), placing your herd,
-## the Bookie's odds, your tools in the fight, the halftime bet and the
-## round's results.
+## your Rally and tools in the fight, the halftime bet and the round's
+## results.
 
 const MENU_SCENE := "res://scenes/main.tscn"
-## How long the Bookie may think each frame (nothing else moves while it
-## thinks), and in all before it settles on the tries it has finished (for
-## slow phones).
-const BOOKIE_USEC_PER_FRAME := 12000
-const BOOKIE_PATIENCE := 3.0
 ## Moods this strong or more show over the animals when a fight starts.
 const MOOD_SHOWN := 12
 
@@ -32,10 +27,6 @@ var _rally_selected := false
 var _fast := false
 var _accumulator := 0.0
 var _bot_wait := 0.0
-var _bookie: Bookie
-var _bookie_time := 0.0
-## The Bookie's halftime chance for the player (-1 while it's thinking).
-var _halftime_line := -1.0
 var _panel_key := ""
 var _result: Dictionary = {}
 
@@ -86,7 +77,6 @@ static func _opponent_levels(pool: Array) -> Dictionary:
 func _process(delta: float) -> void:
 	if stake.is_empty() or not _result.is_empty():
 		return
-	_think_bookie(delta)
 	_opponent_moves(delta)
 	if duel.phase == "fight":
 		_run_fight(delta)
@@ -182,7 +172,7 @@ func _build() -> void:
 func _choose_stake() -> void:
 	var box := UIKit.vbox(12)
 	box.add_child(UIKit.label("Draft Duel", 44, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-	var intro := UIKit.paragraph("Pick your starters, then each round shop for more animals, train them up to 3 stars, place your herd and bet Acorns on the fight. You both start with %d hearts. Lose a fight and you lose hearts: more for every enemy animal still standing. Run out and you're out. Choose your stake:" % int(duel.rules.hearts), 20, UIKit.TEXT)
+	var intro := UIKit.paragraph("Pick your starters, then each round shop for more animals, train them up to 3 stars, place your herd and watch it fight (with a bet on the Pot at halftime). You both start with %d hearts. Lose a fight and you lose hearts: more for every enemy animal still standing. Run out and you're out. Choose your stake:" % int(duel.rules.hearts), 20, UIKit.TEXT)
 	intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	box.add_child(intro)
 	var overlay := _overlay(box)
@@ -290,7 +280,7 @@ func _overlay(content: Control) -> Control:
 func _update_hud() -> void:
 	_round_label.text = "Round %d" % duel.round_number if duel.round_number > 0 else "Draft Duel"
 	var phase_names := {
-		"starters": "Pick your starters", "draft": "Shopping", "place": "Place your herd", "wager": "The Bookie's odds",
+		"starters": "Pick your starters", "draft": "Shopping", "place": "Place your herd",
 		"halftime": "Halftime!", "round_over": "Round over", "over": "Match over",
 	}
 	if duel.phase == "fight":
@@ -335,29 +325,9 @@ func _panel_signature() -> String:
 	for entry in duel.herds[0]:
 		stars.append(entry.stars)
 	return str([duel.phase, duel.round_number, duel.done_shopping, taken, stars, duel.acorns, duel.tools[0],
-		duel.wagers, duel.line >= 0.0, duel.halftime, _halftime_line >= 0.0,
+		duel.halftime,
 		_selected_market, _selected_herd, _selected_tool, _rally_selected, duel.rally_ready[0], _fast, duel.ready,
 		duel.fight_tick > duel.halftime_ticks])
-
-
-## The Bookie works out odds a little each frame when they're wanted.
-func _think_bookie(delta: float) -> void:
-	var wanted := (duel.phase == "wager" and duel.line < 0.0) or (duel.phase == "halftime" and _halftime_line < 0.0)
-	if not wanted:
-		_bookie = null
-		return
-	if _bookie == null:
-		_bookie = Bookie.study(duel, _rng.randi())
-		_bookie_time = 0.0
-	_bookie_time += delta
-	if _bookie.advance(BOOKIE_USEC_PER_FRAME) or (_bookie_time > BOOKIE_PATIENCE and _bookie.settle()):
-		var chance := _bookie.chance(0)
-		_bookie = null
-		if duel.phase == "wager":
-			duel.post_line(chance)
-		else:
-			_halftime_line = chance
-		_bot_wait = _rng.randf_range(0.6, 1.2)
 
 
 ## The opponent takes a moment over each decision, like a person would.
@@ -374,12 +344,9 @@ func _opponent_moves(delta: float) -> void:
 		"place":
 			if not duel.ready[bot.team]:
 				bot.place()
-		"wager":
-			if duel.line >= 0.0 and duel.wagers[bot.team] < 0 and _bot_wait <= 0.0:
-				bot.back_herd(1.0 - duel.line)
 		"halftime":
-			if _halftime_line >= 0.0 and int(duel.halftime.get("turn", -1)) == bot.team and _bot_wait <= 0.0:
-				bot.bet(1.0 - _halftime_line)
+			if int(duel.halftime.get("turn", -1)) == bot.team and _bot_wait <= 0.0:
+				bot.bet()
 				_bot_wait = _rng.randf_range(0.6, 1.0)
 
 
@@ -438,12 +405,6 @@ func _handle_events(events: Array) -> void:
 			"place":
 				Sound.play("pop")
 				_set_status("Place your herd: tap an animal, then where it should start. No rush.")
-			"wager":
-				_set_status("The Bookie plays the fight out a few times to set the odds...")
-			"bet":
-				if theirs:
-					Sound.play("coin")
-					_set_status("%s bets %d on its herd." % [opponent.name, e.amount] if e.amount > 0 else "%s doesn't bet." % opponent.name)
 			"fight":
 				Sound.play("horn")
 				_set_status("Fight! Rally your herd once, at just the right moment.")
@@ -465,7 +426,7 @@ func _handle_events(events: Array) -> void:
 					_set_status("%s used a %s!" % [opponent.name, GameData.get_card(e.id).name], UIKit.YELLOW)
 			"halftime":
 				Sound.play("alert")
-				_halftime_line = -1.0
+				_bot_wait = _rng.randf_range(0.8, 1.4)
 				_selected_tool = -1
 				_rally_selected = false
 				_field.highlight = ""
@@ -534,8 +495,6 @@ func _rebuild_panel() -> void:
 			_draft_panel()
 		"place":
 			_place_panel()
-		"wager":
-			_wager_panel()
 		"fight":
 			_fight_panel()
 		"halftime":
@@ -750,49 +709,6 @@ func _select_herd(index: int) -> void:
 		_field.highlight = ""
 
 
-# The Bookie's odds before the fight.
-
-func _wager_panel() -> void:
-	if duel.line < 0.0:
-		_heading("The Bookie", "Studying the herds... (tools in hand don't count)", "bookie")
-		return
-	var chance := duel.line
-	_heading("The Bookie", "Your herd won %d%% of my tries." % roundi(chance * 100.0), "bookie")
-	if duel.wagers[0] >= 0:
-		var bet: int = duel.wagers[0]
-		_panel.add_child(UIKit.label(("You bet %d. " % bet if bet > 0 else "No bet. ") + "Waiting for %s..." % opponent.name, 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		return
-	var most := duel.max_wager(0)
-	if most == 0:
-		var why := "A sure thing: no bets on this one!" if chance > float(duel.rules.no_bets_above) else "You need your Acorns for the ante."
-		_panel.add_child(UIKit.label(why, 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		var fight := UIKit.button("Fight!", UIKit.GREEN, 26, Vector2(240, 68))
-		fight.pressed.connect(func() -> void: duel.wager(0, 0))
-		_buttons([fight])
-		return
-	var pays := float(duel.payout(0)) / 100.0
-	var hint := UIKit.paragraph("Back your herd? If it wins, every Acorn you bet comes back x%.1f." % pays, 20, UIKit.TEXT)
-	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_panel.add_child(hint)
-	var choices := []
-	var no_bet := UIKit.button("No bet", UIKit.GREY, 22, Vector2(130, 64))
-	no_bet.pressed.connect(func() -> void: duel.wager(0, 0))
-	choices.append(no_bet)
-	for amount in [1, 2, 3, 5]:
-		if amount > most and amount != 5:
-			continue
-		var bet := mini(amount, most)
-		var b := UIKit.button("Bet %d" % bet, UIKit.YELLOW.darkened(0.15), 22, Vector2(110, 64))
-		b.pressed.connect(func() -> void:
-			Sound.play("coin")
-			duel.wager(0, bet)
-		)
-		choices.append(b)
-		if bet == most:
-			break
-	_buttons(choices)
-
-
 # The fight.
 
 func _fight_panel() -> void:
@@ -869,9 +785,11 @@ func _tool_chip(index: int) -> Control:
 
 func _halftime_panel() -> void:
 	var h := duel.halftime
-	var line_text := "The Bookie is watching..." if _halftime_line < 0.0 else "The Bookie gives your herd %d%%." % roundi(_halftime_line * 100.0)
-	_heading("Halftime!  Pot: %d" % duel.pot, line_text, "whistle")
-	if _halftime_line < 0.0 or h.is_empty():
+	var mine := float(duel.sim.herd_value(0))
+	var theirs := float(duel.sim.herd_value(1))
+	var share := roundi(100.0 * mine / maxf(1.0, mine + theirs))
+	_heading("Halftime!  Pot: %d" % duel.pot, "Your herd has %d%% of the strength left on the field." % share, "whistle")
+	if h.is_empty():
 		return
 	if int(h.turn) != 0:
 		_panel.add_child(UIKit.label("%s is deciding..." % opponent.name, 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
@@ -935,9 +853,6 @@ func _round_panel() -> void:
 		lines.append("%s won the Pot (%d)." % [opponent.name, int(r.pot)])
 	else:
 		lines.append("The Pot carries over: %d." % duel.pot)
-	var bet := int(r.wagers[0])
-	if bet > 0:
-		lines.append("The Bookie paid you %d!" % int(r.paid[0]) if int(r.paid[0]) > bet else ("The Bookie gave back your %d." % bet if int(r.paid[0]) == bet else "The Bookie kept your %d." % bet))
 	if int(r.stolen[1]) > 0:
 		lines.append("%s's Raccoon stole %d of your Acorns." % [opponent.name, int(r.stolen[1])])
 	if duel.round_number + 1 == duel.max_rounds():

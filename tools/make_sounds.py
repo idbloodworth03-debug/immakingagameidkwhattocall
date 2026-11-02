@@ -153,6 +153,10 @@ SFX = {
         chime([659, 784, 1047], 0.07, 0.22, "square", 0.1),
         at(envelope(mix(tone(1319, 0.5, "triangle"), tone(1047, 0.5, "triangle")), decay=0.3), 0.22, 0.8),
     ),
+    "synergy": lambda: mix(
+        chime([587, 880, 1175], 0.06, 0.25, "triangle", 0.1),
+        at(0.5 * envelope(tone(1760, 0.45, "sine") * (0.7 + 0.3 * np.sin(2 * np.pi * 9 * t_axis(0.45))), decay=0.25), 0.18, 0.7),
+    ),
     "whoosh": lambda: envelope(lowpass(noise(0.45), 0.85) * np.sin(np.pi * t_axis(0.45) / 0.45), attack=0.05, release=0.1),
 }
 

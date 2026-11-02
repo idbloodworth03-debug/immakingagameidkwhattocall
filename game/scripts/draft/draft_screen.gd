@@ -33,6 +33,34 @@ var _ui_fx: ParticleLayer
 var _panel_box: PanelContainer
 ## The part of the round the panel last showed, to animate a change.
 var _panel_phase := ""
+## Habitat synergies: the tracker on the left of the field (Shop and Place),
+## the opponent's active habitats, and the tiers already celebrated.
+var _tracker: VBoxContainer
+var _tracker_key := ""
+var _their_synergies: HBoxContainer
+var _announced := {}
+var _banner_free_at := 0.0
+
+
+## A habitat badge as a control, with dots for its active tier.
+class HabitatBadge:
+	extends Control
+	var habitat := ""
+	var tier := 0
+
+	func _init(habitat_id: String, active_tier: int, side: float) -> void:
+		habitat = habitat_id
+		tier = active_tier
+		custom_minimum_size = Vector2(side, side)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var r := minf(size.x, size.y) / 2.0 - 2.0
+		UIKit.draw_habitat_badge(self, size / 2.0, r, habitat, 1.0 if tier > 0 else 0.55)
+		for i in tier:
+			var at := Vector2(size.x / 2.0 + (i - (tier - 1) / 2.0) * r * 0.55, size.y - 2.0)
+			draw_circle(at, r * 0.2 + 1.0, UIKit.INK)
+			draw_circle(at, r * 0.2, UIKit.YELLOW)
 var _market_cards: Array = []
 var _herd_chips: Array = []
 var _round_label: Label
@@ -94,6 +122,7 @@ func _process(delta: float) -> void:
 		_accumulator = 0.0
 	_handle_events(duel.take_events())
 	_update_hud()
+	_update_synergies()
 	var key := _panel_signature()
 	if key != _panel_key:
 		_panel_key = key
@@ -138,6 +167,8 @@ func _build() -> void:
 	theirs.add_child(_their_acorns)
 	_their_streak = _streak_chip()
 	theirs.add_child(_their_streak)
+	_their_synergies = UIKit.hbox(2)
+	theirs.add_child(_their_synergies)
 	_their_tools = UIKit.label("", 18, UIKit.TEXT_DIM)
 	_their_tools.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	theirs.add_child(_their_tools)
@@ -149,6 +180,11 @@ func _build() -> void:
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.tapped.connect(_on_field_tapped)
 	column.add_child(_field)
+	# The synergy tracker sits on the left of the field.
+	_tracker = UIKit.vbox(4)
+	_tracker.position = Vector2(6, 44)
+	_tracker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_field.add_child(_tracker)
 
 	_status = UIKit.paragraph("", 19, UIKit.TEXT)
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -335,6 +371,112 @@ func _set_streak(chip: Control, wins: int) -> void:
 	(chip.find_child("Count", true, false) as Label).text = str(wins)
 
 
+# --- Habitat synergies ---------------------------------------------------------
+
+## Keeps the tracker, the opponent's badges and the tier celebrations up to
+## date. Rebuilds only when something it shows has changed.
+func _update_synergies() -> void:
+	var shopping: bool = duel.phase in ["draft", "place"]
+	var preview := ""
+	if duel.phase == "draft" and _selected_market >= 0 and _selected_market < duel.shops[0].size():
+		var item: Dictionary = duel.shops[0][_selected_market]
+		if int(item.taken) < 0 and not GameData.is_tool(item.id) and duel.merge_target(0, item.id) < 0:
+			var owned: bool = duel.herds[0].any(func(e): return e.id == item.id)
+			if not owned:
+				preview = Synergies.habitat_of(item.id)
+	var counts := Synergies.counts(duel.herds[0])
+	var theirs := Synergies.active(duel.herds[1])
+	var key := str([shopping, counts, preview, theirs])
+	if key != _tracker_key:
+		_tracker_key = key
+		_build_tracker(counts, preview, shopping)
+		for child in _their_synergies.get_children():
+			child.queue_free()
+		for habitat in GameData.habitat_order:
+			if theirs.has(habitat):
+				_their_synergies.add_child(HabitatBadge.new(habitat, int(theirs[habitat]), 30))
+	# Celebrate each tier the first time it turns on this match.
+	if duel.phase in ["draft", "place", "starters"]:
+		var mine := Synergies.active(duel.herds[0])
+		for habitat in mine:
+			if int(mine[habitat]) > int(_announced.get(habitat, 0)):
+				_announced[habitat] = int(mine[habitat])
+				_celebrate_synergy(habitat, int(mine[habitat]))
+
+
+func _build_tracker(counts: Dictionary, preview: String, shopping: bool) -> void:
+	for child in _tracker.get_children():
+		_tracker.remove_child(child)
+		child.queue_free()
+	_tracker.visible = shopping
+	if not shopping:
+		return
+	var habitats := GameData.habitat_order.filter(func(h): return counts.has(h) or h == preview)
+	# Active tiers first, then the closest to their next tier.
+	habitats.sort_custom(func(a, b):
+		var ta := Synergies.tier_for(int(counts.get(a, 0)))
+		var tb := Synergies.tier_for(int(counts.get(b, 0)))
+		if ta != tb:
+			return ta > tb
+		return int(counts.get(a, 0)) > int(counts.get(b, 0))
+	)
+	for habitat in habitats:
+		_tracker.add_child(_tracker_chip(habitat, int(counts.get(habitat, 0)), habitat == preview))
+
+
+## One line of the tracker: badge, name and progress, e.g. "Savanna 3/4".
+func _tracker_chip(habitat: String, count: int, preview: bool) -> Control:
+	var info := Synergies.info(habitat)
+	var color := Color(String(info.color))
+	var tier := Synergies.tier_for(count)
+	var chip := PanelContainer.new()
+	var style := UIKit.box(Color(color.darkened(0.45), 0.92) if tier > 0 else Color(UIKit.INK, 0.72), 14, 3)
+	style.content_margin_left = 4
+	style.content_margin_right = 10
+	style.set_border_width_all(2)
+	style.border_color = color if tier > 0 else Color(color, 0.45)
+	chip.add_theme_stylebox_override("panel", style)
+	var row := UIKit.hbox(4)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(row)
+	row.add_child(HabitatBadge.new(habitat, tier, 30))
+	var text := "%s %d/%d" % [info.name, count, Synergies.next_needed(count)]
+	if preview:
+		text = "%s %d+1/%d" % [info.name, count, Synergies.next_needed(count + 1)]
+	var label := UIKit.label(text, 16, UIKit.YELLOW if preview else (Color.WHITE if tier > 0 else UIKit.TEXT_DIM))
+	label.add_theme_constant_override("outline_size", 4)
+	row.add_child(label)
+	UIKit.on_tap(chip, func() -> void: _show_synergy(habitat, count))
+	return chip
+
+
+## The tapped habitat's bonus at each tier, with yours highlighted.
+func _show_synergy(habitat: String, count: int) -> void:
+	var info := Synergies.info(habitat)
+	var box := UIKit.vbox(8)
+	box.add_child(UIKit.paragraph("You have %d different %s animal%s in your herd. Copies of the same animal count once." % [count, info.name, "" if count == 1 else "s"], 20, UIKit.TEXT))
+	var tier := Synergies.tier_for(count)
+	var tiers: Array = GameData.synergy_tiers
+	for i in tiers.size():
+		var on := tier == i + 1
+		var line := UIKit.paragraph("%d animals: %s" % [int(tiers[i]), Synergies.describe(habitat, i + 1)], 21, UIKit.YELLOW if on else (UIKit.TEXT if tier > i else UIKit.TEXT_DIM))
+		box.add_child(line)
+	Modal.open(box, "%s synergy" % info.name)
+
+
+## A tier just turned on: a bouncy pop-up, a sting, and a glow on the
+## animals that are part of it.
+func _celebrate_synergy(habitat: String, tier: int) -> void:
+	var info := Synergies.info(habitat)
+	var color := Color(String(info.color))
+	Sound.play("synergy")
+	_banner("%s x%d!" % [String(info.name).to_upper(), int(GameData.synergy_tiers[tier - 1])], color.lightened(0.25),
+		Feel.count("celebrations", "synergy_text_size", 44), Synergies.describe(habitat, tier))
+	for view in _field.views():
+		if view.team == 0 and view.habitat == habitat:
+			view.glow(color.lightened(0.2), Feel.num("celebrations", "synergy_glow_seconds", 1.4))
+
+
 # --- Big moments --------------------------------------------------------------
 
 ## Herd animal `index` just reached 3 stars: a slow-motion close-up, stars
@@ -379,6 +521,17 @@ func _celebrate_round() -> void:
 
 ## Big bouncy words over the field, with a small line under them.
 func _banner(text: String, color: Color, font_size: int, subtitle := "") -> void:
+	# One banner at a time: a second one waits its turn.
+	var now := Time.get_ticks_msec() / 1000.0
+	var wait := _banner_free_at - now
+	_banner_free_at = maxf(now, _banner_free_at) + Feel.num("celebrations", "banner_seconds", 1.4) * 0.8
+	if wait > 0.0:
+		get_tree().create_timer(wait).timeout.connect(_show_banner.bind(text, color, font_size, subtitle))
+	else:
+		_show_banner(text, color, font_size, subtitle)
+
+
+func _show_banner(text: String, color: Color, font_size: int, subtitle := "") -> void:
 	var holder := VBoxContainer.new()
 	holder.alignment = BoxContainer.ALIGNMENT_CENTER
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -388,7 +541,10 @@ func _banner(text: String, color: Color, font_size: int, subtitle := "") -> void
 	title.add_theme_constant_override("shadow_offset_y", 5)
 	holder.add_child(title)
 	if subtitle != "":
-		holder.add_child(UIKit.label(subtitle, 24, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+		var sub := UIKit.paragraph(subtitle, 22, Color.WHITE)
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sub.add_theme_constant_override("outline_size", 6)
+		holder.add_child(sub)
 	_ui_fx.get_parent().add_child(holder)
 	var field_rect := _field.get_global_rect()
 	holder.size = Vector2(field_rect.size.x, 0)
@@ -491,7 +647,7 @@ func _handle_events(events: Array) -> void:
 				Sound.play("upgrade" if e.merged else "coin")
 				var card := GameData.get_card(e.id)
 				if theirs:
-					_set_status("%s's %s is now %s" % [opponent.name, card.name, _stars_text(e.stars)] if e.merged else "%s bought a %s." % [opponent.name, card.name])
+					_set_status("%s's %s is now %s" % [opponent.name, card.name, _stars_text(e.stars)] if e.merged else "%s bought %s %s." % [opponent.name, "an" if String(card.name)[0] in "AEIOU" else "a", card.name])
 				else:
 					_selected_market = -1
 					if e.merged:

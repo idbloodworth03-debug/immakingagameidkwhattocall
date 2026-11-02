@@ -102,6 +102,15 @@ static func on_tick_effects(sim: BattleSim, f: BattleSim.Fighter) -> void:
 			sim.events.append({"type": "revive", "x": f.x, "y": f.y})
 		return
 
+	# Habitat bonus (Rainforest): heal a share of max health every second.
+	var regen := float(f.memory.get("regen_pct", 0.0))
+	if regen > 0.0 and f.is_unit() and f.hp < f.max_hp:
+		f.memory.regen_left = float(f.memory.get("regen_left", 0.0)) + f.max_hp * regen / 100.0 / sim.tps
+		var whole := int(f.memory.regen_left)
+		if whole > 0:
+			f.memory.regen_left = float(f.memory.regen_left) - whole
+			sim.heal(f, whole)
+
 	var half_second := maxi(1, sim.tps / 2)
 	if sim.tick % half_second != 0:
 		return
@@ -231,6 +240,10 @@ static func outgoing_damage(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.F
 
 
 static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, amount: int) -> void:
+	# Habitat bonus (Arctic): hits slow the enemy for a moment.
+	var chill := int(f.memory.get("chill_pct", 0))
+	if chill > 0 and t.is_unit() and t.alive:
+		sim.slow_down(t, chill, int(f.memory.get("chill_ticks", sim.tps * 2)))
 	match f.ability_id():
 		"poison":
 			if t.is_unit() and t.alive and not is_fearless(t):
@@ -292,6 +305,10 @@ static func incoming_damage(sim: BattleSim, t: BattleSim.Fighter, amount: int, s
 		"colony_bonus":
 			if _group_complete(sim, t):
 				amount = amount * 80 / 100
+	# Habitat bonus (Wetlands): take less damage.
+	var guard := int(t.memory.get("guard_pct", 0))
+	if guard > 0:
+		amount = amount * (100 - guard) / 100
 	if t.shield > 0:
 		var absorbed := mini(t.shield, amount)
 		t.shield -= absorbed

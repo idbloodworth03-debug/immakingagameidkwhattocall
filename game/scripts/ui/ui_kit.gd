@@ -452,6 +452,25 @@ static func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
 	return points
 
 
+## A habitat's badge: a round chip in the habitat's color with its icon, a
+## navy outline and a little shine. Used on cards, on the field and in the
+## synergy tracker.
+static func draw_habitat_badge(canvas: CanvasItem, center: Vector2, radius: float, habitat: String, alpha := 1.0) -> void:
+	var info: Dictionary = GameData.synergies.get(habitat, {})
+	if info.is_empty():
+		return
+	var color := Color(String(info.get("color", "#ffffff")))
+	canvas.draw_circle(center + Vector2(0, radius * 0.12), radius + 1.5, Color(INK, 0.45 * alpha))
+	canvas.draw_circle(center, radius + 1.5, Color(INK, alpha))
+	canvas.draw_circle(center, radius, Color(color.darkened(0.15), alpha))
+	canvas.draw_circle(center - Vector2(0, radius * 0.12), radius * 0.86, Color(color, alpha))
+	var texture := icon(GameData.ui_icon(String(info.get("icon", ""))))
+	if texture != null:
+		var side := radius * 1.25
+		canvas.draw_texture_rect(texture, Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, alpha))
+	canvas.draw_circle(center - Vector2(radius * 0.35, radius * 0.4), radius * 0.28, Color(1, 1, 1, 0.3 * alpha))
+
+
 ## A tinted icon from res://art/icons/ as a plain control.
 static func icon_rect(icon_name: String, tint: Color, side: int) -> TextureRect:
 	var rect := TextureRect.new()

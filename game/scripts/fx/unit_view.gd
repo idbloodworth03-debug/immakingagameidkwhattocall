@@ -50,6 +50,10 @@ var defeat := -1.0            # 0 to 1 while being defeated; -1 while fine
 var defeat_spin := 1.0
 var idle_phase := 0.0
 var _sparkle_in := 0.0        # a 3-star animal's next sparkle
+var habitat := ""
+## A synergy glow (when its habitat's bonus turns on): seconds left, color.
+var glow_left := 0.0
+var glow_color := Color.WHITE
 
 # Health bar
 var hp_ratio := 1.0
@@ -89,6 +93,7 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.walk = randf()
 	v.idle_phase = randf() * TAU
 	v.stars = int(f.memory.get("stars", 1))
+	v.habitat = Synergies.habitat_of(v.id)
 	v.body = Body.new()
 	if Feel.on("characters", "shader_enabled"):
 		var material := ShaderMaterial.new()
@@ -193,6 +198,15 @@ func hurt(from_dir: Vector2, strong: bool) -> void:
 	var push := Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
 	knock += Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push
 	trail_hold = Feel.num(c, "health_bar_trail_delay", 0.4)
+
+
+## Glows in a habitat's color for a moment, with sparkles (a synergy tier
+## turning on).
+func glow(color: Color, seconds := 1.4) -> void:
+	glow_left = seconds
+	glow_color = color
+	var at := position + Vector2(0, -UnitSprites.top(id) * body.k * 0.5)
+	field.fx.burst("sparkle", at, 8, 130.0, 0.7, 8.0, [color.lightened(0.4), Color.WHITE], -60.0, 2.5)
 
 
 func start_defeat() -> void:
@@ -349,10 +363,17 @@ func animate(dt: float, now: float) -> void:
 			_sparkle_in = Feel.num("celebrations", "gold_sparkle_seconds", 0.7) * randf_range(0.7, 1.3)
 			var spot := position + body.position + Vector2(randf_range(-0.5, 0.5) * UnitSprites.top(id) * k, -randf() * UnitSprites.top(id) * k)
 			field.fx.particle("sparkle", spot, Vector2(0, -24), 0.6, 6.0, Color("#ffe58a"), 0.0, 1.0)
+	glow_left = maxf(0.0, glow_left - dt)
 	var m := body.material as ShaderMaterial
 	if m != null:
-		var glow := Feel.num("celebrations", "gold_glow", 0.85) * (0.8 + 0.2 * sin(now * 3.0 + idle_phase)) if golden else 0.0
-		m.set_shader_parameter("gold", glow)
+		var shine := Feel.num("celebrations", "gold_glow", 0.85) * (0.8 + 0.2 * sin(now * 3.0 + idle_phase)) if golden else 0.0
+		var shine_color := Color(1.0, 0.82, 0.25)
+		if glow_left > 0.0:
+			# A synergy glow pulses over the gold, in the habitat's color.
+			shine = maxf(shine, (0.6 + 0.4 * sin(now * 14.0)) * minf(1.0, glow_left * 2.0))
+			shine_color = glow_color
+		m.set_shader_parameter("gold", shine)
+		m.set_shader_parameter("gold_color", shine_color)
 		m.set_shader_parameter("flash", flash)
 		m.set_shader_parameter("flip", 1.0 if body.frame.get("flip", false) else 0.0)
 		m.set_shader_parameter("region", region_uv(body.frame))
@@ -434,6 +455,11 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, ring, Color(team_color, 0.16 * ring_alpha))
 	draw_arc(Vector2.ZERO, ring, 0, TAU, 40, Color(team_color.darkened(0.45), ring_alpha), (width + 2.0) / 0.42)
 	draw_arc(Vector2.ZERO, ring, 0, TAU, 40, Color(team_color.lightened(0.15), ring_alpha), width / 0.42)
+	if f != null and habitat != "":
+		# Its habitat, as a small badge beside its feet.
+		draw_set_transform(Vector2.ZERO)
+		UIKit.draw_habitat_badge(self, Vector2(-ring - 3.0, -2.0), 7.0, habitat, minf(fade, 0.95))
+		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.42))
 	if f != null:
 		# Status rings around its feet.
 		if f.shield > 0:

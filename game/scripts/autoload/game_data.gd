@@ -37,6 +37,9 @@ var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
 var testing: Dictionary = {}         # testing switches (testing.json)
+var synergies: Dictionary = {}       # habitat id -> its synergy (synergies.json)
+var habitat_order: Array = []        # habitat ids, in synergies.json order
+var synergy_tiers: Array = []        # how many animals each tier needs, e.g. [2, 4, 6]
 var art: Dictionary = {}
 
 
@@ -84,6 +87,13 @@ func reload() -> void:
 	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
 	testing = _load("testing.json")
+	var synergy_data: Dictionary = _load("synergies.json")
+	synergies.clear()
+	habitat_order.clear()
+	synergy_tiers = synergy_data.get("tiers", [])
+	for habitat in synergy_data.get("habitats", []):
+		synergies[habitat.id] = habitat
+		habitat_order.append(habitat.id)
 	art = _load("art.json")
 
 
@@ -229,6 +239,8 @@ func validate() -> Array:
 			problems.append("%s: unknown arena '%s'" % [id, a.get("unlock_arena")])
 		if a.kind == "animal" and not STATUS_NAMES.has(a.get("status", "")):
 			problems.append("%s: unknown conservation status '%s'" % [id, a.get("status")])
+		if a.kind == "animal" and not synergies.has(a.get("habitat", "")):
+			problems.append("%s: unknown habitat '%s' (see synergies.json)" % [id, a.get("habitat")])
 		if a.kind == "animal" and not ["ground", "air_ground"].has(a.get("stats", {}).get("targets", "")):
 			problems.append("%s: targets must be 'ground' or 'air_ground'" % id)
 		if a.kind == "animal" and not BattleAbilities.KNOWN.has(a.get("ability", {}).get("id", "")):
@@ -254,6 +266,14 @@ func validate() -> Array:
 	for rarity in draft_rules.get("rarity_weights", {}):
 		if not rarities.has(rarity):
 			problems.append("draft_rules: unknown rarity '%s'" % rarity)
+	for habitat_id in habitat_order:
+		var habitat: Dictionary = synergies[habitat_id]
+		if habitat.get("values", []).size() != synergy_tiers.size():
+			problems.append("synergies: %s needs one value per tier" % habitat_id)
+		if not ["attack_speed", "regen", "shield", "slow_on_hit", "damage_reduction", "damage", "health", "speed", "acorns"].has(habitat.get("effect", "")):
+			problems.append("synergies: %s has an unknown effect '%s'" % [habitat_id, habitat.get("effect")])
+		if not art.get("ui", {}).has(habitat.get("icon", "")):
+			problems.append("synergies: %s's icon '%s' isn't in art.json" % [habitat_id, habitat.get("icon")])
 	if int(draft_rules.get("hearts", 0)) <= 0 or int(draft_rules.get("max_rounds", 0)) <= 0:
 		problems.append("draft_rules: hearts and max_rounds must be above zero")
 

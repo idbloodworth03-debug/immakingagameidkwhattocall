@@ -50,6 +50,9 @@ func pick_starters() -> void:
 		var score := 0.0
 		for id in pick:
 			score += float(GameData.get_card(id).cost)
+		# Starters that share a habitat give it a head start.
+		for habitat in Synergies.active(pick.map(func(id): return {"id": id})):
+			score += 2.5 * synergy_iq()
 		score += rng.randf() * lerpf(4.0, 1.0, difficulty)
 		if score > best_score:
 			best = pick
@@ -135,7 +138,33 @@ func _want(item: Dictionary) -> float:
 		return float(cost) * (1.3 if full or herd_size >= 4 else 0.8) + noise
 	# Early on, numbers matter more than size: two cheap animals can beat one big one.
 	var size_need := 1.5 if herd_size < 4 else 0.0
-	return float(cost) + size_need + noise
+	return float(cost) + size_need + _synergy_value(item.id) + noise
+
+
+## How much `id` would help its herd's habitat synergies: a lot if it turns
+## a tier on, a little if it gets one closer. Sharper opponents care more.
+func _synergy_value(id: String) -> float:
+	if GameData.is_tool(id):
+		return 0.0
+	for entry in duel.herds[team]:
+		if entry.id == id:
+			return 0.0  # a copy doesn't count again
+	var habitat := Synergies.habitat_of(id)
+	var have := int(Synergies.counts(duel.herds[team]).get(habitat, 0))
+	var iq := synergy_iq()
+	var before := Synergies.tier_for(have)
+	var after := Synergies.tier_for(have + 1)
+	if after > before:
+		return (2.5 + after) * iq
+	if Synergies.next_needed(have + 1) - (have + 1) <= 1:
+		return 1.0 * iq
+	return 0.3 * iq
+
+
+## How much it builds around habitats: a little in the first arena, fully
+## at the top.
+func synergy_iq() -> float:
+	return lerpf(0.3, 1.0, difficulty)
 
 
 ## How much it wants to train herd animal `index` for `price` Acorns: worth

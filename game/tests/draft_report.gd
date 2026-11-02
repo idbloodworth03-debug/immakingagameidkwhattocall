@@ -24,6 +24,9 @@ func _ready() -> void:
 	# Team 0's share of the strength left 8 seconds into a fight, in fifths:
 	# 0-20% ... 80-100%.
 	var close := [0, 0, 0, 0, 0]
+	# Habitat synergies: fights where a team had one active, and how many it won.
+	var synergy_fights := {}
+	var synergy_wins := {}
 	var started := Time.get_ticks_msec()
 	for match_index in matches:
 		var seed_value := 1000 + match_index
@@ -67,6 +70,13 @@ func _ready() -> void:
 						totals.rerolls += 1
 					"round_over":
 						totals.fights += 1
+						for team in 2:
+							var active := Synergies.active(m.herds[team])
+							for habitat in active:
+								var tag := "%s %d" % [habitat, int(GameData.synergy_tiers[int(active[habitat]) - 1])]
+								synergy_fights[tag] = int(synergy_fights.get(tag, 0)) + 1
+								if int(e.winner) == team:
+									synergy_wins[tag] = int(synergy_wins.get(tag, 0)) + 1
 						totals.fight_seconds += float(m.fight_tick) / m.sim.tps
 						totals.hearts_lost += int(m.last_round.hearts_lost[0]) + int(m.last_round.hearts_lost[1])
 						totals.wipes += int(m.wiped_at[0] >= 0 or m.wiped_at[1] >= 0)
@@ -92,4 +102,9 @@ func _ready() -> void:
 	print("  economy              per player per round: %.1f interest, %.1f streak bonus; %.1f Acorns held at the end of a round" % [
 		totals.interest / fights / 2.0, totals.streak_paid / fights / 2.0, totals.acorns_left / fights / 2.0])
 	print("  strength at 8 s      0-20%%: %d, 20-40%%: %d, 40-60%%: %d, 60-80%%: %d, 80-100%%: %d (team 0's share, %d fights)" % (close + [totals.halfway]))
+	var tags := synergy_fights.keys()
+	tags.sort()
+	print("  synergies            (fights a team had it active: its round wins)")
+	for tag in tags:
+		print("    %-16s %4d fights, won %d%%" % [tag, synergy_fights[tag], roundi(100.0 * int(synergy_wins.get(tag, 0)) / maxf(1.0, float(synergy_fights[tag])))])
 	get_tree().quit()

@@ -90,6 +90,36 @@ with the same Acorns, and they can't be bought or carried out of a match.
 - The numbers are in `draft_rules.json` (`interest_per`, `interest_cap`,
   `win_streak_from`, `win_streak_bonus`).
 
+**Habitat synergies** (`game/data/synergies.json`, `scripts/draft/synergies.gd`):
+every animal has a habitat, from where it really lives. A herd with 2, 4 or
+6 *different* animals of one habitat (copies of the same animal count once)
+turns on that habitat's bonus, stronger at each tier. Bonuses go to that
+habitat's own animals when a fight starts:
+
+| Habitat | 2 / 4 / 6 different animals |
+|---|---|
+| Savanna | attack 10% / 20% / 35% faster |
+| Rainforest | heal 1% / 2% / 3% of their health every second |
+| Ocean | start each fight with a shield of 10% / 20% / 35% of their health |
+| Arctic | hits slow enemies by 15% / 25% / 40% for 2 seconds |
+| Wetlands | take 10% / 18% / 28% less damage |
+| Forest | hit 10% / 20% / 35% harder |
+| Mountains | 12% / 25% / 40% more health |
+| Plains | move 15% / 30% / 50% faster |
+| City | +1 / +2 / +3 bonus Acorns for you at the start of each round |
+
+Every habitat has at least 6 animals across the full roster of 57. Of the
+20 in the game now: Savanna 4, Forest 4, Arctic 3, Mountains 3, Rainforest
+2, City 2, Wetlands 1, Plains 1, Ocean 0, so only Savanna and Forest can
+reach the 4-animal tier yet, and nothing can reach 6.
+
+On screen: a habitat badge on every card and at every animal's feet, a
+tracker on the left of the field while shopping and placing ("Savanna
+3/4", tap it for the bonus at each tier, and a "+1" preview for the card
+you're looking at), the opponent's active habitats next to their name, and
+the first time a tier turns on in a match: a bouncy pop-up, a sting and a
+glow on its animals.
+
 **Big moments:**
 - **3 stars:** when one of your animals reaches 3 stars, the field slows down
   and zooms in on it, stars and confetti burst, a sting plays and a bouncy
@@ -115,6 +145,7 @@ close fights are 8 seconds in. From the latest runs (30 matches):
 - Herds average 5 animals with 1.4 stars each. A bot buys about 18 cards a match (almost half of them copies for a star) and trains about twice.
 - 8 seconds into a fight, about 80% are still fairly close (each side has 20-80% of the strength left).
 - Before starters and shops, with one shared, take-turns Watering Hole and no stars, fights were much more one-sided.
+- Synergies (60 matches, every card available): Forest 2 is the most common (507 fights) but wins only 46% (38% at Forest 4), since its animals are cheap. Mountains 2 (60%) and Rainforest 2 (72%, only 18 fights) win more, likely because they come with expensive Epics and Legendaries. Savanna 2 wins 53%, Arctic 2 51%, City 2 52%.
 
 **Gambling (removed for now).** Draft Duel used to have a gambling layer
 with Acorns: a raccoon Bookie who posted odds before each fight so you
@@ -346,6 +377,7 @@ follows the same rules:
 
 - **Starters:** it tries random sets within the budget and keeps the one worth the most.
 - **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, and rerolls a weak shop when it has Acorns to spare.
+- **Synergies:** it values cards that turn a habitat tier on, a little less ones that get it closer, and picks starters that share a habitat; a little in the first arena, fully at the top.
 - **Saving:** once its herd has 3 animals and it isn't in danger (more than a third of its hearts left), it keeps whole steps of interest (5, 10...), fewer while its herd is still growing; it only dips into savings for a great buy. Sharper opponents save more steadily.
 - **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.

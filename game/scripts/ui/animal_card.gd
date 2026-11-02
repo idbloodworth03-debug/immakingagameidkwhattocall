@@ -157,8 +157,12 @@ func _draw() -> void:
 		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.15, price_color, str(price))
 	elif not dim or _reachable:
 		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.135, UIKit.ACORN, str(int(animal.get("cost", 0))))
+	# Habitat badge, overlapping the top-right corner.
+	var habitat_id := String(animal.get("habitat", ""))
+	if habitat_id != "" and not (dim and not _reachable):
+		UIKit.draw_habitat_badge(self, Vector2(w - w * 0.13, w * 0.13), w * 0.115, habitat_id)
 	if _new and info == Info.COLLECTION:
-		var tag := Rect2(w - w * 0.38, -h * 0.015, w * 0.36, h * 0.1)
+		var tag := Rect2(w * 0.32, -h * 0.015, w * 0.36, h * 0.1)
 		var tag_style := UIKit.box(UIKit.YELLOW, int(tag.size.y * 0.4))
 		tag_style.set_border_width_all(2)
 		tag_style.border_color = UIKit.INK

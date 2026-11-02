@@ -1,0 +1,15 @@
+{
+  "_note": "Habitat synergies in Draft Duel. A bonus turns on when a herd has `tiers` different animals of a habitat (copies of the same animal count once), and gets stronger at each tier: `values` are per tier, in the order of `tiers`. Every bonus applies to that habitat's own animals, except City (Acorns for the player). `text` is shown to players; {v} is replaced by the tier's value. `effect` picks what the battle engine does: attack_speed (% faster attacks), regen (% of health healed each second), shield (% of health as a shield at the start of a fight), slow_on_hit (% slow on the enemy hit, for `seconds`), damage_reduction (% less damage taken), damage (% harder hits), health (% more health), speed (% faster movement) or acorns (bonus Acorns at the start of each round).",
+  "tiers": [2, 4, 6],
+  "habitats": [
+    {"id": "savanna", "name": "Savanna", "icon": "habitat_savanna", "color": "#f0b13a", "effect": "attack_speed", "values": [10, 20, 35], "text": "Savanna animals attack {v}% faster."},
+    {"id": "rainforest", "name": "Rainforest", "icon": "habitat_rainforest", "color": "#35c46a", "effect": "regen", "values": [1, 2, 3], "text": "Rainforest animals heal {v}% of their health every second."},
+    {"id": "ocean", "name": "Ocean", "icon": "habitat_ocean", "color": "#2f9be8", "effect": "shield", "values": [10, 20, 35], "text": "Ocean animals start each fight with a shield worth {v}% of their health."},
+    {"id": "arctic", "name": "Arctic", "icon": "habitat_arctic", "color": "#9fdcff", "effect": "slow_on_hit", "values": [15, 25, 40], "seconds": 2, "text": "Arctic animals' hits slow enemies by {v}% for 2 seconds."},
+    {"id": "wetlands", "name": "Wetlands", "icon": "habitat_wetlands", "color": "#3fb5a3", "effect": "damage_reduction", "values": [10, 18, 28], "text": "Wetland animals take {v}% less damage."},
+    {"id": "forest", "name": "Forest", "icon": "habitat_forest", "color": "#5c9e3c", "effect": "damage", "values": [10, 20, 35], "text": "Forest animals hit {v}% harder."},
+    {"id": "mountains", "name": "Mountains", "icon": "habitat_mountains", "color": "#9a8bd6", "effect": "health", "values": [12, 25, 40], "text": "Mountain animals have {v}% more health."},
+    {"id": "plains", "name": "Plains", "icon": "habitat_plains", "color": "#d9b45a", "effect": "speed", "values": [15, 30, 50], "text": "Plains animals move {v}% faster."},
+    {"id": "city", "name": "City", "icon": "habitat_city", "color": "#a0a8b8", "effect": "acorns", "values": [1, 2, 3], "text": "You get +{v} bonus Acorns at the start of each round."}
+  ]
+}

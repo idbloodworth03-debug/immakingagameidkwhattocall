@@ -27,6 +27,10 @@ extends RefCounted
 ##      earn interest on the Acorns they saved (1 for every 5, up to a cap),
 ##      and a winning streak of 2 or more rounds pays a bonus next round.
 ##
+## Habitat synergies (see synergies.gd): 2, 4 or 6 different animals of one
+## habitat in a herd turn on a bonus for those animals as the fight starts
+## (City pays Acorns at the start of each round instead).
+##
 ## Acorns are the match's only money, for animals, tools, training and
 ## rerolls. Both players start with the same Acorns, and they're gone when
 ## the match ends.
@@ -576,6 +580,8 @@ func _start_fight() -> void:
 	_defeated_at_start = [int(sim.teams[0].defeated), int(sim.teams[1].defeated)]
 	rally_ready = [true, true]
 	roll_moods(sim, rng, int(rules.get("mood_pct", 0)))
+	for team in 2:
+		Synergies.apply(sim, team, herds[team])
 	_steal_acorns()
 	wiped_at = [-1, -1]
 	for team in 2:
@@ -622,6 +628,11 @@ func _start_round() -> void:
 		if _last_loser >= 0:
 			acorns[_last_loser] += int(rules.loser_bonus)
 			bonus_team = _last_loser
+	# Habitat bonus (City): Acorns at the start of each round.
+	var habitat_paid := [0, 0]
+	for team in 2:
+		habitat_paid[team] = Synergies.round_acorns(herds[team])
+		acorns[team] += habitat_paid[team]
 	for team in 2:
 		shops[team] = _roll_shop(team)
 	_lay_out_herds()
@@ -629,7 +640,7 @@ func _start_round() -> void:
 	ready = [false, false]
 	phase = "draft"
 	events.append({"type": "round", "round": round_number, "bonus_team": bonus_team, "bonus": int(rules.loser_bonus),
-		"streak_bonus": streak_paid})
+		"streak_bonus": streak_paid, "habitat_acorns": habitat_paid})
 
 
 func _start_placing() -> void:

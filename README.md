@@ -24,7 +24,7 @@ Everything runs offline on your computer, saved on the device:
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
 - **Ranger level:** an account level, plus player banners, icons and emotes to unlock
 - **Shop:** daily animal offers, cages, gold packs and cosmetics
-- **Draft Duel** against a computer opponent that gets tougher as you climb: pick 3 starters, then each round shop at your own Watering Hole (with rerolls), train animals up to 3 stars or buy copies for a free star, place your herd on your half with no clock running, then Rally once a fight and use your tools. Each player has 30 hearts; a lost fight costs the round number plus 1 for each enemy animal still standing. Save Acorns for interest (1 per 5 saved, up to 5) and win rounds in a row for streak bonuses. Reaching 3 stars, a comeback and a flawless round get their own celebrations. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
+- **Draft Duel** against a computer opponent that gets tougher as you climb: pick 3 starters, then each round shop at your own Watering Hole (with rerolls), train animals up to 3 stars or buy copies for a free star, place your herd on your half with no clock running, then Rally once a fight and use your tools. Each player has 30 hearts; a lost fight costs the round number plus 1 for each enemy animal still standing. Save Acorns for interest (1 per 5 saved, up to 5) and win rounds in a row for streak bonuses. Reaching 3 stars, a comeback and a flawless round get their own celebrations. Every animal has a habitat: 2, 4 or 6 different animals of one habitat turn on a team bonus (Savanna attacks faster, Arctic slows, Rainforest heals...), with a tracker on the field. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
 - **Look and feel:**
   - every animal is a 3D render, with fur, real markings and its own walk and attack animations (made by our Blender pipeline in `tools/creatures/`)
   - 12 rendered arenas: an open, fenced field with themed scenery around it
@@ -35,7 +35,7 @@ Everything runs offline on your computer, saved on the device:
   - combat juice: white hit flashes, knockback, hit sparks, hit-stop and screen shake on big hits, bouncy damage numbers, chunky health bars with a delayed "damage taken" bar
   - particles (sparkles, stars, puffs, confetti, coins), drifting cloud shadows, swaying grass and petals or snow, bouncy buttons and popups
   - sound effects and music, which players can switch off
-- **Tests:** 96 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
+- **Tests:** 105 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
 
 Not built yet:
 
@@ -154,6 +154,7 @@ files in `game/data/`:
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
 - **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, moods, Rally): `draft_rules.json`
+- **Habitat synergies** (tiers, bonuses, icons, colors): `synergies.json`; each animal's habitat is in `animals.json`
 - **Look and feel** (animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`

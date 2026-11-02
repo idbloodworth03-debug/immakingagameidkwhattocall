@@ -6,7 +6,7 @@ extends Node
 const SFX_NAMES := [
 	"tap", "select", "error", "coin", "upgrade", "pop", "rattle", "reveal", "new_card",
 	"release", "tool", "horn", "heal", "hit", "zap", "tower_hit", "death", "boom",
-	"alert", "tick", "victory", "defeat", "star3", "fanfare", "whoosh",
+	"alert", "tick", "victory", "defeat", "star3", "fanfare", "whoosh", "synergy",
 ]
 const PLAYER_COUNT := 10
 ## The same sound can't start again within this many seconds, so a big fight

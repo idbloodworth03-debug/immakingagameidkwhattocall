@@ -116,6 +116,22 @@ func _build() -> void:
 	for line in lines:
 		play_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
 
+	# Habitat: its synergy, at each tier.
+	var habitat := String(animal.get("habitat", ""))
+	if not is_tool and GameData.synergies.has(habitat):
+		var syn: Dictionary = GameData.synergies[habitat]
+		var habitat_panel := UIKit.well(16)
+		add_child(habitat_panel)
+		var habitat_box := UIKit.vbox(4)
+		habitat_panel.add_child(habitat_box)
+		var habitat_row := UIKit.hbox(8)
+		habitat_row.add_child(UIKit.icon_rect(GameData.ui_icon(syn.icon), Color(syn.color), 32))
+		habitat_row.add_child(UIKit.label("Habitat: %s" % syn.name, 24, Color(syn.color).lightened(0.3)))
+		habitat_box.add_child(habitat_row)
+		var tiers: Array = GameData.synergy_tiers
+		for i in tiers.size():
+			habitat_box.add_child(UIKit.paragraph("%d different %s animals: %s" % [int(tiers[i]), syn.name, Synergies.describe(habitat, i + 1)], 19, UIKit.TEXT))
+
 	# Traits, as little chips
 	if not is_tool:
 		var traits := HFlowContainer.new()

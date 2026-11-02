@@ -91,7 +91,7 @@
   },
 
   "celebrations": {
-    "_note": "Big moments. A 3-star animal gets a slow-motion zoom (zoom in, hold, zoom out, with the field's animation slowed by star3_slow_motion), stars, confetti and a bouncy 3 STARS!, then keeps a gold glow (gold_glow) with a sparkle every gold_sparkle_seconds. Comeback: winning a round at comeback_hearts hearts or fewer. Flawless: winning a round without losing an animal.",
+    "_note": "Big moments. A 3-star animal gets a slow-motion zoom (zoom in, hold, zoom out, with the field's animation slowed by star3_slow_motion), stars, confetti and a bouncy 3 STARS!, then keeps a gold glow (gold_glow) with a sparkle every gold_sparkle_seconds. Comeback: winning a round at comeback_hearts hearts or fewer. Flawless: winning a round without losing an animal. A habitat synergy tier turning on for the first time in a match gets a pop-up (synergy_text_size) and a glow on its animals (synergy_glow_seconds).",
     "star3_zoom": 1.45,
     "star3_zoom_in_seconds": 0.28,
     "star3_hold_seconds": 0.9,
@@ -105,6 +105,8 @@
     "comeback_hearts": 5,
     "comeback_confetti": 30,
     "flawless_sparkles": 18,
+    "synergy_text_size": 44,
+    "synergy_glow_seconds": 1.4,
     "banner_size": 54,
     "banner_seconds": 1.4
   },

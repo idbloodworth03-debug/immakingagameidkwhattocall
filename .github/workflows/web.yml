@@ -1,9 +1,8 @@
-# Builds the web version of Den Duel on every push and runs the tests.
-# Publishing to Netlify (which updates the home-screen app on the iPhone)
-# costs Netlify credits, so it only happens when asked for: "Run workflow"
-# on the Actions tab, or "Re-run all jobs" on any run. Publishing needs the
-# NETLIFY_AUTH_TOKEN repository secret (see README, "Play on your iPhone");
-# every run's build can also be downloaded from its "Artifacts".
+# Builds the web version of Den Duel on every push, runs the tests, and
+# publishes it with GitHub Pages (free for public repositories), so the
+# home-screen app on the iPhone updates by itself. GitHub Pages has to be
+# switched on once (see README, "Play on your iPhone"); until then the build
+# still runs and can be downloaded from the run's "Artifacts".
 name: Web version
 
 on:
@@ -11,21 +10,19 @@ on:
     branches: [main, "claude/**"]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    # A newer push replaces a build still running, but never a publish.
+    # A newer push replaces a build that's still running.
     concurrency:
-      group: web-version-${{ (github.event_name == 'workflow_dispatch' || github.run_attempt != '1') && 'publish' || 'build' }}
+      group: web-build-${{ github.ref }}
       cancel-in-progress: true
     env:
       GODOT_VERSION: "4.7.2"
-      # Publish when started by hand: Run workflow, or a re-run of a push.
-      PUBLISH: ${{ github.event_name == 'workflow_dispatch' || github.run_attempt != '1' }}
-      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-      # The Netlify project to publish to (its Project ID). Not a secret.
-      NETLIFY_SITE_ID: ec65fb06-1a53-4651-890b-e011fac4b66f
     steps:
       - uses: actions/checkout@v4
 
@@ -55,26 +52,34 @@ jobs:
           path: build/web
           retention-days: 14
 
-      - name: Publish to Netlify
-        if: env.PUBLISH == 'true' && env.NETLIFY_AUTH_TOKEN != ''
+      - name: Package the build for GitHub Pages
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: build/web
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    # One publish at a time, and never cut one off halfway.
+    concurrency:
+      group: web-publish
+      cancel-in-progress: false
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
+
+      - name: Say where it is
         run: |
-          cd build/web && zip -qr ../site.zip .
-          status=$(curl -sS -o ../deploy.json -w "%{http_code}" \
-            -H "Content-Type: application/zip" \
-            -H "Authorization: Bearer $NETLIFY_AUTH_TOKEN" \
-            --data-binary "@../site.zip" \
-            "https://api.netlify.com/api/v1/sites/$NETLIFY_SITE_ID/deploys")
-          if [ "$status" -ge 400 ]; then
-            # Show Netlify's reason (e.g. a used-up plan or a revoked token).
-            echo "::error::Netlify refused the deploy ($status): $(head -c 500 ../deploy.json)"
-            exit 1
-          fi
-          python3 -c "import json; d = json.load(open('../deploy.json')); print('Published', d.get('ssl_url') or d.get('url'), '(' + str(d.get('state')) + ')')"
+          echo "::notice::Published to ${{ steps.deployment.outputs.page_url }}"
+          echo "Published to ${{ steps.deployment.outputs.page_url }}" >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Say how to publish
-        if: env.PUBLISH != 'true' && env.NETLIFY_AUTH_TOKEN != ''
-        run: echo "::notice::Built and tested, not published. To update the site, click Re-run all jobs on this run (or Run workflow on the Web version page)."
-
-      - name: Remind about Netlify setup
-        if: env.NETLIFY_AUTH_TOKEN == ''
-        run: echo "::notice::Built and tested, but not published. Add the NETLIFY_AUTH_TOKEN secret to publish (see README)."
+      - name: Explain a failed publish
+        if: failure()
+        run: echo "::error::Couldn't publish. Switch GitHub Pages on once in the repository's Settings > Pages > Source > GitHub Actions (see README, Play on your iPhone)."

@@ -58,40 +58,31 @@ unlocking every animal and resetting your save.
 Den Duel also runs as a website in Safari, and you can add it to your iPhone's
 home screen so it opens full-screen like an app. Every time new work is pushed
 to GitHub, the **Web version** workflow (`.github/workflows/web.yml`) runs the
-tests and builds the web version. It publishes to your Netlify site only when
-you ask, because each publish uses Netlify credits (see *Publish an update*
-below).
+tests, builds the web version and publishes it with **GitHub Pages**, which is
+free for public repositories, with no limit on how often it publishes.
 
-The site is https://denduel.netlify.app. Its Netlify Project ID is in
-`.github/workflows/web.yml`; to publish somewhere else, change it there.
+The site is https://idbloodworth03-debug.github.io/immakingagameidkwhattocall/
 
-**One-time setup**
+**One-time setup** (on github.com, in this repository):
 
-1. **Make the project public:** in Netlify, open the project and click
-   *Make public*. Otherwise Safari asks you to log in to Netlify.
-2. **Make an access token:** click your avatar (top right), then *User
-   settings*, *Applications*, *Personal access tokens*, *New access token*.
-   Name it "GitHub", pick the longest expiration, and copy the token. It's
-   only shown once, and it works like a password, so never paste it into a
-   file in this repository.
-3. **Give it to GitHub:** on github.com, open this repository, then
-   *Settings*, *Secrets and variables*, *Actions*, *New repository secret*.
-   Name it `NETLIFY_AUTH_TOKEN` and paste the token as the value.
-4. **Publish now:** see *Publish an update* below.
+1. **Switch on GitHub Pages:** *Settings*, then *Pages* (left side). Under
+   *Build and deployment*, set *Source* to **GitHub Actions**.
+2. **Let the work branches publish:** *Settings*, then *Environments*, then
+   **github-pages**. Under *Deployment branches and tags*, click *Add
+   deployment branch or tag rule* and enter `claude/*`. (Out of the box only
+   `main` may publish.)
+3. **Publish now:** open the *Actions* tab, click the latest *Web version*
+   run, then *Re-run all jobs*. From then on, every push publishes by itself.
+   You can also click *Web version* on the left, then *Run workflow*.
 
-**Publish an update**
+If a publish fails, the run's *publish* step says why; the usual reason is
+that one of the two settings above isn't done yet.
 
-On github.com, open the *Actions* tab and click the latest *Web version* run,
-then *Re-run all jobs*. The re-run builds that version again and publishes it.
-Once the workflow is on the `main` branch, you can also click *Web version*
-in the list on the left, then *Run workflow*, and pick the branch to publish.
+**Moving from Netlify:** the old site (denduel.netlify.app) no longer gets
+updates. Saves belong to the website they were made on, so the new site
+starts a fresh profile. Delete the old home-screen icon and add the new site.
 
-Each publish uses Netlify credits, and the free plan only has so many each
-month, so publish when there's something new to play, not after every
-change. If a publish fails with "Account credit usage exceeded",
-wait for the monthly reset or add credits in Netlify (*Usage & billing*).
-
-**On the iPhone:** open your Netlify link in **Safari**, tap **Share**, then
+**On the iPhone:** open the site in **Safari**, tap **Share**, then
 **Add to Home Screen**. To get an update, close the app completely (swipe it
 away) and open it again.
 
@@ -99,7 +90,7 @@ Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Every run's build** is under *Artifacts* on the run's page (`den-duel-web`), ready to drag into Netlify by hand, with or without the token.
+- **Every run's build** is also under *Artifacts* on the run's page (`den-duel-web`), to download or host anywhere else.
 - **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 
 ## Run the tests

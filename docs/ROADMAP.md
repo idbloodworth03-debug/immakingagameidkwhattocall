@@ -51,7 +51,7 @@
 - [x] Name: **Den Duel**, with a logo, app icon and splash screen
 - [ ] Before launch: USPTO trademark check, website domain and social handles
 - [x] Web version that runs in Safari and installs to the iPhone home screen
-- [x] Publishing: every push runs the tests and builds the web version; a re-run (or *Run workflow*) updates the Netlify site
+- [x] Publishing: every push runs the tests, builds the web version and publishes it with GitHub Pages (free, no deploy limits; Netlify's free credits ran out)
 - [x] 3D-rendered animals with fur, real markings and walk, attack and death animations (Blender pipeline in `tools/creatures/`)
 - [x] Rendered arenas: 12 themed battlefields with river, bridges and scenery (`tools/creatures/arena.py`)
 - [x] Menu facelift: glossy buttons, raised panels, redesigned cards, icon tab bar, arena preview, popup and screen animations

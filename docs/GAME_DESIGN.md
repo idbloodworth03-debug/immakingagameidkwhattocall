@@ -80,11 +80,11 @@ flawless round ("FLAWLESS!"), and winning a match after being 2 rounds down
 you play against named Rangers, not random usernames. Each arena has 2 or 3
 regulars and one **boss** (38 in all), each with a cartoon portrait (drawn in
 code from `look` in `rivals.json` until there's painted art), a personality
-line, a banner, a favorite habitat or way of playing, and emotes for the
+line, a banner, a favorite class or way of playing, and emotes for the
 start, their big hits, and rounds going their way or not.
 
 - **VS screen** before every match: their portrait and banner on top, yours
-  below, a VS that slams down, their line and favorite habitat, and an ARENA
+  below, a VS that slams down, their line and favorite class, and an ARENA
   BOSS ribbon for a boss. Tap to go on (or it goes on by itself).
 - **In the match** their badge shows their portrait. They emote (a speech
   bubble and a change of face) when the match starts, on their first big hit
@@ -109,16 +109,22 @@ start, their big hits, and rounds going their way or not.
 
 **Your collection matters.** Your picks come from the cards you own, and they
 fight at their levels. The computer opponent's cards are leveled like yours on
-average. New players start with a small set (see Still open).
+average. New players start with 5 cards, one of each of four classes plus a
+tool: Brown Bear (Tank), Wild Boar (Tank Destroyer), Gray Squirrel (Ranged),
+Peregrine Falcon (Air) and the Net (`starting_cards` in
+`game/data/progression.json`). That fills the 5 options, and the first match
+already shows the whole counter loop. A save with fewer than 5 cards (or
+fewer than 3 animals) gets topped up with the starting cards.
 
 **Tuning** is in `game/data/draft_rules.json` (wins needed, picks, options,
 tools, stars) and `game/data/classes.json` (counters, rows, traits, swarm
 size). `tests/draft_report.tscn` plays bot-vs-bot matches and prints match
 length, fight length, herd sizes, what the bots pick and how each class does.
-First run (40 matches): about 5.5 rounds a match, fights about 26 seconds,
-69% end in a wipe-out, about 12 animals on the field per fight (23 at most).
-The bots still pick few Ranged animals, Specialists and tools; their picking
-gets tuned next.
+A run of 240 matches: about 5 rounds a match, fights about 21 seconds, 88%
+end in a wipe-out, about 14 animals on the field per fight (32 at most). The
+bots' picks: 61% new animals, 27% stars, 12% tools. Each class turns up in a
+herd in 1,650 to 2,450 fights and wins 46% to 54% of them; with the same
+herds on both sides each side wins half the time.
 
 **Removed:** the shop, Acorns (costs, rerolls, interest, win streak and loss
 bonuses), hearts, manual placement, habitat synergies, per-animal abilities
@@ -210,7 +216,8 @@ you can't drop back below it. The top two arenas don't, to keep some stakes.
 | 11 | Coral Coast | 4,600 | no | Harbor Seal, Loggerhead Turtle (R), Sea Otter (E), Komodo Dragon (E), African Penguins (L) |
 | 12 | Last Sanctuary | 5,300 | no | Kakapo (L), Philippine Eagle (L), Sumatran Orangutan (L) |
 
-New players start owning every Rescue Center card.
+New players start with the 5 starting cards (see Draft Duel); the rest are
+found in cages.
 
 ### Ranking (with online play)
 
@@ -313,16 +320,39 @@ with a big **NEW ANIMAL FREED!** for first finds, and a summary at the end.
 ## The fight
 
 **The field:** 16 tiles wide and 20 long, with a halfway line and a fence
-around it. You play from the bottom. Rows are 2.2 (front), 4.4 (middle) and
-6.6 (back) tiles back from the middle line; a row with too many animals for
-the field's width wraps into another row further back.
+around it. You play from the bottom. Each class lines up across the field:
+front row 2.2 tiles back from the middle line, middle row 4.4, Air 5.5 and the
+back row 6.6 (`rows` in `classes.json`). A row with too many animals for one
+line gets more lines behind it, every other line shifted half a place so
+nobody hides behind another, and the rows behind it move back to make room.
+
+**Big herds** (`field` in `draft_rules.json`): the field grows as the herds
+do, keeping its shape. It starts at 12 animals on the bigger side and is
+1.5 times as big at 36. It also grows if the rows wouldn't fit otherwise.
+The rows spread wider and deeper with it, and the camera zooms out smoothly
+to show it all (the arena picture grows with the field, and mirrored copies of
+its edges fill a tall screen). 1.5 is the limit, so animals are never drawn
+smaller than two thirds of their size. Big fights also keep their effects in
+check (`crowd` in `feel.json`). From 24 animals on the field:
+- only so many hit sparks and damage numbers show at once, and the biggest
+  hits take the place of the smallest;
+- bursts use half their particles;
+- ordinary hits skip their claw and bite marks;
+- the animals use a plain look that draws faster.
 
 **How animals behave:**
 - Tank Destroyers go for a Tank within 7 tiles first, Ranged for Air within 6;
   otherwise everyone goes for the nearest enemy it can reach (Food Bait close
-  by comes first).
+  by comes first). An animal on its way to a target that's still fine looks
+  around for a better one 4 times a second (`retarget_seconds`), which keeps
+  big fights cheap on a phone.
 - Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
+
+**On screen** there's only the score, the herds (with a class icon under
+each animal and health bars on hurt ones), Rally and the tool buttons; no
+words float up over the field. After a fight the new score pops up big over
+the field and flies into the score bar.
 
 **The end:** a fight is over when a herd is wiped out, or after 40 seconds.
 The fight engine is deterministic: the same herds, seed and actions always
@@ -343,17 +373,22 @@ fight, anywhere on the field:
 | Signal Flare | Epic | Arena 6 | 340 damage in 2.5 tiles |
 
 Tools level up like animals (+10% damage or healing per level). New players
-start with the Net and Air Horn.
+start with the Net.
 
 ## Computer opponent
 
 The opponent is a Rival Ranger (see Draft Duel) played by this bot. It plays
 Draft Duel through the same calls as a person, so it follows the same rules:
 
-- **Picks:** it scores each option and each possible star: an animal's power,
-  plus what its herd needs against yours (Tank Destroyers against your Tanks,
-  Ranged against your Air, Air against your Tank Destroyers, a Tank to shield
-  its own Ranged), plus a little luck. Starters favor a spread of classes.
+- **Picks:** it scores each option and each possible star (`bot` in
+  `draft_rules.json`). Every pick costs the same, so what counts most is what
+  its herd needs against yours: Tank Destroyers against your Tanks, Ranged
+  against your Air, Air against your Tank Destroyers, a Tank to shield its own
+  Ranged, and classes it doesn't have yet. An animal's power only tips the
+  balance, and tools are worth more once its herd is big. It goes by your herd
+  as it was when the round's picking started, as you do: it can't see your new
+  picks either. Starters favor a spread of classes, and a little luck plays a
+  part.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
 
 **Difficulty grows with your arena:** it picks less randomly, pays more
@@ -370,9 +405,8 @@ as a guide.
 
 ## Still open
 
-1. **Match length:** best of 7 runs about 5.5 rounds against the bot, with fights of about 26 seconds. Real players may want a shorter match on a phone.
+1. **Match length:** best of 7 runs about 5 rounds against the bot, with fights of about 21 seconds. Real players may want a shorter match on a phone.
 2. **Balance:** all stats are first guesses from the old mode. Playing a lot of Draft Duel is the only way to really tune them.
-3. **Starting collection:** today a new player owns all 8 Rescue Center cards. The plan is 5 cards: at least 3 animals from different classes, and old saves with fewer get topped up to the same set. Proposed: Brown Bear (Tank), Wild Boar (Tank Destroyer), Gray Squirrel (Ranged), Peregrine Falcon (Air) and the Net.
-4. **The field:** one open field for every arena. Arena-specific features (a pond in Misty Marsh, rocks in Red Rock Canyon) could add variety later.
+3. **The field:** one open field for every arena. Arena-specific features (a pond in Misty Marsh, rocks in Red Rock Canyon) could add variety later.
 
-Settled: the bot gets harder as you climb (yes); Classic battle, dens and the river are gone (Draft Duel is the game).
+Settled: the bot gets harder as you climb (yes); Classic battle, dens and the river are gone (Draft Duel is the game); new players start with 5 cards (see Draft Duel).

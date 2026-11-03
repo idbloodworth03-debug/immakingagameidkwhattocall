@@ -1,5 +1,7 @@
 {
   "_note": "Tuning numbers for progression. Arrays marked 'by target level' are indexed by the level you are upgrading TO.",
+  "starting_cards": ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "net"],
+  "_starting_cards_note": "What every new player owns: enough cards to fill the Draft Duel options (offer_count in draft_rules.json), with at least picks_per_round animals. A save with fewer cards than that is topped up with these.",
   "starting_gold": 500,
   "starting_gems": 100,
   "cage_slots": 4,

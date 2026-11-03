@@ -6,6 +6,7 @@ extends Control
 ## It's built in layers, all inside a "world" node that shakes as one:
 ##   arena   the rendered arena picture, toned down a little (ground shader)
 ##   decor   the highlight, food bait, ground effects and ambient motion
+##   ground  every animal's shadow, team ring and class badge
 ##   units   one UnitView per animal, sorted by depth (scripts/fx/unit_view.gd)
 ##   fx      particles, damage numbers, health bars, projectiles (fx_layer.gd)
 ##
@@ -22,8 +23,7 @@ const ENEMY_COLOR := Color("#d94a4a")
 const EFFECT_COLORS := {
 	"net": Color("#d8c08a"), "air_horn": Color("#ffffff"), "flare": Color("#ff8a3d"),
 	"medkit": Color("#5ef08a"), "tranq_dart": Color("#b07cff"), "bait": Color("#c98b4a"),
-	"heal": Color("#5ef08a"), "cloud": Color("#9bd36b"), "scare": Color("#ffd166"),
-	"stun_pulse": Color("#ffe066"), "rage": Color("#ff9f43"), "tree": Color("#3fbf55"),
+	"splash": Color("#7fd3ff"),
 }
 ## How much of the arena around the field to show, in field units.
 const MARGIN := 600.0
@@ -49,6 +49,9 @@ var fx: FxLayer
 var _world: Node2D
 var _arena: Node2D
 var _decor: Node2D
+## Every animal's shadow, team ring and class badge, in one layer under them
+## all (so a big herd's are drawn in a few batches, not a few per animal).
+var _ground: Node2D
 var _units: Node2D
 ## Animal views by their key (a herd slot, or the fighter's uid).
 var _views := {}
@@ -59,6 +62,17 @@ var _focus := {}
 var _freeze := 0.0
 var _freeze_ready := 0.0
 var _trauma := 0.0
+
+## The camera: how big a field it shows (1 = the smallest field), easing
+## toward the field's real size so it zooms out smoothly as the field grows.
+var _view_k := 1.0
+var _arena_k := 0.0
+
+var _plain := false
+var _last_on_field := 0
+var _k_frame := -1
+var _k_base := 1.0
+var _k_swarm := 1.0
 
 var _press_at := Vector2.ZERO
 var _pressed := false
@@ -84,6 +98,8 @@ func _ready() -> void:
 	_world.add_child(_arena)
 	_decor = _Painter.new(_draw_decor)
 	_world.add_child(_decor)
+	_ground = _Painter.new(_draw_unit_ground)
+	_world.add_child(_ground)
 	_units = Node2D.new()
 	_units.y_sort_enabled = true
 	_world.add_child(_units)
@@ -107,17 +123,26 @@ class _Painter:
 # --- Coordinates -----------------------------------------------------------
 
 func _scale() -> float:
-	return minf(size.x / (BattleSim.WIDTH + 2.0 * MARGIN), size.y / (BattleSim.HEIGHT + 2.0 * MARGIN))
+	return minf(size.x / ((BattleSim.WIDTH + 2.0 * MARGIN) * _view_k), size.y / ((BattleSim.HEIGHT + 2.0 * MARGIN) * _view_k))
 
 
 func field_scale() -> float:
 	return _scale()
 
 
+## The field's size this fight, in field units.
+func _field_size() -> Vector2:
+	return Vector2(sim.width, sim.height) if sim != null else Vector2(BattleSim.WIDTH, BattleSim.HEIGHT)
+
+
+## How much bigger than its smallest size the field is this fight.
+func _field_k() -> float:
+	return _field_size().x / BattleSim.WIDTH
+
+
 ## The field sits in the middle, with the arena's scenery around it.
 func _origin() -> Vector2:
-	var s := _scale()
-	return (size - Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s) / 2.0
+	return (size - _field_size() * _scale()) / 2.0
 
 
 func to_screen(x: float, y: float) -> Vector2:
@@ -126,7 +151,47 @@ func to_screen(x: float, y: float) -> Vector2:
 
 func to_field(point: Vector2) -> Vector2i:
 	var p := (point - _origin()) / _scale()
-	return Vector2i(clampi(roundi(p.x), 0, BattleSim.WIDTH), clampi(roundi(p.y), 0, BattleSim.HEIGHT))
+	var field := _field_size()
+	return Vector2i(clampi(roundi(p.x), 0, int(field.x)), clampi(roundi(p.y), 0, int(field.y)))
+
+
+## Shows the whole field right away, without the zoom (e.g. a new match).
+func snap_camera() -> void:
+	_view_k = _field_k()
+	_arena.queue_redraw()
+
+
+## A crowded field (feel.json "crowd"): simpler effects, so it stays readable
+## and smooth.
+func _check_crowd() -> void:
+	var on_field := 0
+	if sim != null:
+		for f in sim.fighters:
+			if f.alive and f.kind == "unit":
+				on_field += 1
+	fx.crowded = on_field >= Feel.count("crowd", "crowded_from_units", 24)
+	fx.density = Feel.num("crowd", "particles_when_crowded", 0.5) if fx.crowded else 1.0
+	# The plain look for animals is chosen when the herds come on (more
+	# animals than before), so it doesn't change in the middle of a fight.
+	if on_field > _last_on_field:
+		var plain := fx.crowded and Feel.on("crowd", "plain_animals_when_crowded", true)
+		if plain != _plain:
+			_plain = plain
+			for v in _views.values():
+				v.set_shaded(not _plain)
+	_last_on_field = on_field
+
+
+## Eases the camera toward the field's size this fight.
+func _follow_field(delta: float) -> void:
+	var target := _field_k()
+	if is_equal_approx(_view_k, target):
+		return
+	var rate := 1.0 / maxf(0.05, Feel.num("camera", "zoom_seconds", 0.8))
+	_view_k = lerpf(_view_k, target, 1.0 - exp(-delta * rate * 3.0))
+	if absf(_view_k - target) < 0.002:
+		_view_k = target
+	_arena.queue_redraw()
 
 
 ## Screen pixels per sprite pixel for an animal.
@@ -134,6 +199,18 @@ func sprite_k(id: String, swarm: bool) -> float:
 	var c := "characters"
 	var k := _scale() * 1000.0 / UnitSprites.pixels_per_tile(id) * Feel.num(c, "sprite_scale", 1.6)
 	return k * (Feel.num(c, "swarm_scale", 0.8) if swarm else 1.0)
+
+
+## The same for a sheet drawn at `per_tile` pixels per tile, with this
+## frame's scale worked out once for every animal.
+func sprite_k_per_tile(per_tile: float, swarm: bool) -> float:
+	var frame := Engine.get_process_frames()
+	if frame != _k_frame:
+		_k_frame = frame
+		var c := "characters"
+		_k_base = _scale() * 1000.0 * Feel.num(c, "sprite_scale", 1.6)
+		_k_swarm = Feel.num(c, "swarm_scale", 0.8)
+	return _k_base / per_tile * (_k_swarm if swarm else 1.0)
 
 
 func views() -> Array:
@@ -242,6 +319,8 @@ func _process(delta: float) -> void:
 		pan = target.lerp(size / 2.0, focus) - target * zoom
 	_world.scale = Vector2(zoom, zoom)
 	_world.position = pan + shake_offset
+	_follow_field(delta)
+	_check_crowd()
 	if sim != null:
 		_sync_views(dt)
 	fx._process_fx(dt)
@@ -251,6 +330,7 @@ func _process(delta: float) -> void:
 		v.position = to_screen(v.render_pos().x, v.render_pos().y)
 	_remove_finished()
 	_decor.queue_redraw()
+	_ground.queue_redraw()
 	fx.queue_redraw()
 
 
@@ -268,6 +348,7 @@ func _sync_views(dt: float) -> void:
 		var at := Vector2(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
 		if v == null:
 			v = UnitView.make(self, f, key)
+			v.set_shaded(not _plain)
 			_views[key] = v
 			_units.add_child(v)
 			v.position = to_screen(at.x, at.y)
@@ -300,8 +381,9 @@ func _drop_view(key: Variant) -> void:
 ## and drifting petals, leaves or snow to suit the arena.
 func _ambient(delta: float) -> void:
 	var b := "background"
-	if size != _ambient_size and size.x > 0.0:
+	if (size != _ambient_size or _arena_k != _view_k) and size.x > 0.0:
 		_ambient_size = size
+		_arena_k = _view_k
 		_make_ambient()
 	var tile := BattleSim.TILE * _scale()
 	for c in _clouds:
@@ -343,7 +425,7 @@ func _make_ambient() -> void:
 	# Grass tufts around the edges, outside the fence and just inside it.
 	_tufts.clear()
 	var s := _scale()
-	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
+	var field := Rect2(_origin(), _field_size() * s)
 	var inner := field.grow(-BattleSim.TILE * s * 0.6)
 	var tries := 0
 	while _tufts.size() < Feel.count(b, "grass_tufts", 46) and tries < 2000:
@@ -425,21 +507,22 @@ func add_events(events: Array) -> void:
 					shake(Feel.num("combat", "shake_defeat", 0.08))
 				else:
 					fx.burst("puff", to_screen(e.x, e.y), 6, 90.0, 0.4, 10.0, [Color(1, 1, 1, 0.9)], -30.0, 3.0)
-			"heal":
-				var at := to_screen(e.x, e.y)
-				fx.effect("ring", at, mini(e.radius, BattleSim.WIDTH) * s, EFFECT_COLORS.heal, 0.6, "", true)
-				fx.burst_heal(at - Vector2(0, 14))
-			"cloud", "scare", "stun_pulse", "rage":
-				fx.effect("ring", to_screen(e.x, e.y), mini(e.radius, BattleSim.WIDTH) * s, EFFECT_COLORS[e.type], 0.6, "", true)
-				if e.type == "rage":
-					fx.burst("sparkle", to_screen(e.x, e.y) - Vector2(0, 12), 8, 170.0, 0.5, 8.0, [Color("#ff9f43"), Color("#ffe14d")], -60.0, 3.0)
-			"tree":
-				fx.effect("area", to_screen(e.x, e.y), e.radius * s, EFFECT_COLORS.tree, e.seconds, "", true)
 			"emerge":
-				fx.effect("dust", to_screen(e.x, e.y), 800 * s, Color("#b49a78"), 0.5, "", true)
-				fx.effect("text", to_screen(e.x, e.y), 0, Color.WHITE, 0.8, _event_word(e.type))
-			"dodge", "play_dead", "revive", "roll_up", "sleep", "pounce":
-				fx.effect("text", to_screen(e.x, e.y), 0, Color.WHITE, 0.8, _event_word(e.type))
+				# A burrower pops up: a spray of earth.
+				var at := to_screen(e.x, e.y)
+				fx.effect("dust", at, 900 * s, Color("#b49a78"), 0.55, "", true)
+				fx.burst("puff", at, 6, 120.0, 0.45, 9.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 120.0)
+			"splash":
+				var at := to_screen(e.x, e.y)
+				fx.effect("ring", at, e.radius * s, EFFECT_COLORS.splash, 0.45, "", true)
+				fx.burst("puff", at, 6, 150.0, 0.4, 7.0, [Color("#bfeaff"), Color.WHITE], 260.0, 2.0, 140.0)
+			"stun":
+				var v := view_for_uid(e.uid)
+				var top := v.middle() - Vector2(0, 18) if v != null else to_screen(e.x, e.y)
+				fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
+			"sleep":
+				var at := to_screen(e.x, e.y) - Vector2(0, 18)
+				fx.burst("sparkle", at, 5, 50.0, 1.0, 7.0, [EFFECT_COLORS.tranq_dart, Color.WHITE], -70.0, 2.0)
 
 
 func _on_hit(e: Dictionary) -> void:
@@ -459,8 +542,11 @@ func _on_hit(e: Dictionary) -> void:
 	if target != null:
 		target.hurt(dir, strong)
 		at = target.middle()
-	_impact(style, at, dir, s)
-	fx.burst_hit(at, strong, Vector2(dir.x, dir.y * 0.6))
+	# Busy fights keep the biggest hits' sparks and marks (fx.allow_sparks).
+	if fx.allow_sparks(int(e.amount)) or strong:
+		if strong or not fx.crowded:
+			_impact(style, at, dir, s)
+		fx.burst_hit(at, strong, Vector2(dir.x, dir.y * 0.6))
 	var kind := "hurt_enemy" if target == null or target.team == 1 else "hurt_own"
 	fx.number(at + Vector2(0, -10), int(e.amount), kind, strong, target.key if target != null else null)
 	if strong:
@@ -500,22 +586,8 @@ static func play_sounds(events: Array) -> void:
 				Sound.play("hit", -7.0, 0.2)
 			"death":
 				Sound.play("death", -6.0, 0.15)
-			"heal", "tree":
-				Sound.play("heal", -4.0)
-			"dodge", "play_dead", "pounce", "emerge", "sleep":
+			"emerge", "sleep", "stun", "splash":
 				Sound.play("pop", -6.0, 0.2)
-
-
-## A word floating up from a spot on the field, e.g. an animal's mood.
-func say(x: int, y: int, text: String, color := Color.WHITE, life := 1.2) -> void:
-	fx.effect("text", to_screen(x, y) - Vector2(0, 20), 0, color, life, text)
-
-
-func _event_word(kind: String) -> String:
-	return {
-		"dodge": "Dodge!", "play_dead": "Playing dead...", "revive": "Back up!", "roll_up": "Rolled up!",
-		"sleep": "Zzz", "pounce": "Pounce!", "emerge": "Surprise!",
-	}.get(kind, "")
 
 
 # --- Drawing ---------------------------------------------------------------
@@ -524,29 +596,71 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2.ZERO, size), grass.darkened(0.25))
 
 
-## The rendered arena (or plain grass), under everything.
+## The rendered arena (or plain grass), under everything. A bigger field
+## (big herds) gets the same arena, bigger, so its fence still fits.
 func _draw_arena(canvas: CanvasItem) -> void:
 	var s := _scale()
-	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
+	var field_k := _field_k()
+	var field := Rect2(_origin(), _field_size() * s)
 	var ground := arena_art(arena_id)
 	if not ground.is_empty():
 		# The rendered arena: the fenced field and themed scenery around it.
-		var top_left := to_screen(ground.area.position.x, ground.area.position.y)
-		var bottom_right := to_screen(ground.area.end.x, ground.area.end.y)
-		canvas.draw_texture_rect(ground.texture, Rect2(top_left, bottom_right - top_left), false)
+		var area: Rect2 = ground.area
+		var top_left := to_screen(area.position.x * field_k, area.position.y * field_k)
+		var bottom_right := to_screen(area.end.x * field_k, area.end.y * field_k)
+		var art := Rect2(top_left, bottom_right - top_left)
+		canvas.draw_texture_rect(ground.texture, art, false)
+		# On a tall (or wide) screen the picture ends before the screen does:
+		# mirrored copies carry the scenery on to the edges.
+		if art.position.y > 0.0:
+			canvas.draw_set_transform(Vector2(art.position.x, art.position.y), 0.0, Vector2(1, -1))
+			canvas.draw_texture_rect(ground.texture, Rect2(Vector2.ZERO, art.size), false)
+		if art.end.y < size.y:
+			canvas.draw_set_transform(Vector2(art.position.x, art.end.y + art.size.y), 0.0, Vector2(1, -1))
+			canvas.draw_texture_rect(ground.texture, Rect2(Vector2.ZERO, art.size), false)
+		if art.position.x > 0.0:
+			canvas.draw_set_transform(Vector2(art.position.x, art.position.y), 0.0, Vector2(-1, 1))
+			canvas.draw_texture_rect(ground.texture, Rect2(Vector2.ZERO, art.size), false)
+		if art.end.x < size.x:
+			canvas.draw_set_transform(Vector2(art.end.x + art.size.x, art.position.y), 0.0, Vector2(-1, 1))
+			canvas.draw_texture_rect(ground.texture, Rect2(Vector2.ZERO, art.size), false)
+		canvas.draw_set_transform(Vector2.ZERO)
 		return
 	# Plain grass: tile stripes, the halfway line and the center ring.
 	canvas.draw_rect(Rect2(Vector2.ZERO, size).grow(20), grass.darkened(0.15))
 	canvas.draw_rect(field, grass)
 	var tile := BattleSim.TILE * s
-	for row in BattleSim.HEIGHT / BattleSim.TILE:
-		for col in BattleSim.WIDTH / BattleSim.TILE:
+	var tiles := Vector2i((_field_size() / BattleSim.TILE).ceil())
+	for row in tiles.y:
+		for col in tiles.x:
 			if (row + col) % 2 == 0:
-				canvas.draw_rect(Rect2(field.position + Vector2(col, row) * tile, Vector2(tile, tile)), Color(1, 1, 1, 0.035))
-	var middle := to_screen(0, BattleSim.MIDDLE).y
+				canvas.draw_rect(Rect2(field.position + Vector2(col, row) * tile, Vector2(tile, tile)).intersection(field), Color(1, 1, 1, 0.035))
+	var middle := to_screen(0, sim.middle if sim != null else BattleSim.MIDDLE).y
 	canvas.draw_line(Vector2(field.position.x, middle), Vector2(field.end.x, middle), Color(1, 1, 1, 0.35), 3.0)
 	canvas.draw_arc(field.get_center(), tile * 2.2, 0, TAU, 48, Color(1, 1, 1, 0.35), 3.0)
 	canvas.draw_rect(field, Color(0.25, 0.18, 0.1, 0.8), false, 4.0)
+
+
+## Shadows and rings first, then the class badges: their circles, then the
+## icons a class at a time, so each kind of picture is drawn in one batch.
+func _draw_unit_ground(canvas: CanvasItem) -> void:
+	var badges := []
+	for v in _views.values():
+		v.draw_ground(canvas, badges)
+	for b in badges:
+		var info := GameData.class_info(String(b[0]))
+		if not info.is_empty():
+			var r := float(b[2]) + 1.5
+			GroundArt.draw(canvas, GroundArt.Cell.DISC, b[1] + Vector2(0, 1.5), r + 1.5, 1.0, Color(UIKit.INK, float(b[3]) * 0.8))
+			GroundArt.draw(canvas, GroundArt.Cell.DISC, b[1], r, 1.0, Color(Color(String(info.color)), float(b[3])))
+	for cls in GameData.class_order:
+		var texture := UIKit.icon(GameData.ui_icon(String(GameData.class_info(cls).get("icon", ""))))
+		if texture == null:
+			continue
+		for b in badges:
+			if b[0] == cls:
+				var side := float(b[2]) * 1.3
+				canvas.draw_texture_rect(texture, Rect2(b[1] - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, float(b[3])))
 
 
 ## Over the ground, under the animals: the highlight, bait and ground effects.
@@ -554,7 +668,7 @@ func _draw_decor(canvas: CanvasItem) -> void:
 	if sim == null:
 		return
 	var s := _scale()
-	var field := Rect2(_origin(), Vector2(BattleSim.WIDTH, BattleSim.HEIGHT) * s)
+	var field := Rect2(_origin(), _field_size() * s)
 	_draw_ambient(canvas)
 	_draw_highlight(canvas, field)
 	fx.draw_ground(canvas)
@@ -567,7 +681,7 @@ func _draw_highlight(canvas: CanvasItem, field: Rect2) -> void:
 	var area := field
 	match highlight:
 		"own_half":
-			var top := to_screen(0, BattleSim.MIDDLE).y
+			var top := to_screen(0, sim.middle).y
 			area = Rect2(field.position.x, top, field.size.x, field.end.y - top)
 		"field":
 			pass

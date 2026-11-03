@@ -92,8 +92,8 @@ func _new_profile() -> Dictionary:
 	}
 	for i in int(prog.cage_slots):
 		profile.cage_slots.append(null)
-	# Starter cards: everything from the first arena.
-	for id in GameData.cards_in_arena(0):
+	# The starting cards (progression.json).
+	for id in GameData.progression.get("starting_cards", []):
 		profile.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": false}
 	# A first cage so new players can try freeing animals right away.
 	profile.cage_slots[0] = {"cage_id": "twig", "arena": 0, "unlock_at": 0.0}
@@ -112,10 +112,12 @@ func _repair() -> void:
 	for id in data.collection.keys():
 		if not GameData.cards.has(id):
 			data.collection.erase(id)
-	# Starter cards added in an update are free for everyone.
-	for id in GameData.cards_in_arena(0):
-		if not data.collection.has(id):
-			data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": true}
+	# Too few cards to fill the Draft Duel options (or the 3 starting picks):
+	# top up with the starting cards.
+	if _too_few_cards():
+		for id in GameData.progression.get("starting_cards", []):
+			if not data.collection.has(id):
+				data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": true}
 
 	# Classic battle's deck is gone.
 	data.erase("deck")
@@ -133,6 +135,14 @@ func _repair() -> void:
 		data.banner = fresh.banner
 	if GameData.find_by_id(GameData.player_icons, data.icon).is_empty():
 		data.icon = fresh.icon
+
+
+func _too_few_cards() -> bool:
+	var animals := 0
+	for id in data.collection:
+		if not GameData.is_tool(id):
+			animals += 1
+	return data.collection.size() < int(GameData.draft_rules.offer_count) or animals < int(GameData.draft_rules.picks_per_round)
 
 
 func _first_default(items: Array) -> String:

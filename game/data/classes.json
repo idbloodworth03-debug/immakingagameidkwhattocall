@@ -32,12 +32,13 @@
     "ranged": {"class": "air", "tiles": 6.0}
   },
   "rows": {
-    "_note": "Rows in tiles back from the middle line. Animals in a row stand `spacing` tiles apart; a row too full for the field's width wraps into another `depth` tiles further back.",
+    "_note": "Where each class lines up, in tiles back from the middle line: front, middle, air (Air's own line, just behind the middle row) and back. Animals in a line stand at least `spacing` tiles apart; a band too full for one line gets more lines `depth` tiles apart, and the bands behind it move back to make room.",
     "front": 2.2,
     "middle": 4.4,
+    "air": 5.5,
     "back": 6.6,
     "spacing": 1.7,
-    "depth": 1.2
+    "depth": 1.1
   },
   "swarm_max": 2
 }

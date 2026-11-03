@@ -22,5 +22,22 @@
     "speed_pct": 20,
     "attack_pct": 20
   },
-  "fight_seconds": 40
+  "fight_seconds": 40,
+  "bot": {
+    "_note": "How the computer opponent weighs a pick (scripts/draft/draft_bot.gd): a new animal starts at new_animal, a star at star, a tool at tool (plus tool_per_animal for each animal in its herd, at most 2; tool_swap when its belt is full). A card's power (its cost in animals.json, from 2 to 8) adds power per point above an ordinary 4.5. A class its herd doesn't have yet adds new_class; counters against your herd add up to 4 more. A Rival's style and some luck do the rest.",
+    "new_animal": 5.0,
+    "star": 4.0,
+    "tool": 4.0,
+    "tool_per_animal": 0.25,
+    "tool_swap": 1.0,
+    "power": 0.6,
+    "new_class": 1.5
+  },
+  "field": {
+    "_note": "The field grows for big herds, keeping its shape, and the camera zooms out to show all of it. scale 1 is 16 x 20 tiles. It starts growing when the bigger herd has more than grow_from_units animals on the field (a pack counts each animal) and reaches max_scale at grow_full_units; it also grows if the rows wouldn't fit otherwise. max_scale is the camera's zoom limit: animals are drawn 1/max_scale as big at most, so they stay readable on a phone. edge: how far (tiles) the last line stays from the back of the field.",
+    "grow_from_units": 12,
+    "grow_full_units": 36,
+    "max_scale": 1.5,
+    "edge": 0.8
+  }
 }

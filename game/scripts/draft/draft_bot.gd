@@ -78,33 +78,50 @@ func pick_all() -> void:
 		guard += 1
 
 
-## How much it wants an offered card.
+## How much it wants an offered card. Every pick costs the same, so what
+## matters most is what its herd needs against yours (counters, and classes
+## it doesn't have yet); a card's power ("cost" in animals.json) only tips
+## the balance. Tools are worth more once its herd is big enough to use them.
 func _offer_value(id: String) -> float:
+	var weights: Dictionary = GameData.draft_rules.get("bot", {})
 	var noise := rng.randf() * lerpf(3.0, 0.8, difficulty)
 	if GameData.is_tool(id):
-		var tools := _lean("tools")
 		var full: bool = duel.tools[team].size() >= int(duel.rules.tools_max)
-		return (1.0 if full else 3.0 + 2.0 * difficulty) + tools * 4.0 + noise
+		if full:
+			return float(weights.get("tool_swap", 1.0)) + noise
+		var herd_bonus := minf(float(duel.herds[team].size()) * float(weights.get("tool_per_animal", 0.25)), 2.0)
+		return float(weights.get("tool", 4.0)) + herd_bonus + _lean("tools") * 4.0 + noise
 	var index := duel.herd_index(team, id)
 	if index >= 0:
 		return _star_value(index) + noise * 0.5
-	var power := float(GameData.get_card(id).cost)
-	var value := power + _class_need(GameData.class_of(id)) + noise
-	if String(style.get("favorite", "")) == GameData.class_of(id):
+	var cls := GameData.class_of(id)
+	var value := float(weights.get("new_animal", 5.0)) + _power(id) + _class_need(cls) + noise
+	if not _class_counts(team).has(cls):
+		value += float(weights.get("new_class", 1.5))
+	if String(style.get("favorite", "")) == cls:
 		value += FAVORITE_BONUS
 	if duel.is_first_round():
 		# Starters: a spread of classes beats three of a kind.
 		for entry in duel.herds[team]:
-			if GameData.class_of(entry.id) == GameData.class_of(id):
+			if GameData.class_of(entry.id) == cls:
 				value -= 2.0 * (0.4 + difficulty)
 	return value
 
 
-## How much a star on herd animal `index` is worth: a share of its power,
-## more for those who like stars.
+## A card's power, centered on an ordinary card, as a small nudge.
+func _power(id: String) -> float:
+	var weights: Dictionary = GameData.draft_rules.get("bot", {})
+	return (float(GameData.get_card(id).cost) - 4.5) * float(weights.get("power", 0.6)) * lerpf(0.6, 1.0, difficulty)
+
+
+## How much a star on herd animal `index` is worth: about a new animal's
+## worth for its power, more for one that counters the other herd, and more
+## for those who like stars.
 func _star_value(index: int) -> float:
-	var power := float(GameData.get_card(duel.herds[team][index].id).cost)
-	var value := power * float(duel.rules.star_bonus_pct) / 100.0 * 1.6 * (1.0 + _lean("stars"))
+	var weights: Dictionary = GameData.draft_rules.get("bot", {})
+	var id: String = duel.herds[team][index].id
+	var value := float(weights.get("star", 4.0)) + _power(id) * 1.5 + maxf(0.0, _class_need(GameData.class_of(id))) * 0.5
+	value += _lean("stars") * 4.0
 	return value + rng.randf() * lerpf(2.0, 0.5, difficulty)
 
 
@@ -118,21 +135,24 @@ func _class_need(cls: String) -> float:
 	var need := 0.0
 	match cls:
 		"tank_destroyer":
-			need = 1.0 * int(theirs.get("tank", 0))
+			need = 0.8 * int(theirs.get("tank", 0)) - 0.3 * int(mine.get("tank_destroyer", 0))
 		"ranged":
-			need = 1.2 * int(theirs.get("air", 0)) + 0.4
+			need = 1.2 * int(theirs.get("air", 0)) - 0.3 * int(mine.get("ranged", 0)) + 0.6
 		"air":
-			need = 0.8 * int(theirs.get("tank_destroyer", 0)) - 0.6 * int(theirs.get("ranged", 0))
+			need = 0.8 * int(theirs.get("tank_destroyer", 0)) - 0.8 * int(theirs.get("ranged", 0)) - 0.3 * int(mine.get("air", 0))
 		"tank":
-			need = 0.8 * int(mine.get("ranged", 0)) - 0.5 * int(mine.get("tank", 0)) + 0.5
+			need = 0.7 * int(mine.get("ranged", 0)) - 0.4 * int(mine.get("tank", 0)) + 0.8
 		"specialist":
-			need = 0.5
-	return clampf(need, -2.0, 4.0) * lerpf(0.3, 1.0, difficulty)
+			need = 0.8 - 0.4 * int(mine.get("specialist", 0))
+	return clampf(need, -2.0, 4.0) * lerpf(0.4, 1.0, difficulty)
 
 
+## How many of each class a herd has: its own as it is now, the other's as
+## it was when this round's picking started (a person can't see the other's
+## new picks either).
 func _class_counts(side: int) -> Dictionary:
 	var counts := {}
-	for entry in duel.herds[side]:
+	for entry in (duel.herds[side] if side == team else duel.herds_seen[side]):
 		var cls := GameData.class_of(entry.id)
 		counts[cls] = int(counts.get(cls, 0)) + 1
 	return counts
@@ -201,14 +221,14 @@ func _aim(tool_id: String) -> Dictionary:
 					biggest = f
 			return {"x": biggest.x, "y": biggest.y} if biggest != null and biggest.max_hp >= 1000 else {}
 		"bait":
-			var near := enemies.filter(func(f): return BattleSim.on_own_half(team, f.y))
+			var near := enemies.filter(func(f): return duel.sim.on_own_half(team, f.y))
 			var lure := _best_cluster(near, radius, func(f): return float(f.card.cost) / int(f.card.get("count", 1)))
 			if float(lure.get("value", 0)) < 4.0:
 				return {}
 			# Drop it just ahead of them, toward our herd: they stop to eat
 			# while our animals get at them.
 			var ahead := -2 * T if team == 1 else 2 * T
-			return {"x": lure.x, "y": clampi(lure.y + ahead, 0, BattleSim.HEIGHT)}
+			return {"x": lure.x, "y": clampi(lure.y + ahead, 0, duel.sim.height)}
 		_:
 			var hit := _best_cluster(enemies, radius, func(f): return float(f.card.cost) / int(f.card.get("count", 1)))
 			return hit if float(hit.get("value", 0)) >= lerpf(5.0, 3.5, difficulty) else {}

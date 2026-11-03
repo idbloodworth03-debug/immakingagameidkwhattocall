@@ -154,12 +154,13 @@ files in `game/data/`:
 - **New animal:** copy an entry in `animals.json` and change it. Its `unlock_arena` must be an arena id from `arenas.json`, and its tags must exist in `tags.json`. The ability `id` must be one of the types the battle engine knows (listed in `scripts/battle/battle_abilities.gd`).
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
-- **Draft Duel tuning** (wins needed, picks, options, tools, stars, Rally): `draft_rules.json`
+- **Draft Duel tuning** (wins needed, picks, options, tools, stars, Rally, how the field grows for big herds, how the computer weighs its picks): `draft_rules.json`
+- **Starting cards** for new players: `progression.json` (`starting_cards`)
 - **Classes** (counters, rows, Specialist traits, swarm size): `classes.json`; each animal's class and trait are in `animals.json`
 - **Habitats** (flavor: names, icons, colors): `habitats.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`
 - **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`. The wood, brass and sign pieces themselves are drawn by `python3 tools/make_ui_art.py`
-- **Look and feel** (VS screen and emote timings, animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
+- **Look and feel** (VS screen and emote timings, animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion, the camera's zoom, and how big fights keep effects in check): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`
 - **Emotes, quick chats, banners and icons:** their own files

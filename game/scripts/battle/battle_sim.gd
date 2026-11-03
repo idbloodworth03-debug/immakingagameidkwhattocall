@@ -8,17 +8,21 @@ extends RefCounted
 ## rely on this, because both phones run the fight and only the players'
 ## actions travel over the network.
 ##
-## Positions are in thousandths of a tile. The field is 16 tiles wide and 20
-## long; team 0 starts on the near half (the bottom), team 1 on the far half.
+## Positions are in thousandths of a tile. The field is at least 16 tiles wide
+## and 20 long, and grows (keeping its shape) for big herds: set_size(). Team 0
+## starts on the near half (the bottom), team 1 on the far half.
 ## Animals go for the nearest enemy they can reach. Nothing here draws
 ## anything (battle_field.gd does that), and Draft Duel (draft_match.gd) runs
 ## the rounds around it.
 
 const TILE := 1000
+## The field's smallest size (it grows for big herds: width, height).
 const WIDTH := 16 * TILE
 const HEIGHT := 20 * TILE
-## The line between the two halves.
 const MIDDLE := HEIGHT / 2
+## The grid square for pushing overlapping animals apart: bigger than any two
+## animals' radii together.
+const SEPARATE_CELL := 2 * TILE
 
 
 ## Anything on the field that has health: animals and food bait.
@@ -110,6 +114,11 @@ var rng := RandomNumberGenerator.new()
 
 var deploy_ticks := 0
 var melee := 0
+var retarget_ticks := 1
+## The field's size this fight, and the line between the two halves.
+var width := WIDTH
+var height := HEIGHT
+var middle := MIDDLE
 var _next_uid := 1
 var _next_group := 1
 
@@ -122,6 +131,7 @@ func _init(levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> voi
 	tps = int(rules.ticks_per_second)
 	deploy_ticks = roundi(float(rules.deploy_seconds) * tps)
 	melee = roundi(float(rules.melee_range) * TILE)
+	retarget_ticks = maxi(1, roundi(float(rules.get("retarget_seconds", 0.0)) * tps))
 	for team_index in 2:
 		var team := Team.new()
 		team.levels = levels[team_index]
@@ -145,9 +155,17 @@ func units(team: int) -> Array:
 	return fighters.filter(func(f): return f.alive and f.kind == "unit" and f.team == team)
 
 
+## Makes the field `scale` times its smallest size (the same shape), for big
+## herds. Only between fights: it doesn't move anyone.
+func set_size(scale: float) -> void:
+	width = roundi(WIDTH * maxf(1.0, scale) / 2.0) * 2
+	height = roundi(HEIGHT * maxf(1.0, scale) / 2.0) * 2
+	middle = height / 2
+
+
 ## True if (x, y) is on `team`'s own half of the field.
-static func on_own_half(team: int, y: int) -> bool:
-	return y >= MIDDLE if team == 0 else y < MIDDLE
+func on_own_half(team: int, y: int) -> bool:
+	return y >= middle if team == 0 else y < middle
 
 
 ## How much of a team's herd is still standing: each animal counts its card's
@@ -198,7 +216,7 @@ func _update(f: Fighter) -> void:
 	if f.deploy_ticks > 0:
 		f.deploy_ticks -= 1
 		return
-	if int(f.memory.get("playing_dead", 0)) > 0 or f.stun > 0:
+	if f.stun > 0:
 		return
 	if f.cooldown > 0:
 		f.cooldown -= 100 + (f.rage_attack_pct if f.rage > 0 else 0)
@@ -265,22 +283,25 @@ func _update_zones() -> void:
 # --- Targeting and movement ------------------------------------------------
 
 func can_target(f: Fighter, t: Fighter) -> bool:
-	if t == null or not t.alive or t.team == f.team or t.uid == f.uid:
+	if t == null or not t.alive or t.team == f.team:
 		return false
 	if t.kind == "bait":
 		return f.is_unit() and not f.is_flying()
 	if t.stealthed and t.revealed <= 0:
 		return false
-	if t.memory.get("burrowing", false) or int(t.memory.get("playing_dead", 0)) > 0:
-		return false
 	if t.is_flying() and f.targets != "air_ground":
 		return false
-	return true
+	return not t.memory.get("burrowing", false)
 
 
 func _choose_target(f: Fighter) -> void:
-	if f.target != null and can_target(f, f.target) and in_range(f, f.target):
-		return
+	if f.target != null and can_target(f, f.target):
+		if in_range(f, f.target):
+			return
+		# Still a fine target: look around for a better one only now and then
+		# (animals take turns), which keeps big fights cheap.
+		if (tick + f.uid) % retarget_ticks != 0:
+			return
 	f.target = _find_target(f)
 
 
@@ -293,30 +314,24 @@ func _find_target(f: Fighter) -> Fighter:
 			if t.kind == "bait" and t.alive and t.team != f.team and dist(f, t) <= t.lure_radius:
 				return t
 	var prefer: Dictionary = GameData.class_rules.get("prefer", {}).get(f.cls, {})
-	if not prefer.is_empty():
-		var reach := roundi(float(prefer.get("tiles", 0)) * TILE)
-		var wanted := String(prefer.get("class", ""))
-		var best: Fighter = null
-		var best_dist := 1 << 40
-		for t in fighters:
-			if t.cls != wanted or t.kind == "bait" or not can_target(f, t):
-				continue
-			var d := edge_distance(f, t)
-			if d <= reach and d < best_dist:
-				best = t
-				best_dist = d
-		if best != null:
-			return best
+	var reach := roundi(float(prefer.get("tiles", 0)) * TILE)
+	var wanted := String(prefer.get("class", ""))
+	# One pass: the nearest enemy, and the nearest one its class goes after.
+	var best: Fighter = null
+	var best_dist := 1 << 40
 	var nearest: Fighter = null
 	var nearest_dist := 1 << 40
 	for t in fighters:
-		if t.kind == "bait" or not can_target(f, t):
+		if t.team == f.team or t.kind == "bait" or not can_target(f, t):
 			continue
 		var d := edge_distance(f, t)
 		if d < nearest_dist:
 			nearest = t
 			nearest_dist = d
-	return nearest
+		if wanted != "" and d <= reach and d < best_dist and t.cls == wanted:
+			best = t
+			best_dist = d
+	return best if best != null else nearest
 
 
 func in_range(f: Fighter, t: Fighter) -> bool:
@@ -363,7 +378,7 @@ func _move_burrowed(f: Fighter) -> void:
 		f.memory.burrowing = false
 		return
 	var behind := TILE if back.team == 1 else -TILE
-	var goal := Vector2i(back.x, clampi(back.y - behind, f.radius, HEIGHT - f.radius))
+	var goal := Vector2i(back.x, clampi(back.y - behind, f.radius, height - f.radius))
 	if dist_to_point(f, goal.x, goal.y) <= TILE / 2:
 		f.memory.burrowing = false
 		events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
@@ -371,35 +386,55 @@ func _move_burrowed(f: Fighter) -> void:
 	_move_toward(f, goal, current_speed(f))
 
 
-## Pushes overlapping animals apart and keeps everyone on the field.
+## Pushes overlapping animals apart and keeps everyone on the field. Only
+## animals in neighboring squares of a coarse grid are compared, so big herds
+## stay cheap.
 func _separate() -> void:
-	var walkers: Array = fighters.filter(func(f): return f.alive and f.is_unit() and not f.memory.get("burrowing", false))
+	var walkers: Array = []
+	var flying: Array = []
+	var grid := {}
+	for f in fighters:
+		if f.alive and f.kind == "unit" and not f.memory.get("burrowing", false):
+			var key: int = (f.x / SEPARATE_CELL) * 4096 + f.y / SEPARATE_CELL
+			if not grid.has(key):
+				grid[key] = []
+			grid[key].append(walkers.size())
+			walkers.append(f)
+			flying.append(f.is_flying())
 	for i in walkers.size():
 		var a: Fighter = walkers[i]
-		for j in range(i + 1, walkers.size()):
-			var b: Fighter = walkers[j]
-			if a.is_flying() != b.is_flying():
-				continue
-			var min_d := a.radius + b.radius
-			var dx := b.x - a.x
-			var dy := b.y - a.y
-			if absi(dx) >= min_d or absi(dy) >= min_d:
-				continue
-			var d := isqrt(dx * dx + dy * dy)
-			if d >= min_d:
-				continue
-			if d == 0:
-				dx = 1 if (a.uid + b.uid) % 2 == 0 else -1
-				dy = 0
-				d = 1
-			var push := (min_d - d) / 2 + 1
-			a.x -= dx * push / d
-			a.y -= dy * push / d
-			b.x += dx * push / d
-			b.y += dy * push / d
+		var cell_x := a.x / SEPARATE_CELL
+		var cell_y := a.y / SEPARATE_CELL
+		for cx in range(cell_x - 1, cell_x + 2):
+			for cy in range(cell_y - 1, cell_y + 2):
+				var key := cx * 4096 + cy
+				if grid.has(key):
+					for j in grid[key]:
+						if j > i and flying[i] == flying[j]:
+							_push_apart(a, walkers[j])
 	for f in walkers:
-		f.x = clampi(f.x, f.radius, WIDTH - f.radius)
-		f.y = clampi(f.y, f.radius, HEIGHT - f.radius)
+		f.x = clampi(f.x, f.radius, width - f.radius)
+		f.y = clampi(f.y, f.radius, height - f.radius)
+
+
+func _push_apart(a: Fighter, b: Fighter) -> void:
+	var min_d := a.radius + b.radius
+	var dx := b.x - a.x
+	var dy := b.y - a.y
+	if absi(dx) >= min_d or absi(dy) >= min_d:
+		return
+	var d := isqrt(dx * dx + dy * dy)
+	if d >= min_d:
+		return
+	if d == 0:
+		dx = 1 if (a.uid + b.uid) % 2 == 0 else -1
+		dy = 0
+		d = 1
+	var push := (min_d - d) / 2 + 1
+	a.x -= dx * push / d
+	a.y -= dy * push / d
+	b.x += dx * push / d
+	b.y += dy * push / d
 
 
 # --- Fighting --------------------------------------------------------------
@@ -481,8 +516,8 @@ func knock_back(t: Fighter, from_x: int, from_y: int, distance: int) -> void:
 	if d == 0:
 		dy = -1 if t.team == 0 else 1
 		d = 1
-	t.x = clampi(t.x + dx * distance / d, t.radius, WIDTH - t.radius)
-	t.y = clampi(t.y + dy * distance / d, t.radius, HEIGHT - t.radius)
+	t.x = clampi(t.x + dx * distance / d, t.radius, width - t.radius)
+	t.y = clampi(t.y + dy * distance / d, t.radius, height - t.radius)
 
 
 ## Enemies of `team` within `radius` of a point (edges count).
@@ -555,8 +590,8 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 		f.attack_range = maxi(f.attack_range, roundi(float(info.range) * TILE))
 	f.radius = unit_radius(card)
 	f.deploy_ticks = deploy_ticks
-	f.x = clampi(x, f.radius, WIDTH - f.radius)
-	f.y = clampi(y, f.radius, HEIGHT - f.radius)
+	f.x = clampi(x, f.radius, width - f.radius)
+	f.y = clampi(y, f.radius, height - f.radius)
 	f.prev_x = f.x
 	f.prev_y = f.y
 	return f
@@ -603,6 +638,9 @@ func clone() -> BattleSim:
 	copy.tick = tick
 	copy._next_uid = _next_uid
 	copy._next_group = _next_group
+	copy.width = width
+	copy.height = height
+	copy.middle = middle
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
 	copy.zones = zones.duplicate(true)
@@ -662,13 +700,6 @@ static func formation(index: int, count: int) -> Vector2i:
 
 
 # --- Geometry --------------------------------------------------------------
-
-## The middle of the tile under a point. Placing animals snaps to it.
-static func tile_center(x: int, y: int) -> Vector2i:
-	var col := clampi(x / TILE, 0, WIDTH / TILE - 1)
-	var row := clampi(y / TILE, 0, HEIGHT / TILE - 1)
-	return Vector2i(col * TILE + TILE / 2, row * TILE + TILE / 2)
-
 
 static func isqrt(n: int) -> int:
 	if n <= 0:

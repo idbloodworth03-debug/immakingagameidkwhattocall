@@ -52,6 +52,9 @@
 - [x] Habitat synergies at 2, 4 and 6 different animals of a habitat
 - [x] Rival Rangers: 38 named opponents with portraits, lines, styles and emotes; a VS screen; arena bosses that guard promotion, with a first-win reward; quiet easing after 3 losses in a row
 - [x] Simpler rules: best of 7, Pick 3 each round (no shop, Acorns or hearts), five classes with counters and automatic rows, Specialist traits (Burrow, Splash, Stun, Slow), tools once a fight; habitat synergies, per-animal abilities and moods removed
+- [x] New players start with 5 cards from four classes plus a tool; small saves are topped up
+- [x] Big herds: the field grows and the camera zooms out, rows spread out without overlapping, effects are capped (biggest hits first), and the fight was made cheaper (draw calls in the biggest fight down from about 600 to under 200)
+- [x] The computer picks by counters and what its herd lacks (all five classes and tools get picked) and can't see your picks before the fight
 - [ ] Painted portraits for the Rival Rangers (they're drawn in code for now)
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] A balance pass for the open field, from real play

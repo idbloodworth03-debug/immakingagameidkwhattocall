@@ -8,11 +8,19 @@ extends ParticleLayer
 ##
 ## Ground effects (rings on the ground, dust, an area that lasts) are drawn
 ## by the field under the animals through draw_ground().
+##
+## Big fights stay readable (feel.json "crowd"): only so many hit sparks and
+## damage numbers at once, the biggest hits first, and fewer particles each
+## once the field is crowded.
 
 var field: BattleField
 var effects: Array = []
 var numbers: Array = []
 var projectiles: Array = []
+## A crowded fight (see the field): simpler effects.
+var crowded := false
+## Hit-spark bursts on screen now: {"amount", "until"}.
+var _sparks: Array = []
 ## Damage numbers go on top of the particles (which draw as a child).
 var _over: Node2D
 
@@ -70,8 +78,17 @@ func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant =
 				if n.big and kind == "hurt_enemy":
 					n.color = Color("#ffe14d")
 				return
-	if numbers.size() >= Feel.count("combat", "number_max_on_screen", 12):
-		numbers.pop_front()
+	# Too many on screen: a bigger hit takes the place of the smallest number
+	# (a smaller one isn't shown).
+	var most := Feel.count("crowd", "numbers_when_crowded", 6) if crowded else Feel.count("combat", "number_max_on_screen", 12)
+	if numbers.size() >= most:
+		var smallest := 0
+		for i in numbers.size():
+			if int(numbers[i].amount) < int(numbers[smallest].amount):
+				smallest = i
+		if amount <= int(numbers[smallest].amount) and not big:
+			return
+		numbers.remove_at(smallest)
 	var color := Color.WHITE
 	match kind:
 		"hurt_own":
@@ -83,6 +100,26 @@ func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant =
 	numbers.append({"at": at, "drift": randf_range(-14.0, 14.0), "text": ("+%d" if kind == "heal" else "%d") % amount,
 		"color": color, "big": big, "age": 0.0, "life": Feel.num("combat", "number_seconds", 0.85),
 		"source": source, "kind": kind, "amount": amount})
+
+
+## Whether a hit of `amount` gets sparks: only so many bursts at once
+## (feel.json "crowd"); when that many are showing, a bigger hit takes the
+## place of the smallest.
+func allow_sparks(amount: int) -> bool:
+	_sparks = _sparks.filter(func(s): return float(s.until) > time)
+	var most := Feel.count("crowd", "hit_sparks_when_crowded", 6) if crowded else Feel.count("crowd", "hit_sparks_max", 12)
+	var entry := {"amount": amount, "until": time + Feel.num("crowd", "spark_seconds", 0.25)}
+	if _sparks.size() < most:
+		_sparks.append(entry)
+		return true
+	var smallest := 0
+	for i in _sparks.size():
+		if int(_sparks[i].amount) < int(_sparks[smallest].amount):
+			smallest = i
+	if amount <= int(_sparks[smallest].amount):
+		return false
+	_sparks[smallest] = entry
+	return true
 
 
 ## A ranged animal's throw: leaves its paw before the hit and lands on it.
@@ -126,41 +163,43 @@ func _draw_bars() -> void:
 	var c := "combat"
 	var w := Feel.num(c, "health_bar_width", 44.0)
 	var h := Feel.num(c, "health_bar_height", 9.0)
+	var stars_at := []
 	for view in field.views():
-		var show: bool = view.bar_shown < 0.999 or view.bar_trail > view.bar_shown + 0.002
-		if not show or view.defeat >= 0.0 or view.pop < 1.0:
+		if view.defeat >= 0.0 or view.pop < 1.0:
 			continue
-		var top: Vector2 = view.position + view.head() + Vector2(0, -12.0)
-		var width := w * (0.8 if view.swarm else 1.0)
-		var rect := Rect2(top - Vector2(width / 2.0, h / 2.0), Vector2(width, h))
-		var team_color := BattleField.OWN_COLOR if view.team == 0 else BattleField.ENEMY_COLOR
-		var radius := int(h / 2.0)
-		draw_style_box(UIKit.box(Color(UIKit.INK, 0.9), radius + 2), rect.grow(2.0))
-		draw_style_box(UIKit.box(Color(0.12, 0.14, 0.2), radius), rect)
-		var trail := Rect2(rect.position, Vector2(width * clampf(view.bar_trail, 0.0, 1.0), h))
-		if trail.size.x > 1.0:
-			draw_style_box(UIKit.box(Color("#fff1c2"), radius), trail)
-		var fill := Rect2(rect.position, Vector2(width * clampf(view.bar_shown, 0.0, 1.0), h))
-		if fill.size.x > 1.0:
-			draw_style_box(UIKit.box(team_color.lightened(0.15), radius), fill)
-			var gloss := Rect2(fill.position + Vector2(1, 1), Vector2(maxf(fill.size.x - 2, 0.0), h * 0.38))
-			draw_style_box(UIKit.box(Color(1, 1, 1, 0.35), radius), gloss)
-		if view.stars > 1 and view.shows_stars():
-			UIKit.draw_stars(self, top + Vector2(0, -h - 1.0), view.stars, 5.5)
-	# Animals at full health still show their stars over their heads.
-	for view in field.views():
-		var full: bool = view.bar_shown >= 0.999 and view.bar_trail <= view.bar_shown + 0.002
-		if full and view.stars > 1 and view.shows_stars() and view.defeat < 0.0 and view.pop >= 1.0:
-			var head: Vector2 = view.position + view.head() + Vector2(0, -14.0)
-			for i in view.stars:
-				UIStyle.draw_particle(self, "star", head + Vector2((i - (view.stars - 1) / 2.0) * 12.0, 0), 6.5, Color("#ffe14d"))
+		var show: bool = view.bar_shown < 0.999 or view.bar_trail > view.bar_shown + 0.002
+		if show:
+			var top: Vector2 = view.position + view.head() + Vector2(0, -12.0)
+			var width := w * (0.8 if view.swarm else 1.0)
+			var rect := Rect2(top - Vector2(width / 2.0, h / 2.0), Vector2(width, h))
+			var team_color := BattleField.OWN_COLOR if view.team == 0 else BattleField.ENEMY_COLOR
+			var radius := int(h / 2.0)
+			draw_style_box(UIKit.box(Color(UIKit.INK, 0.9), radius + 2), rect.grow(2.0))
+			draw_style_box(UIKit.box(Color(0.12, 0.14, 0.2), radius), rect)
+			var trail := Rect2(rect.position, Vector2(width * clampf(view.bar_trail, 0.0, 1.0), h))
+			if trail.size.x > 1.0:
+				draw_style_box(UIKit.box(Color("#fff1c2"), radius), trail)
+			var fill := Rect2(rect.position, Vector2(width * clampf(view.bar_shown, 0.0, 1.0), h))
+			if fill.size.x > 1.0:
+				draw_style_box(UIKit.box(team_color.lightened(0.15), radius), fill)
+				var gloss := Rect2(fill.position + Vector2(1, 1), Vector2(maxf(fill.size.x - 2, 0.0), h * 0.38))
+				draw_style_box(UIKit.box(Color(1, 1, 1, 0.35), radius), gloss)
+			if view.stars > 1 and view.shows_stars():
+				stars_at.append([top + Vector2(0, -h - 1.0), view.stars, 5.5])
+		elif view.stars > 1 and view.shows_stars():
+			stars_at.append([view.position + view.head() + Vector2(0, -14.0), view.stars, 6.5])
 		# Stunned: dizzy stars circling over its head.
-		if view.fighter != null and view.fighter.stun > 0 and view.defeat < 0.0:
+		if view.fighter != null and view.fighter.stun > 0:
 			var over: Vector2 = view.position + view.head() + Vector2(0, -4.0)
 			for i in 3:
 				var ang := time * 5.0 + i * TAU / 3.0
-				var spot := over + Vector2(cos(ang) * 14.0, sin(ang) * 5.0)
-				UIStyle.draw_particle(self, "star", spot, 5.5, Color("#ffe14d"))
+				stars_at.append([over + Vector2(cos(ang) * 14.0, sin(ang) * 5.0), 1, 5.5])
+	# All the stars after all the bars, so each draws in one batch.
+	for s in stars_at:
+		var count: int = s[1]
+		var gap: float = float(s[2]) * 1.85
+		for i in count:
+			UIStyle.draw_particle(self, "star", s[0] + Vector2((i - (count - 1) / 2.0) * gap, 0), float(s[2]), Color("#ffe14d"))
 
 
 func _draw_projectile(pr: Dictionary) -> void:

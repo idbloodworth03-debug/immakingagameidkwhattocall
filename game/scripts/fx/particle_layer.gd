@@ -16,6 +16,8 @@ const SHADER := preload("res://scripts/fx/particle.gdshader")
 
 var particles: Array = []
 var time := 0.0
+## Fewer particles per burst (0-1), e.g. in a crowded fight.
+var density := 1.0
 ## False when something else calls step_particles() (the battlefield).
 var self_driven := true
 
@@ -112,7 +114,7 @@ func particle(kind: String, at: Vector2, vel: Vector2, life: float, size: float,
 ## A ring of particles flying out from `at`.
 func burst(kind: String, at: Vector2, count: int, speed: float, life: float, size: float, colors: Array,
 		gravity := 0.0, drag := 3.0, upward := 0.0) -> void:
-	for i in count:
+	for i in _thin(count):
 		var ang := randf() * TAU
 		var v := Vector2(cos(ang), sin(ang) * 0.75) * speed * randf_range(0.55, 1.1) + Vector2(0, -upward)
 		particle(kind, at, v, life * randf_range(0.75, 1.15), size * randf_range(0.7, 1.2),
@@ -121,7 +123,7 @@ func burst(kind: String, at: Vector2, count: int, speed: float, life: float, siz
 
 func burst_hit(at: Vector2, strong: bool, dir: Vector2) -> void:
 	var e := "effects"
-	var count := Feel.count(e, "strong_hit_sparks" if strong else "hit_sparks", 8 if strong else 5)
+	var count := _thin(Feel.count(e, "strong_hit_sparks" if strong else "hit_sparks", 8 if strong else 5))
 	for i in count:
 		var ang := dir.angle() + randf_range(-1.1, 1.1)
 		var speed := randf_range(140.0, 300.0) * (1.3 if strong else 1.0)
@@ -130,6 +132,10 @@ func burst_hit(at: Vector2, strong: bool, dir: Vector2) -> void:
 	particle("puff", at, Vector2.ZERO, 0.12, 8.0 if strong else 5.0, Color(1, 1, 1, 0.8), 0.0, 0.0)
 	if strong:
 		burst("star", at, 3, 160.0, 0.45, 7.0, [Color("#ffe14d"), Color.WHITE], 380.0, 1.5, 90.0)
+
+
+func _thin(count: int) -> int:
+	return count if density >= 1.0 else maxi(1, roundi(count * density))
 
 
 func burst_defeat(at: Vector2) -> void:

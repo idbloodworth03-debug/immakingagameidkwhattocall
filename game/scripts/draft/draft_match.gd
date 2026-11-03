@@ -63,6 +63,13 @@ var last_round: Dictionary = {}
 var events: Array = []
 ## The battle-field groups of each herd's animals, in herd order, so a tap on
 ## an animal finds its herd entry.
+## The herds as they were when this round's picking started: what each
+## player has seen of the other's (the computer opponent goes by this, not by
+## picks it can't see yet).
+var herds_seen := [[], []]
+## How much bigger than its smallest size the field is this fight (see
+## choose_field_scale).
+var field_scale := 1.0
 var groups := [[], []]
 var _defeated_at_start := [0, 0]
 var _undo := [[], []]
@@ -88,7 +95,8 @@ func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}
 
 
 ## The cards a player draws from: the animals and tools they own, topped up
-## with the first arena's cards if that's too few to fill the options.
+## with the starting cards (then the first arena's) if that's too few to fill
+## the options.
 static func pool_from_collection(owned: Callable, draft_rules: Dictionary = {}) -> Array:
 	var r: Dictionary = draft_rules if not draft_rules.is_empty() else GameData.draft_rules
 	var cards := []
@@ -98,10 +106,13 @@ static func pool_from_collection(owned: Callable, draft_rules: Dictionary = {}) 
 			cards.append(id)
 			if not GameData.is_tool(id):
 				animals += 1
-	for id in GameData.card_order:
+	# Too few to fill the options: the starting cards, then the first arena's.
+	var extra: Array = GameData.progression.get("starting_cards", []).duplicate()
+	extra.append_array(GameData.cards_in_arena(0))
+	for id in extra:
 		if cards.size() >= int(r.offer_count) and animals >= int(r.picks_per_round):
 			break
-		if cards.has(id) or int(GameData.cards[id].unlock_arena_index) > 0:
+		if cards.has(id):
 			continue
 		cards.append(id)
 		if not GameData.is_tool(id):
@@ -380,35 +391,47 @@ static func row_of(card_id: String) -> String:
 	return String(GameData.class_info(GameData.class_of(card_id)).get("row", "middle"))
 
 
-## Every animal takes its place by class (classes.json "rows"): rows run
-## across the field, evenly spaced; a row too full for the field's width
-## wraps into another row further back. Air hovers just behind the middle
-## row, over the ground animals.
+## Where an animal stands: its class's row (Air gets its own line, hovering
+## just behind the middle row).
+static func band_of(card_id: String) -> String:
+	return "air" if GameData.class_of(card_id) == "air" else row_of(card_id)
+
+
+## Every animal takes its place by class (classes.json "rows"): front row,
+## middle row, Air, back row, each a line across the field. A band too full
+## for one line gets more lines behind it, and later bands move back to make
+## room. The field grows (draft_rules.json "field") as the herds do, so
+## everyone fits with room to spare.
 func _lay_out_herds() -> void:
 	sim.clear_units()
 	groups = [[], []]
 	var layout: Dictionary = GameData.class_rules.get("rows", {})
+	var bands := [{}, {}]
+	var units := 0
 	for team in 2:
-		var by_row := {}
+		var on_field := 0
 		for index in herds[team].size():
 			var id: String = herds[team][index].id
-			var row := row_of(id)
-			if GameData.class_of(id) == "air":
-				row = "air"
-			if not by_row.has(row):
-				by_row[row] = []
-			by_row[row].append(index)
+			var band := band_of(id)
+			if not bands[team].has(band):
+				bands[team][band] = []
+			bands[team][band].append(index)
+			on_field += BattleSim.group_size(GameData.get_card(id))
+		units = maxi(units, on_field)
+	field_scale = choose_field_scale([_counts(bands[0]), _counts(bands[1])], units, layout, rules.get("field", {}))
+	sim.set_size(field_scale)
+	for team in 2:
 		var spots := {}
-		for row in by_row:
-			var depth := float(layout.get("middle" if row == "air" else row, 4.0)) + (0.6 if row == "air" else 0.0)
-			var places := row_spots(by_row[row].size(), depth, layout)
-			for i in by_row[row].size():
-				spots[by_row[row][i]] = places[i]
+		var places := band_spots(_counts(bands[team]), field_scale, layout, rules.get("field", {}))
+		for band in bands[team]:
+			for i in bands[team][band].size():
+				spots[bands[team][band][i]] = places[band][i]
 		for index in herds[team].size():
 			var entry: Dictionary = herds[team][index]
 			var at: Vector2 = spots[index]
-			var y := BattleSim.MIDDLE + roundi(at.y * BattleSim.TILE) * (1 if team == 0 else -1)
-			var made := sim.spawn(team, entry.id, roundi(at.x * BattleSim.TILE), y)
+			var x := roundi(at.x * BattleSim.TILE)
+			var y := sim.middle + roundi(at.y * BattleSim.TILE) * (1 if team == 0 else -1)
+			var made := sim.spawn(team, entry.id, x if team == 0 else sim.width - x, y)
 			for member in made.size():
 				var f: BattleSim.Fighter = made[member]
 				f.deploy_ticks = 0
@@ -420,21 +443,92 @@ func _lay_out_herds() -> void:
 	sim.take_events()
 
 
-## Where `count` animals of one row stand (x across in tiles, y back from
-## the middle line in tiles): evenly across the field, wrapping into more
-## rows further back when there are too many for one.
-static func row_spots(count: int, depth: float, layout: Dictionary) -> Array:
-	var width := float(BattleSim.WIDTH) / BattleSim.TILE
-	var half := float(BattleSim.MIDDLE) / BattleSim.TILE
+static func _counts(bands: Dictionary) -> Dictionary:
+	var counts := {}
+	for band in bands:
+		counts[band] = (bands[band] as Array).size()
+	return counts
+
+
+const BANDS := ["front", "middle", "air", "back"]
+
+
+## The lines each band stands in (tiles back from the middle line) on a field
+## `scale` times its smallest size (rows move back with it, so a bigger herd
+## stands deeper as well as wider), and how many fit across one line.
+## {"lines": {band: [depth, ...]}, "per_line", "depth": the furthest line,
+## "room": how far back a line can be}.
+static func band_lines(counts: Dictionary, scale: float, layout: Dictionary, field: Dictionary) -> Dictionary:
+	var width := float(BattleSim.WIDTH) / BattleSim.TILE * scale
+	var half := float(BattleSim.MIDDLE) / BattleSim.TILE * scale
 	var spacing := float(layout.get("spacing", 1.7))
+	var gap := float(layout.get("depth", 1.1)) * scale
 	var per_line := maxi(1, floori((width - 1.0) / spacing))
-	var spots := []
-	var lines := ceili(count / float(per_line))
-	for line in lines:
-		var in_line := mini(per_line, count - line * per_line)
-		var y := minf(depth + line * float(layout.get("depth", 1.2)), half - 0.6)
-		for i in in_line:
-			spots.append(Vector2(0.5 + (width - 1.0) * (i + 0.5) / in_line, y))
+	var lines := {}
+	var last := -1.0
+	for band in BANDS:
+		var count := int(counts.get(band, 0))
+		if count <= 0:
+			continue
+		var nominal := float(layout.get(band, 4.4)) * scale
+		var start := nominal if last < 0.0 else maxf(nominal, last + gap)
+		var depths := []
+		for i in ceili(count / float(per_line)):
+			depths.append(start + i * gap)
+		last = depths[-1]
+		lines[band] = depths
+	return {"lines": lines, "per_line": per_line, "depth": last, "room": half - float(field.get("edge", 0.8))}
+
+
+## How much bigger than its smallest size the field is this fight: it grows
+## as the herds do (between grow_from_units and grow_full_units animals on
+## the bigger side), and further if the rows wouldn't fit, up to max_scale.
+static func choose_field_scale(counts: Array, units: int, layout: Dictionary, field: Dictionary) -> float:
+	var top := float(field.get("max_scale", 1.5))
+	var from := float(field.get("grow_from_units", 12))
+	var full := maxf(from + 1.0, float(field.get("grow_full_units", 36)))
+	var scale := 1.0 + (top - 1.0) * clampf((units - from) / (full - from), 0.0, 1.0)
+	scale = snappedf(scale, 0.05)
+	while scale < top:
+		var fits := true
+		for team_counts in counts:
+			var plan := band_lines(team_counts, scale, layout, field)
+			fits = fits and float(plan.depth) <= float(plan.room)
+		if fits:
+			break
+		scale += 0.05
+	return minf(scale, top)
+
+
+## Where each animal of each band stands: {band: [Vector2(x across, y back
+## from the middle line) in tiles, ...]}. A band's animals share its lines
+## evenly and spread evenly across each; every other line is shifted half a
+## place, so nobody hides right behind another. If even the biggest field
+## is too small, the lines squeeze closer together.
+static func band_spots(counts: Dictionary, scale: float, layout: Dictionary, field: Dictionary) -> Dictionary:
+	var plan := band_lines(counts, scale, layout, field)
+	var width := float(BattleSim.WIDTH) / BattleSim.TILE * scale
+	var first := float(layout.get("front", 2.2)) * scale
+	var squeeze := 1.0
+	if float(plan.depth) > float(plan.room):
+		squeeze = maxf(0.1, (float(plan.room) - first) / maxf(0.01, float(plan.depth) - first))
+	var spots := {}
+	var line_index := 0
+	for band in BANDS:
+		if not plan.lines.has(band):
+			continue
+		var depths: Array = plan.lines[band]
+		var count := int(counts[band])
+		var places := []
+		for j in depths.size():
+			var in_line := count / depths.size() + (1 if j < count % depths.size() else 0)
+			var y := first + (float(depths[j]) - first) * squeeze
+			var shift := 0.5 if line_index % 2 == 0 else 1.0
+			var slots := float(in_line) if line_index % 2 == 0 else float(in_line + 1)
+			for i in in_line:
+				places.append(Vector2(0.5 + (width - 1.0) * (i + shift) / slots, y))
+			line_index += 1
+		spots[band] = places
 	return spots
 
 
@@ -471,7 +565,7 @@ func use_tool(team: int, index: int, x: int, y: int) -> bool:
 		return false
 	var id: String = tools[team][index]
 	tools_ready[team][index] = false
-	ToolEffects.use(sim, team, GameData.get_card(id), sim.level_of(team, id), clampi(x, 0, BattleSim.WIDTH), clampi(y, 0, BattleSim.HEIGHT))
+	ToolEffects.use(sim, team, GameData.get_card(id), sim.level_of(team, id), clampi(x, 0, sim.width), clampi(y, 0, sim.height))
 	events.append({"type": "tool", "team": team, "id": id, "x": x, "y": y})
 	return true
 
@@ -528,6 +622,7 @@ func _start_round() -> void:
 		else:
 			offers[team] = _roll_offers(team)
 	ready = [false, false]
+	herds_seen = herds.duplicate(true)
 	_lay_out_herds()
 	phase = "pick"
 	events.append({"type": "round", "round": round_number})

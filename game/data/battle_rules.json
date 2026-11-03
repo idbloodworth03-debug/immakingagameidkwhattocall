@@ -1,5 +1,6 @@
 {
-  "_note": "Fight tuning. The field is 16 tiles wide and 20 long. Times are in seconds, distances in tiles, speeds in tiles per minute.",
+  "_note": "Fight tuning. The field is 16 tiles wide and 20 long (bigger for big herds: draft_rules.json \"field\"). Times are in seconds, distances in tiles, speeds in tiles per minute. An animal heading for a target that's still fine looks around for a better one every retarget_seconds (keeps big fights cheap on phones).",
+  "retarget_seconds": 0.25,
   "ticks_per_second": 20,
   "deploy_seconds": 1.0,
   "melee_range": 0.7,

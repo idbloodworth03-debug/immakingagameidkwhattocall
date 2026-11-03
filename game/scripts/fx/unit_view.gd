@@ -50,11 +50,34 @@ var defeat := -1.0            # 0 to 1 while being defeated; -1 while fine
 var defeat_spin := 1.0
 var idle_phase := 0.0
 var _sparkle_in := 0.0        # a 3-star animal's next sparkle
+## Its sprite sheet's speeds and sizes (see make()), and the frame it's on.
+var _idle_fps := 6.0
+var _attack_fps := 12.0
+var _walk_frames := 8.0
+var _attack_len := 0.5
+var _per_tile := 64.0
+var _walk_tiles := 1.0
+var _windup := 0.2
+var _frame_key := ""
+## Tuning from feel.json, read once a frame for every animal (see _tuning()).
+static var _tuned := {}
+static var _tuned_frame := -1
+## What the shader was last given (gold, flash, opacity; the frame).
+var _shader_values := [-1.0, -1.0, -1.0]
+var _shaded_frame: Dictionary = {}
+var _material: ShaderMaterial
+
+
+## The full look (its shader) or the plain one, which draws faster: a crowded
+## fight uses the plain look, so many animals of a kind batch together.
+func set_shaded(on: bool) -> void:
+	var want: Material = _material if on else null
+	if body.material != want:
+		body.material = want
+		_shader_values = [-1.0, -1.0, -1.0]
+		_shaded_frame = {}
 ## Its class: a small icon shows under it.
 var cls := ""
-## A synergy glow (when its habitat's bonus turns on): seconds left, color.
-var glow_left := 0.0
-var glow_color := Color.WHITE
 
 # Health bar
 var hp_ratio := 1.0
@@ -95,11 +118,22 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.idle_phase = randf() * TAU
 	v.stars = int(f.memory.get("stars", 1))
 	v.cls = GameData.class_of(v.id)
+	# Facts about its sprite sheet, looked up once (a big fight animates
+	# dozens of these every frame).
+	v._idle_fps = float(UnitSprites.animation(v.id, "idle").get("fps", 6))
+	v._attack_fps = float(UnitSprites.animation(v.id, "attack").get("fps", 12))
+	v._walk_frames = float(UnitSprites.animation(v.id, "walk").get("frames", 8))
+	v._attack_len = UnitSprites.duration(v.id, "attack")
+	v._per_tile = UnitSprites.pixels_per_tile(v.id)
+	v._walk_tiles = maxf(0.05, UnitSprites.walk_cycle_tiles(v.id))
+	v._windup = float(UnitSprites.animation(v.id, "attack").get("hit", 0.45)) * v._attack_len
 	v.body = Body.new()
 	if Feel.on("characters", "shader_enabled"):
 		var material := ShaderMaterial.new()
 		material.shader = SHADER
 		_apply_look(material)
+		material.set_shader_parameter("gold_color", Color(1.0, 0.82, 0.25))
+		v._material = material
 		v.body.material = material
 	v.add_child(v.body)
 	v.z_index = 1 if v.flying else 0
@@ -150,7 +184,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		moving = 0.12
 		move_dir = moved.normalized()
 		_turn(moved, dt)
-		walk += moved.length() / 1000.0 / UnitSprites.walk_cycle_tiles(id)
+		walk += moved.length() / 1000.0 / _walk_tiles
 	else:
 		moving = maxf(0.0, moving - dt)
 		if f.target != null and f.target.alive:
@@ -176,7 +210,7 @@ func _turn(toward: Vector2, dt: float) -> void:
 
 
 func windup_seconds() -> float:
-	return float(UnitSprites.animation(id, "attack").get("hit", 0.45)) * UnitSprites.duration(id, "attack")
+	return _windup
 
 
 func attacking(now: float) -> bool:
@@ -201,15 +235,6 @@ func hurt(from_dir: Vector2, strong: bool) -> void:
 	trail_hold = Feel.num(c, "health_bar_trail_delay", 0.4)
 
 
-## Glows in a habitat's color for a moment, with sparkles (a synergy tier
-## turning on).
-func glow(color: Color, seconds := 1.4) -> void:
-	glow_left = seconds
-	glow_color = color
-	var at := position + Vector2(0, -UnitSprites.top(id) * body.k * 0.5)
-	field.fx.burst("sparkle", at, 8, 130.0, 0.7, 8.0, [color.lightened(0.4), Color.WHITE], -60.0, 2.5)
-
-
 func start_defeat() -> void:
 	if defeat >= 0.0:
 		return
@@ -225,49 +250,87 @@ func is_done() -> bool:
 
 # --- Every frame -------------------------------------------------------------
 
+## The feel.json numbers every animal's animation uses, read once a frame.
+static func _tuning() -> Dictionary:
+	var now := Engine.get_process_frames()
+	if now != _tuned_frame:
+		_tuned_frame = now
+		_tuned = {
+			"bob_pixels": Feel.num("characters", "bob_pixels", 1.5),
+			"breathe_amount": Feel.num("characters", "breathe_amount", 0.035),
+			"breathe_speed": Feel.num("characters", "breathe_speed", 2.4),
+			"defeat_hop_pixels": Feel.num("combat", "defeat_hop_pixels", 46.0),
+			"defeat_seconds": Feel.num("combat", "defeat_seconds", 0.6),
+			"defeat_spin_turns": Feel.num("combat", "defeat_spin_turns", 1.25),
+			"gold_glow": Feel.num("celebrations", "gold_glow", 0.85),
+			"gold_sparkle_seconds": Feel.num("celebrations", "gold_sparkle_seconds", 0.7),
+			"health_bar_drain_speed": Feel.num("combat", "health_bar_drain_speed", 3.0),
+			"health_bar_trail_speed": Feel.num("combat", "health_bar_trail_speed", 0.9),
+			"hit_flash_seconds": Feel.num("combat", "hit_flash_seconds", 0.11),
+			"lean_degrees": Feel.num("characters", "lean_degrees", 7.0),
+			"lunge_pixels": Feel.num("combat", "lunge_pixels", 12.0),
+			"move_hop_pixels": Feel.num("characters", "move_hop_pixels", 22.0),
+			"spawn_drop_pixels": Feel.num("characters", "spawn_drop_pixels", 26.0),
+			"spawn_pop_seconds": Feel.num("characters", "spawn_pop_seconds", 0.5),
+			"spring_damping": Feel.num("combat", "spring_damping", 16.0),
+			"spring_stiffness": Feel.num("combat", "spring_stiffness", 320.0),
+			"strike_stretch": Feel.num("combat", "strike_stretch", 0.16),
+			"upgrade_pop": Feel.num("characters", "upgrade_pop", 0.3),
+			"walk_hop_pixels": Feel.num("characters", "walk_hop_pixels", 5.0),
+			"walk_squash": Feel.num("characters", "walk_squash", 0.07),
+			"windup_pull_pixels": Feel.num("combat", "windup_pull_pixels", 4.0),
+			"windup_squash": Feel.num("combat", "windup_squash", 0.12),
+		}
+	return _tuned
+
+
+
 ## Moves the springs and timers along and lays out the body for this frame.
 func animate(dt: float, now: float) -> void:
-	var c := "characters"
-	var cb := "combat"
-	var stiff := Feel.num(cb, "spring_stiffness", 320.0)
-	var damp := Feel.num(cb, "spring_damping", 16.0)
+	var t := _tuning()
+	var stiff := float(t.spring_stiffness)
+	var damp := float(t.spring_damping)
 	# Springs: squash and knockback settle back with a wobble.
 	squash_v += (-stiff * squash - damp * squash_v) * dt
 	squash += squash_v * dt
 	knock_v += (-stiff * knock - damp * knock_v) * dt
 	knock += knock_v * dt
-	flash = maxf(0.0, flash - dt / maxf(0.01, Feel.num(cb, "hit_flash_seconds", 0.11)))
-	pop = minf(1.0, pop + dt / maxf(0.01, Feel.num(c, "spawn_pop_seconds", 0.5)))
+	flash = maxf(0.0, flash - dt / maxf(0.01, float(t.hit_flash_seconds)))
+	pop = minf(1.0, pop + dt / maxf(0.01, float(t.spawn_pop_seconds)))
 	upgrade = maxf(0.0, upgrade - dt / 0.6)
 	if hop_t < 1.0:
 		hop_t = minf(1.0, hop_t + dt / maxf(0.05, hop_seconds))
 	if defeat >= 0.0:
-		defeat = minf(1.0, defeat + dt / maxf(0.05, Feel.num(cb, "defeat_seconds", 0.6)))
+		defeat = minf(1.0, defeat + dt / maxf(0.05, float(t.defeat_seconds)))
 	# The health bar drains smoothly; the "damage taken" part waits, then follows.
-	bar_shown = move_toward(bar_shown, hp_ratio, dt * Feel.num(cb, "health_bar_drain_speed", 3.0))
+	bar_shown = move_toward(bar_shown, hp_ratio, dt * float(t.health_bar_drain_speed))
 	if hp_ratio > bar_trail:
 		bar_trail = hp_ratio
 	if trail_hold > 0.0:
 		trail_hold -= dt
 	else:
-		bar_trail = move_toward(bar_trail, bar_shown, dt * Feel.num(cb, "health_bar_trail_speed", 0.9))
+		bar_trail = move_toward(bar_trail, bar_shown, dt * float(t.health_bar_trail_speed))
 
-	var k := field.sprite_k(id, swarm)
+	var k := field.sprite_k_per_tile(_per_tile, swarm)
 	body.k = k
 	var anim := "idle"
-	var frame := int((now + uid * 0.37) * float(UnitSprites.animation(id, "idle").get("fps", 6)))
+	var frame := int((now + uid * 0.37) * _idle_fps)
 	var since := now - attack_at
-	var attack_len := UnitSprites.duration(id, "attack")
+	var attack_len := _attack_len
 	if defeat >= 0.0:
 		anim = "attack"
 		frame = 0
 	elif since >= 0.0 and since < attack_len:
 		anim = "attack"
-		frame = int(since * float(UnitSprites.animation(id, "attack").fps))
+		frame = int(since * _attack_fps)
 	elif moving > 0.0 and hop_t >= 1.0:
 		anim = "walk"
-		frame = int(walk * float(UnitSprites.animation(id, "walk").frames))
-	body.frame = UnitSprites.frame(id, anim, facing, frame)
+		frame = int(walk * _walk_frames)
+	# Look the frame up only when it changes.
+	var frame_key := "%s%d/%d" % [anim, frame, roundi(fposmod(facing, 360.0) / 45.0) % 8]
+	if frame_key != _frame_key:
+		_frame_key = frame_key
+		body.frame = UnitSprites.frame(id, anim, facing, frame)
 
 	# Build this frame's offset, stretch and lean.
 	var offset := Vector2.ZERO
@@ -277,39 +340,39 @@ func animate(dt: float, now: float) -> void:
 	var lift := 0.0
 	if anim == "idle" and defeat < 0.0:
 		# Breathing: a slow squash and stretch, and a gentle bob.
-		var b := sin(now * Feel.num(c, "breathe_speed", 2.4) + idle_phase)
-		var amount := Feel.num(c, "breathe_amount", 0.035)
+		var b := sin(now * float(t.breathe_speed) + idle_phase)
+		var amount := float(t.breathe_amount)
 		sy += b * amount
 		sx -= b * amount * 0.6
-		offset.y -= (b * 0.5 + 0.5) * Feel.num(c, "bob_pixels", 1.5)
+		offset.y -= (b * 0.5 + 0.5) * float(t.bob_pixels)
 	elif anim == "walk":
 		# Little hops in step with the walk cycle: stretched in the air,
 		# squashed on landing, leaning into the run.
 		var step := absf(sin(walk * TAU))
-		lift = step * Feel.num(c, "walk_hop_pixels", 5.0)
+		lift = step * float(t.walk_hop_pixels)
 		var land := 1.0 - step
-		var ws := Feel.num(c, "walk_squash", 0.07)
+		var ws := float(t.walk_squash)
 		sy += step * ws - land * ws * 0.8
 		sx -= step * ws * 0.6 - land * ws * 0.6
-		lean = move_dir.x * Feel.num(c, "lean_degrees", 7.0)
+		lean = move_dir.x * float(t.lean_degrees)
 	elif anim == "attack" and defeat < 0.0:
 		var windup := windup_seconds()
 		var screen_dir := Vector2(attack_dir.x, attack_dir.y * 0.6).normalized()
 		if since < windup:
 			# Anticipation: squash down and pull back.
 			var w := Ease.in_out_sine(since / maxf(windup, 0.01))
-			var ws := Feel.num(cb, "windup_squash", 0.12)
+			var ws := float(t.windup_squash)
 			sy -= w * ws
 			sx += w * ws * 0.7
-			offset -= screen_dir * w * Feel.num(cb, "windup_pull_pixels", 4.0)
+			offset -= screen_dir * w * float(t.windup_pull_pixels)
 		else:
 			# The strike: a fast stretch and lunge, then settle back.
 			var after := (since - windup) / maxf(attack_len - windup, 0.05)
 			var strike_t := 1.0 - Ease.out_cubic(after)
-			var st := Feel.num(cb, "strike_stretch", 0.16)
+			var st := float(t.strike_stretch)
 			sy += strike_t * st
 			sx -= strike_t * st * 0.6
-			offset += screen_dir * strike_t * Feel.num(cb, "lunge_pixels", 12.0)
+			offset += screen_dir * strike_t * float(t.lunge_pixels)
 			lean = screen_dir.x * 10.0 * strike_t
 	# Hit reaction.
 	sx += squash
@@ -320,13 +383,13 @@ func animate(dt: float, now: float) -> void:
 		var p := Ease.out_elastic(pop)
 		sx *= p
 		sy *= lerpf(0.4, 1.0, Ease.out_back(pop)) * p
-		offset.y -= (1.0 - Ease.out_cubic(pop * 1.6)) * Feel.num(c, "spawn_drop_pixels", 26.0)
+		offset.y -= (1.0 - Ease.out_cubic(pop * 1.6)) * float(t.spawn_drop_pixels)
 	if upgrade > 0.0:
-		var u := Ease.arc(1.0 - upgrade) * Feel.num(c, "upgrade_pop", 0.3)
+		var u := Ease.arc(1.0 - upgrade) * float(t.upgrade_pop)
 		sx += u
 		sy += u
 	if hop_t < 1.0:
-		lift += Ease.arc(hop_t) * Feel.num(c, "move_hop_pixels", 22.0) * clampf(hop_seconds / 0.3, 0.4, 1.0)
+		lift += Ease.arc(hop_t) * float(t.move_hop_pixels) * clampf(hop_seconds / 0.3, 0.4, 1.0)
 		var h := Ease.arc(hop_t)
 		sy += h * 0.12
 		sx -= h * 0.08
@@ -335,8 +398,8 @@ func animate(dt: float, now: float) -> void:
 	if defeat >= 0.0:
 		# A cartoon knockout: hop up, spin, shrink and vanish in a poof.
 		var d := defeat
-		lift += Ease.arc(minf(1.0, d * 1.15)) * Feel.num(cb, "defeat_hop_pixels", 46.0)
-		rot += defeat_spin * Feel.num(cb, "defeat_spin_turns", 1.25) * 360.0 * Ease.out_cubic(d)
+		lift += Ease.arc(minf(1.0, d * 1.15)) * float(t.defeat_hop_pixels)
+		rot += defeat_spin * float(t.defeat_spin_turns) * 360.0 * Ease.out_cubic(d)
 		var shrink := 1.0 - Ease.in_cubic(d)
 		sx *= shrink
 		sy *= shrink
@@ -352,40 +415,40 @@ func animate(dt: float, now: float) -> void:
 	body.rotation_degrees = rot
 	body.visible = not (f != null and f.memory.get("burrowing", false))
 	var tint := Color.WHITE
-	if f != null and int(f.memory.get("playing_dead", 0)) > 0:
-		tint = Color(0.6, 0.6, 0.6)
-	elif f != null and f.stun > 0:
+	if f != null and f.stun > 0:
 		tint = Color(1.0, 1.0, 0.8)
 	# Three stars: a gentle golden glow, and a sparkle now and then.
 	var golden := stars >= int(GameData.draft_rules.get("star_max", 3)) and defeat < 0.0
 	if golden and dt > 0.0:
 		_sparkle_in -= dt
 		if _sparkle_in <= 0.0:
-			_sparkle_in = Feel.num("celebrations", "gold_sparkle_seconds", 0.7) * randf_range(0.7, 1.3)
+			_sparkle_in = float(t.gold_sparkle_seconds) * randf_range(0.7, 1.3)
 			var spot := position + body.position + Vector2(randf_range(-0.5, 0.5) * UnitSprites.top(id) * k, -randf() * UnitSprites.top(id) * k)
 			field.fx.particle("sparkle", spot, Vector2(0, -24), 0.6, 6.0, Color("#ffe58a"), 0.0, 1.0)
-	glow_left = maxf(0.0, glow_left - dt)
 	var m := body.material as ShaderMaterial
 	if m != null:
-		var shine := Feel.num("celebrations", "gold_glow", 0.85) * (0.8 + 0.2 * sin(now * 3.0 + idle_phase)) if golden else 0.0
-		var shine_color := Color(1.0, 0.82, 0.25)
-		if glow_left > 0.0:
-			# A synergy glow pulses over the gold, in the habitat's color.
-			shine = maxf(shine, (0.6 + 0.4 * sin(now * 14.0)) * minf(1.0, glow_left * 2.0))
-			shine_color = glow_color
-		m.set_shader_parameter("gold", shine)
-		m.set_shader_parameter("gold_color", shine_color)
-		m.set_shader_parameter("flash", flash)
-		m.set_shader_parameter("flip", 1.0 if body.frame.get("flip", false) else 0.0)
-		m.set_shader_parameter("region", region_uv(body.frame))
-		m.set_shader_parameter("opacity", opacity)
+		# Only what changed goes to the shader (a big fight has dozens of
+		# animals, every frame).
+		var shine := float(t.gold_glow) * (0.8 + 0.2 * sin(now * 3.0 + idle_phase)) if golden else 0.0
+		_set_param(m, 0, "gold", snappedf(shine, 0.01))
+		_set_param(m, 1, "flash", snappedf(flash, 0.01))
+		_set_param(m, 2, "opacity", snappedf(opacity, 0.01))
+		if body.frame != _shaded_frame:
+			_shaded_frame = body.frame
+			m.set_shader_parameter("flip", 1.0 if body.frame.get("flip", false) else 0.0)
+			m.set_shader_parameter("region", region_uv(body.frame))
 	else:
 		# No shader (the lighter option): flash and fade with a plain tint.
 		tint = tint.lerp(Color(2.0, 2.0, 2.0), flash * 0.6)
 		tint.a = opacity
 	body.self_modulate = tint
 	body.queue_redraw()
-	queue_redraw()
+
+
+func _set_param(m: ShaderMaterial, slot: int, param: String, value: float) -> void:
+	if _shader_values[slot] != value:
+		_shader_values[slot] = value
+		m.set_shader_parameter(param, value)
 
 
 ## A frame's rectangle in its sheet, in UV (for the shader's shading).
@@ -421,7 +484,10 @@ func middle() -> Vector2:
 
 # --- Drawing the shadow and ring ---------------------------------------------
 
-func _draw() -> void:
+## Its shadow, team ring and status rings on the ground, drawn by the field
+## for every animal in one go (so they batch); its class badge is added to
+## `badges` for the field to draw after all the rings.
+func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 	var c := "characters"
 	var s := field.field_scale()
 	var f := fighter
@@ -432,43 +498,37 @@ func _draw() -> void:
 		fade = 1.0 - defeat
 	if pop < 1.0:
 		fade *= pop
+	var at := position
 	if f != null and f.memory.get("burrowing", false):
 		# Underground: a little mound of dirt wobbling along.
 		var w := radius * 1.1
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.55))
-		draw_circle(Vector2.ZERO, w, Color("#5a3d22"))
-		draw_circle(Vector2(0, -w * 0.2), w * 0.75, Color("#7a5532"))
-		draw_set_transform(Vector2.ZERO)
+		GroundArt.draw(canvas, GroundArt.Cell.DISC, at, w, 0.55, Color("#5a3d22"))
+		GroundArt.draw(canvas, GroundArt.Cell.DISC, at + Vector2(0, -w * 0.11), w * 0.75, 0.55, Color("#7a5532"))
 		return
 	# The shadow shrinks and fades as the animal leaves the ground.
 	var air := clampf(lift / 40.0, 0.0, 0.7)
 	var shadow_w := radius * Feel.num(c, "shadow_width", 1.25) * (1.0 - air * 0.5)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.42))
-	draw_circle(Vector2.ZERO, shadow_w, Color(0.05, 0.1, 0.05, Feel.num(c, "shadow_alpha", 0.34) * (1.0 - air) * fade))
-	draw_circle(Vector2.ZERO, shadow_w * 0.65, Color(0.05, 0.1, 0.05, Feel.num(c, "shadow_alpha", 0.34) * 0.6 * (1.0 - air) * fade))
+	GroundArt.draw(canvas, GroundArt.Cell.SHADOW, at, shadow_w * 1.1, 0.42, Color(0.05, 0.1, 0.05, Feel.num(c, "shadow_alpha", 0.34) * 1.3 * (1.0 - air) * fade))
 	# Team ring, flattened to sit on the ground.
 	var team_color := BattleField.OWN_COLOR if team == 0 else BattleField.ENEMY_COLOR
 	var ring := radius * 1.45
 	var ring_alpha := Feel.num(c, "team_ring_alpha", 0.9) * fade
 	if f != null and f.stealthed and f.revealed <= 0:
 		ring_alpha *= 0.4 if team == 0 else 0.1
-	var width := Feel.num(c, "team_ring_width", 3.0)
-	draw_circle(Vector2.ZERO, ring, Color(team_color, 0.16 * ring_alpha))
-	draw_arc(Vector2.ZERO, ring, 0, TAU, 40, Color(team_color.darkened(0.45), ring_alpha), (width + 2.0) / 0.42)
-	draw_arc(Vector2.ZERO, ring, 0, TAU, 40, Color(team_color.lightened(0.15), ring_alpha), width / 0.42)
-	if f != null and cls != "":
-		# Its class, as a small badge just under its feet.
-		draw_set_transform(Vector2.ZERO)
-		UIStyle.draw_class_badge(self, Vector2(0, ring * 0.42 + 7.0), 7.5, cls, minf(fade, 0.95))
-		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.42))
+	GroundArt.draw(canvas, GroundArt.Cell.DISC, at, ring, 0.42, Color(team_color, 0.16 * ring_alpha))
+	GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring, 0.42, Color(team_color.darkened(0.45), ring_alpha))
+	GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring, 0.42, Color(team_color.lightened(0.15), ring_alpha))
 	if f != null:
 		# Status rings around its feet.
 		if f.shield > 0:
-			draw_arc(Vector2.ZERO, ring + 4, 0, TAU, 32, Color("#7fd6ff"), 6.0)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 4, 0.42, Color("#7fd6ff"))
 		if f.rage > 0:
-			draw_arc(Vector2.ZERO, ring + 7, 0, TAU, 32, Color("#ff9f43", 0.85), 5.0)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 7, 0.42, Color("#ff9f43", 0.85))
 		if f.slow > 0:
-			draw_arc(Vector2.ZERO, ring + 3, 0, TAU, 32, Color("#9fd8ff", 0.8), 5.0)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, 0.42, Color("#9fd8ff", 0.8))
 		if f.invulnerable > 0:
-			draw_arc(Vector2.ZERO, ring + 6, 0, TAU, 32, Color.WHITE, 7.0)
-	draw_set_transform(Vector2.ZERO)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, 0.42, Color.WHITE)
+		if cls != "":
+			# Its class, as a small badge just under its feet.
+			var badge := Feel.num(c, "class_badge_radius", 9.0)
+			badges.append([cls, at + Vector2(0, ring * 0.42 + badge * 0.9), badge, minf(fade, 0.95)])

@@ -23,10 +23,14 @@ func _ready_now(made: Array) -> Array:
 func test_open_field_and_halves() -> void:
 	var sim := _sim()
 	check_eq(sim.fighters.size(), 0, "an empty field to start")
-	check_eq(BattleSim.WIDTH, 16 * T, "16 tiles wide")
-	check_eq(BattleSim.HEIGHT, 20 * T, "20 tiles long")
-	check(BattleSim.on_own_half(0, 15 * T) and not BattleSim.on_own_half(0, 5 * T), "team 0 has the near half")
-	check(BattleSim.on_own_half(1, 5 * T) and not BattleSim.on_own_half(1, 15 * T), "team 1 has the far half")
+	check_eq(sim.width, 16 * T, "16 tiles wide")
+	check_eq(sim.height, 20 * T, "20 tiles long")
+	check(sim.on_own_half(0, 15 * T) and not sim.on_own_half(0, 5 * T), "team 0 has the near half")
+	check(sim.on_own_half(1, 5 * T) and not sim.on_own_half(1, 15 * T), "team 1 has the far half")
+	sim.set_size(1.5)
+	check_eq(sim.width, 24 * T, "a bigger field for big herds")
+	check_eq(sim.height, 30 * T, "the same shape")
+	check_eq(sim.middle, 15 * T, "the middle line moves with it")
 
 
 func test_nothing_to_fight_means_standing_still() -> void:
@@ -66,7 +70,7 @@ func test_everyone_stays_on_the_field() -> void:
 	for i in 30 * sim.tps:
 		sim.step()
 		for f in sim.fighters:
-			if f.x < 0 or f.x > BattleSim.WIDTH or f.y < 0 or f.y > BattleSim.HEIGHT:
+			if f.x < 0 or f.x > sim.width or f.y < 0 or f.y > sim.height:
 				check(false, "%s left the field at (%d, %d)" % [f.card.id, f.x, f.y])
 				return
 	check(true, "nobody left the field")

@@ -279,13 +279,23 @@ func find_by_id(list: Array, id: String) -> Dictionary:
 func validate() -> Array:
 	var problems := []
 
-	# New players own the first arena's cards, and draft from them.
-	var starters := cards_in_arena(0)
-	var starter_animals := starters.filter(func(id): return not is_tool(id)).size()
-	if starter_animals < int(draft_rules.get("offer_count", 5)):
-		problems.append("The first arena must unlock at least %d animals to fill the Draft Duel options" % int(draft_rules.get("offer_count", 5)))
-	if starter_animals == starters.size():
-		problems.append("The first arena must unlock at least one tool")
+	# New players own the starting cards, and draft from them: enough to fill
+	# the options, with enough animals for the first round's picks.
+	var starters: Array = progression.get("starting_cards", [])
+	for id in starters:
+		if not cards.has(id):
+			problems.append("Starting card %s doesn't exist" % id)
+	var starter_animals := starters.filter(func(id): return cards.has(id) and not is_tool(id)).size()
+	if starters.size() < int(draft_rules.get("offer_count", 5)):
+		problems.append("There must be at least %d starting cards to fill the Draft Duel options" % int(draft_rules.get("offer_count", 5)))
+	if starter_animals < int(draft_rules.get("picks_per_round", 3)):
+		problems.append("At least %d starting cards must be animals" % int(draft_rules.get("picks_per_round", 3)))
+	var starter_classes := {}
+	for id in starters:
+		if cards.has(id) and not is_tool(id):
+			starter_classes[class_of(id)] = true
+	if starter_classes.size() < mini(starter_animals, 3):
+		problems.append("The starting animals should be from different classes")
 
 	for id in card_order:
 		var a: Dictionary = cards[id]

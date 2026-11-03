@@ -2,7 +2,8 @@
   "_note": "How the game LOOKS and FEELS: animation, hit effects, particles, UI motion and backgrounds. Nothing here changes the rules or balance. Times are in seconds, sizes in screen pixels unless they say tiles. Set a strength to 0 to switch an effect off.",
 
   "characters": {
-    "_note": "The animals. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a warm highlight on the edge facing the light (top-left), a cool rim light on the far edge, outlines recolored to a dark shade of the animal's own color, and a little extra color punch.",
+    "_note": "The animals. class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a warm highlight on the edge facing the light (top-left), a cool rim light on the far edge, outlines recolored to a dark shade of the animal's own color, and a little extra color punch.",
+    "class_badge_radius": 9.0,
     "shader_enabled": true,
     "sprite_scale": 1.6,
     "swarm_scale": 0.8,
@@ -90,8 +91,25 @@
     "projectile_glow": 0.55
   },
 
+  "crowd": {
+    "_note": "Keeping big fights readable and smooth. A fight is crowded from crowded_from_units animals on the field: bursts use particles_when_crowded of their particles, ordinary hits lose their claw and bite marks, fewer sparks and numbers show, and (plain_animals_when_crowded) the animals skip their shader so many of a kind draw together; that look is chosen as the herds come on, not mid-fight. Hit sparks: at most hit_sparks_max bursts at once (hit_sparks_when_crowded when crowded), each counting for spark_seconds; when that many are showing, a bigger hit takes the place of the smallest. Damage numbers work the same way (combat number_max_on_screen; numbers_when_crowded when crowded).",
+    "crowded_from_units": 24,
+    "plain_animals_when_crowded": true,
+    "particles_when_crowded": 0.5,
+    "hit_sparks_max": 12,
+    "hit_sparks_when_crowded": 6,
+    "spark_seconds": 0.25,
+    "numbers_when_crowded": 6
+  },
+
+  "camera": {
+    "_note": "The fight's camera. When the field grows for bigger herds (draft_rules.json \"field\"), the camera zooms out to it over about zoom_seconds.",
+    "zoom_seconds": 0.8
+  },
+
   "celebrations": {
-    "_note": "Big moments. A 3-star animal gets a slow-motion zoom (zoom in, hold, zoom out, with the field's animation slowed by star3_slow_motion), stars, confetti and a bouncy 3 STARS!, then keeps a gold glow (gold_glow) with a sparkle every gold_sparkle_seconds. Comeback: winning a round at comeback_hearts hearts or fewer. Flawless: winning a round without losing an animal. A habitat synergy tier turning on for the first time in a match gets a pop-up (synergy_text_size) and a glow on its animals (synergy_glow_seconds).",
+    "_note": "Big moments. After each fight the new score pops up over the field (score_pop_size) and flies into the score bar. A 3-star animal gets a slow-motion zoom (zoom in, hold, zoom out, with the field's animation slowed by star3_slow_motion), stars, confetti and a bouncy 3 STARS!, then keeps a gold glow (gold_glow) with a sparkle every gold_sparkle_seconds. Flawless: winning a round without losing an animal. Comeback Victory: winning the match after being 2 rounds down.",
+    "score_pop_size": 120,
     "star3_zoom": 1.45,
     "star3_zoom_in_seconds": 0.28,
     "star3_hold_seconds": 0.9,
@@ -102,11 +120,7 @@
     "star3_text_size": 64,
     "gold_glow": 0.85,
     "gold_sparkle_seconds": 0.7,
-    "comeback_hearts": 5,
-    "comeback_confetti": 30,
     "flawless_sparkles": 18,
-    "synergy_text_size": 44,
-    "synergy_glow_seconds": 1.4,
     "banner_size": 54,
     "banner_seconds": 1.4
   },

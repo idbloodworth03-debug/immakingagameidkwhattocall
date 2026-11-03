@@ -16,7 +16,9 @@ func cleanup() -> void:
 
 func test_new_profile() -> void:
 	check(not profile.data.has("deck"), "no deck any more")
-	check_eq(profile.found_count(), GameData.cards_in_arena(0).size(), "owns every first-arena card")
+	check_eq(profile.found_count(), GameData.progression.starting_cards.size(), "owns the starting cards")
+	for id in GameData.progression.starting_cards:
+		check(profile.has_card(id), "owns %s" % id)
 	check_eq(profile.get_trophies(), 0, "no trophies yet")
 	check_eq(profile.cage_slot_state(0), "locked", "starter cage waiting")
 
@@ -83,7 +85,7 @@ func test_skip_with_gems() -> void:
 
 
 func test_upgrade_card() -> void:
-	var id: String = GameData.cards_in_arena(0)[0]
+	var id: String = GameData.progression.starting_cards[0]
 	check(not profile.can_upgrade(id), "no spare copies yet")
 	profile.grant_rewards({"cards": [{"animal": id, "rarity": GameData.cards[id].rarity, "count": 50}]})
 	var level: int = profile.card_level(id)
@@ -104,11 +106,29 @@ func test_new_cards_are_flagged() -> void:
 
 
 func test_card_levels_for_draft_duel() -> void:
-	var id: String = GameData.cards_in_arena(0)[0]
+	var id: String = GameData.progression.starting_cards[0]
 	profile.data.collection[id].level = 7
 	var levels: Dictionary = profile.card_levels()
 	check_eq(levels.size(), profile.found_count(), "every card you own")
 	check_eq(levels[id], 7, "at its level")
+
+
+func test_small_saves_get_the_starting_cards() -> void:
+	profile.data.collection = {"cheetah": {"level": 3, "copies": 1, "new": false}, "air_horn": {"level": 1, "copies": 0, "new": false}}
+	profile._repair()
+	for id in GameData.progression.starting_cards:
+		check(profile.has_card(id), "topped up with %s" % id)
+	check_eq(int(profile.data.collection.cheetah.level), 3, "what they had stays")
+	check(profile.found_count() >= int(GameData.draft_rules.offer_count), "enough to fill the options")
+
+
+func test_big_saves_are_left_alone() -> void:
+	var owned := {}
+	for id in ["sewer_rats", "raccoon", "red_fox", "cheetah", "lion", "air_horn"]:
+		owned[id] = {"level": 2, "copies": 0, "new": false}
+	profile.data.collection = owned.duplicate(true)
+	profile._repair()
+	check_eq(profile.data.collection.keys().size(), owned.size(), "nothing added")
 
 
 func test_repair_drops_the_old_deck() -> void:

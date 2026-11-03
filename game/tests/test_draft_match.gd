@@ -112,7 +112,7 @@ func test_no_limit_on_the_herd() -> void:
 	m._lay_out_herds()
 	check_eq(m.groups[0].size(), 12, "twelve animals on the field")
 	for f in m.sim.units(0):
-		check(f.y > BattleSim.MIDDLE and f.y < BattleSim.HEIGHT, "%s stays on its own half" % f.card.id)
+		check(f.y > m.sim.middle and f.y < m.sim.height, "%s stays on its own half" % f.card.id)
 
 
 func test_classes_take_their_rows() -> void:
@@ -125,7 +125,77 @@ func test_classes_take_their_rows() -> void:
 		y[f.card.id] = f.y
 	check(y.brown_bear < y.lion and y.lion < y.gray_squirrel, "Tank in front, Tank Destroyer in the middle, Ranged at the back")
 	for f in m.sim.units(1):
-		check(f.y < BattleSim.MIDDLE, "the other herd lines up on its own half")
+		check(f.y < m.sim.middle, "the other herd lines up on its own half")
+
+
+## A herd of `count` animals of these ids, in turn.
+func _big_herd(count: int, ids: Array) -> Array:
+	var herd := []
+	for i in count:
+		herd.append({"id": ids[i % ids.size()], "stars": 1})
+	return herd
+
+
+func test_small_herds_use_the_smallest_field() -> void:
+	var m := DraftMatch.new(31)
+	m.herds = [_big_herd(6, ["brown_bear", "lion", "gray_squirrel"]), _big_herd(6, ["polar_bear", "cheetah", "raccoon"])]
+	m._lay_out_herds()
+	check_eq(m.field_scale, 1.0, "no need to grow")
+	check_eq(m.sim.width, BattleSim.WIDTH, "16 tiles wide")
+
+
+func test_big_herds_grow_the_field_up_to_a_limit() -> void:
+	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "sewer_rats", "wolf_pack", "hippopotamus", "red_panda", "raccoon", "cheetah"]
+	var top := float(GameData.draft_rules.field.max_scale)
+	var last := 1.0
+	for count in [10, 20, 30, 45]:
+		var m := DraftMatch.new(32)
+		m.herds = [_big_herd(count, ids), _big_herd(count, ids)]
+		m._lay_out_herds()
+		check(m.field_scale >= last, "%d animals: the field doesn't shrink as herds grow (%.2f)" % [count, m.field_scale])
+		check(m.field_scale <= top, "%d animals: no bigger than the limit" % count)
+		last = m.field_scale
+	check(last > 1.0, "the biggest herds get a bigger field")
+	check_eq(last, top, "and the biggest of all reach the limit")
+
+
+func test_big_herds_line_up_without_overlapping() -> void:
+	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "sewer_rats", "hippopotamus", "red_panda", "raccoon", "cheetah", "tiger", "asian_elephant", "american_bison"]
+	var m := DraftMatch.new(33)
+	m.herds = [_big_herd(24, ids), _big_herd(24, ids)]
+	m._lay_out_herds()
+	var spacing := float(GameData.class_rules.rows.spacing) * T
+	for team in 2:
+		var spots := []
+		for f in m.sim.units(team):
+			if String(f.memory.view_key).ends_with("/0"):
+				spots.append(Vector2(f.x, f.y))
+		check_eq(spots.size(), 24, "team %d: everyone on the field" % team)
+		var closest := INF
+		for i in spots.size():
+			for j in range(i + 1, spots.size()):
+				closest = minf(closest, (spots[i] as Vector2).distance_to(spots[j]))
+		check(closest >= spacing * 0.5, "team %d: nobody stands on top of another (closest %.0f)" % [team, closest])
+		for f in m.sim.units(team):
+			check(m.sim.on_own_half(team, f.y), "team %d: %s on its own half" % [team, f.card.id])
+			check(f.x >= 0 and f.x <= m.sim.width, "%s inside the fence" % f.card.id)
+
+
+func test_rows_stay_in_order_in_big_herds() -> void:
+	var m := DraftMatch.new(34)
+	var herd := _big_herd(12, ["brown_bear"]) + _big_herd(12, ["lion"]) + _big_herd(6, ["peregrine_falcon"]) + _big_herd(6, ["gray_squirrel"])
+	m.herds = [herd, herd.duplicate(true)]
+	m._lay_out_herds()
+	var deepest := {}
+	var nearest := {}
+	for f in m.sim.units(0):
+		var back: int = f.y - m.sim.middle
+		var band: String = DraftMatch.band_of(f.card.id)
+		deepest[band] = maxi(int(deepest.get(band, -1)), back)
+		nearest[band] = mini(int(nearest.get(band, 1 << 30)), back)
+	check(deepest.front < nearest.middle, "every Tank in front of every Tank Destroyer")
+	check(deepest.middle < nearest.air, "Air behind the middle row")
+	check(deepest.air < nearest.back, "Ranged at the back")
 
 
 func test_tools_work_once_a_fight_and_stay() -> void:

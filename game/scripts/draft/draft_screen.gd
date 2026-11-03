@@ -263,6 +263,7 @@ func _show_view(which: String) -> void:
 		return
 	_view = which
 	_hide_details()
+	_hide_tip()
 	other.visible = false
 	view.visible = true
 	view.modulate.a = 0.0
@@ -826,11 +827,12 @@ func _handle_events(events: Array) -> void:
 				_round_result(int(e.winner))
 
 
-## The quick result: a banner and the score; then on to the next round.
+## The quick result: the new score, big, then on to the next round.
 func _round_result(winner: int) -> void:
 	var c := "celebrations"
 	var size := Feel.count(c, "banner_size", 54)
 	var at := _field.get_global_rect().get_center()
+	_score_pop(winner)
 	if winner == 0:
 		Sound.play("upgrade")
 		var half := Feel.count("effects", "win_confetti", 60) / 2
@@ -841,18 +843,52 @@ func _round_result(winner: int) -> void:
 			_banner("FLAWLESS!", Color("#7fe0ff"), size)
 			UIFx.particles.burst("sparkle", at, Feel.count(c, "flawless_sparkles", 18), 260.0, 0.8, 10.0, [Color.WHITE, Color("#bff0ff"), Color("#ffe14d")], -40.0, 2.0)
 			Sound.play("fanfare", 2.0)
-		else:
-			_banner("Round won!", UIStyle.color("gold"), size)
 	elif winner == 1:
 		Sound.play("pop")
-		_banner("Round lost", Color("#ffb3a8"), size)
-	else:
-		_banner("Draw", Color.WHITE, size)
 	if not duel.is_over():
 		_rival_says("losing" if winner == 0 else ("winning" if winner == 1 else "start"))
 		get_tree().create_timer(Feel.num("pick", "result_seconds", 1.8)).timeout.connect(func() -> void:
 			if duel.phase == "round_over":
 				duel.next_round())
+
+
+## The new score pops up big over the field (the round winner's number
+## glowing), then flies up into the score bar.
+func _score_pop(winner: int) -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 18)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.z_index = OVER_FIELD
+	var big := Feel.count("celebrations", "score_pop_size", 120)
+	var parts := [str(duel.wins[0]), "-", str(duel.wins[1])]
+	var colors := [Color.WHITE, Color.WHITE, Color.WHITE]
+	if winner == 0:
+		colors[0] = UIStyle.color("gold")
+	elif winner == 1:
+		colors[2] = Color("#ff8a7a")
+	for i in 3:
+		var part := UIStyle.label(parts[i], "title", colors[i], HORIZONTAL_ALIGNMENT_CENTER)
+		part.add_theme_font_size_override("font_size", big if i != 1 else big * 2 / 3)
+		part.add_theme_constant_override("outline_size", UIStyle.outline_for(big))
+		row.add_child(part)
+	add_child(row)
+	row.reset_size()
+	var field := _field.get_global_rect()
+	row.position = field.get_center() - row.size / 2.0 - get_global_rect().position
+	row.pivot_offset = row.size / 2.0
+	row.scale = Vector2(0.2, 0.2)
+	var goal := _score_label.get_global_rect().get_center() - get_global_rect().position - row.size / 2.0
+	var shrink := clampf(_score_label.size.y / maxf(1.0, row.size.y), 0.2, 1.0)
+	var hold := Feel.num("pick", "result_seconds", 1.8)
+	var tween := row.create_tween()
+	tween.tween_property(row, "scale", Vector2(1.15, 1.15), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(row, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_SINE)
+	tween.tween_interval(maxf(0.2, hold - 0.9))
+	tween.set_parallel()
+	tween.tween_property(row, "position", goal, 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_property(row, "scale", Vector2(shrink, shrink), 0.4).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	tween.tween_property(row, "modulate:a", 0.0, 0.2).set_delay(0.25)
+	tween.chain().tween_callback(row.queue_free)
 
 
 func _celebrate_if_three_stars(id: String, rect: Rect2) -> void:

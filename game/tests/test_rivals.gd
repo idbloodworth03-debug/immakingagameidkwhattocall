@@ -146,17 +146,28 @@ func test_a_favorite_class() -> void:
 	var m := _second_round()
 	var fan := DraftBot.new(m, 1, 9, 0.5, {"favorite": "air"})
 	var plain := DraftBot.new(m, 1, 9, 0.5)
-	check_eq(fan._offer_value("peregrine_falcon") - plain._offer_value("peregrine_falcon"), DraftBot.FAVORITE_BONUS, "wants Air more")
+	var more: float = fan._offer_value("peregrine_falcon") - plain._offer_value("peregrine_falcon")
+	check(is_equal_approx(more, DraftBot.FAVORITE_BONUS), "wants Air more (%.2f)" % more)
 	check_eq(fan._offer_value("tiger"), plain._offer_value("tiger"), "and the rest the same")
 
 
 func test_counters() -> void:
 	var m := _second_round()
-	m.herds[0] = [{"id": "brown_bear", "stars": 1}, {"id": "polar_bear", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
+	m.herds_seen[0] = [{"id": "brown_bear", "stars": 1}, {"id": "polar_bear", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
 	var sharp := DraftBot.new(m, 1, 9, 1.0)
 	check(sharp._class_need("tank_destroyer") > sharp._class_need("tank"), "lots of Tanks over there: Tank Destroyers")
-	m.herds[0] = [{"id": "peregrine_falcon", "stars": 1}, {"id": "california_condor", "stars": 1}]
+	m.herds_seen[0] = [{"id": "peregrine_falcon", "stars": 1}, {"id": "california_condor", "stars": 1}]
 	check(sharp._class_need("ranged") > sharp._class_need("tank_destroyer"), "Air over there: Ranged")
+
+
+func test_counters_go_by_what_it_has_seen() -> void:
+	var m := _second_round()
+	m.herds_seen[0] = [{"id": "gray_squirrel", "stars": 1}]
+	m.herds[0] = [{"id": "brown_bear", "stars": 1}, {"id": "polar_bear", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
+	var sharp := DraftBot.new(m, 1, 9, 1.0)
+	var before := sharp._class_need("tank_destroyer")
+	m.herds_seen[0] = m.herds[0].duplicate(true)
+	check(sharp._class_need("tank_destroyer") > before, "Tanks picked this round only count once it has seen them")
 
 
 func test_personalities() -> void:

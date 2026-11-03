@@ -1,0 +1,184 @@
+{
+  "_note": "Written by tools/make_ui_art.py: the nine-slice margins of each UI skin, in texture pixels. Do not edit by hand; change the script and run it again.",
+  "skins": {
+    "panel": {
+      "file": "panel.png",
+      "shine": "panel_shine.png",
+      "size": [
+        240,
+        240
+      ],
+      "margins": [
+        60,
+        60,
+        60,
+        90
+      ],
+      "shadow": 18,
+      "scale": 0.5
+    },
+    "inset": {
+      "file": "inset.png",
+      "shine": "",
+      "size": [
+        160,
+        160
+      ],
+      "margins": [
+        44,
+        44,
+        44,
+        44
+      ],
+      "shadow": 0,
+      "scale": 0.5
+    },
+    "button": {
+      "file": "button.png",
+      "shine": "button_shine.png",
+      "size": [
+        200,
+        176
+      ],
+      "margins": [
+        48,
+        48,
+        48,
+        72
+      ],
+      "shadow": 8,
+      "scale": 0.5
+    },
+    "button_pressed": {
+      "file": "button_pressed.png",
+      "shine": "button_pressed_shine.png",
+      "size": [
+        200,
+        176
+      ],
+      "margins": [
+        48,
+        48,
+        48,
+        72
+      ],
+      "shadow": 8,
+      "scale": 0.5
+    },
+    "chip": {
+      "file": "chip.png",
+      "shine": "chip_shine.png",
+      "size": [
+        128,
+        120
+      ],
+      "margins": [
+        35,
+        35,
+        35,
+        49
+      ],
+      "shadow": 6,
+      "scale": 0.5
+    },
+    "chip_brass": {
+      "file": "chip_brass.png",
+      "shine": "chip_brass_shine.png",
+      "size": [
+        128,
+        120
+      ],
+      "margins": [
+        35,
+        35,
+        35,
+        49
+      ],
+      "shadow": 6,
+      "scale": 0.5
+    },
+    "card": {
+      "file": "card.png",
+      "shine": "card_shine.png",
+      "size": [
+        160,
+        200
+      ],
+      "margins": [
+        44,
+        44,
+        44,
+        64
+      ],
+      "shadow": 10,
+      "scale": 0.5
+    },
+    "window": {
+      "file": "window.png",
+      "shine": "",
+      "size": [
+        128,
+        128
+      ],
+      "margins": [
+        32,
+        32,
+        32,
+        32
+      ],
+      "shadow": 0,
+      "scale": 0.5
+    },
+    "sign": {
+      "file": "sign.png",
+      "shine": "sign_shine.png",
+      "size": [
+        320,
+        132
+      ],
+      "margins": [
+        56,
+        40,
+        56,
+        62
+      ],
+      "shadow": 10,
+      "scale": 0.5
+    },
+    "glow": {
+      "file": "glow.png",
+      "shine": "",
+      "size": [
+        160,
+        160
+      ],
+      "margins": [
+        64,
+        64,
+        64,
+        64
+      ],
+      "shadow": 0,
+      "scale": 0.5
+    }
+  },
+  "particles": {
+    "cell": 128,
+    "columns": 4,
+    "kinds": [
+      "puff",
+      "star",
+      "sparkle",
+      "confetti",
+      "coin",
+      "petal",
+      "spark",
+      "glow",
+      "leaf",
+      "dust",
+      "heart",
+      "acorn",
+      "badge"
+    ]
+  }
+}

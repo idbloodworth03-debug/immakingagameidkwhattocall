@@ -51,7 +51,7 @@ func _draw(item: RID, rect: Rect2) -> void:
 		_flat("lip", color.darkened(dark + 0.28), inner_r).draw(item, inner)
 	var face := Rect2(inner.position + Vector2(0, sink), Vector2(inner.size.x, maxf(4.0, inner.size.y - lip)))
 	_gradient(item, face, inner_r, face_top, face_bottom)
-	if gloss > 0.0:
+	if gloss > 0.0 and face.size.x > 14.0 and face.size.y > 8.0:
 		var shine := Rect2(face.position + Vector2(5, 4), Vector2(face.size.x - 10, face.size.y * 0.44))
 		var points := _round_rect(shine, maxf(2.0, inner_r - 4.0))
 		var colors := PackedColorArray()
@@ -71,6 +71,8 @@ func _get_draw_rect(rect: Rect2) -> Rect2:
 ## A rounded rectangle filled with a gradient from `top` to `bottom`, with a
 ## smoothed edge.
 func _gradient(item: RID, rect: Rect2, r: float, top: Color, bottom: Color) -> void:
+	if rect.size.x < 1.0 or rect.size.y < 1.0:
+		return
 	var points := _round_rect(rect, r)
 	var colors := PackedColorArray()
 	for p in points:
@@ -116,7 +118,13 @@ static func _round_rect(rect: Rect2, r: float, top_only := false) -> PackedVecto
 		var start: float = corners[c][1]
 		for i in steps + 1:
 			var angle := start + PI * 0.5 * float(i) / steps
-			points.append(center + Vector2(cos(angle), sin(angle)) * r)
+			var p := center + Vector2(cos(angle), sin(angle)) * r
+			# Skip repeats (a pill exactly 2 radii tall has corners that meet):
+			# a polygon with repeated points can't be filled.
+			if points.is_empty() or p.distance_squared_to(points[points.size() - 1]) > 0.01:
+				points.append(p)
+	if not top_only and points.size() > 2 and points[0].distance_squared_to(points[points.size() - 1]) <= 0.01:
+		points.remove_at(points.size() - 1)
 	if top_only:
 		# Down the sides a little, fading into the face.
 		points.insert(0, points[0] + Vector2(0, minf(r * 0.6, rect.size.y * 0.25)))

@@ -13,12 +13,20 @@ var field: BattleField
 var effects: Array = []
 var numbers: Array = []
 var projectiles: Array = []
+## Damage numbers go on top of the particles (which draw as a child).
+var _over: Node2D
 
 
 func _init(owner_field: BattleField) -> void:
 	field = owner_field
 	# The field moves it along (so hit-stop freezes it too).
 	self_driven = false
+	_ensure_mesh()
+	_over = Node2D.new()
+	_over.draw.connect(func() -> void:
+		for n in numbers:
+			_draw_number(n))
+	add_child(_over)
 
 
 func _process_fx(dt: float) -> void:
@@ -26,9 +34,12 @@ func _process_fx(dt: float) -> void:
 	for fx in effects:
 		fx.age += dt
 	effects = effects.filter(func(fx): return fx.age < fx.life)
+	var had_numbers := not numbers.is_empty()
 	for n in numbers:
 		n.age += dt
 	numbers = numbers.filter(func(n): return n.age < n.life)
+	if had_numbers:
+		_over.queue_redraw()
 	projectiles = projectiles.filter(func(pr): return time < pr.land)
 
 
@@ -90,9 +101,6 @@ func _draw() -> void:
 	for pr in projectiles:
 		_draw_projectile(pr)
 	_draw_bars()
-	draw_particles()
-	for n in numbers:
-		_draw_number(n)
 
 
 ## Effects that sit on the ground, drawn under the animals.
@@ -111,7 +119,7 @@ func _draw_number(n: Dictionary) -> void:
 	var rise := Ease.out_cubic(t) * Feel.num("combat", "number_rise_pixels", 38.0)
 	var at: Vector2 = n.at + Vector2(float(n.drift) * t, -rise)
 	var alpha := 1.0 - Ease.in_cubic(maxf(0.0, (t - 0.55) / 0.45))
-	_draw_text(self, at, n.text, font_size, Color(n.color, alpha), maxi(3, font_size / 4))
+	_draw_text(_over, at, n.text, font_size, Color(n.color, alpha), maxi(3, font_size / 4))
 
 
 func _draw_bars() -> void:
@@ -143,15 +151,16 @@ func _draw_bars() -> void:
 	for view in field.views():
 		var full: bool = view.bar_shown >= 0.999 and view.bar_trail <= view.bar_shown + 0.002
 		if full and view.stars > 1 and view.shows_stars() and view.defeat < 0.0 and view.pop >= 1.0:
-			UIKit.draw_stars(self, view.position + view.head() + Vector2(0, -14.0), view.stars, 6.0)
+			var head: Vector2 = view.position + view.head() + Vector2(0, -14.0)
+			for i in view.stars:
+				UIStyle.draw_particle(self, "star", head + Vector2((i - (view.stars - 1) / 2.0) * 12.0, 0), 6.5, Color("#ffe14d"))
 		# Stunned: dizzy stars circling over its head.
 		if view.fighter != null and view.fighter.stun > 0 and view.defeat < 0.0:
 			var over: Vector2 = view.position + view.head() + Vector2(0, -4.0)
 			for i in 3:
 				var ang := time * 5.0 + i * TAU / 3.0
 				var spot := over + Vector2(cos(ang) * 14.0, sin(ang) * 5.0)
-				_draw_star(spot, 6.0, ang, Color(UIKit.INK, 0.8))
-				_draw_star(spot, 4.5, ang, Color("#ffe14d"))
+				UIStyle.draw_particle(self, "star", spot, 5.5, Color("#ffe14d"))
 
 
 func _draw_projectile(pr: Dictionary) -> void:

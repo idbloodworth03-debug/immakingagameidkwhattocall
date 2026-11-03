@@ -90,9 +90,13 @@ var _toast_tween: Tween
 var _their_badge: PanelContainer
 var _rival_portrait: RangerPortrait
 var _rival_check: Control
-## Which shop the cards show: they pop in one by one when it changes.
-var _shop_key := ""
-var _lifted := -1
+## The shop while you're shopping: kept and updated in place, so every
+## change animates instead of the panel being rebuilt (see _build_shop).
+var _shop: Dictionary = {}
+## Herd slots a bought card is flying to (they show it when it lands).
+var _landing := {}
+var _bob_time := 0.0
+var _column: VBoxContainer
 var _emote_free_at := 0.0
 var _big_hit_round := -1
 var _panel: VBoxContainer
@@ -112,6 +116,9 @@ func _ready() -> void:
 	_build()
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
+	# While the VS screen covers everything, the screen under it isn't drawn.
+	_column.visible = false
+	intro.leaving.connect(func() -> void: _column.visible = true)
 	intro.finished.connect(_choose_starters)
 	intro.z_index = OVER_FIELD
 	add_child(intro)
@@ -148,6 +155,7 @@ func _process(delta: float) -> void:
 	if key != _panel_key:
 		_panel_key = key
 		_rebuild_panel()
+	_bob_cards(delta)
 	if duel.is_over():
 		_end_match()
 
@@ -159,6 +167,7 @@ func _build() -> void:
 	var safe := UIStyle.safe_margins(get_viewport())
 	var margin := UIStyle.num("screen", "margin", 16)
 	var column := UIStyle.vbox("xs")
+	_column = column
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	column.offset_left = margin
 	column.offset_right = -margin
@@ -195,7 +204,7 @@ func _build() -> void:
 	_toast_label = UIStyle.label("", "small", Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER)
 	_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_toast = UIStyle.chip(_toast_label, Color(UIStyle.color("outline"), 0.0))
-	_toast.add_theme_stylebox_override("panel", UIStyle.chip_box(UIStyle.color("outline").lightened(0.12)))
+	_toast.add_theme_stylebox_override("panel", UIStyle.chip_box(UIStyle.color("toast")))
 	_toast.modulate.a = 0.0
 	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_field.add_child(_toast)
@@ -214,7 +223,7 @@ func _build() -> void:
 	_my_hearts = UIStyle.pill("heart", UIStyle.color("heart"), duel.hearts[0])
 	_my_hearts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(_my_hearts)
-	_my_acorns = UIStyle.pill("acorn", UIStyle.color("acorn").lightened(0.15), duel.acorns[0])
+	_my_acorns = UIStyle.pill("acorn", UIStyle.color("acorn").lightened(0.15), duel.acorns[0], true)
 	_my_acorns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	bottom.add_child(_my_acorns)
 	_my_streak = _streak_chip()
@@ -862,16 +871,21 @@ func _show_moods() -> void:
 # --- The panel under the field ---------------------------------------------
 
 func _rebuild_panel() -> void:
+	# While shopping, the shop updates in place.
+	if duel.phase == "draft" and not _shop.is_empty() and int(_shop.round) == duel.round_number:
+		_refresh_shop()
+		return
 	for child in _panel.get_children():
 		_panel.remove_child(child)
 		child.queue_free()
+	_shop = {}
 	if duel.phase != _panel_phase:
 		# A new part of the round: the panel springs in.
 		_panel_phase = duel.phase
 		(func() -> void: UIKit.pop_in(_panel_box, 0.92, Feel.num("ui", "panel_seconds", 0.32))).call_deferred()
 	match duel.phase:
 		"draft":
-			_draft_panel()
+			_build_shop()
 		"place":
 			_place_panel()
 		"fight":
@@ -882,31 +896,32 @@ func _rebuild_panel() -> void:
 	_panel_box.visible = _panel.get_child_count() > 0
 
 
-## The strip across the top of the panel: a title (and a short hint under
-## it, if any) on the left, `right` (chips or a button) on the right.
-## Tapping the title calls `on_title`, if given.
+## The strip across the top of the panel: a title on a wooden trail sign
+## (and a short hint under it, if any) on the left, `right` (chips or a
+## button) on the right. Tapping the title calls `on_title`, if given.
 func _heading(title: String, subtitle := "", icon_key := "", right: Control = null, on_title := Callable()) -> void:
 	var row := UIStyle.hbox("s")
+	_fill_heading(row, title, subtitle, icon_key, right, on_title)
+	_panel.add_child(row)
+
+
+func _fill_heading(row: HBoxContainer, title: String, subtitle := "", icon_key := "", right: Control = null, on_title := Callable()) -> void:
 	row.custom_minimum_size.y = UIStyle.num("button", "min_height", 88)
 	if icon_key != "":
 		row.add_child(UIStyle.icon(icon_key, UIStyle.color("gold"), 52))
 	var titles := UIStyle.vbox("xs")
-	titles.add_theme_constant_override("separation", 0)
+	titles.add_theme_constant_override("separation", 2)
 	titles.alignment = BoxContainer.ALIGNMENT_CENTER
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var title_row := UIStyle.hbox("xs")
-	if on_title.is_valid():
-		title_row.add_child(UIStyle.icon("info", UIStyle.color("text_soft"), 36))
-	var title_label := UIStyle.label(title, "large")
-	title_label.clip_text = true
-	title_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title_row.add_child(title_label)
-	titles.add_child(title_row)
+	var widest := 640.0 - (right.get_combined_minimum_size().x + UIStyle.space("s") if right != null else 0.0)
+	var plank := UIStyle.sign(title, "body" if on_title.is_valid() else "large", widest - 80.0)
+	plank.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	titles.add_child(plank)
 	if subtitle != "":
 		var sub := UIStyle.label(subtitle, "small", UIStyle.color("text_soft"))
 		sub.clip_text = true
 		sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		sub.custom_minimum_size.x = 0
 		titles.add_child(sub)
 	row.add_child(titles)
 	if on_title.is_valid():
@@ -915,7 +930,6 @@ func _heading(title: String, subtitle := "", icon_key := "", right: Control = nu
 	if right != null:
 		right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		row.add_child(right)
-	_panel.add_child(row)
 
 
 ## A row of big buttons sharing the panel's width.
@@ -931,23 +945,138 @@ func _buttons(row_items: Array) -> HBoxContainer:
 
 # Shopping: your own Watering Hole, and training your herd.
 
-func _draft_panel() -> void:
+## The shop: a strip (title and counts, or the picked card and its Buy or
+## Train button), two rows of three big cards, your herd's slots, and
+## Reroll and Done. Built once a round; _refresh_shop() keeps it up to date.
+func _build_shop() -> void:
+	var strip := UIStyle.hbox("s")
+	strip.custom_minimum_size.y = UIStyle.num("button", "min_height", 88)
+	_panel.add_child(strip)
+	var grid := GridContainer.new()
+	grid.columns = 3
+	grid.add_theme_constant_override("h_separation", UIStyle.space("s"))
+	grid.add_theme_constant_override("v_separation", UIStyle.space("s"))
+	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var cells := []
+	for i in duel.shops[0].size():
+		var cell := Control.new()
+		cell.custom_minimum_size = _shop_card_size()
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		grid.add_child(cell)
+		cells.append(cell)
+	_panel.add_child(grid)
+	var herd_row := UIStyle.hbox("xs")
+	herd_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var herd_cells := []
+	for i in int(duel.rules.herd_max):
+		var cell := Control.new()
+		cell.custom_minimum_size = _herd_slot_size()
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		herd_row.add_child(cell)
+		herd_cells.append(cell)
+	_panel.add_child(herd_row)
+	var reroll := UIStyle.button("Reroll", "secondary", "reroll", int(duel.rules.reroll_cost))
+	reroll.pressed.connect(_reroll_pressed)
+	var finish := UIStyle.button("Done", "primary")
+	finish.pressed.connect(func() -> void:
+		_selected_market = -1
+		_selected_herd = -1
+		duel.finish_shopping(0)
+	)
+	var buttons := _buttons([reroll, finish])
+	_shop = {"round": duel.round_number, "strip": strip, "strip_key": "", "cells": cells, "herd_cells": herd_cells,
+		"reroll": reroll, "done": finish, "shop_key": "", "first": true}
+	_market_cards.clear()
+	_herd_chips.clear()
+	_refresh_shop()
+	_shop.first = false
+	# The herd slots and buttons pop in one after another, after the cards.
+	var step := Feel.num("ui", "stagger_seconds", 0.05)
+	var delay := step * cells.size()
+	for cell in herd_cells:
+		_pop_later(cell, delay)
+		delay += step * 0.6
+	_pop_later(buttons, delay)
+
+
+## Keeps the shop up to date: the strip, the cards (new ones pop in, bought
+## ones fade to a check mark, a picked one lifts), your herd and the buttons.
+func _refresh_shop() -> void:
 	var done: bool = duel.done_shopping[0]
-	var market_picked: bool = _selected_market >= 0 and int(duel.shops[0][_selected_market].taken) < 0
+	_refresh_strip(done)
+	var cells: Array = _shop.cells
+	var key := str(duel.shops[0].map(func(item): return item.id))
+	if key != String(_shop.shop_key):
+		_shop.shop_key = key
+		_deal_cards(not bool(_shop.first))
+	for i in _market_cards.size():
+		_update_market_card(i)
+	# Your herd: a card per animal, an empty slot for each spare place.
+	var herd: Array = duel.herds[0]
+	var herd_cells: Array = _shop.herd_cells
+	_herd_chips.clear()
+	for i in herd_cells.size():
+		var cell: Control = herd_cells[i]
+		var id: String = herd[i].id if i < herd.size() else ""
+		var card: GameCard = cell.get_child(0) if cell.get_child_count() > 0 else null
+		if card == null or card.card_id != id:
+			if card != null:
+				cell.remove_child(card)
+				card.queue_free()
+			card = GameCard.make(id, cell.custom_minimum_size)
+			cell.add_child(card)
+			if id != "":
+				var index := i
+				UIKit.on_tap(card, func() -> void: _select_herd(index))
+				if _landing.has(i):
+					card.modulate.a = 0.0  # shown when the bought card lands
+		if id != "":
+			if card.stars != int(herd[i].stars):
+				card.stars = int(herd[i].stars)
+				card.queue_redraw()
+			card.selected = i == _selected_herd
+			_lift(card, card.selected)
+			_herd_chips.append(card)
+	var reroll: ChunkyButton = _shop.reroll
+	reroll.kind = "secondary" if not done and duel.acorns[0] >= int(duel.rules.reroll_cost) else "disabled"
+	reroll.disabled = done
+	var finish: ChunkyButton = _shop.done
+	finish.disabled = done
+	finish.set_label("Ready" if done else "Done")
+	finish.breathe = not done
+
+
+## The strip changes with what's picked; the new one fades in.
+func _refresh_strip(done: bool) -> void:
+	var market_picked: bool = _selected_market >= 0 and _selected_market < duel.shops[0].size() and int(duel.shops[0][_selected_market].taken) < 0
 	var herd_picked: bool = not market_picked and _selected_herd >= 0 and _selected_herd < duel.herds[0].size()
+	var key := ""
 	if done:
-		_heading("Ready!", "Waiting for %s" % opponent.name)
+		key = "done"
+	elif market_picked:
+		key = "market %d %s %s" % [_selected_market, duel.shops[0][_selected_market].id, duel.can_buy(0, _selected_market)]
+	elif herd_picked:
+		key = "herd %d %d %s" % [_selected_herd, int(duel.herds[0][_selected_herd].stars), duel.can_train(0, _selected_herd)]
+	else:
+		key = "idle %d %d" % [duel.herds[0].size(), duel.tools[0].size()]
+	if key == String(_shop.strip_key):
+		return
+	_shop.strip_key = key
+	var strip: HBoxContainer = _shop.strip
+	for child in strip.get_children():
+		strip.remove_child(child)
+		child.queue_free()
+	if done:
+		_fill_heading(strip, "Ready!", "Waiting for %s" % opponent.name)
 	elif market_picked:
 		var item: Dictionary = duel.shops[0][_selected_market]
-		var card := GameData.get_card(item.id)
 		var problem := duel.can_buy(0, _selected_market)
 		var buy := UIStyle.button("Buy", "primary" if problem == "" else "disabled", "", int(item.cost))
 		buy.pressed.connect(func() -> void: _buy(_selected_market))
 		var id: String = item.id
-		_heading(card.name, _card_line(item.id), "", buy, func() -> void: _show_card(id))
+		_fill_heading(strip, GameData.get_card(id).name, _card_line(id), "", buy, func() -> void: _show_card(id))
 	elif herd_picked:
 		var entry: Dictionary = duel.herds[0][_selected_herd]
-		var card := GameData.get_card(entry.id)
 		var price := duel.train_cost(0, _selected_herd)
 		var problem := duel.can_train(0, _selected_herd)
 		var right: Control = null
@@ -957,75 +1086,113 @@ func _draft_panel() -> void:
 			right = train
 		var line := "+%d%% health and bite" % int(duel.rules.star_bonus_pct) if price >= 0 else "Fully trained!"
 		var id: String = entry.id
-		_heading(card.name, line, "", right, func() -> void: _show_card(id))
+		_fill_heading(strip, GameData.get_card(id).name, line, "", right, func() -> void: _show_card(id))
 	else:
 		var counts := UIStyle.hbox("xs")
 		counts.add_child(_count_chip("paw", "%d/%d" % [duel.herds[0].size(), int(duel.rules.herd_max)]))
 		counts.add_child(_count_chip("toolbox", "%d/%d" % [duel.tools[0].size(), int(duel.rules.tools_max)]))
-		_heading("Watering Hole", "", "", counts)
-
-	# The shop: two rows of three big cards.
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", UIStyle.space("s"))
-	grid.add_theme_constant_override("v_separation", UIStyle.space("s"))
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	_market_cards.clear()
-	for i in duel.shops[0].size():
-		var card := _market_card(i)
-		_market_cards.append(card)
-		grid.add_child(card)
-	_panel.add_child(grid)
-
-	# Your herd: a slot for each animal it can hold.
-	var herd_row := UIStyle.hbox("xs")
-	herd_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	_herd_chips.clear()
-	for i in int(duel.rules.herd_max):
-		if i < duel.herds[0].size():
-			var chip := _herd_chip(i, _herd_slot_size())
-			_herd_chips.append(chip)
-			herd_row.add_child(chip)
-		else:
-			herd_row.add_child(GameCard.make("", _herd_slot_size()))
-	_panel.add_child(herd_row)
-
-	var reroll := UIStyle.button("Reroll", "secondary" if not done and duel.acorns[0] >= int(duel.rules.reroll_cost) else "disabled", "reroll", int(duel.rules.reroll_cost))
-	reroll.disabled = done
-	reroll.pressed.connect(func() -> void:
-		if duel.acorns[0] < int(duel.rules.reroll_cost):
-			Sound.play("error")
-			_set_status("Not enough Acorns", UIStyle.color("danger").lightened(0.4))
-			return
-		duel.reroll(0)
-	)
-	var finish := UIStyle.button("Done" if not done else "Ready", "primary", "check" if done else "")
-	finish.disabled = done
-	finish.pressed.connect(func() -> void:
-		_selected_market = -1
-		_selected_herd = -1
-		duel.finish_shopping(0)
-	)
-	_buttons([reroll, finish])
-	_animate_shop()
+		_fill_heading(strip, "Watering Hole", "", "", counts)
+	strip.modulate.a = 0.0
+	var tween := strip.create_tween()
+	tween.tween_property(strip, "modulate:a", 1.0, Feel.num("ui", "fade_seconds", 0.15))
 
 
-func _market_card(slot: int) -> Control:
+func _market_card(slot: int) -> GameCard:
 	var item: Dictionary = duel.shops[0][slot]
-	var taken := int(item.taken)
 	var card := GameCard.make(item.id, _shop_card_size())
-	card.cost = int(item.cost)
-	card.affordable = duel.acorns[0] >= int(item.cost) or taken >= 0
-	card.selected = slot == _selected_market
-	card.done = taken >= 0
-	var target := duel.merge_target(0, item.id) if taken < 0 and not GameData.is_tool(item.id) else -1
-	if target >= 0:
-		# A copy of one you have: buying it adds a star.
-		card.stars = int(duel.herds[0][target].stars) + 1
-		card.star_preview = true
-		card.animate(true)
 	UIKit.on_tap(card, func() -> void: _on_market_tapped(slot))
 	return card
+
+
+## Deals the shop's cards into their slots: the old ones flip away and the
+## new ones pop in one after another (`animated`), or just appear.
+func _deal_cards(animated: bool) -> void:
+	var cells: Array = _shop.cells
+	var step := Feel.num("ui", "stagger_seconds", 0.05)
+	_market_cards.clear()
+	for i in cells.size():
+		var cell: Control = cells[i]
+		for old in cell.get_children():
+			var leaving := old as Control
+			leaving.set_meta("leaving", true)
+			var out := leaving.create_tween()
+			out.tween_property(leaving, "scale", Vector2(0.2, 0.2), 0.12).set_delay(step * i * 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
+			out.parallel().tween_property(leaving, "modulate:a", 0.0, 0.12).set_delay(step * i * 0.5)
+			out.tween_callback(leaving.queue_free)
+		if i >= duel.shops[0].size():
+			continue
+		var card := _market_card(i)
+		cell.add_child(card)
+		_market_cards.append(card)
+		card.scale = Vector2(0.4, 0.4)
+		card.modulate.a = 0.0
+		var tween := card.create_tween()
+		tween.tween_interval((0.14 if animated else 0.0) + step * i)
+		tween.tween_property(card, "modulate:a", 1.0, 0.1)
+		tween.parallel().tween_property(card, "scale", Vector2.ONE, Feel.num("ui", "panel_seconds", 0.32)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Brings one shop card up to date: price, what you can afford, whether it's
+## picked (it lifts), bought (it fades to a check mark) or a copy of one of
+## yours (a pulsing extra star).
+func _update_market_card(i: int) -> void:
+	var card: GameCard = _market_cards[i]
+	var item: Dictionary = duel.shops[0][i]
+	var taken := int(item.taken)
+	card.cost = int(item.cost)
+	card.affordable = duel.acorns[0] >= int(item.cost) or taken >= 0
+	card.selected = i == _selected_market and taken < 0
+	_lift(card, card.selected)
+	if taken >= 0 and card.done < 1.0 and not card.has_meta("fading"):
+		card.set_meta("fading", true)
+		card.create_tween().tween_property(card, "done", 1.0, 0.25).set_delay(0.15)
+	var target := duel.merge_target(0, item.id) if taken < 0 and not GameData.is_tool(item.id) else -1
+	var stars := int(duel.herds[0][target].stars) + 1 if target >= 0 else 0
+	if stars != card.stars:
+		card.stars = stars
+		card.star_preview = target >= 0
+		card.animate(target >= 0)
+		card.queue_redraw()
+
+
+## Lifts a picked card a little (and lets it back down), smoothly.
+func _lift(card: Control, on: bool) -> void:
+	if bool(card.get_meta("lifted", false)) == on:
+		return
+	card.set_meta("lifted", on)
+	var lift := UIStyle.num("card", "selected_lift", 1.06)
+	card.pivot_offset = card.size / 2.0
+	card.create_tween().tween_property(card, "scale", Vector2.ONE * (lift if on else 1.0), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Shop cards bob gently, each a little out of step with the others.
+func _bob_cards(delta: float) -> void:
+	if _shop.is_empty():
+		return
+	_bob_time += delta
+	var amount := Feel.num("ui", "card_bob_pixels", 3.0)
+	var period := maxf(0.2, Feel.num("ui", "card_bob_seconds", 2.6))
+	for i in _market_cards.size():
+		var card: Control = _market_cards[i]
+		if is_instance_valid(card):
+			card.position.y = sin(_bob_time * TAU / period + i * 1.9) * amount
+
+
+## Pops a control in after `delay` seconds.
+func _pop_later(control: Control, delay: float) -> void:
+	control.modulate.a = 0.0
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		if is_instance_valid(control):
+			UIKit.pop_in(control, 0.6, Feel.num("ui", "panel_seconds", 0.32)))
+
+
+func _reroll_pressed() -> void:
+	if duel.acorns[0] < int(duel.rules.reroll_cost):
+		Sound.play("error")
+		_set_status("Not enough Acorns", UIStyle.color("danger").lightened(0.4))
+		return
+	Sound.play("whoosh", -6.0)
+	duel.reroll(0)
 
 
 func _shop_card_size() -> Vector2:
@@ -1060,29 +1227,7 @@ func _count_chip(icon_key: String, text: String) -> Control:
 	return UIStyle.chip(row)
 
 
-## Cards pop in one by one when the shop changes (a new round or a reroll),
-## and a newly picked card lifts.
-func _animate_shop() -> void:
-	var key := str([duel.round_number, duel.shops[0].map(func(item): return item.id)])
-	var fresh := key != _shop_key
-	_shop_key = key
-	var lift := UIStyle.num("card", "selected_lift", 1.06)
-	for i in _market_cards.size():
-		var card: GameCard = _market_cards[i]
-		if fresh:
-			card.scale = Vector2(0.4, 0.4)
-			card.modulate.a = 0.0
-			var tween := card.create_tween()
-			tween.tween_interval(0.05 * i)
-			tween.tween_property(card, "modulate:a", 1.0, 0.1)
-			tween.parallel().tween_property(card, "scale", Vector2.ONE, Feel.num("ui", "panel_seconds", 0.32)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-		elif card.selected:
-			if _lifted != i:
-				card.scale = Vector2.ONE
-				card.create_tween().tween_property(card, "scale", Vector2(lift, lift), 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			else:
-				card.scale = Vector2(lift, lift)
-	_lifted = _selected_market
+
 
 
 
@@ -1094,10 +1239,23 @@ func _train_selected() -> void:
 		Sound.play("error")
 		_set_status(problem, UIStyle.color("danger").lightened(0.4))
 		return
-	var at := _chip_center(_herd_chips, _selected_herd)
-	if duel.train(0, _selected_herd):
-		_ui_fx.burst("sparkle", at, Feel.count("effects", "upgrade_sparkles", 14), 220.0, 0.7, 10.0, [Color("#ffe14d"), Color.WHITE], -80.0, 2.5)
-		_ui_fx.burst("star", at, 4, 200.0, 0.7, 9.0, [Color("#ffe14d")], 500.0, 1.2, 160.0)
+	var index := _selected_herd
+	if duel.train(0, index):
+		_star_up(index)
+
+
+## A herd animal gained a star: it flashes and bounces, and stars burst out.
+func _star_up(index: int) -> void:
+	if _shop.is_empty() or index >= (_shop.herd_cells as Array).size():
+		return
+	var cell: Control = _shop.herd_cells[index]
+	if cell.get_child_count() == 0:
+		return
+	var card: GameCard = cell.get_child(0)
+	card.flash = 1.0
+	card.create_tween().tween_property(card, "flash", 0.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	_squash(card)
+	UIFx.stars(cell.get_global_rect().get_center(), Feel.count("effects", "upgrade_sparkles", 14) / 2)
 
 
 func _on_market_tapped(slot: int) -> void:
@@ -1117,10 +1275,80 @@ func _buy(slot: int) -> void:
 		Sound.play("error")
 		_set_status(problem, UIStyle.color("danger").lightened(0.4))
 		return
-	var at := _chip_center(_market_cards, slot)
+	var item: Dictionary = duel.shops[0][slot]
+	var id: String = item.id
+	var from := (_market_cards[slot] as Control).get_global_rect()
+	var tool := GameData.is_tool(id)
+	var target := duel.merge_target(0, id) if not tool else -1
+	var index: int = target if target >= 0 else duel.herds[0].size()
+	if not tool and target < 0:
+		_landing[index] = true
 	duel.buy(0, slot)
-	_ui_fx.burst_coins(at, Feel.count("effects", "coin_burst", 8))
-	_ui_fx.burst("sparkle", at, 6, 160.0, 0.5, 8.0, [Color.WHITE, Color("#fff3a8")], -40.0, 3.0)
+	UIFx.particles.burst_coins(from.get_center(), Feel.count("effects", "coin_burst", 8))
+	if tool:
+		# Tools go in your tool belt: up toward the counts in the strip.
+		var strip: Control = _shop.strip
+		var to := Rect2(strip.get_global_rect().end - Vector2(150, 70), Vector2(60, 60))
+		_fly_card(id, from, to, func() -> void: UIFx.tap(to.get_center()))
+		return
+	var cell: Control = _shop.herd_cells[index]
+	_fly_card(id, from, cell.get_global_rect(), func() -> void: _land(index, target >= 0))
+
+
+## A bought card flies along an arc from the shop to its place.
+func _fly_card(id: String, from: Rect2, to: Rect2, on_land: Callable) -> void:
+	var flyer := GameCard.make(id, from.size)
+	flyer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flyer.position = from.position
+	flyer.pivot_offset = from.size / 2.0
+	UIFx.air.add_child(flyer)
+	var start := from.get_center()
+	var end := to.get_center()
+	var peak := (start + end) / 2.0 + Vector2(0, -Feel.num("ui", "fly_arc_pixels", 140.0))
+	var end_scale := Vector2(to.size.x / from.size.x, to.size.y / from.size.y)
+	var size := from.size
+	Sound.play("whoosh", -8.0)
+	var tween := flyer.create_tween()
+	tween.tween_method(func(t: float) -> void:
+		var at := start.lerp(peak, t).lerp(peak.lerp(end, t), t)
+		flyer.position = at - size / 2.0
+		flyer.scale = Vector2.ONE.lerp(end_scale, t) * (1.0 + 0.12 * sin(t * PI))
+		flyer.rotation = -0.22 * sin(t * PI)
+	, 0.0, 1.0, Feel.num("ui", "fly_seconds", 0.5)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(func() -> void:
+		flyer.queue_free()
+		on_land.call())
+
+
+## The card lands in your herd: it squashes, bounces, and kicks up dust. A
+## copy instead adds a star to the one already there.
+func _land(index: int, merged: bool) -> void:
+	_landing.erase(index)
+	if _shop.is_empty() or index >= (_shop.herd_cells as Array).size():
+		return
+	var cell: Control = _shop.herd_cells[index]
+	if cell.get_child_count() == 0:
+		return
+	var card: GameCard = cell.get_child(0)
+	card.modulate.a = 1.0
+	_squash(card)
+	var rect := cell.get_global_rect()
+	UIFx.dust(Vector2(rect.get_center().x, rect.end.y - 4.0), rect.size.x * 0.8)
+	Sound.play("land")
+	if merged:
+		_star_up(index)
+
+
+## A quick squash and bounce back.
+func _squash(card: Control) -> void:
+	var amount := Feel.num("ui", "land_squash", 0.22)
+	card.pivot_offset = Vector2(card.size.x / 2.0, card.size.y)
+	card.scale = Vector2(1.0 + amount, 1.0 - amount)
+	var tween := card.create_tween()
+	tween.tween_property(card, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	tween.tween_callback(func() -> void:
+		card.pivot_offset = card.size / 2.0
+		card.set_meta("lifted", false))
 
 
 # Placing.
@@ -1478,7 +1706,7 @@ func _record(outcome: String) -> void:
 
 func _back_to_menu() -> void:
 	Profile.pending_match_result = _result
-	get_tree().change_scene_to_file(MENU_SCENE)
+	Transition.go(MENU_SCENE)
 
 
 func _on_leave() -> void:

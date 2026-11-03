@@ -8,6 +8,8 @@ extends Control
 ## Timings and sizes are in feel.json ("rivals").
 
 signal finished
+## Starts fading out: what's under it can show again.
+signal leaving
 
 const C := "rivals"
 
@@ -210,6 +212,7 @@ func _leave() -> void:
 	if _leaving or not is_inside_tree():
 		return
 	_leaving = true
+	leaving.emit()
 	Sound.play("whoosh", -4.0)
 	var tween := create_tween()
 	tween.tween_property(self, "modulate:a", 0.0, 0.25)

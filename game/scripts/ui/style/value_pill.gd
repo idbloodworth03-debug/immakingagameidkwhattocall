@@ -13,17 +13,20 @@ var _shown := 0.0
 var _tween: Tween
 
 
-static func make(icon_key: String, icon_tint: Color, start := 0) -> ValuePill:
+static func make(icon_key: String, icon_tint: Color, start := 0, brass := false) -> ValuePill:
 	var pill := ValuePill.new()
-	pill.theme_type_variation = "ChipPanel"
+	pill.theme_type_variation = "BrassPanel" if brass else "ChipPanel"
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var row := UIStyle.hbox("xs")
 	pill.add_child(row)
 	pill.icon_rect = UIStyle.icon(icon_key, icon_tint, int(UIStyle.num("chip", "icon", 40)))
 	row.add_child(pill.icon_rect)
+	if brass:
+		UIStyle.add_glint(pill.icon_rect)
 	pill.amount = UIStyle.label(str(start), "body")
 	row.add_child(pill.amount)
-	pill.extra_label = UIStyle.label("", "small", UIStyle.color("gold"))
+	# A short note after the number (gold on wood, white on brass).
+	pill.extra_label = UIStyle.label("", "small", Color.WHITE if brass else UIStyle.color("gold"))
 	pill.extra_label.visible = false
 	row.add_child(pill.extra_label)
 	pill.value = start

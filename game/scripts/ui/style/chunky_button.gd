@@ -1,10 +1,12 @@
 class_name ChunkyButton
 extends Button
 ## A chunky game button (make it with UIStyle.button). Its look comes from
-## the shared theme ("PrimaryButton", "SecondaryButton"...): a lighter top,
-## a darker lip underneath and a thick outline. Its content (icon, outlined
-## text, Acorn price) sits on the face and sinks with it when pressed; the
-## button squashes down on press, bounces back on release, and clicks.
+## the shared theme ("PrimaryButton", "SecondaryButton"...): painted wood
+## with a darker lip underneath and a thick outline. Its content (icon,
+## outlined text, Acorn price) sits on the face and sinks with it when
+## pressed; the button squashes down on press, bounces back on release, and
+## a tap pops with a little sparkle. `breathe` makes it pulse gently, for
+## the action you'd most likely take next (feel.json "ui").
 
 var kind := "secondary":
 	set(value):
@@ -19,10 +21,20 @@ var min_width := 0.0:
 	set(value):
 		min_width = value
 		_fit()
+## Pulse gently (the main action on a screen).
+var breathe := false:
+	set(value):
+		breathe = value
+		set_process(value)
+		if not value:
+			scale = Vector2.ONE
 var content: HBoxContainer
 var text_label: Label
 var cost_label: Label
 var _sunk := false
+var _held := false
+var _settle_until := 0.0
+var _time := 0.0
 
 
 static func make(text_value: String, button_kind: String, icon_key := "", cost := -1, size_key := "large") -> ChunkyButton:
@@ -47,9 +59,16 @@ static func make(text_value: String, button_kind: String, icon_key := "", cost :
 		b.content.add_child(price)
 	b.add_child(b.content)
 	b.content.minimum_size_changed.connect(b._fit)
-	b.button_down.connect(func() -> void: UIKit.press_squash(b))
-	b.button_up.connect(func() -> void: UIKit.release_bounce(b))
-	b.pressed.connect(func() -> void: Sound.play("tap"))
+	b.button_down.connect(func() -> void:
+		b._held = true
+		UIKit.press_squash(b))
+	b.button_up.connect(func() -> void:
+		b._held = false
+		b._settle_until = Time.get_ticks_msec() / 1000.0 + Feel.num("ui", "release_seconds", 0.28)
+		UIKit.release_bounce(b))
+	b.pressed.connect(func() -> void:
+		Sound.play("tap")
+		UIFx.tap(b.get_global_rect().get_center()))
 	b.resized.connect(func() -> void: b.pivot_offset = b.size / 2.0)
 	return b
 
@@ -57,6 +76,16 @@ static func make(text_value: String, button_kind: String, icon_key := "", cost :
 func _ready() -> void:
 	_fit()
 	_place_content()
+	set_process(breathe)
+
+
+func _process(delta: float) -> void:
+	_time += delta
+	if _held or Time.get_ticks_msec() / 1000.0 < _settle_until or disabled:
+		return
+	var amount := Feel.num("ui", "breathe_amount", 0.03)
+	var period := maxf(0.2, Feel.num("ui", "breathe_seconds", 1.8))
+	scale = Vector2.ONE * (1.0 + amount * (0.5 + 0.5 * sin(_time * TAU / period)))
 
 
 func _notification(what: int) -> void:

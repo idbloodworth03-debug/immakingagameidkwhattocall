@@ -124,14 +124,40 @@
   },
 
   "ui": {
-    "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in. Numbers in pills tick to their new value over count_seconds; short messages over the field stay for toast_seconds.",
+    "_note": "Buttons and tappable cards squash when pressed and spring back with an overshoot (big panels squash less); popups and the Draft Duel panel pop in. Numbers in pills tick to their new value over count_seconds; short messages over the field stay for toast_seconds. A tap shows tap_sparkles sparkles; the main button on a screen breathes (breathe_amount, breathe_seconds); brass and gold icons catch a glint every glint_seconds; shop cards bob gently (card_bob_pixels, card_bob_seconds) and pop in stagger_seconds apart; a bought card flies to your herd (fly_seconds, along an arc fly_arc_pixels high) and lands with a squash (land_squash) and land_puffs puffs of dust.",
     "press_scale": 0.9,
     "release_overshoot": 1.07,
     "release_seconds": 0.28,
     "panel_seconds": 0.32,
     "pill_bump": 1.22,
     "count_seconds": 0.4,
-    "toast_seconds": 2.2
+    "toast_seconds": 2.2,
+    "tap_sparkles": 4,
+    "breathe_amount": 0.03,
+    "breathe_seconds": 1.8,
+    "glint_seconds": 3.5,
+    "card_bob_pixels": 3.0,
+    "card_bob_seconds": 2.6,
+    "fly_seconds": 0.5,
+    "fly_arc_pixels": 140.0,
+    "land_puffs": 7,
+    "land_squash": 0.22,
+    "stagger_seconds": 0.05,
+    "fade_seconds": 0.15
+  },
+
+  "grade": {
+    "_note": "A warm afternoon grade over the whole game, darker toward the edges (a gentle vignette). Colors are in ui_style.json (grade_center, grade_edge); strength 0 turns it off without removing it.",
+    "enabled": true,
+    "strength": 1.0,
+    "vignette_start": 0.55
+  },
+
+  "transition": {
+    "_note": "Changing screens: a leafy circle closes (cover_seconds) with a swirl of leaves, then opens on the next screen (reveal_seconds).",
+    "cover_seconds": 0.38,
+    "reveal_seconds": 0.45,
+    "leaves": 22
   },
 
   "background": {

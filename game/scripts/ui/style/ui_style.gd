@@ -95,78 +95,51 @@ static func body_font() -> Font:
 
 # --- Boxes -----------------------------------------------------------------
 
-## The main panel: bright, chunky, with a lip and a soft shadow.
-static func panel_box(base := Color(0, 0, 0, 0)) -> ChunkyBox:
-	var box := ChunkyBox.new()
-	box.color = base if base.a > 0.0 else color("panel")
-	box.outline = color("outline")
-	box.radius = radius("panel")
-	box.border = num("panel", "border", 5)
-	box.lip = num("panel", "lip", 6)
-	box.highlight = num("panel", "highlight", 0.45)
-	box.shadow_alpha = num("panel", "shadow_alpha", 0.28)
-	box.shadow_size = num("panel", "shadow_size", 10)
-	box.shadow_offset = num("panel", "shadow_offset", 6)
-	_pad(box, space("s"), box.border, box.lip)
+## The main panel: painted wood with a chunky lip and a soft shadow.
+static func panel_box(base := Color(0, 0, 0, 0)) -> SkinBox:
+	var box := SkinBox.make("panel", base if base.a > 0.0 else color("panel"))
+	_pad(box, space("s"), num("panel", "border", 5), num("panel", "lip", 6))
 	return box
 
 
-## A sunken well inside a panel.
-static func inset_box(base := Color(0, 0, 0, 0)) -> ChunkyBox:
-	var box := ChunkyBox.new()
-	box.color = base if base.a > 0.0 else color("panel_inset")
-	box.outline = color("outline")
-	box.sunken = true
-	box.radius = radius("card")
-	box.border = 3.0
-	box.lip = 0.0
-	box.highlight = 0.0
-	box.shadow_alpha = 0.0
+## A sunken well inside a panel (darker wood).
+static func inset_box(base := Color(0, 0, 0, 0)) -> SkinBox:
+	var box := SkinBox.make("inset", base if base.a > 0.0 else color("panel_inset"))
 	_pad(box, space("xs"), 3.0, 0.0)
 	return box
 
 
-## A small chip (pills, badges, tags).
-static func chip_box(base := Color(0, 0, 0, 0)) -> ChunkyBox:
-	var box := ChunkyBox.new()
-	box.color = base if base.a > 0.0 else color("chip")
-	box.outline = color("outline")
-	box.radius = radius("chip")
-	box.border = num("chip", "border", 3)
-	box.lip = num("chip", "lip", 4)
-	box.highlight = 0.4
-	box.shadow_alpha = 0.22
-	box.shadow_size = 4
-	box.shadow_offset = 3
-	box.content_margin_left = space("xs")
-	box.content_margin_right = space("s")
-	box.content_margin_top = 2 + box.border
-	box.content_margin_bottom = 2 + box.border + box.lip
+## A small chip (pills, badges, tags): wood, or brass for money (`brass`).
+static func chip_box(base := Color(0, 0, 0, 0), brass := false) -> SkinBox:
+	var box := SkinBox.make("chip_brass" if brass else "chip", base if base.a > 0.0 else (color("gold") if brass else color("chip")))
+	var border := num("chip", "border", 3)
+	box.content_margin_left = space("xs") + border
+	box.content_margin_right = space("s") + border
+	box.content_margin_top = 2 + border
+	box.content_margin_bottom = 2 + border + num("chip", "lip", 4)
 	return box
 
 
-## A button face of `kind` in one state: "normal", "pressed" or "disabled".
-static func button_box(kind: String, state := "normal") -> ChunkyBox:
-	var box := ChunkyBox.new()
+## A wooden trail-sign plank, for a panel's title.
+static func sign_box() -> SkinBox:
+	var box := SkinBox.make("sign", color("sign"))
+	box.content_margin_left = space("m") + 8
+	box.content_margin_right = space("m") + 8
+	box.content_margin_top = 6
+	box.content_margin_bottom = 12
+	return box
+
+
+## A button face of `kind` in one state: "normal", "hover", "pressed" or
+## "disabled". Painted wood in the kind's color.
+static func button_box(kind: String, state := "normal") -> SkinBox:
 	var base := color(kind if kind != "disabled" else "disabled")
 	if state == "disabled":
 		base = color("disabled")
 	elif state == "hover":
 		base = base.lightened(0.05)
-	box.color = base
-	box.outline = color("outline")
-	box.radius = radius("button")
-	box.border = num("button", "border", 4)
-	box.lip = num("button", "lip", 8)
-	box.gloss = num("button", "gloss", 0.3)
-	box.highlight = num("button", "highlight", 0.55)
-	box.shadow_alpha = num("button", "shadow_alpha", 0.3)
-	box.shadow_size = 4
-	box.shadow_offset = num("button", "shadow_offset", 4)
-	if state == "pressed":
-		box.sink = box.lip - num("button", "pressed_lip", 2)
-		box.shadow_offset = 1.0
-	_pad(box, space("m"), box.border, box.lip)
+	var box := SkinBox.make("button_pressed" if state == "pressed" else "button", base)
+	_pad(box, space("m"), num("button", "border", 4), num("button", "lip", 8))
 	return box
 
 
@@ -233,6 +206,10 @@ static func theme() -> Theme:
 	t.set_stylebox("panel", "InsetPanel", inset_box())
 	t.set_type_variation("ChipPanel", "PanelContainer")
 	t.set_stylebox("panel", "ChipPanel", chip_box())
+	t.set_type_variation("BrassPanel", "PanelContainer")
+	t.set_stylebox("panel", "BrassPanel", chip_box(Color(0, 0, 0, 0), true))
+	t.set_type_variation("SignPanel", "PanelContainer")
+	t.set_stylebox("panel", "SignPanel", sign_box())
 
 	# Thin, rounded scroll bars.
 	var grabber := StyleBoxFlat.new()
@@ -303,7 +280,22 @@ static func inset(content: Control = null) -> PanelContainer:
 	return p
 
 
-## A small chip holding `content`, in `base` color (the chip blue by default).
+## A wooden trail sign holding a title, cut short (…) past `widest` pixels.
+static func sign(title: String, size_key := "large", widest := 0.0) -> PanelContainer:
+	var l := label(title, size_key, Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER)
+	if widest > 0.0:
+		var px := text_size(size_key)
+		var width := display_font().get_string_size(title, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x + outline_for(px) * 2.0
+		if width > widest:
+			l.clip_text = true
+			l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+			l.custom_minimum_size.x = widest
+	var p := panel(l)
+	p.theme_type_variation = "SignPanel"
+	return p
+
+
+## A small chip holding `content`, in `base` color (wood by default).
 static func chip(content: Control, base := Color(0, 0, 0, 0)) -> PanelContainer:
 	var p := panel(content)
 	if base.a > 0.0:
@@ -314,8 +306,19 @@ static func chip(content: Control, base := Color(0, 0, 0, 0)) -> PanelContainer:
 
 
 ## A pill with an icon and a number that ticks up and down (ValuePill).
-static func pill(icon_key: String, icon_tint: Color, value := 0) -> ValuePill:
-	return ValuePill.make(icon_key, icon_tint, value)
+## `brass` for money: shiny, and its icon catches a glint now and then.
+static func pill(icon_key: String, icon_tint: Color, value := 0, brass := false) -> ValuePill:
+	return ValuePill.make(icon_key, icon_tint, value, brass)
+
+
+## Makes a shiny thing (a brass or gold icon) catch a sweeping glint now
+## and then (feel.json "ui": glint_seconds).
+static func add_glint(item: CanvasItem) -> void:
+	var material := ShaderMaterial.new()
+	material.shader = preload("res://scripts/fx/glint.gdshader")
+	material.set_shader_parameter("period", Feel.num("ui", "glint_seconds", 3.5))
+	material.set_shader_parameter("offset", randf() * 10.0)
+	item.material = material
 
 
 ## A tinted icon from res://art/icons/ by its art.json "ui" key.
@@ -344,7 +347,7 @@ static func vbox(gap_key := "xs") -> VBoxContainer:
 	return v
 
 
-## The screen backdrop: a bright sky gradient.
+## The screen backdrop: a warm summer sky fading to sunshine.
 static func backdrop() -> TextureRect:
 	var gradient := Gradient.new()
 	gradient.set_color(0, color("sky"))
@@ -362,6 +365,19 @@ static func backdrop() -> TextureRect:
 	rect.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
+
+
+## One cell of the particle sheet (a star, a brass coin, a leaf...) centered
+## on `center`, `radius` across its shape, tinted. Cards use these so their
+## stars and coins batch with each other.
+static func draw_particle(canvas: CanvasItem, kind: String, center: Vector2, radius: float, tint := Color.WHITE) -> void:
+	var info: Dictionary = SkinBox.meta().get("particles", {})
+	var cell := float(info.get("cell", 128))
+	var columns := int(info.get("columns", 4))
+	var index := ParticleLayer.cell_of(kind)
+	var src := Rect2((index % columns) * cell, floori(index / float(columns)) * cell, cell, cell)
+	var side := radius * 2.5
+	canvas.draw_texture_rect_region(SkinBox.texture("particles.png"), Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), src, tint)
 
 
 ## A gold star with a dark outline, filled or as an empty socket.

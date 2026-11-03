@@ -39,7 +39,7 @@ func _ready() -> void:
 	battle.add_theme_constant_override("icon_max_width", 58)
 	battle.add_theme_constant_override("h_separation", 14)
 	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	battle.pressed.connect(func() -> void: get_tree().change_scene_to_file(DRAFT_SCENE))
+	battle.pressed.connect(func() -> void: Transition.go(DRAFT_SCENE))
 	column.add_child(battle)
 	# A gentle pulse so the main button invites a tap.
 	var pulse := battle.create_tween().set_loops()

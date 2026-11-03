@@ -1,29 +1,32 @@
 class_name ParticleLayer
 extends Node2D
-## Bright cartoon particles: sparks, puffs, stars, sparkles, confetti, coins
-## and petals. Drawn in one pass, with a cap on how many there can be at once
-## (data/feel.json, "effects"). On its own it moves itself along every frame;
-## the battlefield's effects layer (FxLayer) builds on it and is moved along
-## by the field instead, so hit-stop freezes it too.
+## Bright cartoon particles: sparks, puffs, stars, sparkles, confetti, coins,
+## petals, leaves, dust, hearts and acorns, with a cap on how many there can
+## be at once (data/feel.json, "effects"). On its own it moves itself along
+## every frame; the battlefield's effects layer (FxLayer) builds on it and is
+## moved along by the field instead, so hit-stop freezes it too.
+##
+## All of them are drawn in a single draw call: one MultiMesh of quads, each
+## showing a cell of the particle sheet (art/ui/particles.png, made by
+## tools/make_ui_art.py). Drawing each particle as shapes cost two or three
+## draw calls apiece, which a phone's browser feels in a big celebration.
 
-const STAR_POINTS := 5
+const SHEET := "res://art/ui/particles.png"
+const SHADER := preload("res://scripts/fx/particle.gdshader")
 
 var particles: Array = []
 var time := 0.0
 ## False when something else calls step_particles() (the battlefield).
 var self_driven := true
 
-
-var _was_busy := false
+var _mesh: MultiMeshInstance2D
+static var _cells: Dictionary = {}
+static var _quad: ArrayMesh
 
 
 func _process(delta: float) -> void:
 	if self_driven:
 		step_particles(delta)
-		if not particles.is_empty() or _was_busy:
-			queue_redraw()
-		_was_busy = not particles.is_empty()
-
 
 func step_particles(dt: float) -> void:
 	time += dt
@@ -34,27 +37,76 @@ func step_particles(dt: float) -> void:
 		p.pos += p.vel * dt
 		p.rot += float(p.spin) * dt
 	particles = particles.filter(func(p): return p.age < p.life)
+	_update_mesh()
 
 
-func _draw() -> void:
-	draw_particles()
+## The sheet's cell number for each kind.
+static func cell_of(kind: String) -> int:
+	if _cells.is_empty():
+		var kinds: Array = SkinBox.meta().get("particles", {}).get("kinds", [])
+		for i in kinds.size():
+			_cells[kinds[i]] = i
+	return int(_cells.get(kind, 0))
 
 
-func draw_particles() -> void:
-	for p in particles:
-		_draw_particle(p)
+func _ensure_mesh() -> void:
+	if _mesh != null:
+		return
+	if _quad == null:
+		# A unit quad centered on the origin (2D, y down).
+		var arrays := []
+		arrays.resize(Mesh.ARRAY_MAX)
+		arrays[Mesh.ARRAY_VERTEX] = PackedVector2Array([Vector2(-0.5, -0.5), Vector2(0.5, -0.5), Vector2(0.5, 0.5), Vector2(-0.5, -0.5), Vector2(0.5, 0.5), Vector2(-0.5, 0.5)])
+		arrays[Mesh.ARRAY_TEX_UV] = PackedVector2Array([Vector2(0, 0), Vector2(1, 0), Vector2(1, 1), Vector2(0, 0), Vector2(1, 1), Vector2(0, 1)])
+		_quad = ArrayMesh.new()
+		_quad.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_2D
+	multimesh.use_colors = true
+	multimesh.use_custom_data = true
+	multimesh.mesh = _quad
+	multimesh.instance_count = Feel.count("effects", "max_particles", 320)
+	multimesh.visible_instance_count = 0
+	_mesh = MultiMeshInstance2D.new()
+	_mesh.multimesh = multimesh
+	_mesh.texture = load(SHEET)
+	var material := ShaderMaterial.new()
+	material.shader = SHADER
+	var info: Dictionary = SkinBox.meta().get("particles", {})
+	var kinds: Array = info.get("kinds", [])
+	var columns := int(info.get("columns", 4))
+	material.set_shader_parameter("grid", Vector2(columns, ceili(kinds.size() / float(columns))))
+	_mesh.material = material
+	add_child(_mesh)
 
+
+## Fills the MultiMesh with this frame's particles.
+func _update_mesh() -> void:
+	if _mesh == null:
+		if particles.is_empty():
+			return
+		_ensure_mesh()
+	var multimesh := _mesh.multimesh
+	var count := mini(particles.size(), multimesh.instance_count)
+	for i in count:
+		var look := _look(particles[i])
+		multimesh.set_instance_transform_2d(i, look.xform)
+		multimesh.set_instance_color(i, look.color)
+		multimesh.set_instance_custom_data(i, Color(float(look.cell), 0, 0, 0))
+	multimesh.visible_instance_count = count
 
 # --- Particles ---------------------------------------------------------------
 
 ## Adds one particle. `kind`: "spark", "puff", "star", "sparkle", "confetti",
-## "coin" or "petal". Positions are in field-layer pixels.
+## "coin", "petal", "leaf", "dust", "glow", "heart" or "acorn". Positions are
+## in this layer's pixels.
 func particle(kind: String, at: Vector2, vel: Vector2, life: float, size: float, color: Color,
 		gravity := 0.0, drag := 2.0, spin := 0.0) -> void:
 	if particles.size() >= Feel.count("effects", "max_particles", 320):
 		return
 	particles.append({"kind": kind, "pos": at, "vel": vel, "life": life, "age": 0.0, "size": size,
 		"color": color, "gravity": gravity, "drag": drag, "rot": randf() * TAU, "spin": spin})
+	_ensure_mesh()
 
 
 ## A ring of particles flying out from `at`.
@@ -114,56 +166,56 @@ func burst_heal(at: Vector2) -> void:
 	burst("sparkle", at, Feel.count("effects", "heal_sparkles", 6), 70.0, 0.7, 7.0, [Color("#7dffb0"), Color.WHITE], -90.0, 2.0)
 
 
-func _draw_particle(p: Dictionary) -> void:
+## Where a particle is, how big, which way it's turned, its cell and color.
+## The sheet's shapes fill about 80% of their cell, so a particle of
+## radius r needs a quad about 2.5 r across.
+func _look(p: Dictionary) -> Dictionary:
 	var t: float = p.age / p.life
 	var col: Color = p.color
 	var size: float = p.size
-	match p.kind:
+	var kind: String = p.kind
+	var pos: Vector2 = p.pos
+	var rot := 0.0
+	var scale := Vector2.ONE * size * 2.5
+	var alpha := 1.0
+	match kind:
 		"spark":
 			var v: Vector2 = p.vel
-			var len := clampf(v.length() * 0.05, 3.0, 22.0) * (1.0 - t)
-			var dir := v.normalized()
-			draw_line(p.pos - dir * len, p.pos + dir * len * 0.3, Color(col, 1.0 - t), size * 0.5 * (1.0 - t) + 1.0)
-		"puff":
+			var length := clampf(v.length() * 0.05, 3.0, 22.0) * (1.0 - t)
+			rot = v.angle()
+			scale = Vector2(length * 1.6 + 4.0, (size * 0.5 * (1.0 - t) + 1.0) * 6.0)
+			alpha = 1.0 - t
+		"puff", "dust":
 			var r := size * (0.6 + 1.1 * Ease.out_cubic(t))
-			draw_circle(p.pos, r + 1.5, Color(0.35, 0.4, 0.5, 0.25 * col.a * (1.0 - t)))
-			draw_circle(p.pos, r, Color(col, col.a * (1.0 - t * t)))
-			draw_circle(p.pos - Vector2(r * 0.3, r * 0.35), r * 0.45, Color(1, 1, 1, 0.5 * (1.0 - t)))
+			scale = Vector2.ONE * r * 2.4
+			alpha = col.a * (1.0 - t * t)
 		"star":
-			var r := size * (1.0 - 0.3 * t)
-			_draw_star(p.pos, r + 1.8, p.rot, Color(UIKit.INK, 0.8 * (1.0 - t * t)))
-			_draw_star(p.pos, r, p.rot, Color(col, 1.0 - t * t))
+			scale = Vector2.ONE * size * (1.0 - 0.3 * t) * 2.6
+			rot = p.rot
+			alpha = 1.0 - t * t
 		"sparkle":
-			var r := size * Ease.arc(t) * 1.3
-			var a := Color(col, 1.0 - t * 0.5)
-			draw_line(p.pos - Vector2(r, 0), p.pos + Vector2(r, 0), a, maxf(1.5, r * 0.35))
-			draw_line(p.pos - Vector2(0, r), p.pos + Vector2(0, r), a, maxf(1.5, r * 0.35))
-			draw_circle(p.pos, r * 0.3, Color.WHITE)
+			scale = Vector2.ONE * size * Ease.arc(t) * 1.3 * 2.5
+			alpha = 1.0 - t * 0.5
 		"confetti":
-			var w := size
-			var h := size * 0.55 * absf(cos(float(p.rot) * 1.7))
-			draw_set_transform(p.pos, p.rot, Vector2.ONE)
-			draw_rect(Rect2(-w / 2.0, -h / 2.0, w, maxf(h, 1.0)), Color(col, 1.0 - Ease.in_cubic(t)))
-			draw_set_transform(Vector2.ZERO)
+			rot = p.rot
+			scale = Vector2(size * 1.25, size * 1.25 * maxf(0.12, absf(cos(float(p.rot) * 1.7))))
+			alpha = 1.0 - Ease.in_cubic(t)
 		"coin":
-			var squish := absf(cos(float(p.rot)))
-			draw_set_transform(p.pos, 0.0, Vector2(maxf(squish, 0.15), 1.0))
-			draw_circle(Vector2.ZERO, size + 1.5, Color("#9a6a00", 1.0 - Ease.in_cubic(t)))
-			draw_circle(Vector2.ZERO, size, Color(col, 1.0 - Ease.in_cubic(t)))
-			draw_circle(Vector2(-size * 0.3, -size * 0.3), size * 0.35, Color(1, 1, 1, 0.6 * (1.0 - t)))
-			draw_set_transform(Vector2.ZERO)
-		"petal":
-			draw_set_transform(p.pos, p.rot, Vector2(1.0, 0.5))
-			draw_circle(Vector2.ZERO, size, Color(col, col.a * minf(1.0, (1.0 - t) * 3.0) * minf(1.0, t * 5.0)))
-			draw_set_transform(Vector2.ZERO)
+			scale = Vector2(size * 2.5 * maxf(0.15, absf(cos(float(p.rot)))), size * 2.5)
+			alpha = 1.0 - Ease.in_cubic(t)
+		"petal", "leaf":
+			rot = p.rot
+			scale = Vector2(size * 2.5, size * 2.5)
+			alpha = col.a * minf(1.0, (1.0 - t) * 3.0) * minf(1.0, t * 5.0)
+		"glow":
+			scale = Vector2.ONE * size * 2.5 * (0.8 + 0.4 * Ease.out_cubic(t))
+			alpha = col.a * (1.0 - t)
+		_:
+			rot = p.rot
+			alpha = 1.0 - Ease.in_cubic(t)
+	return {"xform": Transform2D(rot, scale, 0.0, pos), "color": Color(col.r, col.g, col.b, alpha), "cell": cell_of(kind)}
 
 
-func _draw_star(center: Vector2, radius: float, rot: float, color: Color) -> void:
-	var points := PackedVector2Array()
-	for i in STAR_POINTS * 2:
-		var r := radius if i % 2 == 0 else radius * 0.45
-		var ang := rot - PI / 2.0 + i * PI / STAR_POINTS
-		points.append(center + Vector2(cos(ang), sin(ang)) * r)
-	draw_colored_polygon(points, color)
+
 
 

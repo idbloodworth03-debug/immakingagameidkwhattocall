@@ -1,23 +1,24 @@
 {
-  "_note": "The look of every screen: colors, fonts, text sizes, spacing, corners and the chunky components (panels, buttons, pills, cards, popups). Screens use these through scripts/ui/style/ui_style.gd and never pick their own colors or sizes. Sizes are in game pixels: the layout is 720 wide, so on an iPhone 1 pixel is about 0.54 pt (26 px is about 14 pt, 88 px about 48 pt).",
-
+  "_note": "The look of every screen (\"Ranger Camp\": summer camp, ranger stations, painted wood and brass): colors, fonts, text sizes, spacing, corners and the chunky components (panels, buttons, pills, cards, signs). Screens use these through scripts/ui/style/ui_style.gd and never pick their own colors or sizes. The chunky pieces are textures drawn by tools/make_ui_art.py and tinted with these colors. Sizes are in game pixels: the layout is 720 wide, so on an iPhone 1 pixel is about 0.54 pt (26 px is about 14 pt, 88 px about 48 pt).",
   "colors": {
-    "_note": "Every color, defined once. Gradients are made from these: a lighter top (gradient_light) and a darker bottom (gradient_dark).",
-    "sky": "#45a8f5",
-    "sky_deep": "#2378d6",
-    "panel": "#3a9cf0",
-    "panel_inset": "#1f6fcc",
-    "outline": "#0f2e5c",
+    "_note": "Every color, defined once: warm sunny yellows, leaf greens, sky blues and wood browns. The chunky pieces are shaded textures tinted with these.",
+    "sky": "#8fd2f0",
+    "sky_deep": "#ffe2a0",
+    "panel": "#d99a5b",
+    "panel_inset": "#a8693b",
+    "sign": "#e8ad6b",
+    "outline": "#3a2414",
     "text": "#ffffff",
-    "text_soft": "#d9efff",
-    "text_dark": "#0f2e5c",
-    "primary": "#4cc72e",
-    "secondary": "#2f95f5",
-    "danger": "#f0453f",
-    "tool": "#9a5af0",
-    "gold": "#ffc21a",
-    "disabled": "#9fb0c4",
-    "chip": "#1b67c4",
+    "text_soft": "#fff0d2",
+    "text_dark": "#4a2a12",
+    "primary": "#66c23a",
+    "secondary": "#47a9ec",
+    "danger": "#e4523b",
+    "tool": "#a465de",
+    "gold": "#ffc53d",
+    "disabled": "#c4b49c",
+    "chip": "#b8773f",
+    "toast": "#5a3418",
     "heart": "#ff4f6d",
     "acorn": "#d68d45",
     "gem": "#44dd85",
@@ -26,21 +27,20 @@
     "selected": "#ffe14d",
     "player": "#3b8ff0",
     "enemy": "#f0453f",
-    "rarity_common": "#b7c7da",
-    "rarity_rare": "#ff9f2e",
-    "rarity_epic": "#c062ff",
-    "rarity_legendary": "#38e8cf"
+    "grade_center": "#fffaf0",
+    "grade_edge": "#e2c29a",
+    "rarity_common": "#dccaa8",
+    "rarity_rare": "#ff9b3d",
+    "rarity_epic": "#b468f0",
+    "rarity_legendary": "#3fd2bd"
   },
-
   "gradient_light": 0.2,
   "gradient_dark": 0.14,
-
   "fonts": {
     "_note": "display: titles, numbers and buttons (thick outline and drop shadow). body: the few longer lines.",
     "display": "res://art/fonts/LilitaOne-Regular.ttf",
     "body": "res://art/fonts/Nunito.ttf"
   },
-
   "text_sizes": {
     "_note": "The only four sizes. Nothing smaller than small (about 14 pt on an iPhone).",
     "small": 26,
@@ -51,7 +51,6 @@
   "text_outline": 0.24,
   "text_shadow": 0.12,
   "text_shadow_alpha": 0.55,
-
   "space": {
     "_note": "Padding and gaps: always one of these.",
     "xs": 8,
@@ -59,14 +58,12 @@
     "m": 24,
     "l": 32
   },
-
   "radius": {
     "panel": 28,
     "chip": 16,
     "button": 22,
     "card": 20
   },
-
   "panel": {
     "border": 5,
     "lip": 6,
@@ -75,7 +72,6 @@
     "shadow_size": 10,
     "shadow_offset": 6
   },
-
   "button": {
     "_note": "A button's darker lip under the face makes it look pressable; pressed, the face sinks onto it. min_height is the smallest touch target.",
     "min_height": 88,
@@ -87,21 +83,18 @@
     "shadow_alpha": 0.3,
     "shadow_offset": 4
   },
-
   "chip": {
     "height": 60,
     "border": 3,
     "lip": 4,
     "icon": 40
   },
-
   "card": {
     "_note": "The frame is the rarity color; selected cards get a thick selected-color outline and lift.",
     "border": 4,
     "frame": 7,
     "selected_lift": 1.06
   },
-
   "screen": {
     "_note": "safe_area_extra adds a little room under a notch and above the home bar on top of what the phone reports.",
     "margin": 16,

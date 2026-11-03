@@ -7,6 +7,10 @@ extends Control
 ## painted art.
 ##
 ## `mood` changes the face: "normal" (their own look), "happy" or "sad".
+##
+## The drawing is about fifty shapes, so each portrait (per look, mood and
+## size) is drawn once into a texture at twice its size and reused: one
+## draw call a frame instead of fifty, and still crisp on a 3x screen.
 
 const SKIN_SHADE := 0.17
 const OUTLINE := 2.6
@@ -22,6 +26,12 @@ var mood := "normal":
 	set(value):
 		mood = value
 		queue_redraw()
+## Draw from the shared texture (false: draw the shapes, e.g. into it).
+var cached := true
+
+## Rendered portraits: key -> {"viewport", "ready"}.
+static var _cache: Dictionary = {}
+static var _waiting: Array = []
 
 
 static func create(rival: Dictionary, side := 120.0) -> RangerPortrait:
@@ -43,6 +53,56 @@ func _on_resized() -> void:
 	queue_redraw()
 
 
+# --- The shared texture ---------------------------------------------------------
+
+## This portrait's texture, or null until it has been drawn (then this
+## portrait redraws itself).
+func _texture(side: float) -> Texture2D:
+	var px := int(ceilf(side * 2.0 / 32.0) * 32.0)
+	var key := "%s|%s|%s|%s|%d" % [str(look), banner_id, mood, background, px]
+	if not _cache.has(key):
+		var holder := get_tree().root if is_inside_tree() else null
+		if holder == null:
+			return null
+		var viewport := SubViewport.new()
+		viewport.size = Vector2i(px, px)
+		viewport.transparent_bg = true
+		viewport.disable_3d = true
+		viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+		var painter := RangerPortrait.new()
+		painter.cached = false
+		painter.look = look
+		painter.banner_id = banner_id
+		painter.mood = mood
+		painter.background = background
+		painter.size = Vector2(px, px)
+		viewport.add_child(painter)
+		holder.add_child.call_deferred(viewport)
+		var entry := {"viewport": viewport, "ready": false}
+		_cache[key] = entry
+		# It's added at the end of this frame and drawn during the next one.
+		_after_frames(entry, 2)
+	var found: Dictionary = _cache[key]
+	if not bool(found.ready):
+		if not _waiting.has(self):
+			_waiting.append(self)
+		return null
+	return (found.viewport as SubViewport).get_texture()
+
+
+static func _after_frames(entry: Dictionary, frames: int) -> void:
+	RenderingServer.frame_post_draw.connect(func() -> void:
+		if frames > 1:
+			_after_frames(entry, frames - 1)
+			return
+		entry.ready = true
+		for waiting in _waiting:
+			if is_instance_valid(waiting):
+				(waiting as CanvasItem).queue_redraw()
+		_waiting.clear()
+	, CONNECT_ONE_SHOT)
+
+
 # --- Drawing ---------------------------------------------------------------
 # Everything is laid out on a 100 x 100 canvas, scaled to fit.
 
@@ -50,6 +110,12 @@ func _draw() -> void:
 	var side := minf(size.x, size.y)
 	if side <= 0.0:
 		return
+	# Headless runs (tests, tools) have no real renderer to draw into.
+	if cached and DisplayServer.get_name() != "headless":
+		var texture := _texture(side)
+		if texture != null:
+			draw_texture_rect(texture, Rect2((size - Vector2(side, side)) / 2.0, Vector2(side, side)), false)
+			return
 	draw_set_transform((size - Vector2(side, side)) / 2.0, 0.0, Vector2(side, side) / 100.0)
 	var skin := Color(look.get("skin", "#f1c7a0"))
 	var hair := Color(look.get("hair", "#5a3a1e"))

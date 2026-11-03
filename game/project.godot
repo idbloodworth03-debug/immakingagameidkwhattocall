@@ -23,6 +23,9 @@ config/icon="res://art/logo/app_icon.png"
 GameData="*res://scripts/autoload/game_data.gd"
 Profile="*res://scripts/autoload/profile.gd"
 Sound="*res://scripts/autoload/sound.gd"
+UIFx="*res://scripts/autoload/ui_fx.gd"
+Transition="*res://scripts/autoload/transition.gd"
+Atmosphere="*res://scripts/autoload/atmosphere.gd"
 
 [debug]
 

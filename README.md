@@ -156,7 +156,7 @@ files in `game/data/`:
 - **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, moods, Rally): `draft_rules.json`
 - **Habitat synergies** (tiers, bonuses, icons, colors): `synergies.json`; each animal's habitat is in `animals.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`
-- **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`
+- **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`. The wood, brass and sign pieces themselves are drawn by `python3 tools/make_ui_art.py`
 - **Look and feel** (VS screen and emote timings, animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`

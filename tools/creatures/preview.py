@@ -22,7 +22,9 @@ import scene as S
 def main(species, out, pose=None, size=480):
     creature = cartoon.load(species, style=os.environ.get("STYLE", "cartoon"))
     sc = S.reset()
-    sc.cycles.samples = 64
+    sc.cycles.samples = int(os.environ.get("SAMPLES", 64))
+    # VIEWS=2,3 renders only some of the four views (faster checks).
+    wanted = [int(x) for x in os.environ.get("VIEWS", "1,2,3,4").split(",")]
     arm, body, mesh = S.build(creature)
     if pose:
         import motion
@@ -40,6 +42,8 @@ def main(species, out, pose=None, size=480):
     tmp = out + ".part{}.png"
 
     def shoot(i):
+        if i not in wanted:
+            return
         sc.render.filepath = tmp.format(i)
         bpy.ops.render.render(write_still=True)
         views.append(tmp.format(i))
@@ -59,10 +63,11 @@ def main(species, out, pose=None, size=480):
     cam = S.ortho_camera(89.9, span * 1.05, target=(0, center[1], center[2]))
     shoot(4)
 
-    sheet = Image.new("RGBA", (size * 2, size * 2), (96, 140, 80, 255))
+    cols = 2 if len(views) > 1 else 1
+    sheet = Image.new("RGBA", (size * cols, size * ((len(views) + 1) // 2 if cols == 2 else 1)), (96, 140, 80, 255))
     for i, path in enumerate(views):
         im = Image.open(path).convert("RGBA")
-        sheet.alpha_composite(im, ((i % 2) * size, (i // 2) * size))
+        sheet.alpha_composite(im, ((i % cols) * size, (i // cols) * size))
         os.remove(path)
     sheet.save(out)
     print("saved", out)

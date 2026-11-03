@@ -10,7 +10,8 @@
     "common": 55,
     "rare": 27,
     "epic": 13,
-    "legendary": 5
+    "legendary": 5,
+    "mythic": 3
   },
   "tools_max": 2,
   "star_max": 3,

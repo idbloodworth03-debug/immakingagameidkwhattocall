@@ -274,9 +274,11 @@ def bird(name, j, r, **extra):
         cone(P("skull") + np.asarray(r["beak_root"]), P("beak_tip"), r["beak"][0], r["beak"][1], "beak", "head", blend=r["beak_blend"]),
         cone(P("jaw_hinge"), P("chin"), r["jaw"][0], r["jaw"][1], "beak", "jaw", blend=r["beak_blend"] * 0.5),
     ]
-    # Hooked tip of the beak.
-    hook = P("beak_tip") + np.array([0, -r["beak"][1] * 0.6, -r["beak"][1] * 2.6])
-    shapes.append(cone(P("beak_tip"), hook, r["beak"][1], r["beak"][1] * 0.4, "beak", "head", blend=0.002))
+    # Hooked tip of the beak (r["hook"]: 0 for a straight beak, 1 a raptor's).
+    k = r.get("hook", 1.0)
+    if k > 0:
+        hook = P("beak_tip") + np.array([0, -r["beak"][1] * 0.6, -r["beak"][1] * 2.6]) * k
+        shapes.append(cone(P("beak_tip"), hook, r["beak"][1], r["beak"][1] * 0.4, "beak", "head", blend=0.002))
     for side, sx in ((".L", 1), (".R", -1)):
         lead = [P("shoulder" + side), P("elbow" + side), P("wrist" + side), P("wing_tip" + side)]
         names = ["wing_upper" + side, "wing_lower" + side, "wing_hand" + side]

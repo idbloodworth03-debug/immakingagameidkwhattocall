@@ -284,8 +284,11 @@ def add_wings(c, j, r, feathers=True):
     on its back: `j` holds the LEFT wing's shoulder, elbow, wrist and
     wing_tip; `r` the bird-style wing sizes (chord, wing_thick, arm,
     feathers, fan, ...). The wings use the same bones as a bird's, so the
-    flying motions work on them."""
-    for key in ("shoulder", "elbow", "wrist", "wing_tip"):
+    flying motions work on them. feathers=False makes skin wings like a
+    bat's (a dragon's): `j` then also needs finger2, finger3 and anchor (where
+    the trailing edge meets the body)."""
+    keys = ("shoulder", "elbow", "wrist", "wing_tip") + (() if feathers else ("finger2", "finger3", "anchor"))
+    for key in keys:
         c.joints["w_" + key + ".L"] = j[key]
         c.joints["w_" + key + ".R"] = mirror(j[key])
     P = lambda key: np.asarray(c.joints[key], float)
@@ -299,8 +302,61 @@ def add_wings(c, j, r, feathers=True):
         names = ["wing_upper" + side, "wing_lower" + side, "wing_hand" + side]
         if feathers:
             c.shapes += _wing_feathers(lead, names, r, sx)
+        else:
+            sh, el, wr, tip = lead
+            f2, f3, body = P("w_finger2" + side), P("w_finger3" + side), P("w_anchor" + side)
+            for a_, b_, c_, bone in ((sh, el, body, names[0]), (el, f3, body, names[1]), (el, wr, f3, names[1]),
+                                     (wr, f2, f3, names[2]), (wr, tip, f2, names[2])):
+                c.shapes.append(plate(a_, b_, c_, r["wing_thick"], r.get("wing_round", r["wing_thick"] * 2), "wing", bone, blend=r["wing_blend"]))
+            for f in (f2, f3):
+                c.shapes.append(cone(wr, f, r["arm"][2], r["arm"][2] * 0.4, "wing_bone", names[2], blend=r["wing_blend"]))
         c.shapes.append(cone(lead[0], lead[1], r["arm"][0], r["arm"][1], "wing", names[0], names[1], blend=r["wing_blend"]))
         c.shapes.append(cone(lead[1], lead[2], r["arm"][1], r["arm"][2], "wing", names[1], names[2], blend=r["wing_blend"]))
         c.shapes.append(cone(lead[2], lead[3], r["arm"][2], r["arm"][2] * 0.4, "wing", names[2], blend=r["wing_blend"]))
     c.motion["body"] = "winged"
+    return c
+
+
+# --- Snakes ------------------------------------------------------------------------
+
+def snake(name, j, r, **extra):
+    """A snake: a body lying in curves on the ground from the tail tip to the
+    middle, then (for a cobra) rising up to a spread hood and a head held
+    level. Joints: tail_end, tail_mid, tail_base, pelvis, spine_mid,
+    withers, neck_base, head_base, skull, snout_tip, jaw_hinge, chin.
+    r["body"]: the body's radius at each of the first eight joints (tail tip
+    to head); r["hood"]: the hood's size (0 for none)."""
+    joints = dict(j)
+    _root(joints, "pelvis", "spine_mid")
+    bones = [
+        Bone("root", "root", "root_tip"),
+        Bone("hips", "pelvis", "spine_mid", "root"),
+        Bone("chest", "spine_mid", "withers", "hips"),
+        Bone("neck", "withers", "neck_base", "chest"),
+        Bone("neck2", "neck_base", "head_base", "neck"),
+        Bone("head", "head_base", "snout_tip", "neck2"),
+        Bone("jaw", "jaw_hinge", "chin", "head"),
+        Bone("tail1", "pelvis", "tail_base", "hips"),
+        Bone("tail2", "tail_base", "tail_mid", "tail1"),
+        Bone("tail3", "tail_mid", "tail_end", "tail2"),
+    ]
+    P = lambda key: np.asarray(joints[key], float)
+    chain = ["tail_end", "tail_mid", "tail_base", "pelvis", "spine_mid", "withers", "neck_base", "head_base"]
+    owners = ["tail3", "tail2", "tail1", "hips", "chest", "neck", "neck2"]
+    radii = r["body"]
+    b = r["blend"]
+    shapes = []
+    for i in range(len(chain) - 1):
+        shapes.append(cone(P(chain[i]), P(chain[i + 1]), radii[i], radii[i + 1], "torso" if i >= 3 else "tail", owners[i], blend=b))
+    if r.get("hood"):
+        mid = (P("neck_base") + P("head_base")) / 2 + np.array([0, -r["hood"][1] * 0.6, 0])
+        shapes.append(ellipsoid(tuple(mid), r["hood"], "hood", "neck2", blend=b))
+    shapes += [
+        ellipsoid(P("skull"), r["skull"], "head", "head", blend=b * 0.6),
+        cone(P("skull") + np.asarray(r["snout_root"]), P("snout_tip"), r["snout"][0], r["snout"][1], "snout", "head", blend=b * 0.5),
+        cone(P("jaw_hinge"), P("chin"), r["jaw"][0], r["jaw"][1], "jaw", "jaw", blend=b * 0.3),
+    ]
+    extra.setdefault("motion", {})
+    c = Creature(name, joints, bones, shapes, **extra)
+    c.motion.setdefault("body", "serpent")
     return c

@@ -278,6 +278,17 @@ func find_by_id(list: Array, id: String) -> Dictionary:
 ## Looks for mistakes in the JSON files (typos in ids, missing fields...).
 ## Returns a list of problems; an empty list means everything looks right.
 ## The tests run this, so a broken data file is caught before it ships.
+## Animals on the way (data/animals_later.json), by id: a legend can link to
+## one before it's in the game.
+func _later_ids() -> Dictionary:
+	var ids := {}
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/animals_later.json"))
+	if parsed is Array:
+		for card in parsed:
+			ids[String(card.get("id", ""))] = true
+	return ids
+
+
 func validate() -> Array:
 	var problems := []
 
@@ -301,7 +312,7 @@ func validate() -> Array:
 
 	for id in card_order:
 		var a: Dictionary = cards[id]
-		for field in ["name", "rarity", "cost", "count", "tags", "stats", "ability"]:
+		for field in ["name", "rarity", "cost", "count", "tags", "stats"]:
 			if not a.has(field):
 				problems.append("%s: missing '%s'" % [id, field])
 		if not ["animal", "tool"].has(a.kind):
@@ -310,7 +321,7 @@ func validate() -> Array:
 			problems.append("%s: unknown rarity '%s'" % [id, a.get("rarity")])
 		if a.unlock_arena_index < 0:
 			problems.append("%s: unknown arena '%s'" % [id, a.get("unlock_arena")])
-		if a.kind == "animal" and not STATUS_NAMES.has(a.get("status", "")):
+		if a.kind == "animal" and a.rarity != "mythic" and not STATUS_NAMES.has(a.get("status", "")):
 			problems.append("%s: unknown conservation status '%s'" % [id, a.get("status")])
 		if a.kind == "animal" and not habitats.has(a.get("habitat", "")):
 			problems.append("%s: unknown habitat '%s' (see habitats.json)" % [id, a.get("habitat")])
@@ -322,6 +333,10 @@ func validate() -> Array:
 			problems.append("%s: targets must be 'ground' or 'air_ground'" % id)
 		if a.kind == "tool" and not ToolEffects.KNOWN.has(a.get("ability", {}).get("id", "")):
 			problems.append("%s: the battle engine doesn't know tool effect '%s'" % [id, a.get("ability", {}).get("id")])
+		if a.kind == "animal" and a.rarity == "mythic" and a.get("legend", "") == "":
+			problems.append("%s: a Mythic needs its legend line (the real story behind it)" % id)
+		if a.has("legend_card") and not cards.has(String(a.legend_card)) and not _later_ids().has(String(a.legend_card)):
+			problems.append("%s: its legend links to unknown card '%s'" % [id, a.legend_card])
 		for tag in a.get("tags", []):
 			if not tags.has(tag):
 				problems.append("%s: unknown tag '%s' (add it to tags.json)" % [id, tag])

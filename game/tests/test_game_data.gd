@@ -29,7 +29,7 @@ func test_rarity_matches_conservation_status() -> void:
 	var expected := {"common": ["LC"], "rare": ["NT", "VU"], "epic": ["EN"], "legendary": ["CR"]}
 	for id in GameData.card_order:
 		var card: Dictionary = GameData.cards[id]
-		if card.kind == "animal":
+		if card.kind == "animal" and card.rarity != "mythic":
 			check(expected[card.rarity].has(card.status), "%s is %s but has status %s" % [id, card.rarity, card.status])
 
 

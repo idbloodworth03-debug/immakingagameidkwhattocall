@@ -580,9 +580,66 @@ def winged_dive(c, t):
     return p
 
 
+def serpent_idle(c, t):
+    """A raised snake swaying, hood spread, the tail curling a little."""
+    p = Pose()
+    sway = math.sin(t * TAU)
+    p.rot("neck", z=sway * 0.12)
+    p.rot("neck2", z=-sway * 0.08, x=0.04 * math.sin(t * TAU * 2))
+    p.rot("head", z=-sway * 0.05)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, z=math.sin(t * TAU - i) * 0.06)
+    return p
+
+
+def slither(c, t):
+    """Slithering: waves run down the body from head to tail, side to side,
+    and the raised front sways with them."""
+    p = Pose()
+    s = _size(c)
+    wave = lambda k: math.sin(t * TAU - k)
+    p.rot("hips", z=wave(0.0) * 0.25)
+    p.rot("chest", z=-wave(0.8) * 0.22)
+    p.rot("neck", z=wave(1.6) * 0.12)
+    p.rot("neck2", z=-wave(2.2) * 0.08)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, z=wave(-0.9 * (i + 1)) * (0.3 + 0.08 * i))
+    p.move(x=wave(0.0) * s * 0.02)
+    return p
+
+
+def frog_idle(c, t):
+    """A sitting frog breathing: its throat and body swell and settle."""
+    p = Pose()
+    s = _scale(c)
+    breath = max(0.0, math.sin(t * TAU * 2))
+    p.move(z=breath * s * 0.01)
+    p.rot("jaw", x=-0.04 * breath)
+    p.rot("head", x=0.02 * breath)
+    return p
+
+
+def frog_hop(c, t):
+    """Hopping: crouch, the long back legs fling it forward in an arc with the
+    front legs reaching, then it lands and folds up again."""
+    p = Pose()
+    s = _scale(c)
+    crouch = keys(t, [(0, 0.4), (0.15, 1), (0.3, -0.4), (0.6, -0.2), (0.8, 0.6), (1, 0.4)])
+    air = max(0.0, math.sin(math.pi * min(max((t - 0.2) / 0.55, 0.0), 1.0)))
+    p.move(y=air * s * 0.4, z=air * s * c.motion.get("hop", 0.6))
+    p["root_rot"] = (air * 0.25 - float(crouch) * 0.08, 0.0, 0.0)
+    for side in ("L", "R"):
+        k = float(crouch)
+        p.leg("hl." + side, upper=k * 0.5 - (1 - k) * 0.6 * air, lower=-k * 0.9 + air * 0.8, foot=k * 0.9 - air * 0.5)
+        p.leg("fl." + side, upper=air * 0.7 - k * 0.2, lower=-air * 0.3)
+    return p
+
+
 BODY_IDLE = {"insect": insect_idle, "fish": fish_idle, "cetacean": cetacean_idle, "crustacean": crustacean_idle,
+             "serpent": serpent_idle, "frog": frog_idle,
              "winged": lambda c, t: winged_flap(c, t, power=c.motion.get("hover_power", 0.55))}
 BODY_WALK = {"insect": insect_walk, "fish": fish_hop, "cetacean": cetacean_slide, "crustacean": crustacean_scuttle,
+             "serpent": slither, "frog": frog_hop,
              "winged": winged_flap}
 
 

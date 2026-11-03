@@ -56,6 +56,8 @@ static func show_odds(cage_id: String, arena_index: int) -> void:
 	grid.add_theme_constant_override("h_separation", 40)
 	box.add_child(grid)
 	for rarity in GameData.rarity_order:
+		if not cage.weights.has(rarity):
+			continue  # this cage never has any (e.g. Mythics, which come their own way)
 		grid.add_child(UIKit.label(GameData.rarity_name(rarity), 24, GameData.rarity_color(rarity)))
 		var chance := float(odds.get(rarity, 0.0))
 		grid.add_child(UIKit.label("%.2f%%" % chance if chance > 0.0 else "Locked", 24))

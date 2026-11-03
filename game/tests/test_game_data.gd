@@ -6,10 +6,12 @@ func test_data_files_have_no_problems() -> void:
 	check(problems.is_empty(), "GameData.validate() found problems:\n            " + "\n            ".join(problems))
 
 
-func test_every_rarity_has_animals() -> void:
+func test_every_rarity_cages_drop_has_animals() -> void:
 	var pools := GameData.cage_pools(GameData.arenas.size() - 1)
 	for rarity in GameData.rarity_order:
-		check(not pools[rarity].is_empty(), "no animals of rarity %s" % rarity)
+		var dropped := GameData.cages.values().any(func(c): return float(c.weights.get(rarity, 0.0)) > 0.0)
+		if dropped:
+			check(not pools[rarity].is_empty(), "no animals of rarity %s" % rarity)
 
 
 func test_starting_cards_fill_the_options() -> void:

@@ -32,7 +32,8 @@
     "rarity_common": "#dccaa8",
     "rarity_rare": "#ff9b3d",
     "rarity_epic": "#b468f0",
-    "rarity_legendary": "#3fd2bd"
+    "rarity_legendary": "#3fd2bd",
+    "rarity_mythic": "#ff5fa8"
   },
   "gradient_light": 0.2,
   "gradient_dark": 0.14,

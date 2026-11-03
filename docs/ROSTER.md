@@ -142,11 +142,11 @@ batch 1 changes that.
 | Qilin | Ranged | Back | 9. Emerald Jungle | 1 | 0.69 | When a giraffe was brought to the Chinese emperor in 1414, people called it a qilin. |
 | Jackalope | Ranged | Back | 3. Prairie Fields | 1 | 0.35 | One theory: rabbits with a virus that grows horn-like bumps on their heads. |
 | Unicorn | Ranged | Back | 4. Whispering Woods | 1 | 0.81 | Narwhal tusks were once sold in Europe as unicorn horns. |
-| Yeti | Tank | Front | 8. Frozen Tundra | 4 | 0.83 | A 2017 DNA study found most supposed Yeti samples came from bears. (links to: Brown Bear) |
+| Yeti | Tank | Front | 8. Frozen Tundra | 4 | 0.74 | A 2017 DNA study found most supposed Yeti samples came from bears. (links to: Brown Bear) |
 | Bigfoot | Tank | Front | 4. Whispering Woods | 4 | 0.75 | One theory: many sightings are black bears walking on their hind legs. |
-| Black Tortoise | Tank | Front | 11. Coral Coast | 4 | 0.85 | From Chinese star lore: the guardian of the north, a tortoise wound with a snake. |
-| Fenrir | Tank Destroyer | Middle | 8. Frozen Tundra | 4 | 0.85 | From Norse myth: a giant wolf the gods could only hold with a magic ribbon. |
-| Nemean Lion | Tank Destroyer | Middle | 6. Sunbaked Savanna | 4 | 0.83 | Lions really lived in ancient Greece, until about 2,000 years ago. (links to: Lion) |
+| Black Tortoise | Tank | Front | 11. Coral Coast | 4 | 0.77 | From Chinese star lore: the guardian of the north, a tortoise wound with a snake. |
+| Fenrir | Tank Destroyer | Middle | 8. Frozen Tundra | 4 | 0.78 | From Norse myth: a giant wolf the gods could only hold with a magic ribbon. |
+| Nemean Lion | Tank Destroyer | Middle | 6. Sunbaked Savanna | 4 | 0.76 | Lions really lived in ancient Greece, until about 2,000 years ago. (links to: Lion) |
 | Cerberus | Tank Destroyer | Middle | 12. Last Sanctuary | 4 | 0.79 | From Greek myth: the three-headed dog that guards the gate of the underworld. |
 | Manticore | Tank Destroyer | Middle | 6. Sunbaked Savanna | 4 | 0.71 | One theory: Greek writers heard Persian tales of the tiger and turned it into a monster. (links to: Tiger) |
 | Chupacabra | Tank Destroyer | Middle | 7. Red Rock Canyon | 4 | 0.65 | Many 'chupacabras' found in the US turned out to be coyotes with mange. (links to: Coyote Pack) |

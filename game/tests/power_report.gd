@@ -7,6 +7,8 @@ extends Node
 ##
 ## From the repository root (ONLY=id,id to test a few; OUT=file to save):
 ##   godot --headless --path game res://tests/power_report.tscn
+## Fights per animal (FIGHTS overrides). SCALE=id:factor,... multiplies an
+## animal's health and damage first, for trying out a change.
 const FIGHTS := 48
 
 func _ready() -> void:
@@ -18,6 +20,12 @@ func _ready() -> void:
 		card["unlock_arena_index"] = GameData.arena_index_by_id.get(card.unlock_arena, -1)
 		GameData.cards[card.id] = card
 		all_ids.append(card.id)
+	for spec in OS.get_environment("SCALE").split(",", false):
+		var bits := spec.split(":")
+		var stats: Dictionary = GameData.cards[bits[0]].stats
+		stats.hp = roundi(float(stats.hp) * float(bits[1]))
+		stats.damage = roundi(float(stats.damage) * float(bits[1]))
+	var fights := int(OS.get_environment("FIGHTS")) if OS.get_environment("FIGHTS") != "" else FIGHTS
 	var levels := {}
 	for id in all_ids:
 		levels[id] = GameData.start_level(GameData.cards[id].rarity)
@@ -29,7 +37,7 @@ func _ready() -> void:
 		var rng := RandomNumberGenerator.new()
 		rng.seed = hash(id)
 		var won := 0.0
-		for i in FIGHTS:
+		for i in fights:
 			var herd := []
 			for k in 4:
 				herd.append({"id": base_ids[rng.randi() % base_ids.size()], "stars": 1})
@@ -53,7 +61,7 @@ func _ready() -> void:
 			var mine := 0 if i % 2 == 0 else 1
 			won += 1.0 if w == mine else (0.5 if w < 0 else 0.0)
 		var card: Dictionary = GameData.cards[id]
-		lines.append("%.2f %s %s %s cost %d" % [won / FIGHTS, id, card.rarity, card["class"], int(card.cost)])
+		lines.append("%.2f %s %s %s cost %d level %d" % [won / fights, id, card.rarity, card["class"], int(card.cost), levels[id]])
 		print(lines[-1])
 	if OS.get_environment("OUT") != "":
 		var f := FileAccess.open(OS.get_environment("OUT"), FileAccess.WRITE)

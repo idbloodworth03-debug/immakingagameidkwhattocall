@@ -2903,8 +2903,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 4200,
-   "damage": 180,
+   "hp": 4120,
+   "damage": 176,
    "hit_speed": 2.0,
    "speed": "slow",
    "range": 1,
@@ -2930,8 +2930,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1400,
-   "damage": 320,
+   "hp": 1190,
+   "damage": 272,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -2957,8 +2957,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1600,
-   "damage": 280,
+   "hp": 1490,
+   "damage": 260,
    "hit_speed": 1.2,
    "speed": "fast",
    "range": 1,

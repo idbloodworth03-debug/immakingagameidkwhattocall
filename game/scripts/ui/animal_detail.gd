@@ -49,6 +49,8 @@ func _build() -> void:
 	var is_tool: bool = animal.kind == "tool"
 	if is_tool:
 		info.add_child(UIKit.paragraph("Ranger tool", 20))
+	elif rarity == "mythic":
+		info.add_child(UIKit.paragraph("Mythical creature", 20))
 	else:
 		info.add_child(UIKit.paragraph("Real-world status: %s" % GameData.status_name(animal.status), 20))
 	if owned:
@@ -110,6 +112,27 @@ func _build() -> void:
 		var habitat: Dictionary = GameData.habitats.get(String(animal.get("habitat", "")), {})
 		if not habitat.is_empty():
 			info.add_child(_chip(String(habitat.name), Color(String(habitat.color))))
+
+	# Ranger Journal: the real animal or history behind a Mythic's legend,
+	# with a link to that animal's card when it's in the game.
+	if String(animal.get("legend", "")) != "":
+		var journal := UIKit.well(16)
+		add_child(journal)
+		var column := UIKit.vbox(8)
+		journal.add_child(column)
+		var heading := UIKit.hbox(10)
+		heading.add_child(UIKit.icon_rect(GameData.ui_icon("journal"), UIKit.YELLOW, 34))
+		heading.add_child(UIKit.label("Ranger Journal", 24, UIKit.YELLOW))
+		column.add_child(heading)
+		column.add_child(UIKit.paragraph(String(animal.legend), 20, UIKit.TEXT))
+		var link := String(animal.get("legend_card", ""))
+		if link != "" and GameData.cards.has(link):
+			var meet := UIKit.button(GameData.get_card(link).name, UIKit.BLUE, 22, Vector2(0, 64))
+			meet.icon = UIKit.icon(GameData.card_icon(link))
+			meet.add_theme_constant_override("icon_max_width", 36)
+			meet.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			meet.pressed.connect(func() -> void: Modal.open(AnimalDetail.create(link), GameData.get_card(link).name))
+			column.add_child(meet)
 
 	# Buttons
 	if owned:

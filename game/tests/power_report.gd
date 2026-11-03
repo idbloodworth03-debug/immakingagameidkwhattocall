@@ -8,7 +8,10 @@ extends Node
 ## From the repository root (ONLY=id,id to test a few; OUT=file to save):
 ##   godot --headless --path game res://tests/power_report.tscn
 ## Fights per animal (FIGHTS overrides). SCALE=id:factor,... multiplies an
-## animal's health and damage first, for trying out a change.
+## animal's health and damage first, for trying out a change. POOL=all
+## draws the herds from the whole roster, the animals on the way included.
+## WEIGHTS=draft picks them as often as Draft Duel offers each rarity
+## (draft_rules.json "rarity_weights"), so 0.5 = an average offered card.
 const FIGHTS := 48
 
 func _ready() -> void:
@@ -20,12 +23,30 @@ func _ready() -> void:
 		card["unlock_arena_index"] = GameData.arena_index_by_id.get(card.unlock_arena, -1)
 		GameData.cards[card.id] = card
 		all_ids.append(card.id)
+	# POOL=all: the herds and the animal it's compared with come from the
+	# whole roster, the ones on the way too (how it will play once they're in).
+	if OS.get_environment("POOL") == "all":
+		base_ids = all_ids.duplicate()
 	for spec in OS.get_environment("SCALE").split(",", false):
 		var bits := spec.split(":")
 		var stats: Dictionary = GameData.cards[bits[0]].stats
 		stats.hp = roundi(float(stats.hp) * float(bits[1]))
 		stats.damage = roundi(float(stats.damage) * float(bits[1]))
 	var fights := int(OS.get_environment("FIGHTS")) if OS.get_environment("FIGHTS") != "" else FIGHTS
+	var weights: Array[float] = []
+	var total := 0.0
+	for id in base_ids:
+		var w := 1.0
+		if OS.get_environment("WEIGHTS") == "draft":
+			w = float(GameData.draft_rules.get("rarity_weights", {}).get(GameData.cards[id].rarity, 1))
+		total += w
+		weights.append(total)
+	var pick := func(rng: RandomNumberGenerator) -> String:
+		var roll := rng.randf() * total
+		for k in weights.size():
+			if roll < weights[k]:
+				return String(base_ids[k])
+		return String(base_ids[-1])
 	var levels := {}
 	for id in all_ids:
 		levels[id] = GameData.start_level(GameData.cards[id].rarity)
@@ -40,8 +61,8 @@ func _ready() -> void:
 		for i in fights:
 			var herd := []
 			for k in 4:
-				herd.append({"id": base_ids[rng.randi() % base_ids.size()], "stars": 1})
-			var other: String = base_ids[rng.randi() % base_ids.size()]
+				herd.append({"id": pick.call(rng), "stars": 1})
+			var other: String = pick.call(rng)
 			var m := DraftMatch.new(rng.randi(), {"levels": [levels, levels]})
 			var a := herd.duplicate(true)
 			a.append({"id": id, "stars": 1})

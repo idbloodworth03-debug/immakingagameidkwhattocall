@@ -123,6 +123,12 @@ way (a few minutes; `ONLY=lion,tiger` for just some):
 godot --headless --path game res://tests/power_report.tscn
 ```
 
+0.5 means an average pick. The balance targets in the data were measured with
+`POOL=all WEIGHTS=draft`: herds drawn from the whole roster (the animals on
+the way too) as often as Draft Duel offers each rarity. `SCALE=id:1.2` tries a
+change to an animal's health and damage first, `FIGHTS=240` measures more
+carefully, and `OUT=file.txt` saves the results.
+
 ## Where things are
 
 ```

@@ -41,7 +41,8 @@ def load(species, style="cartoon"):
 def cartoonify(c):
     """A species can tune its cartoon by setting c.cartoon, e.g.
     {"head": 1.3} for an animal whose head is already big, or
-    {"face_mane": True} for a mane that frames the face and so grows with it."""
+    {"face_mane": True} for a mane that frames the face and so grows with it.
+    c.after_cartoon(c), if set, runs at the end (see add_cartoon_eyes)."""
     global HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS
     defaults = dict(HEAD=HEAD, MUZZLE=MUZZLE, EYES=EYES, EARS=EARS, LEGS=LEGS, LENGTH=LENGTH, BELLY=BELLY,
                     LIMBS=LIMBS)
@@ -49,6 +50,11 @@ def cartoonify(c):
     HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS = (tuned.get(k, v) for k, v in defaults.items())
     try:
         _cartoonify(c)
+        # A species with more than one head adds the other heads' eyes here,
+        # once the shapes have their cartoon proportions.
+        hook = getattr(c, "after_cartoon", None)
+        if hook is not None:
+            hook(c)
     finally:
         HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS = defaults.values()
 
@@ -351,3 +357,20 @@ def _descendants(c, root):
                 names.add(b.name)
                 changed = True
     return names
+
+
+def add_cartoon_eyes(c, origin, eye_dir, bone="head", size=1.0):
+    """A pair of big cartoon eyes on another head of a many-headed creature:
+    placed on the cartoon surface, looking out from that head's center
+    `origin` along `eye_dir` (toward its left eye; the right one mirrors it),
+    as big as the main eyes times `size`."""
+    r = (c.eyes[0][1] if c.eyes else 0.02) * size
+    for sign in (1, -1):
+        d = np.array([eye_dir[0] * sign, eye_dir[1], eye_dir[2]], float)
+        d /= np.linalg.norm(d)
+        p = surface_point(c.shapes, np.asarray(origin, float), d, sink=r * 0.3)
+        eye = Extra("ellipsoid", "eye", bone, center=tuple(p), radii=(r * 0.85, r * 1.05, r * 0.75),
+                    direction=tuple(d), color="#ffffff", rot=(0.0, 0.0, 0.0))
+        eye.pupil = "cartoon"
+        c.extras.append(eye)
+        c.eyes.append((p, r))

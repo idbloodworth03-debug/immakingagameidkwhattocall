@@ -107,6 +107,9 @@ GAITS = {
     "gallop": {"offsets": (0.55, 0.65, 0.0, 0.1), "stance": 0.38, "bobs": 1, "swing": 0.62, "lift": 1.1},
     # Upright on two legs: each arm swings with the opposite leg.
     "biped": {"offsets": (0.5, 0.0, 0.0, 0.5), "stance": 0.6, "bobs": 2, "swing": 0.34, "lift": 0.45},
+    # A sea turtle on the beach: both front flippers row together, then both
+    # back ones push, and the body surges once per stroke.
+    "flipper": {"offsets": (0.0, 0.0, 0.5, 0.5), "stance": 0.5, "bobs": 1, "swing": 0.55, "lift": 0.5},
 }
 
 
@@ -635,11 +638,46 @@ def frog_hop(c, t):
     return p
 
 
+def pinniped_idle(c, t):
+    """A seal resting on its belly: breathing, looking around, the back
+    flippers waving."""
+    p = Pose()
+    s = _size(c)
+    wave = math.sin(t * TAU)
+    p.move(z=max(0.0, math.sin(t * TAU * 2)) * s * 0.004)
+    p.rot("neck", x=0.05 * wave)
+    p.rot("head", z=0.15 * wave, x=-0.04 * math.sin(t * TAU * 2))
+    for i, side in enumerate(("L", "R")):
+        p.leg("hl." + side, foot=0.25 * math.sin(t * TAU * 2 + i * math.pi))
+        p.leg("fl." + side, upper=0.06 * math.sin(t * TAU * 2 + i))
+    return p
+
+
+def galumph(c, t):
+    """Galumphing on land: the chest heaves up on the front flippers, then
+    the hips hump up and slide in behind, like a big caterpillar."""
+    p = Pose()
+    s = _size(c)
+    lift = math.sin(t * TAU)
+    hump = math.sin(t * TAU - 1.4)
+    p.move(y=max(0.0, lift) * s * 0.03, z=max(0.0, lift) * s * 0.05 + max(0.0, hump) * s * 0.02)
+    p.rot("chest", x=-lift * 0.16)
+    p.rot("hips", x=hump * 0.2)
+    p.rot("neck", x=lift * 0.18)
+    p.rot("head", x=-lift * 0.12)
+    for side in ("L", "R"):
+        p.leg("fl." + side, upper=-lift * 0.5, lower=lift * 0.25, foot=lift * 0.2)
+        p.leg("hl." + side, upper=hump * 0.15, foot=-hump * 0.35)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-hump * (0.08 + 0.04 * i))
+    return p
+
+
 BODY_IDLE = {"insect": insect_idle, "fish": fish_idle, "cetacean": cetacean_idle, "crustacean": crustacean_idle,
-             "serpent": serpent_idle, "frog": frog_idle,
+             "serpent": serpent_idle, "frog": frog_idle, "pinniped": pinniped_idle,
              "winged": lambda c, t: winged_flap(c, t, power=c.motion.get("hover_power", 0.55))}
 BODY_WALK = {"insect": insect_walk, "fish": fish_hop, "cetacean": cetacean_slide, "crustacean": crustacean_scuttle,
-             "serpent": slither, "frog": frog_hop,
+             "serpent": slither, "frog": frog_hop, "pinniped": galumph,
              "winged": winged_flap}
 
 

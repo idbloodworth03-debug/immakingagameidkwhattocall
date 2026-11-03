@@ -457,7 +457,7 @@ static func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
 ## navy outline and a little shine. Used on cards, on the field and in the
 ## synergy tracker.
 static func draw_habitat_badge(canvas: CanvasItem, center: Vector2, radius: float, habitat: String, alpha := 1.0) -> void:
-	var info: Dictionary = GameData.synergies.get(habitat, {})
+	var info: Dictionary = GameData.habitats.get(habitat, {})
 	if info.is_empty():
 		return
 	var color := Color(String(info.get("color", "#ffffff")))

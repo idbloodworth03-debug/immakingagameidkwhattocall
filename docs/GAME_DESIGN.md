@@ -7,12 +7,12 @@ itself (speeds, timing, luck) in `game/data/battle_rules.json`.
 
 ## The big idea
 
-An animal battler built around one mode, **Draft Duel**: a round-based duel.
-Pick a few starters from your collection, then each round shop for more
-animals and train them up, place your herd with no clock running, and
-watch it fight on its own while you make a few well-timed calls: a Rally
-and your tools. Each player has 30 hearts; lose a fight and you lose
-hearts. Acorns, the shop money, only exist inside a match.
+An animal battler built around one mode, **Draft Duel**: a best-of-7 duel.
+Each round you make 3 picks from your collection (new animals, tools, or
+stars for animals you have), then watch your herd fight on its own while you
+make a few well-timed calls: a Rally and your tools. Every animal has a
+class (Tank, Tank Destroyer, Ranged, Air or Specialist) that sets its row
+and what it beats. First to 4 round wins takes the match.
 
 The theme is wildlife rescue: chests are **cages** you open to **free**
 animals, the player is a **Ranger**, and card rarity follows how endangered
@@ -24,112 +24,57 @@ river across the field. That mode, "Classic battle", and the dens, river and
 
 ## Draft Duel
 
-The goal: give players time to think and keep them involved during the
-fight, with skill (building and placing a herd, timing a Rally) beating
-luck. Each player starts with **30 hearts**, and the match goes round by
-round until someone runs out (at most 15 rounds).
+The goal: a simple, clear game. Herds fight on their own; your choices are
+what to pick, and when to Rally or use a tool. **Best of 7**: the first player
+to win 4 rounds wins (at most 7 rounds; then the most wins, or a draw). The
+score is always big at the top: "2 - 1", with 4 pips each.
 
-**Starters.** Before the first round, each player picks up to **3 animals**
-they own to start with, worth up to **12 Acorns** together (so not just
-the three strongest). They start the match in the herd.
+**Each round: Pick, then Fight, then a quick result.**
 
-Then each round has four parts:
+**Pick 3.** Every round you make exactly 3 picks:
+- **Round 1:** 3 starting animals from your collection (any you own,
+  Legendaries included).
+- **After that:** 5 options from your collection, a mix of animals and tools
+  (rarer ones come up less often). Each pick is one of:
+  - an offered animal (one you already have gets a **star** instead of a copy),
+  - an offered tool (2 at most; a third replaces one you choose),
+  - a star for an animal already in your herd (tap it in the herd row).
+- Stars go up to 3; each star after the first adds 60% health and bite.
+- **No limit on the herd**: it grows every round, so fights get bigger.
+- Tap your latest pick to take it back. **Fight!** lights up once all 3
+  picks are made. Hold any card for its name and one short line.
+- No money, no shop, no hearts: there are no Acorns any more.
 
-1. **Shop.** Each player has their own Watering Hole: 5 animals and 1 Ranger
-   tool, all from **your collection** (topped up with the first arena's
-   cards if you own too few). Both players shop
-   at the same time, and each can:
-   - **Buy** cards. A herd holds up to 6 animals and 2 tools, and it carries over from round to round.
-   - **Buy a copy** of an animal already in the herd: instead of joining, it gives that animal a **star** (and a copy still fits when the herd is full).
-   - **Train** a herd animal up a star for Acorns: its card cost times the stars it has, plus 1 (a Brown Bear costs 7 to reach 2 stars, 13 to reach 3).
-   - **Reroll** the shop for 1 Acorn.
-   - Press **Done**. When both are done, it's time to place.
+**Classes** (`game/data/classes.json`): every animal has one, shown as an
+icon on its card and under it on the field. Animals take their places
+automatically by class:
 
-   **Stars:** every animal starts with 1 and can reach 3. Each star after
-   the first adds 60% health and bite, and stars count at the bell.
-   Each player's shop has its own dice, so one player's rerolls never
-   change what the other is offered.
-2. **Place your herd.** Nothing moves and there's no clock. Both herds are on
-   the field (the opponent places first, so you can answer it). Animals start
-   on your own half, at least a tile back from the middle line.
-   When both players press Ready, the fight starts.
-3. **The fight** (up to 40 seconds) runs on its own, with some luck:
-   - **Moods:** at the whistle, every animal rolls a mood for
-     the fight: up to 30% harder or softer bites ("Fired up!", "Sleepy").
-   - **Hits** vary by up to 25% each.
-   - **Rally:** once a fight, tap a spot and your animals there bite 30%
-     harder, attack and move 20% faster for 4 seconds. Timing is everything.
-   - **Tools** bought in the draft can be used anywhere, any time.
-   - **The Raccoon** (Trash Panda) steals an Acorn from the other player as
-     the fight starts.
-   - Which tools each player holds is hidden (only how many shows).
-4. **Round over.** The fight ends when a herd is wiped out; the other herd
-   wins the round. If both still stand at the bell, the one with more of
-   itself left wins (each animal counts its card's cost times the share of
-   health it has left).
+| Class | Row | What it does |
+|---|---|---|
+| Tank | Front | Tough. Holds the front line |
+| Tank Destroyer | Middle | +150% damage to Tanks, and goes for them first |
+| Ranged | Back | Reaches at least 5 tiles; +50% damage to Air, and goes for it first |
+| Air | Over the middle | Flies: only Ranged and Air can hit it |
+| Specialist | By trait | One trait: Burrow, Splash, Stun or Slow |
 
-**Hearts.** The loser of a round loses hearts: **the round number, plus 1
-for each of the winner's animals still standing** (a pack counts once). A
-round 4 loss to a herd with 3 animals left costs 7 hearts. A tie costs
-nobody anything. Run out of hearts and you lose; after round 15, more
-hearts wins.
+Counters: Tank Destroyers beat Tanks, Tanks protect Ranged, Ranged beat Air,
+Air beats Tank Destroyers (they can't hit back), and Specialists disrupt.
 
-**Acorns** are the only money in a match: 6 to start, +6 each round, +2
-more for the loser of the last round (to help it catch up), plus Raccoon
-thefts. Spend them on animals, tools, training and rerolls. Everyone starts
-with the same Acorns, and they can't be bought or carried out of a match.
+Specialist traits: **Burrow** (starts in front, travels underground and pops
+up behind the enemy's last row), **Splash** (back row; every hit also hits
+the group around the target for 60%), **Stun** (middle; every third hit
+freezes the target for 1 second), **Slow** (middle; hits slow the target 40%
+for 2 seconds). Swarms bring 2 animals at most.
 
-**Saving vs. spending:**
-- **Interest:** at the end of each round you earn 1 Acorn for every 5 you
-  saved, up to 5. The shop shows "+2 interest" next to your Acorns, and it
-  updates as you spend, so you can see what a purchase costs you later.
-- **Win streaks:** winning 2, 3 or 4+ rounds in a row pays +1, +2 or +3
-  Acorns at the start of the next round (a flame shows your streak). This
-  sits alongside the loser's bonus, so both streaks have something going
-  for them. A tie resets both streaks.
-- The numbers are in `draft_rules.json` (`interest_per`, `interest_cap`,
-  `win_streak_from`, `win_streak_bonus`).
+**Fight.** The herds fight on their own. You can **Rally** once (tap Rally,
+then the field: your animals there bite harder and move faster for a few
+seconds) and use **each tool once a fight**; tools stay in your belt for the
+next fight. The herd that outlasts the other wins the round; at the bell
+(40 seconds), the one with more of itself left.
 
-**Habitat synergies** (`game/data/synergies.json`, `scripts/draft/synergies.gd`):
-every animal has a habitat, from where it really lives. A herd with 2, 4 or
-6 *different* animals of one habitat (copies of the same animal count once)
-turns on that habitat's bonus, stronger at each tier. Bonuses go to that
-habitat's own animals when a fight starts:
-
-| Habitat | 2 / 4 / 6 different animals |
-|---|---|
-| Savanna | attack 10% / 20% / 35% faster |
-| Rainforest | heal 1% / 2% / 3% of their health every second |
-| Ocean | start each fight with a shield of 10% / 20% / 35% of their health |
-| Arctic | hits slow enemies by 15% / 25% / 40% for 2 seconds |
-| Wetlands | take 10% / 18% / 28% less damage |
-| Forest | hit 10% / 20% / 35% harder |
-| Mountains | 12% / 25% / 40% more health |
-| Plains | move 15% / 30% / 50% faster |
-| City | +1 / +2 / +3 bonus Acorns for you at the start of each round |
-
-Every habitat has at least 6 animals across the full roster of 57. Of the
-20 in the game now: Savanna 4, Forest 4, Arctic 3, Mountains 3, Rainforest
-2, City 2, Wetlands 1, Plains 1, Ocean 0, so only Savanna and Forest can
-reach the 4-animal tier yet, and nothing can reach 6.
-
-On screen: a habitat badge on every card and at every animal's feet, a
-tracker on the left of the field while shopping and placing ("Savanna
-3/4", tap it for the bonus at each tier, and a "+1" preview for the card
-you're looking at), the opponent's active habitats next to their name, and
-the first time a tier turns on in a match: a bouncy pop-up, a sting and a
-glow on its animals.
-
-**Big moments:**
-- **3 stars:** when one of your animals reaches 3 stars, the field slows down
-  and zooms in on it, stars and confetti burst, a sting plays and a bouncy
-  "3 STARS!" pops up. It keeps a golden outline, rim and an occasional
-  sparkle for the rest of the match.
-- **Comeback:** winning a round at 5 hearts or fewer ("COMEBACK!", confetti),
-  and the match ends on "Comeback Victory!".
-- **Flawless:** winning a round without losing an animal ("FLAWLESS!").
-- Timings, zoom, slow motion and particle counts are in `feel.json`
-  ("celebrations").
+**Big moments:** reaching 3 stars ("3 STARS!", stars and confetti), a
+flawless round ("FLAWLESS!"), and winning a match after being 2 rounds down
+("Comeback Victory!"). Timings and particle counts are in `feel.json`.
 
 **Rival Rangers** (`game/data/rivals.json`, `scripts/battle/opponents.gd`):
 you play against named Rangers, not random usernames. Each arena has 2 or 3
@@ -145,9 +90,8 @@ start, their big hits, and rounds going their way or not.
   bubble and a change of face) when the match starts, on their first big hit
   of a round, and when they win or lose a round, at most one every few
   seconds. At the end they react to the result.
-- **Ways of playing** (`style`): a favorite habitat they build toward (ignored
-  if your collection doesn't have 2 of it), and how much they reroll, save
-  Acorns, chase stars and like tools. 0.5 is an ordinary player.
+- **Ways of playing** (`style`): a favorite class they pick more of, and how
+  much they like stars over new animals, and tools. 0.5 is ordinary.
 - **Bosses guard promotion.** When a win could take you to the next arena
   (within `boss_within_trophies`), you face that arena's boss. Beat the boss
   and you go up; regular wins stop just short of the next arena. In the top
@@ -163,28 +107,25 @@ start, their big hits, and rounds going their way or not.
   difficulty and cards `ease_card_levels` lower. Nothing on screen says so.
 - Timings and sizes for the VS screen and emotes are in `feel.json` ("rivals").
 
-**Your collection matters, a little.** Your starters and shop come from the
-cards you own, and your animals and tools fight at their levels. The computer opponent's cards
-are leveled like yours on average, so leveling a few favorites helps without
-making the match one-sided.
+**Your collection matters.** Your picks come from the cards you own, and they
+fight at their levels. The computer opponent's cards are leveled like yours on
+average. New players start with a small set (see Still open).
 
-**Tuning** is in `game/data/draft_rules.json`. `tests/draft_report.tscn` plays
-bot-vs-bot matches and prints match length, hearts lost, shopping and how
-close fights are 8 seconds in. From the latest runs (30 matches):
-- Matches last about 7 rounds. Wins split 18-22 (40 matches, with interest and streaks).
-- Interest pays about 0.6 Acorns per player per round and streaks about 0.3; bots hold about 5 Acorns at the end of a round. About 2.7 animals reach 3 stars in a match (both players together).
-- A fight lasts about 17 seconds, and 9 in 10 end with a herd wiped out. A loss costs 5.8 hearts on average.
-- Herds average 5 animals with 1.4 stars each. A bot buys about 18 cards a match (almost half of them copies for a star) and trains about twice.
-- 8 seconds into a fight, about 80% are still fairly close (each side has 20-80% of the strength left).
-- Before starters and shops, with one shared, take-turns Watering Hole and no stars, fights were much more one-sided.
-- Rival styles (`draft_report.tscn -- 266 rivals`: each rival's style against an ordinary bot at the same difficulty): rivals overall win 54%. Mountains fans 77%, Savanna fans 75%, star chasers 71% and spenders 61% win more; Forest fans 33%, Rainforest fans 33% and savers 46% win less. Rerollers 54%, Arctic fans 50%, tool lovers 50%, City fans 57%. So a rival's favorite habitat changes how hard it is about as much as its skill does.
-- Synergies (60 matches, every card available): Forest 2 is the most common (507 fights) but wins only 46% (38% at Forest 4), since its animals are cheap. Mountains 2 (60%) and Rainforest 2 (72%, only 18 fights) win more, likely because they come with expensive Epics and Legendaries. Savanna 2 wins 53%, Arctic 2 51%, City 2 52%.
+**Tuning** is in `game/data/draft_rules.json` (wins needed, picks, options,
+tools, stars) and `game/data/classes.json` (counters, rows, traits, swarm
+size). `tests/draft_report.tscn` plays bot-vs-bot matches and prints match
+length, fight length, herd sizes, what the bots pick and how each class does.
+First run (40 matches): about 5.5 rounds a match, fights about 26 seconds,
+69% end in a wipe-out, about 12 animals on the field per fight (23 at most).
+The bots still pick few Ranged animals, Specialists and tools; their picking
+gets tuned next.
 
-**Gambling (removed for now).** Draft Duel used to have a gambling layer
-with Acorns: a raccoon Bookie who posted odds before each fight so you
-could bet on your own herd, a halftime Pot (ante, raise, call or fold), a
-face-down Mystery Crate in the shop, and Safe/Bold/All-in trophy stakes.
-All of it was taken out; it's in the git history if any of it comes back.
+**Removed:** the shop, Acorns (costs, rerolls, interest, win streak and loss
+bonuses), hearts, manual placement, habitat synergies, per-animal abilities
+(animals now fight by class; their old ability names are kept in the data for
+flavor only), and moods. Draft Duel also used to have a gambling layer (a
+Bookie, a halftime Pot, a Mystery Crate, trophy stakes). It's all in the git
+history.
 
 ## Rarity = how endangered the animal is
 
@@ -210,39 +151,39 @@ doesn't load.
 
 Each animal has:
 
-- **Acorn cost** (2 to 8): what it costs at the Watering Hole. Its **count** says how many come in a pack (the Wolf Pack is several wolves).
-- **Stats** at its starting level: hitpoints, damage, hit speed, speed, range and what it targets (ground, or air & ground)
-- **Tags** like Canine, Big Cat, Aquatic or Savanna animal, used by abilities
-- **One ability**, e.g. *Pounce*, *Pack Hunters*, *Trash Panda* or *Apex Pounce*. Abilities are built from reusable types (pounce, poison, stealth, shield...), so the battle code implements each type once and many animals share it.
+- **A class** (and a trait for Specialists): see Draft Duel. This decides its row and what it beats.
+- **Stats** at its starting level: hitpoints, damage, hit speed, speed and range. Its **count** says how many come in a pack (2 at most on the field).
+- **A habitat** (flavor: the color of its card window) and **tags** like Canine or Big Cat.
+- A **power** number (2 to 8, the old shop cost) the computer opponent uses to judge it. The old ability names stay in the data for flavor; they don't do anything in a fight.
 
 ### The roster
 
-| Animal | Rarity | Cost | Ability | Unlocks in |
-|---|---|---|---|---|
-| Sewer Rats | Common | 2 | Scurry | 1. Rescue Center |
-| Raccoon | Common | 3 | Trash Panda | 1. Rescue Center |
-| Gray Squirrel | Common | 3 | Hidden Stash | 1. Rescue Center |
-| Red Fox | Common | 3 | Pounce | 1. Rescue Center |
-| Peregrine Falcon | Common | 3 | Stoop Dive | 1. Rescue Center |
-| Wild Boar | Common | 4 | Charge | 2. City Park |
-| Wolf Pack | Common | 5 | Pack Hunters | 4. Whispering Woods |
-| Brown Bear | Common | 6 | Maul | 4. Whispering Woods |
-| Cheetah | Rare | 4 | Sprint | 1. Rescue Center |
-| American Bison | Rare | 5 | Stampede | 3. Prairie Fields |
-| Hippopotamus | Rare | 6 | Territorial | 5. Misty Marsh |
-| Lion | Rare | 5 | Roar | 6. Sunbaked Savanna |
-| Polar Bear | Rare | 6 | Thick Fur | 11. Coral Coast |
-| African Wild Dogs | Epic | 5 | Relentless | 6. Sunbaked Savanna |
-| Tiger | Epic | 6 | Apex Pounce | 9. Emerald Jungle |
-| Asian Elephant | Epic | 8 | Trample | 9. Emerald Jungle |
-| Red Panda | Epic | 3 | Stand Tall | 10. Cloudpeak Mountains |
-| California Condor | Legendary | 5 | Sky Scavenger | 7. Red Rock Canyon |
-| Amur Leopard | Legendary | 5 | Phantom | 8. Frozen Tundra |
-| Black Rhino | Legendary | 7 | Thunder Charge | 12. Last Sanctuary |
+| Animal | Rarity | Class | Unlocks in |
+|---|---|---|---|
+| Sewer Rats | Common | Specialist (Burrow) | 1. Rescue Center |
+| Raccoon | Common | Ranged | 1. Rescue Center |
+| Gray Squirrel | Common | Ranged | 1. Rescue Center |
+| Red Fox | Common | Specialist (Burrow) | 1. Rescue Center |
+| Peregrine Falcon | Common | Air | 1. Rescue Center |
+| Wild Boar | Common | Tank Destroyer | 2. City Park |
+| Wolf Pack | Common | Tank Destroyer | 4. Whispering Woods |
+| Brown Bear | Common | Tank | 4. Whispering Woods |
+| Cheetah | Rare | Tank Destroyer | 1. Rescue Center |
+| American Bison | Rare | Tank | 3. Prairie Fields |
+| Hippopotamus | Rare | Tank | 5. Misty Marsh |
+| Lion | Rare | Tank Destroyer | 6. Sunbaked Savanna |
+| Polar Bear | Rare | Tank | 11. Coral Coast |
+| African Wild Dogs | Epic | Tank Destroyer | 6. Sunbaked Savanna |
+| Tiger | Epic | Tank Destroyer | 9. Emerald Jungle |
+| Asian Elephant | Epic | Tank | 9. Emerald Jungle |
+| Red Panda | Epic | Specialist (Slow) | 10. Cloudpeak Mountains |
+| Black Rhino | Legendary | Tank | 12. Last Sanctuary |
+| California Condor | Legendary | Air | 7. Red Rock Canyon |
+| Amur Leopard | Legendary | Tank Destroyer | 8. Frozen Tundra |
 
-Every arena unlocks at least one animal. New players own the six Rescue
-Center animals plus the Net and Air Horn, which is enough to fill the
-Watering Hole.
+Every arena unlocks at least one animal. Of these 20, 6 are Tanks, 7 Tank
+Destroyers, 2 Ranged, 2 Air and 3 Specialists (Burrow and Slow); the 37 still
+to come add more Ranged and Air animals and the Splash and Stun Specialists.
 
 ## Arenas and trophies
 
@@ -371,18 +312,17 @@ with a big **NEW ANIMAL FREED!** for first finds, and a summary at the end.
 
 ## The fight
 
-The animals fight on their own: you choose what to draft, where it starts,
-and when to Rally or use a tool.
-
-**The field:** 16 tiles wide and 20 long, open, with a halfway line and a
-center ring, and a fence around it. You play from the bottom. Every arena
-uses the same field; only the look and scenery change.
+**The field:** 16 tiles wide and 20 long, with a halfway line and a fence
+around it. You play from the bottom. Rows are 2.2 (front), 4.4 (middle) and
+6.6 (back) tiles back from the middle line; a row with too many animals for
+the field's width wraps into another row further back.
 
 **How animals behave:**
-- Each goes for the nearest enemy it can reach, anywhere on the field (Food Bait close by comes first). With no enemy left, it stands still.
-- Ground-only animals can't hit flyers (the Falcon and Condor); animals that target "air & ground" (the Squirrel's thrown acorns, the birds) can.
+- Tank Destroyers go for a Tank within 7 tiles first, Ranged for Air within 6;
+  otherwise everyone goes for the nearest enemy it can reach (Food Bait close
+  by comes first).
+- Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
-- Moods and hit luck make each fight a bit different (see Draft Duel above).
 
 **The end:** a fight is over when a herd is wiped out, or after 40 seconds.
 The fight engine is deterministic: the same herds, seed and actions always
@@ -390,17 +330,17 @@ play out the same way, which online play will rely on.
 
 ## Ranger tools
 
-Bought at the Watering Hole, kept on your tool belt (2 at most) and used
-once, anywhere on the field, during a fight:
+Picked like animals, kept on your tool belt (2 at most) and used once each
+fight, anywhere on the field:
 
-| Tool | Rarity | Cost | Unlocks | What it does |
-|---|---|---|---|---|
-| Net | Common | 2 | Arena 1 | Enemies in a 2-tile area are stuck for 2.5s and take 40 damage |
-| Air Horn | Common | 2 | Arena 1 | 145 damage in 2.5 tiles and knocks enemies back |
-| Food Bait | Rare | 2 | Arena 2 | A snack that enemy ground animals within 5 tiles go for, for up to 7s |
-| Medkit | Rare | 3 | Arena 3 | Heals your animals in 3 tiles for 440 |
-| Tranquilizer Dart | Epic | 3 | Arena 5 | Puts the closest enemy animal to sleep for 4s (Fearless ones are only slowed) |
-| Signal Flare | Epic | 4 | Arena 6 | 340 damage in 2.5 tiles, reveals hidden animals |
+| Tool | Rarity | Unlocks | What it does |
+|---|---|---|---|
+| Net | Common | Arena 1 | Enemies in a 2-tile area are stuck for 2.5s and take 40 damage |
+| Air Horn | Common | Arena 1 | 145 damage in 2.5 tiles and knocks enemies back |
+| Food Bait | Rare | Arena 2 | A snack that enemy ground animals within 5 tiles go for, for up to 7s |
+| Medkit | Rare | Arena 3 | Heals your animals in 3 tiles for 440 |
+| Tranquilizer Dart | Epic | Arena 5 | Puts the closest enemy animal to sleep for 4s |
+| Signal Flare | Epic | Arena 6 | 340 damage in 2.5 tiles |
 
 Tools level up like animals (+10% damage or healing per level). New players
 start with the Net and Air Horn.
@@ -410,21 +350,18 @@ start with the Net and Air Horn.
 The opponent is a Rival Ranger (see Draft Duel) played by this bot. It plays
 Draft Duel through the same calls as a person, so it follows the same rules:
 
-- **Starters:** it tries random sets within the budget and keeps the one worth the most.
-- **Shopping:** it buys by cost (pricier animals are stronger), likes copies that add a star (more so once its herd is full), trains its pricier animals when the herd is full, wants one tool, and rerolls a weak shop when it has Acorns to spare.
-- **Synergies:** it values cards that turn a habitat tier on, a little less ones that get it closer, and picks starters that share a habitat; a little in the first arena, fully at the top.
-- **Saving:** once its herd has 3 animals and it isn't in danger (more than a third of its hearts left), it keeps whole steps of interest (5, 10...), fewer while its herd is still growing; it only dips into savings for a great buy. Sharper opponents save more steadily.
-- **Placing:** tough animals in front, ranged ones behind, leaning toward the side where your herd is strongest.
+- **Picks:** it scores each option and each possible star: an animal's power,
+  plus what its herd needs against yours (Tank Destroyers against your Tanks,
+  Ranged against your Air, Air against your Tank Destroyers, a Tank to shield
+  its own Ranged), plus a little luck. Starters favor a spread of classes.
 - **Fighting:** it rallies where two or more of its animals are fighting, uses damage tools on groups, the Medkit on its hurt animals, the Dart on your biggest animal and Food Bait in front of its herd.
 
-**Difficulty grows with your arena:** it shops less randomly and uses tools
-sooner and on smaller groups. Each rival adds its own skill, bosses more, and
-it eases off quietly after 3 losses in a row. Its cards are leveled like yours
-on average. **Personality** (the rival's `style`): a favorite habitat adds to
-how much it wants those animals; rerollers reroll sooner and more often;
-savers keep more interest steps back and spenders fewer; star chasers value
-copies and training more; tool lovers want a tool sooner and a second one. The same bot can later fill online matchmaking when
-few players are on.
+**Difficulty grows with your arena:** it picks less randomly, pays more
+attention to counters, and uses tools sooner and on smaller groups. Each rival
+adds its own skill, bosses more, and it eases off quietly after 3 losses in a
+row. **Personality** (the rival's `style`): a favorite class it picks more of,
+and how much it likes stars over new animals, and likes tools. The same bot can
+later fill online matchmaking when few players are on.
 
 **Balance.** All animal stats were first tuned from about 7,000 bot battles
 in the old Classic mode. Draft Duel's open field and herds change what's
@@ -433,8 +370,9 @@ as a guide.
 
 ## Still open
 
-1. **Match length:** 30 hearts and the per-round loss give about 6 rounds against the bot. Real players may want shorter matches (25 hearts?) on a phone.
+1. **Match length:** best of 7 runs about 5.5 rounds against the bot, with fights of about 26 seconds. Real players may want a shorter match on a phone.
 2. **Balance:** all stats are first guesses from the old mode. Playing a lot of Draft Duel is the only way to really tune them.
-3. **The field:** one open field for every arena. Arena-specific features (a pond in Misty Marsh, rocks in Red Rock Canyon) could add variety later.
+3. **Starting collection:** today a new player owns all 8 Rescue Center cards. The plan is 5 cards: at least 3 animals from different classes, and old saves with fewer get topped up to the same set. Proposed: Brown Bear (Tank), Wild Boar (Tank Destroyer), Gray Squirrel (Ranged), Peregrine Falcon (Air) and the Net.
+4. **The field:** one open field for every arena. Arena-specific features (a pond in Misty Marsh, rocks in Red Rock Canyon) could add variety later.
 
 Settled: the bot gets harder as you climb (yes); Classic battle, dens and the river are gone (Draft Duel is the game).

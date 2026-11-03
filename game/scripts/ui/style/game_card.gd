@@ -2,28 +2,28 @@ class_name GameCard
 extends Control
 ## The one card look (UIStyle, "Ranger Camp"): a painted-wood frame in the
 ## card's rarity color, the animal (or tool) big in a sunken window lit in
-## its habitat color, the Acorn cost on a brass coin in the top-left corner,
-## a small habitat badge in the top-right, stars along the bottom and, if
-## there's room, the name. With no card id it's an empty slot.
+## its habitat color, its class badge in the top-left corner (a tool badge
+## for tools), stars along the bottom, an upgrade arrow when a pick would
+## add a star and, if there's room, the name. No other text. With no card
+## id it's an empty slot.
 ##
 ## The frame, window, glow, coin and stars are regions of a few shared
 ## textures (tools/make_ui_art.py), so cards batch well. Tap handling is up
 ## to the screen (UIKit.on_tap).
 
 var card_id := ""
-## The price in the corner (-1 hides it), red when you can't afford it.
-var cost := -1
-var affordable := true:
+## A green arrow in the top-right corner: a pick here adds a star.
+var upgrade_arrow := false:
 	set(value):
-		if value != affordable:
-			affordable = value
+		if value != upgrade_arrow:
+			upgrade_arrow = value
 			queue_redraw()
 ## Stars along the bottom (0 hides them). `star_preview` makes the last one
 ## pulse: what buying this would make it.
 var stars := 0
 var star_preview := false
 var show_name := false
-var show_habitat := true
+var show_class := true
 ## Picked: a warm glow around it and a gold rim.
 var selected := false:
 	set(value):
@@ -118,15 +118,27 @@ func _draw() -> void:
 			var pulse := 0.5 + 0.5 * sin(_time * 7.0) if star_preview and i == stars - 1 else 0.0
 			UIStyle.draw_particle(self, "star", at, sr * (1.0 + 0.2 * pulse), UIStyle.color("gold").lightened(0.25 * pulse))
 
-	# Cost on a brass coin (top-left), habitat (top-right).
-	var corner := clampf(w * 0.15, 22.0, 32.0)
-	if cost >= 0:
-		var c := Vector2(corner * 0.85, corner * 0.85)
-		UIStyle.draw_particle(self, "coin", c, corner, Color.WHITE if affordable else Color(1.0, 0.55, 0.5))
-		UIStyle.draw_text(self, str(cost), Rect2(c - Vector2(corner, corner), Vector2(corner, corner) * 2.0), "small", Color.WHITE if affordable else Color("#ffd6cf"))
-	var habitat := String(card.get("habitat", ""))
-	if show_habitat and habitat != "":
-		UIKit.draw_habitat_badge(self, Vector2(w - corner * 0.8, corner * 0.8), corner * 0.6, habitat)
+	# Its class (or a tool badge) in the top-left corner; an upgrade arrow
+	# in the top-right.
+	var corner := clampf(w * 0.15, 18.0, 30.0)
+	if show_class:
+		var at := Vector2(corner * 0.85, corner * 0.85)
+		if is_tool:
+			UIStyle.draw_particle(self, "badge", at, corner * 0.75, UIStyle.color("tool"))
+			var box := UIKit.icon(GameData.ui_icon("toolbox"))
+			if box != null:
+				var side := corner * 0.95
+				draw_texture_rect(box, Rect2(at - Vector2(side, side) / 2.0, Vector2(side, side)), false)
+		else:
+			UIStyle.draw_class_badge(self, at, corner * 0.72, GameData.class_of(card_id))
+	if upgrade_arrow:
+		var at := Vector2(w - corner * 0.85, corner * 0.85)
+		var bob := 2.0 * sin(_time * 5.0)
+		UIStyle.draw_particle(self, "badge", at + Vector2(0, bob), corner * 0.72, UIStyle.color("primary"))
+		var arrow := UIKit.icon(GameData.ui_icon("upgrade"))
+		if arrow != null:
+			var side := corner * 1.0
+			draw_texture_rect(arrow, Rect2(at + Vector2(0, bob) - Vector2(side, side) / 2.0, Vector2(side, side)), false)
 
 	if flash > 0.0:
 		_glow.tint = Color(1, 1, 0.85, flash * 0.9)
@@ -168,5 +180,5 @@ func _draw_art(card: Dictionary, art: Rect2, is_tool: bool) -> void:
 
 
 static func _habitat_color(card: Dictionary) -> Color:
-	var info: Dictionary = GameData.synergies.get(String(card.get("habitat", "")), {})
+	var info: Dictionary = GameData.habitats.get(String(card.get("habitat", "")), {})
 	return Color(String(info.get("color", "#6fae5a")))

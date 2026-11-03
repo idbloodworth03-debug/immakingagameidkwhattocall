@@ -187,8 +187,8 @@ func _show_match_result(result: Dictionary) -> void:
 		row.add_child(portrait)
 		row.add_child(UIKit.label(("vs %s" % rival.name) + ("  (Boss)" if rival.get("boss", false) else ""), 24, UIKit.TEXT))
 		box.add_child(row)
-	if result.has("hearts"):
-		box.add_child(UIKit.label("Hearts left  %d - %d" % [result.hearts[0], result.hearts[1]], 24, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
+	if result.has("score"):
+		box.add_child(UIKit.label("%d - %d" % [result.score[0], result.score[1]], 34, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	var change := int(result.trophy_change)
 	box.add_child(UIKit.label("%+d trophies" % change, 34, UIKit.TROPHY, HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(UIKit.label("Total: %s" % UIKit.format_number(int(result.trophies)), 24, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))

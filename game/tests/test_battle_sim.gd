@@ -39,10 +39,10 @@ func test_nothing_to_fight_means_standing_still() -> void:
 func test_animals_find_the_nearest_enemy_and_fight() -> void:
 	var sim := _sim()
 	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
-	var near: BattleSim.Fighter = _ready_now(sim.spawn(1, "red_fox", 3 * T, 6 * T))[0]
+	var near: BattleSim.Fighter = _ready_now(sim.spawn(1, "gray_squirrel", 3 * T, 6 * T))[0]
 	var far: BattleSim.Fighter = _ready_now(sim.spawn(1, "raccoon", 15 * T, 1 * T))[0]
 	_run(sim, 0.2)
-	check(bear.target == near, "the bear goes for the closer fox")
+	check(bear.target == near, "the bear goes for the closer squirrel")
 	_run(sim, 15)
 	check(not near.alive, "and beats it")
 	check(bear.target == far or not far.alive, "then goes after the raccoon")
@@ -124,102 +124,96 @@ func test_clear_units_empties_the_field() -> void:
 	check_eq(sim.fighters.size(), 0, "nothing left")
 
 
-# --- Abilities -------------------------------------------------------------
+# --- Classes and traits ----------------------------------------------------
 
-func test_shield_absorbs_damage() -> void:
-	borrow_later_animals()
+func test_every_animal_has_a_class() -> void:
+	var later: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/animals_later.json"))
+	for card in GameData.cards.values().filter(func(c): return c.kind == "animal") + Array(later):
+		check(GameData.classes.has(card.get("class", "")), "%s has a class" % card.id)
+		check((card.get("class", "") == "specialist") == GameData.traits.has(card.get("trait", "")), "%s: Specialists, and only they, have a trait" % card.id)
+
+
+func test_air_is_hit_only_by_ranged_and_air() -> void:
 	var sim := _sim()
-	var turtle: BattleSim.Fighter = sim.spawn(0, "snapping_turtle", 8 * T, 15 * T)[0]
-	sim.deal_damage(turtle, 200, null)
-	check_eq(turtle.hp, turtle.max_hp, "shell took it")
-	sim.deal_damage(turtle, 200, null)
-	check_eq(turtle.hp, turtle.max_hp - 100, "shell broke after 300")
+	var falcon: BattleSim.Fighter = sim.spawn(1, "peregrine_falcon", 8 * T, 5 * T)[0]
+	var tank: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T, 15 * T)[0]
+	var destroyer: BattleSim.Fighter = sim.spawn(0, "lion", 6 * T, 15 * T)[0]
+	var ranged: BattleSim.Fighter = sim.spawn(0, "raccoon", 4 * T, 15 * T)[0]
+	var air: BattleSim.Fighter = sim.spawn(0, "california_condor", 10 * T, 15 * T)[0]
+	check(falcon.is_flying() and air.is_flying(), "Air flies")
+	check(not sim.can_target(tank, falcon) and not sim.can_target(destroyer, falcon), "Tanks and Tank Destroyers can't reach it")
+	check(sim.can_target(ranged, falcon) and sim.can_target(air, falcon), "Ranged and Air can")
+	check(ranged.attack_range >= roundi(float(GameData.class_info("ranged").range) * T), "Ranged reach far, even a Raccoon")
 
 
-func test_poison_keeps_hurting() -> void:
-	borrow_later_animals()
+func test_tank_destroyers_hit_tanks_hard() -> void:
 	var sim := _sim()
-	var snake: BattleSim.Fighter = sim.spawn(0, "rattlesnake", 8 * T, 12 * T)[0]
-	var badger: BattleSim.Fighter = sim.spawn(1, "honey_badger", 8 * T, 12 * T + 900)[0]
-	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 12 * T - 900)[0]
-	BattleAbilities.after_hit(sim, snake, bear, 10)
-	BattleAbilities.after_hit(sim, snake, badger, 10)
-	check(bear.poison > 0, "bear poisoned")
-	check_eq(badger.poison, 0, "honey badger is fearless")
-	var before := bear.hp
-	_run(sim, 1)
-	check(bear.hp < before, "poison hurts over time")
-
-
-func test_opossum_plays_dead() -> void:
-	borrow_later_animals()
-	var sim := _sim()
-	var possum: BattleSim.Fighter = sim.spawn(0, "opossum", 8 * T, 15 * T)[0]
-	sim.deal_damage(possum, 99999, null)
-	check(possum.alive, "playing dead, not defeated")
-	sim.deal_damage(possum, 99999, null)
-	check(possum.alive, "can't be hurt while playing dead")
-	_run(sim, 2.1)
-	check_eq(possum.hp, possum.max_hp * 40 / 100, "gets back up with 40%")
-	sim.deal_damage(possum, 99999, null)
-	check(not possum.alive, "only once")
-
-
-func test_pack_hunters_hit_harder_together() -> void:
-	var sim := _sim()
-	var wolves := sim.spawn(0, "wolf_pack", 8 * T, 15 * T)
-	var dummy: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
-	var together := BattleAbilities.outgoing_damage(sim, wolves[0], dummy, 100)
-	wolves[1].alive = false
-	wolves[2].alive = false
-	var alone := BattleAbilities.outgoing_damage(sim, wolves[0], dummy, 100)
-	check(together > 100, "packmates nearby: a bonus")
-	check_eq(alone, 100, "alone: no bonus")
-
-
-func test_hippo_is_fiercer_on_its_own_half() -> void:
-	var sim := _sim()
-	var hippo: BattleSim.Fighter = sim.spawn(0, "hippopotamus", 8 * T, 15 * T)[0]
-	var dummy: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
-	var home := BattleAbilities.outgoing_damage(sim, hippo, dummy, 100)
-	hippo.y = 5 * T
-	var away := BattleAbilities.outgoing_damage(sim, hippo, dummy, 100)
-	check(home > away and away == 100, "a bonus at home only")
-
-
-func test_bison_shoves_animals_aside() -> void:
-	var sim := _sim()
-	var bison: BattleSim.Fighter = _ready_now(sim.spawn(0, "american_bison", 8 * T, 16 * T))[0]
-	var target: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 8 * T, 4 * T))[0]
-	var in_the_way: BattleSim.Fighter = _ready_now(sim.spawn(1, "sewer_rats", 8 * T, 12 * T))[0]
-	var start := Vector2(in_the_way.x, in_the_way.y)
-	bison.target = target
-	BattleAbilities.on_moved(sim, bison)
-	check_eq(Vector2(in_the_way.x, in_the_way.y), start, "too far away to shove")
-	in_the_way.x = bison.x
-	in_the_way.y = bison.y - bison.radius
-	BattleAbilities.on_moved(sim, bison)
-	check(in_the_way.y < bison.y - bison.radius, "shoved out of the way")
-	check_eq(target.y, 4 * T, "but not its target")
-
-
-func test_stealth_until_first_attack() -> void:
-	var sim := _sim()
-	var leopard: BattleSim.Fighter = sim.spawn(0, "amur_leopard", 8 * T, 15 * T)[0]
+	var lion: BattleSim.Fighter = sim.spawn(0, "lion", 8 * T, 15 * T)[0]
 	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
-	check(not sim.can_target(bear, leopard), "hidden")
-	leopard.revealed = 10
-	check(sim.can_target(bear, leopard), "a flare reveals it")
+	var boar: BattleSim.Fighter = sim.spawn(1, "wild_boar", 6 * T, 5 * T)[0]
+	var bonus := BattleAbilities.counter_pct("tank_destroyer", "tank")
+	check(bonus > 0, "a counter bonus in classes.json")
+	check_eq(BattleAbilities.outgoing_damage(sim, lion, bear, 100), 100 + bonus, "extra damage to a Tank")
+	check_eq(BattleAbilities.outgoing_damage(sim, lion, boar, 100), 100, "none to another Tank Destroyer")
 
 
-func test_burrower_is_untargetable_then_emerges() -> void:
+func test_tank_destroyers_go_for_tanks() -> void:
+	var sim := _sim()
+	var lion: BattleSim.Fighter = _ready_now(sim.spawn(0, "lion", 8 * T, 13 * T))[0]
+	_ready_now(sim.spawn(1, "wild_boar", 8 * T, 9 * T))
+	var bear: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 10 * T, 7 * T))[0]
+	_run(sim, 0.1)
+	check(lion.target == bear, "a Tank in reach comes first, even if something's closer")
+
+
+func test_ranged_go_for_air() -> void:
+	var sim := _sim()
+	var squirrel: BattleSim.Fighter = _ready_now(sim.spawn(0, "gray_squirrel", 8 * T, 14 * T))[0]
+	_ready_now(sim.spawn(1, "brown_bear", 8 * T, 10 * T))
+	var falcon: BattleSim.Fighter = _ready_now(sim.spawn(1, "peregrine_falcon", 11 * T, 9 * T))[0]
+	_run(sim, 0.1)
+	check(squirrel.target == falcon, "Air in reach comes first")
+
+
+func test_burrowers_pop_up_behind_the_enemy() -> void:
+	var sim := _sim()
+	var fox: BattleSim.Fighter = _ready_now(sim.spawn(0, "red_fox", 4 * T, 12 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 4 * T, 8 * T))[0]
+	var squirrel: BattleSim.Fighter = _ready_now(sim.spawn(1, "gray_squirrel", 10 * T, 3 * T))[0]
+	bear.stun = 9999
+	squirrel.stun = 9999
+	check(not sim.can_target(bear, fox), "underground, it can't be hit")
+	var emerged := false
+	for i in 20 * sim.tps:
+		sim.step()
+		if not fox.memory.get("burrowing", true):
+			emerged = true
+			break
+	check(emerged, "it comes up")
+	check(fox.y < 5 * T, "behind the enemy's last row (at %.1f tiles)" % (fox.y / float(T)))
+
+
+func test_splash_stun_and_slow() -> void:
 	borrow_later_animals()
 	var sim := _sim()
-	var ferret: BattleSim.Fighter = _ready_now(sim.spawn(0, "black_footed_ferret", 4 * T, 16 * T))[0]
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 4 * T, 4 * T))[0]
-	check(not sim.can_target(bear, ferret), "underground")
-	_run(sim, 20)
-	check(not ferret.memory.get("burrowing", true) or not ferret.alive, "popped up at the enemy")
+	var walrus: BattleSim.Fighter = sim.spawn(0, "walrus", 8 * T, 12 * T)[0]
+	var target: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 10 * T)[0]
+	var beside: BattleSim.Fighter = sim.spawn(1, "wild_boar", 9 * T, 10 * T)[0]
+	var before := beside.hp
+	BattleAbilities.after_hit(sim, walrus, target, 100)
+	check(beside.hp < before, "Splash hits the one beside it too")
+	var gorilla: BattleSim.Fighter = sim.spawn(0, "mountain_gorilla", 6 * T, 12 * T)[0]
+	for i in int(GameData.traits.stun.every):
+		BattleAbilities.after_hit(sim, gorilla, target, 10)
+	check(target.stun > 0, "Stun: every few hits freeze the target")
+	var panda: BattleSim.Fighter = sim.spawn(0, "red_panda", 4 * T, 12 * T)[0]
+	BattleAbilities.after_hit(sim, panda, beside, 10)
+	check(beside.slow > 0 and beside.slow_pct == int(GameData.traits.slow.pct), "Slow slows")
+
+
+func test_swarms_bring_at_most_two() -> void:
+	var sim := _sim()
+	check_eq(sim.spawn(0, "sewer_rats", 8 * T, 15 * T).size(), int(GameData.class_rules.swarm_max), "four rats on the card, two on the field")
 
 
 # --- Ranger tools ----------------------------------------------------------

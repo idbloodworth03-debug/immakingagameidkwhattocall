@@ -78,6 +78,7 @@ func _new_profile() -> Dictionary:
 		"losses": 0,
 		"draws": 0,
 		"loss_streak": 0,
+		"tips_seen": [],
 		"bosses_beaten": [],
 		"collection": {},
 		"cage_slots": [],

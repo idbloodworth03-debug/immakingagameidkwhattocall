@@ -127,47 +127,53 @@ func test_loss_streak() -> void:
 	check_eq(profile.loss_streak(), 0, "a win resets it")
 
 
-func _shop_match() -> DraftMatch:
+## A match in round 2 (both herds picked), for the bots to pick from.
+func _second_round() -> DraftMatch:
 	var m := DraftMatch.new(6)
-	m.pick_starters(0, [])
-	m.pick_starters(1, [])
+	for team in 2:
+		for id in ["brown_bear", "lion", "gray_squirrel"]:
+			for slot in m.offers[team].size():
+				if m.offers[team][slot].id == id:
+					m.pick(team, slot)
+		m.set_ready(team)
+	while m.phase == "fight":
+		m.step()
+	m.next_round()
 	return m
 
 
-func test_a_favorite_habitat() -> void:
-	var m := _shop_match()
-	var fan := DraftBot.new(m, 1, 9, 0.5, {"favorite": "forest"})
+func test_a_favorite_class() -> void:
+	var m := _second_round()
+	var fan := DraftBot.new(m, 1, 9, 0.5, {"favorite": "air"})
 	var plain := DraftBot.new(m, 1, 9, 0.5)
-	check_eq(fan.favorite, "forest", "builds around Forest")
-	var item := {"id": "red_fox", "cost": GameData.get_card("red_fox").cost}
-	check_eq(fan._want(item) - plain._want(item), DraftBot.FAVORITE_BONUS, "wants Forest animals more")
-	var other := {"id": "lion", "cost": GameData.get_card("lion").cost}
-	check_eq(fan._want(other), plain._want(other), "and the rest the same")
-	var unbuildable := DraftBot.new(m, 1, 9, 0.5, {"favorite": "ocean"})
-	check_eq(unbuildable.favorite, "", "a habitat with too few animals in the pool is ignored")
+	check_eq(fan._offer_value("peregrine_falcon") - plain._offer_value("peregrine_falcon"), DraftBot.FAVORITE_BONUS, "wants Air more")
+	check_eq(fan._offer_value("tiger"), plain._offer_value("tiger"), "and the rest the same")
+
+
+func test_counters() -> void:
+	var m := _second_round()
+	m.herds[0] = [{"id": "brown_bear", "stars": 1}, {"id": "polar_bear", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
+	var sharp := DraftBot.new(m, 1, 9, 1.0)
+	check(sharp._class_need("tank_destroyer") > sharp._class_need("tank"), "lots of Tanks over there: Tank Destroyers")
+	m.herds[0] = [{"id": "peregrine_falcon", "stars": 1}, {"id": "california_condor", "stars": 1}]
+	check(sharp._class_need("ranged") > sharp._class_need("tank_destroyer"), "Air over there: Ranged")
 
 
 func test_personalities() -> void:
-	var m := _shop_match()
-	var herd := ["brown_bear", "lion", "wolf_pack", "cheetah", "red_fox"]
-	m.herds[1] = herd.map(func(id): return {"id": id, "x": 0, "y": 0, "stars": 1})
-	m.acorns[1] = 26
-	var saver := DraftBot.new(m, 1, 1, 0.5, {"saving": 0.95})
-	var spender := DraftBot.new(m, 1, 1, 0.5, {"saving": 0.0})
-	check(saver._reserve() > spender._reserve(), "a saver keeps more Acorns back (%d vs %d)" % [saver._reserve(), spender._reserve()])
+	var m := _second_round()
 	var trainer := DraftBot.new(m, 1, 1, 0.5, {"stars": 0.95})
 	var casual := DraftBot.new(m, 1, 1, 0.5, {"stars": 0.1})
-	check(trainer._train_value(0, 4) > casual._train_value(0, 4), "a star-chaser trains more")
+	check(trainer._star_value(0) > casual._star_value(0), "a star-chaser values stars more")
 	m.tools[1] = ["net"]
 	var tinkerer := DraftBot.new(m, 1, 1, 0.5, {"tools": 0.95})
 	var plain := DraftBot.new(m, 1, 1, 0.5)
-	var tool := {"id": "net", "cost": GameData.get_card("net").cost}
-	check(tinkerer._want(tool) > plain._want(tool) + 1.0, "a tool lover wants a second tool")
+	check(tinkerer._offer_value("air_horn") > plain._offer_value("air_horn") + 1.0, "a tool lover wants another tool")
 
 
 func test_rival_bots_play_whole_matches() -> void:
 	# Every rival's style on both sides, a short match each.
 	var rules := GameData.draft_rules.duplicate()
+	rules.wins_needed = 2
 	rules.max_rounds = 3
 	for i in range(0, GameData.rivals.size(), 6):
 		var a: Dictionary = GameData.rivals[i]
@@ -175,19 +181,12 @@ func test_rival_bots_play_whole_matches() -> void:
 		var m := DraftMatch.new(100 + i, {}, rules)
 		var bots := [DraftBot.new(m, 0, i + 1, Opponents.difficulty_for(a, 3, false), a.style), DraftBot.new(m, 1, i + 2, Opponents.difficulty_for(b, 3, false), b.style)]
 		var guard := 0
-		while not m.is_over() and guard < 100000:
+		while not m.is_over() and guard < 200000:
 			guard += 1
 			match m.phase:
-				"starters":
+				"pick":
 					for bot in bots:
-						bot.pick_starters()
-				"draft":
-					for bot in bots:
-						bot.shop()
-				"place":
-					for bot in bots:
-						if not m.ready[bot.team]:
-							bot.place()
+						bot.pick_all()
 				"fight":
 					for bot in bots:
 						bot.update()

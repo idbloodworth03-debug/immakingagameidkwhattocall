@@ -567,7 +567,7 @@ func _draw_highlight(canvas: CanvasItem, field: Rect2) -> void:
 	var area := field
 	match highlight:
 		"own_half":
-			var top := to_screen(0, BattleSim.MIDDLE + DraftMatch.START_GAP).y
+			var top := to_screen(0, BattleSim.MIDDLE).y
 			area = Rect2(field.position.x, top, field.size.x, field.end.y - top)
 		"field":
 			pass

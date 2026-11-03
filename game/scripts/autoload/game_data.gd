@@ -37,9 +37,12 @@ var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
 var testing: Dictionary = {}         # testing switches (testing.json)
-var synergies: Dictionary = {}       # habitat id -> its synergy (synergies.json)
-var habitat_order: Array = []        # habitat ids, in synergies.json order
-var synergy_tiers: Array = []        # how many animals each tier needs, e.g. [2, 4, 6]
+var habitats: Dictionary = {}        # habitat id -> name, icon, color (habitats.json; flavor)
+var habitat_order: Array = []        # habitat ids, in habitats.json order
+var classes: Dictionary = {}         # class id -> its info (classes.json)
+var class_order: Array = []          # class ids, in classes.json order
+var traits: Dictionary = {}          # Specialist trait id -> its info
+var class_rules: Dictionary = {}     # the rest of classes.json: counters, rows, ...
 var rival_rules: Dictionary = {}     # rivals.json settings (bosses, easing, reward)
 var rivals: Array = []               # Rival Rangers, in rivals.json order
 var ui_style: Dictionary = {}        # the design system (ui_style.json, see UIStyle)
@@ -90,13 +93,21 @@ func reload() -> void:
 	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
 	testing = _load("testing.json")
-	var synergy_data: Dictionary = _load("synergies.json")
-	synergies.clear()
+	var habitat_data: Dictionary = _load("habitats.json")
+	habitats.clear()
 	habitat_order.clear()
-	synergy_tiers = synergy_data.get("tiers", [])
-	for habitat in synergy_data.get("habitats", []):
-		synergies[habitat.id] = habitat
+	for habitat in habitat_data.get("habitats", []):
+		habitats[habitat.id] = habitat
 		habitat_order.append(habitat.id)
+	class_rules = _load("classes.json")
+	classes.clear()
+	class_order.clear()
+	traits.clear()
+	for info in class_rules.get("classes", []):
+		classes[info.id] = info
+		class_order.append(info.id)
+	for info in class_rules.get("traits", []):
+		traits[info.id] = info
 	rival_rules = _load("rivals.json")
 	rivals = rival_rules.get("rivals", [])
 	ui_style = _load("ui_style.json")
@@ -175,6 +186,38 @@ func get_arena(index: int) -> Dictionary:
 	return arenas[clampi(index, 0, arenas.size() - 1)]
 
 
+# --- Classes -----------------------------------------------------------------
+
+## 0 for the commonest rarity, then 1, 2...
+func rarity_rank(rarity: String) -> int:
+	return maxi(0, rarity_order.find(rarity))
+
+
+## An animal's class ("tank", "tank_destroyer", "ranged", "air" or
+## "specialist"); "" for a tool.
+func class_of(card_id: String) -> String:
+	return String(cards.get(card_id, {}).get("class", ""))
+
+
+## A Specialist's trait ("burrow", "splash", "stun" or "slow"), or "".
+func trait_of(card_id: String) -> String:
+	return String(cards.get(card_id, {}).get("trait", ""))
+
+
+func class_info(class_id: String) -> Dictionary:
+	return classes.get(class_id, {})
+
+
+## The one short line about a card (shown when you hold it).
+func card_line(card_id: String) -> String:
+	if is_tool(card_id):
+		return String(cards[card_id].get("ability", {}).get("short", cards[card_id].get("ability", {}).get("text", "")))
+	var trait_id := trait_of(card_id)
+	if trait_id != "":
+		return String(traits.get(trait_id, {}).get("line", ""))
+	return String(class_info(class_of(card_id)).get("line", ""))
+
+
 # --- Rival Rangers ----------------------------------------------------------
 
 ## The rivals of one arena; bosses only, or only the regulars.
@@ -239,8 +282,8 @@ func validate() -> Array:
 	# New players own the first arena's cards, and draft from them.
 	var starters := cards_in_arena(0)
 	var starter_animals := starters.filter(func(id): return not is_tool(id)).size()
-	if starter_animals < int(draft_rules.get("market_animals", 4)):
-		problems.append("The first arena must unlock at least %d animals to fill the Watering Hole" % int(draft_rules.get("market_animals", 4)))
+	if starter_animals < int(draft_rules.get("offer_count", 5)):
+		problems.append("The first arena must unlock at least %d animals to fill the Draft Duel options" % int(draft_rules.get("offer_count", 5)))
 	if starter_animals == starters.size():
 		problems.append("The first arena must unlock at least one tool")
 
@@ -257,12 +300,14 @@ func validate() -> Array:
 			problems.append("%s: unknown arena '%s'" % [id, a.get("unlock_arena")])
 		if a.kind == "animal" and not STATUS_NAMES.has(a.get("status", "")):
 			problems.append("%s: unknown conservation status '%s'" % [id, a.get("status")])
-		if a.kind == "animal" and not synergies.has(a.get("habitat", "")):
-			problems.append("%s: unknown habitat '%s' (see synergies.json)" % [id, a.get("habitat")])
+		if a.kind == "animal" and not habitats.has(a.get("habitat", "")):
+			problems.append("%s: unknown habitat '%s' (see habitats.json)" % [id, a.get("habitat")])
+		if a.kind == "animal" and not classes.has(a.get("class", "")):
+			problems.append("%s: unknown class '%s' (see classes.json)" % [id, a.get("class")])
+		if a.kind == "animal" and (a.get("class", "") == "specialist") != traits.has(a.get("trait", "")):
+			problems.append("%s: Specialists (and only they) need a known trait" % id)
 		if a.kind == "animal" and not ["ground", "air_ground"].has(a.get("stats", {}).get("targets", "")):
 			problems.append("%s: targets must be 'ground' or 'air_ground'" % id)
-		if a.kind == "animal" and not BattleAbilities.KNOWN.has(a.get("ability", {}).get("id", "")):
-			problems.append("%s: the battle engine doesn't know ability '%s'" % [id, a.get("ability", {}).get("id")])
 		if a.kind == "tool" and not ToolEffects.KNOWN.has(a.get("ability", {}).get("id", "")):
 			problems.append("%s: the battle engine doesn't know tool effect '%s'" % [id, a.get("ability", {}).get("id")])
 		for tag in a.get("tags", []):
@@ -285,15 +330,13 @@ func validate() -> Array:
 		if not rarities.has(rarity):
 			problems.append("draft_rules: unknown rarity '%s'" % rarity)
 	for habitat_id in habitat_order:
-		var habitat: Dictionary = synergies[habitat_id]
-		if habitat.get("values", []).size() != synergy_tiers.size():
-			problems.append("synergies: %s needs one value per tier" % habitat_id)
-		if not ["attack_speed", "regen", "shield", "slow_on_hit", "damage_reduction", "damage", "health", "speed", "acorns"].has(habitat.get("effect", "")):
-			problems.append("synergies: %s has an unknown effect '%s'" % [habitat_id, habitat.get("effect")])
-		if not art.get("ui", {}).has(habitat.get("icon", "")):
-			problems.append("synergies: %s's icon '%s' isn't in art.json" % [habitat_id, habitat.get("icon")])
-	if int(draft_rules.get("hearts", 0)) <= 0 or int(draft_rules.get("max_rounds", 0)) <= 0:
-		problems.append("draft_rules: hearts and max_rounds must be above zero")
+		if not art.get("ui", {}).has(habitats[habitat_id].get("icon", "")):
+			problems.append("habitats: %s's icon '%s' isn't in art.json" % [habitat_id, habitats[habitat_id].get("icon")])
+	for info in classes.values() + traits.values():
+		if not art.get("ui", {}).has(info.get("icon", "")):
+			problems.append("classes: %s's icon '%s' isn't in art.json" % [info.id, info.get("icon")])
+	if int(draft_rules.get("wins_needed", 0)) <= 0 or int(draft_rules.get("max_rounds", 0)) < int(draft_rules.get("wins_needed", 0)) * 2 - 1:
+		problems.append("draft_rules: wins_needed must be above zero and max_rounds at least 2 x wins_needed - 1")
 
 	const LOOKS := {
 		"hair_style": ["short", "spiky", "long", "ponytail", "bun", "curly", "bald"],
@@ -316,8 +359,8 @@ func validate() -> Array:
 			if not emote_ids.has(r.get("emotes", {}).get(moment, "")):
 				problems.append("rival %s: unknown %s emote '%s'" % [r.id, moment, r.get("emotes", {}).get(moment)])
 		var favorite: String = r.get("style", {}).get("favorite", "")
-		if favorite != "" and not synergies.has(favorite):
-			problems.append("rival %s: unknown favorite habitat '%s'" % [r.id, favorite])
+		if favorite != "" and not classes.has(favorite):
+			problems.append("rival %s: unknown favorite class '%s'" % [r.id, favorite])
 		for part in LOOKS:
 			if not LOOKS[part].has(r.get("look", {}).get(part, "")):
 				problems.append("rival %s: look.%s must be one of %s" % [r.id, part, ", ".join(LOOKS[part])])

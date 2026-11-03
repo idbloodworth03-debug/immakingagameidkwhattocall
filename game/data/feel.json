@@ -146,6 +146,18 @@
     "fade_seconds": 0.15
   },
 
+  "pick": {
+    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: option_card for the five options, start_card for round 1's collection grid, herd_card for your herd row; slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Hold a card hold_seconds to see its details. After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
+    "option_card": [214, 262],
+    "start_card": [156, 176],
+    "herd_card": [104, 120],
+    "slot_size": 108,
+    "undo_badge": 38,
+    "hold_seconds": 0.35,
+    "result_seconds": 1.8,
+    "bot_pick_seconds": [0.4, 0.8]
+  },
+
   "grade": {
     "_note": "A warm afternoon grade over the whole game, darker toward the edges (a gentle vignette). Colors are in ui_style.json (grade_center, grade_edge); strength 0 turns it off without removing it.",
     "enabled": true,

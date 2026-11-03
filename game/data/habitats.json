@@ -1,0 +1,59 @@
+{
+  "_note": "Habitats: where each animal really lives (animals.json \"habitat\"). Flavor only: the color of a card's art window and a badge in the collection.",
+  "habitats": [
+    {
+      "id": "savanna",
+      "name": "Savanna",
+      "icon": "habitat_savanna",
+      "color": "#f0b13a"
+    },
+    {
+      "id": "rainforest",
+      "name": "Rainforest",
+      "icon": "habitat_rainforest",
+      "color": "#35c46a"
+    },
+    {
+      "id": "ocean",
+      "name": "Ocean",
+      "icon": "habitat_ocean",
+      "color": "#2f9be8"
+    },
+    {
+      "id": "arctic",
+      "name": "Arctic",
+      "icon": "habitat_arctic",
+      "color": "#9fdcff"
+    },
+    {
+      "id": "wetlands",
+      "name": "Wetlands",
+      "icon": "habitat_wetlands",
+      "color": "#3fb5a3"
+    },
+    {
+      "id": "forest",
+      "name": "Forest",
+      "icon": "habitat_forest",
+      "color": "#5c9e3c"
+    },
+    {
+      "id": "mountains",
+      "name": "Mountains",
+      "icon": "habitat_mountains",
+      "color": "#9a8bd6"
+    },
+    {
+      "id": "plains",
+      "name": "Plains",
+      "icon": "habitat_plains",
+      "color": "#d9b45a"
+    },
+    {
+      "id": "city",
+      "name": "City",
+      "icon": "habitat_city",
+      "color": "#a0a8b8"
+    }
+  ]
+}

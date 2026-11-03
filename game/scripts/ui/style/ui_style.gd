@@ -380,6 +380,18 @@ static func draw_particle(canvas: CanvasItem, kind: String, center: Vector2, rad
 	canvas.draw_texture_rect_region(SkinBox.texture("particles.png"), Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), src, tint)
 
 
+## A class badge: a disc in the class's color with its icon (classes.json).
+static func draw_class_badge(canvas: CanvasItem, center: Vector2, radius: float, class_id: String, alpha := 1.0) -> void:
+	var info := GameData.class_info(class_id)
+	if info.is_empty():
+		return
+	draw_particle(canvas, "badge", center, radius + 1.5, Color(Color(String(info.color)), alpha))
+	var texture := UIKit.icon(GameData.ui_icon(String(info.icon)))
+	if texture != null:
+		var side := radius * 1.3
+		canvas.draw_texture_rect(texture, Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, alpha))
+
+
 ## A gold star with a dark outline, filled or as an empty socket.
 static func draw_star(canvas: CanvasItem, center: Vector2, r: float, filled := true, alpha := 1.0) -> void:
 	var points := PackedVector2Array()

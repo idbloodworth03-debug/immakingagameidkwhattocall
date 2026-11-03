@@ -97,16 +97,15 @@ func _build_rival() -> Control:
 	line.custom_minimum_size.x = 480
 	bubble.add_child(line)
 	box.add_child(bubble)
+	# Their favorite class, as its badge.
 	var favorite: String = rival.get("style", {}).get("favorite", "")
-	if GameData.synergies.has(favorite):
-		var row := UIKit.hbox(6)
+	if GameData.classes.has(favorite):
+		var info := GameData.class_info(favorite)
+		var row := UIKit.hbox(8)
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var badge := _Badge.new()
-		badge.habitat = favorite
-		badge.custom_minimum_size = Vector2(30, 30)
-		row.add_child(badge)
-		row.add_child(_outlined("Loves %s animals" % GameData.synergies[favorite].name, 20, Color.WHITE))
+		row.add_child(UIKit.icon_rect(GameData.ui_icon(String(info.icon)), Color(String(info.color)).lightened(0.3), 34))
+		row.add_child(_outlined("Loves %s" % String(info.name), 20, Color.WHITE))
 		box.add_child(row)
 	return box
 
@@ -247,11 +246,3 @@ func _draw() -> void:
 	if rival.get("boss", false):
 		var glow := 0.5 + 0.5 * sin(_time * 3.0)
 		draw_rect(Rect2(0, 0, w, h), Color(UIKit.GOLD, 0.06 + 0.05 * glow), false, 14.0)
-
-
-class _Badge:
-	extends Control
-	var habitat := ""
-
-	func _draw() -> void:
-		UIKit.draw_habitat_badge(self, size / 2.0, minf(size.x, size.y) / 2.0 - 2.0, habitat)

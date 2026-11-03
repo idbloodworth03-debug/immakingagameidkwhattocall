@@ -50,7 +50,8 @@ var defeat := -1.0            # 0 to 1 while being defeated; -1 while fine
 var defeat_spin := 1.0
 var idle_phase := 0.0
 var _sparkle_in := 0.0        # a 3-star animal's next sparkle
-var habitat := ""
+## Its class: a small icon shows under it.
+var cls := ""
 ## A synergy glow (when its habitat's bonus turns on): seconds left, color.
 var glow_left := 0.0
 var glow_color := Color.WHITE
@@ -93,7 +94,7 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.walk = randf()
 	v.idle_phase = randf() * TAU
 	v.stars = int(f.memory.get("stars", 1))
-	v.habitat = Synergies.habitat_of(v.id)
+	v.cls = GameData.class_of(v.id)
 	v.body = Body.new()
 	if Feel.on("characters", "shader_enabled"):
 		var material := ShaderMaterial.new()
@@ -455,10 +456,10 @@ func _draw() -> void:
 	draw_circle(Vector2.ZERO, ring, Color(team_color, 0.16 * ring_alpha))
 	draw_arc(Vector2.ZERO, ring, 0, TAU, 40, Color(team_color.darkened(0.45), ring_alpha), (width + 2.0) / 0.42)
 	draw_arc(Vector2.ZERO, ring, 0, TAU, 40, Color(team_color.lightened(0.15), ring_alpha), width / 0.42)
-	if f != null and habitat != "":
-		# Its habitat, as a small badge beside its feet.
+	if f != null and cls != "":
+		# Its class, as a small badge just under its feet.
 		draw_set_transform(Vector2.ZERO)
-		UIKit.draw_habitat_badge(self, Vector2(-ring - 3.0, -2.0), 7.0, habitat, minf(fade, 0.95))
+		UIStyle.draw_class_badge(self, Vector2(0, ring * 0.42 + 7.0), 7.5, cls, minf(fade, 0.95))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2(1.0, 0.42))
 	if f != null:
 		# Status rings around its feet.

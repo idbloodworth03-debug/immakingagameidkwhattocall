@@ -1,114 +1,77 @@
 extends Control
-## Draft Duel against the computer opponent (the rules are in DraftMatch).
-## Before the match: your starters. The field in the middle
-## shows both herds for the whole match. The panel under it changes with
-## each part of a round: your shop (buy, reroll, train), placing your herd,
-## your Rally and tools in the fight, and the round's results.
+## Draft Duel against a Rival Ranger (the rules are in DraftMatch): best of
+## 7, first to 4 round wins.
+##
+## Each round has two views under the score bar:
+## - Pick: "Pick 3" with three slots, the options as big cards (in round 1,
+##   your whole collection), your herd in a scrolling row (tap one with an
+##   arrow to add a star), and the Fight! button, lit once all three picks
+##   are made. Hold any card for a short line about it; tap your last pick
+##   to take it back.
+## - Fight: the field, with the Rally button and your tools under it. Then
+##   a quick result, and back to picking.
+##
+## Almost no words anywhere: icons, numbers and stars do the talking. Sizes
+## and timings: feel.json ("pick").
 
 const MENU_SCENE := "res://scenes/main.tscn"
-## Card sizes in the shop panel (three to a row) and herd slots (six), and
-## a little shorter on short screens (like an iPhone SE) so the field keeps
-## some room.
-const SHOP_CARD := Vector2(204, 150)
-const HERD_SLOT := Vector2(100, 96)
-const SHORT_SCREEN := 1400.0
-const SHOP_CARD_SHORT := Vector2(204, 124)
-const HERD_SLOT_SHORT := Vector2(100, 80)
 ## Draws popups above the field (flying animals sit a step higher).
 const OVER_FIELD := 10
-## Moods this strong or more show over the animals when a fight starts.
-const MOOD_SHOWN := 12
 
 var duel: DraftMatch
 var bot: DraftBot
 var opponent: Dictionary = {}
 
 var _rng := RandomNumberGenerator.new()
-var _selected_market := -1
-## A herd animal picked: to train while shopping, to move while placing.
-var _selected_herd := -1
-## The starters being picked, before the match.
-var _starter_ids: Array = []
-var _selected_tool := -1
-var _rally_selected := false
-var _fast := false
 var _accumulator := 0.0
 var _bot_wait := 0.0
-var _panel_key := ""
+var _fast := false
 var _result: Dictionary = {}
+var _selected_tool := -1
+var _rally_selected := false
+var _view := ""
 
-var _field: BattleField
-## Particles over the whole screen: coins, sparkles, confetti.
-var _ui_fx: ParticleLayer
-var _panel_box: PanelContainer
-## The part of the round the panel last showed, to animate a change.
-var _panel_phase := ""
-## Habitat synergies: the tracker on the left of the field (Shop and Place),
-## the opponent's active habitats, and the tiers already celebrated.
-var _tracker: VBoxContainer
-var _tracker_key := ""
-var _their_synergies: HBoxContainer
-var _announced := {}
-var _banner_free_at := 0.0
-
-
-## A habitat badge as a control, with dots for its active tier.
-class HabitatBadge:
-	extends Control
-	var habitat := ""
-	var tier := 0
-
-	func _init(habitat_id: String, active_tier: int, side: float) -> void:
-		habitat = habitat_id
-		tier = active_tier
-		custom_minimum_size = Vector2(side, side)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _draw() -> void:
-		var r := minf(size.x, size.y) / 2.0 - 2.0
-		UIKit.draw_habitat_badge(self, size / 2.0, r, habitat, 1.0 if tier > 0 else 0.55)
-		for i in tier:
-			var at := Vector2(size.x / 2.0 + (i - (tier - 1) / 2.0) * r * 0.55, size.y - 2.0)
-			draw_circle(at, r * 0.2 + 1.0, UIKit.INK)
-			draw_circle(at, r * 0.2, UIKit.YELLOW)
-var _market_cards: Array = []
-var _herd_chips: Array = []
-var _round_label: Label
-var _their_hearts: ValuePill
-var _my_acorns: ValuePill
-var _my_hearts: ValuePill
-## The win streak flames: yours by your pills, theirs on their badge.
-var _my_streak: Control
-var _their_streak: Control
-var _hearts_shown := [-1, -1]
-## Short messages pop up over the bottom of the field, then fade.
-var _toast: PanelContainer
-var _toast_label: Label
-var _toast_tween: Tween
-## The rival's badge (portrait, name, level, a check once they're done),
-## and when their next emote bubble may show.
-var _their_badge: PanelContainer
+# The score bar.
+var _score_bar: Control
+var _score_label: Label
+var _my_pips: _Pips
+var _their_pips: _Pips
 var _rival_portrait: RangerPortrait
 var _rival_check: Control
-## The shop while you're shopping: kept and updated in place, so every
-## change animates instead of the panel being rebuilt (see _build_shop).
-var _shop: Dictionary = {}
-## Herd slots a bought card is flying to (they show it when it lands).
-var _landing := {}
-var _bob_time := 0.0
-var _column: VBoxContainer
+var _shown_wins := [0, 0]
+var _most_behind := 0
+
+# The pick view.
+var _pick_view: VBoxContainer
+var _pick_title: Label
+var _slots: Array = []
+var _options_holder: Control
+var _option_cards: Array = []
+var _herd_scroll: ScrollContainer
+var _herd_row: HBoxContainer
+var _fight_button: ChunkyButton
+var _flying := {}
+var _details: Control
+var _tip: Control
+var _pick_key := ""
+
+# The fight view.
+var _fight_view: VBoxContainer
+var _field: BattleField
+var _actions: HBoxContainer
+var _actions_key := ""
+
 var _emote_free_at := 0.0
 var _big_hit_round := -1
-var _panel: VBoxContainer
+var _banner_free_at := 0.0
 
 
 func _ready() -> void:
 	theme = UIStyle.theme()
 	_rng.randomize()
-	# You draft from the cards you own, and they fight at your levels. The
-	# opponent's cards are about as leveled as yours.
 	# Your opponent is a Rival Ranger from your arena (or its boss, when a
 	# win would take you up), with their own way of playing (see Opponents).
+	# You both pick from the cards you own, at your levels.
 	opponent = Opponents.next_for_player(_rng)
 	var pool := DraftMatch.pool_from_collection(Profile.has_card)
 	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(pool, Opponents.level_drop(opponent))], "pool": pool})
@@ -117,9 +80,11 @@ func _ready() -> void:
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
 	# While the VS screen covers everything, the screen under it isn't drawn.
-	_column.visible = false
-	intro.leaving.connect(func() -> void: _column.visible = true)
-	intro.finished.connect(_choose_starters)
+	_score_bar.visible = false
+	_pick_view.visible = false
+	intro.leaving.connect(func() -> void:
+		_score_bar.visible = true
+		_show_view("pick"))
 	intro.z_index = OVER_FIELD
 	add_child(intro)
 
@@ -140,22 +105,20 @@ static func _opponent_levels(pool: Array, drop := 0) -> Dictionary:
 func _process(delta: float) -> void:
 	if not _result.is_empty():
 		return
-	if GameData.testing.get("infinite_acorns", false):
-		# Testing switch (data/testing.json): your Acorns never run low.
-		duel.acorns[0] = maxi(duel.acorns[0], int(GameData.testing.get("acorns_amount", 99)))
 	_opponent_moves(delta)
 	if duel.phase == "fight":
 		_run_fight(delta)
 	else:
 		_accumulator = 0.0
 	_handle_events(duel.take_events())
-	_update_hud()
-	_update_synergies()
-	var key := _panel_signature()
-	if key != _panel_key:
-		_panel_key = key
-		_rebuild_panel()
-	_bob_cards(delta)
+	if _view == "pick":
+		var key := _pick_signature()
+		if key != _pick_key:
+			_pick_key = key
+			_refresh_pick()
+	elif _view == "fight":
+		_refresh_actions()
+	_update_score()
 	if duel.is_over():
 		_end_match()
 
@@ -166,8 +129,7 @@ func _build() -> void:
 	add_child(UIStyle.backdrop())
 	var safe := UIStyle.safe_margins(get_viewport())
 	var margin := UIStyle.num("screen", "margin", 16)
-	var column := UIStyle.vbox("xs")
-	_column = column
+	var column := UIStyle.vbox("s")
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	column.offset_left = margin
 	column.offset_right = -margin
@@ -175,20 +137,110 @@ func _build() -> void:
 	column.offset_bottom = -margin * 0.5 - float(safe.bottom)
 	add_child(column)
 
-	# Top: the rival, the round, and the rival's hearts.
-	var top := UIStyle.hbox("xs")
-	column.add_child(top)
-	_their_badge = _rival_badge()
-	top.add_child(_their_badge)
-	_round_label = UIStyle.label("", "body", Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER)
-	var round_chip := UIStyle.chip(_round_label)
-	round_chip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	round_chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	top.add_child(round_chip)
-	_their_hearts = UIStyle.pill("heart", UIStyle.color("heart"), duel.hearts[1])
-	_their_hearts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	top.add_child(_their_hearts)
+	_score_bar = _build_score_bar()
+	column.add_child(_score_bar)
 
+	var views := Control.new()
+	views.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	views.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(views)
+	_pick_view = _build_pick_view()
+	views.add_child(_pick_view)
+	_fight_view = _build_fight_view()
+	views.add_child(_fight_view)
+	_fight_view.visible = false
+
+
+## The score, big: your pips, "2 - 1", their pips, and the rival's face
+## (with a check once they've made their picks).
+func _build_score_bar() -> Control:
+	var row := UIStyle.hbox("s")
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var mine := GameData.find_by_id(GameData.player_icons, Profile.data.icon)
+	var me := IconArt.make(GameData.player_icon(Profile.data.icon), Color(mine.get("color", "#888888")))
+	me.custom_minimum_size = Vector2(64, 64)
+	me.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(me)
+	var wins := int(duel.rules.wins_needed)
+	_my_pips = _Pips.new(wins, UIStyle.color("player"))
+	row.add_child(_my_pips)
+	_score_label = UIStyle.label("0 - 0", "title", Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER)
+	_score_label.custom_minimum_size.x = 170
+	row.add_child(_score_label)
+	_their_pips = _Pips.new(wins, UIStyle.color("enemy"))
+	row.add_child(_their_pips)
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(64, 64)
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rival_portrait = RangerPortrait.create(opponent, 64)
+	holder.add_child(_rival_portrait)
+	_rival_check = _CheckBadge.new()
+	_rival_check.size = Vector2(30, 30)
+	_rival_check.position = Vector2(40, 38)
+	_rival_check.visible = false
+	holder.add_child(_rival_check)
+	row.add_child(holder)
+	return UIStyle.chip(row)
+
+
+func _build_pick_view() -> VBoxContainer:
+	var view := UIStyle.vbox("m")
+	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	# "Pick 3" and the three slots the picks land in.
+	var header := UIStyle.hbox("s")
+	_pick_title = UIStyle.label("Pick 3", "title")
+	_pick_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	header.add_child(_pick_title)
+	_slots.clear()
+	var side := Feel.num("pick", "slot_size", 108.0)
+	for i in int(duel.rules.picks_per_round):
+		var slot := PanelContainer.new()
+		slot.theme_type_variation = "InsetPanel"
+		slot.custom_minimum_size = Vector2(side, side)
+		slot.mouse_filter = Control.MOUSE_FILTER_STOP
+		var index := i
+		slot.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+				_tap_slot(index))
+		header.add_child(slot)
+		_slots.append(slot)
+	view.add_child(header)
+
+	# The options (filled each round).
+	_options_holder = Control.new()
+	_options_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_options_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	view.add_child(_options_holder)
+
+	# Your herd, in a row that scrolls, then your tools.
+	_herd_scroll = ScrollContainer.new()
+	_herd_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_herd_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	var herd_size: Vector2 = _size("herd_card", Vector2(104, 120))
+	_herd_scroll.custom_minimum_size.y = herd_size.y + 24.0
+	_herd_row = UIStyle.hbox("xs")
+	_herd_scroll.add_child(_herd_row)
+	view.add_child(UIStyle.inset(_herd_scroll))
+
+	# Leave, and Fight!
+	var bottom := UIStyle.hbox("s")
+	var leave := UIStyle.icon_button("exit", "danger")
+	leave.pressed.connect(_on_leave)
+	bottom.add_child(leave)
+	_fight_button = UIStyle.button("Fight!", "primary", "tab_battle")
+	_fight_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_fight_button.pressed.connect(func() -> void:
+		_hide_tip()
+		duel.set_ready(0))
+	bottom.add_child(_fight_button)
+	view.add_child(bottom)
+	return view
+
+
+func _build_fight_view() -> VBoxContainer:
+	var view := UIStyle.vbox("s")
+	view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_field = BattleField.new()
 	_field.sim = duel.sim
 	_field.grass = Color(GameData.get_arena(Profile.arena_index()).color)
@@ -196,94 +248,515 @@ func _build() -> void:
 	_field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_field.tapped.connect(_on_field_tapped)
 	_field.strong_hit.connect(_on_strong_hit)
-	column.add_child(_field)
-	# The synergy tracker sits on the left of the field.
-	_tracker = UIStyle.vbox("xs")
-	_tracker.position = Vector2(UIStyle.space("xs"), UIStyle.space("s"))
-	_field.add_child(_tracker)
-	_toast_label = UIStyle.label("", "small", Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER)
-	_toast_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_toast = UIStyle.chip(_toast_label, Color(UIStyle.color("outline"), 0.0))
-	_toast.add_theme_stylebox_override("panel", UIStyle.chip_box(UIStyle.color("toast")))
-	_toast.modulate.a = 0.0
-	_toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_field.add_child(_toast)
-
-	# Only as tall as each part of the round needs, so the fight gets room.
-	var panel := UIStyle.panel()
-	column.add_child(panel)
-	_panel_box = panel
-	_panel = UIStyle.vbox("s")
-	panel.add_child(_panel)
-
-	# Bottom: your hearts and Acorns (with the interest they'd earn), your
-	# streak, and a way out.
-	var bottom := UIStyle.hbox("xs")
-	column.add_child(bottom)
-	_my_hearts = UIStyle.pill("heart", UIStyle.color("heart"), duel.hearts[0])
-	_my_hearts.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bottom.add_child(_my_hearts)
-	_my_acorns = UIStyle.pill("acorn", UIStyle.color("acorn").lightened(0.15), duel.acorns[0], true)
-	_my_acorns.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	bottom.add_child(_my_acorns)
-	_my_streak = _streak_chip()
-	bottom.add_child(_my_streak)
-	var gap := Control.new()
-	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bottom.add_child(gap)
-	var leave := UIStyle.icon_button("exit", "danger")
-	leave.pressed.connect(_on_leave)
-	bottom.add_child(leave)
-	_hearts_shown = [duel.hearts[0], duel.hearts[1]]
-	_update_hud()
-	var fx_layer := CanvasLayer.new()
-	fx_layer.layer = 10
-	add_child(fx_layer)
-	_ui_fx = ParticleLayer.new()
-	fx_layer.add_child(_ui_fx)
+	view.add_child(_field)
+	_actions = UIStyle.hbox("s")
+	_actions.alignment = BoxContainer.ALIGNMENT_CENTER
+	view.add_child(_actions)
+	return view
 
 
-## The rival's badge: portrait, name and level (or BOSS), with their win
-## streak and active habitats tucked beside the level, and a check over the
-## portrait once they're done shopping or placing.
-func _rival_badge() -> PanelContainer:
-	var row := UIStyle.hbox("xs")
-	var side := 76.0
-	var holder := Control.new()
-	holder.custom_minimum_size = Vector2(side, side)
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_rival_portrait = RangerPortrait.create(opponent, side)
-	holder.add_child(_rival_portrait)
-	_rival_check = _CheckBadge.new()
-	_rival_check.custom_minimum_size = Vector2(34, 34)
-	_rival_check.size = Vector2(34, 34)
-	_rival_check.position = Vector2(side - 28, side - 30)
+## Shows the pick view or the fight view, with a quick slide and fade.
+func _show_view(which: String) -> void:
+	var view: Control = _pick_view if which == "pick" else _fight_view
+	var other: Control = _fight_view if which == "pick" else _pick_view
+	if _view == which and view.visible:
+		return
+	_view = which
+	_hide_details()
+	other.visible = false
+	view.visible = true
+	view.modulate.a = 0.0
+	view.position.y = 40.0
+	var tween := view.create_tween().set_parallel()
+	tween.tween_property(view, "modulate:a", 1.0, Feel.num("ui", "panel_seconds", 0.32))
+	tween.tween_property(view, "position:y", 0.0, Feel.num("ui", "panel_seconds", 0.32)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_rival_check.visible = false
-	holder.add_child(_rival_check)
-	row.add_child(holder)
+	if which == "pick":
+		_pick_key = ""
+		_build_options()
+		_refresh_pick()
+		_first_match_tip()
+	else:
+		_actions_key = ""
+		_refresh_actions()
+
+
+func _size(key: String, fallback: Vector2) -> Vector2:
+	var value: Variant = GameData.feel.get("pick", {}).get(key, null)
+	if value is Array and (value as Array).size() == 2:
+		return Vector2(float(value[0]), float(value[1]))
+	return fallback
+
+
+# --- The score -----------------------------------------------------------------
+
+func _update_score() -> void:
+	if duel.wins == _shown_wins:
+		return
+	for team in 2:
+		if duel.wins[team] != _shown_wins[team]:
+			(_my_pips if team == 0 else _their_pips).set_filled(duel.wins[team])
+	_shown_wins = duel.wins.duplicate()
+	_most_behind = maxi(_most_behind, duel.wins[1] - duel.wins[0])
+	_score_label.text = "%d - %d" % [duel.wins[0], duel.wins[1]]
+	_score_label.pivot_offset = _score_label.size / 2.0
+	_score_label.scale = Vector2(1.35, 1.35)
+	_score_label.create_tween().tween_property(_score_label, "scale", Vector2.ONE, 0.4).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## A row of pips, one per round needed to win, filling as rounds are won.
+class _Pips:
+	extends Control
+	var count := 4
+	var filled := 0
+	var color := Color.WHITE
+	var _pop := {}
+
+	func _init(pip_count: int, pip_color: Color) -> void:
+		count = pip_count
+		color = pip_color
+		custom_minimum_size = Vector2(pip_count * 30.0 + 4.0, 40)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func set_filled(value: int) -> void:
+		for i in range(filled, value):
+			_pop[i] = 0.0
+		filled = value
+		set_process(true)
+		queue_redraw()
+
+	func _process(delta: float) -> void:
+		var busy := false
+		for i in _pop.keys():
+			_pop[i] = float(_pop[i]) + delta * 3.0
+			busy = busy or float(_pop[i]) < 1.0
+		if not busy:
+			_pop.clear()
+			set_process(false)
+		queue_redraw()
+
+	func _draw() -> void:
+		var ink := UIStyle.color("outline")
+		for i in count:
+			var c := Vector2(17.0 + i * 30.0, size.y / 2.0)
+			draw_circle(c, 12.0, ink)
+			if i < filled:
+				var t: float = clampf(float(_pop.get(i, 1.0)), 0.0, 1.0)
+				var k := 1.0 + 0.5 * sin(t * PI) if _pop.has(i) else 1.0
+				UIStyle.draw_particle(self, "badge", c, 10.0 * k, color)
+			else:
+				draw_circle(c, 9.0, Color(ink, 0.55).lightened(0.15))
+
+
+# --- Picking ---------------------------------------------------------------------
+
+## Changes whenever the pick view needs updating.
+func _pick_signature() -> String:
+	return str([duel.round_number, duel.picks_left[0], duel.picks_made[0].size(), duel.herds[0], duel.tools[0],
+		duel.offers[0].map(func(o): return o.taken), duel.ready, _flying.keys()])
+
+
+## The options as big cards: the whole collection in round 1 (a grid that
+## scrolls), five cards after that (three over two).
+func _build_options() -> void:
+	for child in _options_holder.get_children():
+		_options_holder.remove_child(child)
+		child.queue_free()
+	_option_cards.clear()
+	var step := Feel.num("ui", "stagger_seconds", 0.05)
+	if duel.is_first_round():
+		var scroll := ScrollContainer.new()
+		scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		var grid := GridContainer.new()
+		grid.columns = 4
+		grid.add_theme_constant_override("h_separation", UIStyle.space("s"))
+		grid.add_theme_constant_override("v_separation", UIStyle.space("s"))
+		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		scroll.add_child(grid)
+		_options_holder.add_child(scroll)
+		for slot in duel.offers[0].size():
+			var card := _option_card(slot, _size("start_card", Vector2(156, 176)))
+			grid.add_child(card)
+			_pop_after(card, step * slot)
+		return
+	var rows := UIStyle.vbox("s")
+	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rows.alignment = BoxContainer.ALIGNMENT_CENTER
+	_options_holder.add_child(rows)
+	var per_row := [3, 2]
+	var slot := 0
+	for count in per_row:
+		var row := UIStyle.hbox("s")
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		rows.add_child(row)
+		for i in count:
+			if slot >= duel.offers[0].size():
+				break
+			var card := _option_card(slot, _size("option_card", Vector2(208, 236)))
+			row.add_child(card)
+			_pop_after(card, step * slot)
+			slot += 1
+
+
+func _option_card(slot: int, card_size: Vector2) -> GameCard:
+	var id: String = duel.offers[0][slot].id
+	var card := GameCard.make(id, card_size)
+	card.show_name = false
+	_bind_card(card, func() -> void: _tap_option(slot), id)
+	_option_cards.append(card)
+	return card
+
+
+## Brings the pick view up to date: the title, every card's state, the
+## slots, your herd row and the Fight! button.
+func _refresh_pick() -> void:
+	var left: int = duel.picks_left[0]
+	_pick_title.text = "Pick %d" % left if left > 0 and duel.has_any_pick(0) else "Ready!"
+	_pick_title.add_theme_color_override("font_color", UIStyle.color("text") if left > 0 else UIStyle.color("gold"))
+	for slot in _option_cards.size():
+		var card: GameCard = _option_cards[slot]
+		var item: Dictionary = duel.offers[0][slot]
+		var index := duel.herd_index(0, item.id)
+		var can := duel.can_pick(0, slot) == ""
+		card.upgrade_arrow = index >= 0 and can and not duel.is_first_round()
+		var stars := int(duel.herds[0][index].stars) + 1 if card.upgrade_arrow else 0
+		if stars != card.stars:
+			card.stars = stars
+			card.star_preview = stars > 0
+			card.animate(stars > 0 or card.upgrade_arrow)
+			card.queue_redraw()
+		var done := 1.0 if item.taken else 0.0
+		if card.done != done:
+			card.create_tween().tween_property(card, "done", done, 0.2)
+		card.modulate.a = 1.0 if can or item.taken or not duel.has_any_pick(0) else 0.55
+	_refresh_slots()
+	_refresh_herd_row()
+	var done_picking: bool = not duel.has_any_pick(0)
+	_fight_button.disabled = duel.ready[0] or not done_picking
+	_fight_button.kind = "primary" if done_picking and not duel.ready[0] else "disabled"
+	_fight_button.set_label("Fight!")
+	_fight_button.breathe = done_picking and not duel.ready[0]
+	_rival_check.visible = duel.phase == "pick" and duel.ready[1]
+
+
+## Each slot shows its pick (a card, a star for a herd animal, a tool), the
+## latest with a back arrow to take it back. Empty slots wait.
+func _refresh_slots() -> void:
+	var picks: Array = duel.picks_made[0]
+	for i in _slots.size():
+		var slot: PanelContainer = _slots[i]
+		var want := ""
+		if i < picks.size() and not _flying.has(i):
+			want = "%s:%s" % [picks[i].kind, picks[i].id]
+		var have := String(slot.get_meta("pick", ""))
+		var last: bool = i == picks.size() - 1 and not duel.ready[0]
+		if want != have:
+			slot.set_meta("pick", want)
+			for child in slot.get_children():
+				slot.remove_child(child)
+				child.queue_free()
+			if want != "":
+				var card := GameCard.make(picks[i].id, Vector2.ONE * (slot.custom_minimum_size.x - 12.0))
+				card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+				if picks[i].kind != "tool":
+					card.stars = int(duel.herds[0][picks[i].index].stars) if picks[i].index < duel.herds[0].size() else 1
+				slot.add_child(card)
+				UIKit.pop_in(slot, 0.6, 0.3)
+				Sound.play("pop")
+		slot.modulate = Color(1, 1, 1, 1) if want != "" else Color(1, 1, 1, 0.75)
+		# The latest pick can be taken back: a little back arrow in its corner.
+		# (On the card: the slot is a container and would stretch it.)
+		var card_now: Control = slot.get_child(0) if slot.get_child_count() > 0 else null
+		var undo: Control = card_now.get_node_or_null("Undo") if card_now != null else null
+		if card_now != null and last and undo == null:
+			var badge := _UndoBadge.new()
+			badge.name = "Undo"
+			var side := Feel.num("pick", "undo_badge", 38.0)
+			badge.size = Vector2(side, side)
+			badge.position = Vector2(card_now.custom_minimum_size.x - side * 0.7, -side * 0.3)
+			badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			card_now.add_child(badge)
+			UIKit.pop_in(badge, 0.4, 0.25)
+		elif undo != null and not last:
+			card_now.remove_child(undo)
+			undo.queue_free()
+
+
+## Your herd in a scrolling row (an arrow on each one a pick can add a star
+## to), then your tools.
+func _refresh_herd_row() -> void:
+	var herd: Array = duel.herds[0]
+	var card_size := _size("herd_card", Vector2(104, 120))
+	_herd_scroll.get_parent().visible = not duel.is_first_round() and (not herd.is_empty() or not duel.tools[0].is_empty())
+	var children := _herd_row.get_children()
+	var wanted := []
+	for entry in herd:
+		wanted.append("a:" + String(entry.id))
+	for id in duel.tools[0]:
+		wanted.append("t:" + String(id))
+	var have := children.map(func(c): return String(c.get_meta("key", "")))
+	if have != wanted:
+		for child in children:
+			_herd_row.remove_child(child)
+			child.queue_free()
+		for i in wanted.size():
+			var key: String = wanted[i]
+			var id := key.substr(2)
+			var card := GameCard.make(id, card_size)
+			card.set_meta("key", key)
+			if key.begins_with("a:"):
+				var index := i
+				_bind_card(card, func() -> void: _tap_herd(index), id)
+			else:
+				_bind_card(card, func() -> void: pass, id)
+			_herd_row.add_child(card)
+			if not have.has(key):
+				UIKit.pop_in(card, 0.4, 0.35)
+	for i in herd.size():
+		var card: GameCard = _herd_row.get_child(i)
+		var stars := int(herd[i].stars)
+		var arrow := duel.can_star(0, i) == ""
+		if card.stars != stars or card.upgrade_arrow != arrow:
+			card.stars = stars
+			card.upgrade_arrow = arrow
+			card.animate(arrow)
+			card.queue_redraw()
+
+
+func _tap_option(slot: int) -> void:
+	var problem := duel.can_pick(0, slot)
+	if problem != "":
+		_nope(_option_cards[slot])
+		return
+	if duel.needs_tool_swap(0, slot):
+		_ask_tool_swap(slot)
+		return
+	_pick(slot, -1)
+
+
+func _pick(slot: int, replace: int) -> void:
+	var card: Control = _option_cards[slot]
+	var from := card.get_global_rect()
+	var into: int = duel.picks_made[0].size()
+	var id: String = duel.offers[0][slot].id
+	if not duel.pick(0, slot, replace):
+		_nope(card)
+		return
+	Sound.play("coin", -4.0)
+	_fly_to_slot(id, from, into)
+
+
+func _tap_herd(index: int) -> void:
+	if index >= duel.herds[0].size():
+		return
+	var card: GameCard = _herd_row.get_child(index)
+	if duel.can_star(0, index) != "":
+		_nope(card)
+		return
+	var from := card.get_global_rect()
+	var into: int = duel.picks_made[0].size()
+	if duel.star(0, index):
+		card.flash = 1.0
+		card.create_tween().tween_property(card, "flash", 0.0, 0.5)
+		UIFx.stars(from.get_center(), 6)
+		Sound.play("upgrade")
+		_fly_to_slot(String(duel.herds[0][index].id), from, into)
+
+
+## Tapping your latest pick takes it back.
+func _tap_slot(index: int) -> void:
+	if index != duel.picks_made[0].size() - 1 or duel.ready[0]:
+		return
+	if duel.undo(0):
+		Sound.play("whoosh", -6.0)
+		var slot: Control = _slots[index]
+		slot.pivot_offset = slot.size / 2.0
+		var tween := slot.create_tween()
+		tween.tween_property(slot, "scale", Vector2(0.85, 0.85), 0.08)
+		tween.tween_property(slot, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## A picked card flies along an arc into its slot and lands with a pop.
+func _fly_to_slot(id: String, from: Rect2, into: int) -> void:
+	_hide_tip()
+	if into < 0 or into >= _slots.size():
+		return
+	_flying[into] = true
+	var slot: Control = _slots[into]
+	var to := slot.get_global_rect()
+	var flyer := GameCard.make(id, from.size)
+	flyer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flyer.position = from.position
+	flyer.pivot_offset = from.size / 2.0
+	UIFx.air.add_child(flyer)
+	var start := from.get_center()
+	var end := to.get_center()
+	var peak := (start + end) / 2.0 + Vector2(0, -Feel.num("ui", "fly_arc_pixels", 140.0))
+	var end_scale := Vector2(to.size.x / from.size.x, to.size.y / from.size.y)
+	var size := from.size
+	Sound.play("whoosh", -8.0)
+	var tween := flyer.create_tween()
+	tween.tween_method(func(t: float) -> void:
+		flyer.position = start.lerp(peak, t).lerp(peak.lerp(end, t), t) - size / 2.0
+		flyer.scale = Vector2.ONE.lerp(end_scale, t) * (1.0 + 0.12 * sin(t * PI))
+		flyer.rotation = -0.22 * sin(t * PI)
+	, 0.0, 1.0, Feel.num("ui", "fly_seconds", 0.5)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_callback(func() -> void:
+		flyer.queue_free()
+		_flying.erase(into)
+		UIFx.dust(Vector2(to.get_center().x, to.end.y - 4.0), to.size.x * 0.8)
+		Sound.play("land")
+		_celebrate_if_three_stars(id, to))
+
+
+## A third tool: tap one of yours to swap it out (or tap outside to keep them).
+func _ask_tool_swap(slot: int) -> void:
+	var box := UIStyle.vbox("s")
+	box.add_child(UIStyle.label("Swap", "large", Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER))
+	var row := UIStyle.hbox("s")
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	box.add_child(row)
+	var layer := _overlay(box, true)
+	for i in duel.tools[0].size():
+		var card := GameCard.make(duel.tools[0][i], _size("herd_card", Vector2(104, 120)) * 1.3)
+		var index: int = i
+		UIKit.on_tap(card, func() -> void:
+			layer.queue_free()
+			_pick(slot, index))
+		row.add_child(card)
+
+
+## A card that can't be picked gives a little shake.
+func _nope(card: Control) -> void:
+	Sound.play("error", -4.0)
+	var x := card.position.x
+	var tween := card.create_tween()
+	for k in [8.0, -7.0, 5.0, -3.0, 0.0]:
+		tween.tween_property(card, "position:x", x + k, 0.04)
+
+
+## Taps, and holding to see a card's details (a name and one line).
+func _bind_card(card: Control, on_tap: Callable, id: String) -> void:
+	card.mouse_filter = Control.MOUSE_FILTER_PASS
+	var press := {"down": false, "held": false, "at": Vector2.ZERO, "serial": 0}
+	card.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
+			if event.pressed:
+				press.down = true
+				press.held = false
+				press.at = event.global_position
+				press.serial = int(press.serial) + 1
+				var serial: int = press.serial
+				UIKit.press_squash(card)
+				get_tree().create_timer(Feel.num("pick", "hold_seconds", 0.35)).timeout.connect(func() -> void:
+					if bool(press.down) and int(press.serial) == serial and is_instance_valid(card):
+						press.held = true
+						_show_details(id, card))
+			elif press.down:
+				press.down = false
+				UIKit.release_bounce(card)
+				if press.held:
+					_hide_details()
+				elif event.global_position.distance_to(press.at) < 24.0:
+					Sound.play("select")
+					UIFx.tap(event.global_position)
+					on_tap.call()
+		elif event is InputEventMouseMotion and bool(press.down) and event.global_position.distance_to(press.at) > 24.0:
+			# A drag: scrolling, not a tap.
+			press.down = false
+			UIKit.release_bounce(card)
+			if press.held:
+				_hide_details()
+	)
+
+
+## A short popup over a held card: its name, and one line.
+func _show_details(id: String, card: Control) -> void:
+	_hide_details()
+	var card_info := GameData.get_card(id)
+	var row := UIStyle.hbox("s")
+	var icon_key := "toolbox" if GameData.is_tool(id) else String(GameData.class_info(GameData.class_of(id)).get("icon", ""))
+	var tint := UIStyle.color("tool") if GameData.is_tool(id) else Color(String(GameData.class_info(GameData.class_of(id)).get("color", "#ffffff")))
+	row.add_child(UIStyle.icon(icon_key, tint.lightened(0.3), 52))
 	var words := UIStyle.vbox("xs")
 	words.add_theme_constant_override("separation", 0)
-	words.alignment = BoxContainer.ALIGNMENT_CENTER
-	var name_label := UIStyle.label(opponent.name, "body")
-	name_label.clip_text = true
-	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_label.custom_minimum_size.x = 196
-	words.add_child(name_label)
-	var tags := UIStyle.hbox("xs")
-	var boss: bool = opponent.get("boss", false)
-	var tag := UIStyle.chip(UIStyle.label("BOSS" if boss else "Lv %d" % int(opponent.level), "small"), UIStyle.color("gold") if boss else UIStyle.color("chip").darkened(0.15))
-	tags.add_child(tag)
-	_their_streak = _streak_chip()
-	tags.add_child(_their_streak)
-	_their_synergies = UIStyle.hbox("xs")
-	_their_synergies.add_theme_constant_override("separation", 2)
-	tags.add_child(_their_synergies)
-	words.add_child(tags)
+	words.add_child(UIStyle.label(String(card_info.name), "body"))
+	var line := UIStyle.label(GameData.card_line(id), "small", UIStyle.color("text_soft"))
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	line.custom_minimum_size.x = 380
+	words.add_child(line)
 	row.add_child(words)
-	var badge := UIStyle.chip(row)
-	badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	return badge
+	var popup := UIStyle.chip(row, UIStyle.color("toast"))
+	popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	popup.z_index = OVER_FIELD
+	add_child(popup)
+	popup.reset_size()
+	var rect := card.get_global_rect()
+	var screen := get_viewport_rect().size
+	popup.position = Vector2(clampf(rect.get_center().x - popup.size.x / 2.0, 8.0, screen.x - popup.size.x - 8.0),
+		maxf(8.0, rect.position.y - popup.size.y - 10.0))
+	UIKit.pop_in(popup, 0.7, 0.2)
+	_details = popup
+
+
+func _hide_details() -> void:
+	if _details != null and is_instance_valid(_details):
+		_details.queue_free()
+	_details = null
+
+
+## A one-time hint in your very first match: what to tap.
+func _first_match_tip() -> void:
+	if not Profile.data.has("tips_seen"):
+		return
+	var seen: Array = Profile.data.tips_seen
+	var key := "pick" if duel.is_first_round() else ("star" if duel.round_number == 2 else "")
+	if key == "" or seen.has(key):
+		return
+	seen.append(key)
+	Profile.save()
+	var text := "Tap 3 animals" if key == "pick" else "Tap your animals to add a star"
+	var anchor: Control = _options_holder if key == "pick" else _herd_scroll
+	_hide_tip()
+	var tip := UIStyle.chip(UIStyle.label(text, "body"), UIStyle.color("primary"))
+	tip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tip.z_index = OVER_FIELD
+	add_child(tip)
+	_tip = tip
+	(func() -> void:
+		if not is_instance_valid(tip):
+			return
+		tip.reset_size()
+		var rect := anchor.get_global_rect()
+		# Just above what to tap, in the gap; it stays until you pick.
+		tip.position = Vector2((get_viewport_rect().size.x - tip.size.x) / 2.0, rect.position.y - tip.size.y - UIStyle.space("xs"))
+		if key == "pick":
+			tip.position.y = rect.position.y - tip.size.y * 0.5
+		UIKit.pop_in(tip, 0.6, 0.3)
+		var bob := tip.create_tween().set_loops()
+		bob.tween_property(tip, "position:y", tip.position.y - 6.0, 0.4).set_trans(Tween.TRANS_SINE)
+		bob.tween_property(tip, "position:y", tip.position.y, 0.4).set_trans(Tween.TRANS_SINE)).call_deferred()
+
+
+func _hide_tip() -> void:
+	if _tip != null and is_instance_valid(_tip):
+		var tip := _tip
+		tip.create_tween().tween_property(tip, "modulate:a", 0.0, 0.2).finished.connect(tip.queue_free)
+	_tip = null
+
+
+## A small round back arrow: "tap to take this back".
+class _UndoBadge:
+	extends Control
+
+	func _draw() -> void:
+		var c := size / 2.0
+		var r := minf(size.x, size.y) / 2.0
+		UIStyle.draw_particle(self, "badge", c, r, UIStyle.color("danger"))
+		var arrow := UIKit.icon(GameData.ui_icon("reroll"))
+		if arrow != null:
+			draw_texture_rect(arrow, Rect2(c - Vector2(r, r) * 0.6, Vector2(r, r) * 1.2), false)
 
 
 ## A green check mark in a circle.
@@ -293,462 +766,21 @@ class _CheckBadge:
 	func _draw() -> void:
 		var c := size / 2.0
 		var r := minf(size.x, size.y) / 2.0
-		var ink := UIStyle.color("outline")
-		draw_circle(c + Vector2(0, 2), r, Color(ink, 0.4))
-		draw_circle(c, r, ink)
-		draw_circle(c, r - 3.0, UIStyle.color("primary"))
+		UIStyle.draw_particle(self, "badge", c, r, UIStyle.color("primary"))
 		var check := UIKit.icon(GameData.ui_icon("check"))
 		if check != null:
 			draw_texture_rect(check, Rect2(c - Vector2(r, r) * 0.62, Vector2(r, r) * 1.24), false)
 
 
-## Before the first round: up to 3 of your animals to start with, within
-## the Acorn budget.
-func _choose_starters() -> void:
-	var box := UIKit.vbox(10)
-	var overlay := _overlay(box)
-	var rebuild := func(again: Callable) -> void:
-		for child in box.get_children():
-			box.remove_child(child)
-			child.queue_free()
-		box.add_child(UIKit.label("Draft Duel", 40, UIKit.YELLOW, HORIZONTAL_ALIGNMENT_CENTER))
-		var intro := UIKit.paragraph("Each round: shop for animals, train them up to 3 stars, place your herd and watch it fight. Save Acorns to earn interest, and win rounds in a row for a streak bonus. You both start with %d hearts; lose a fight and you lose hearts, more for every enemy animal still standing. Run out and you're out." % int(duel.rules.hearts), 19, UIKit.TEXT)
-		intro.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		box.add_child(intro)
-		box.add_child(UIKit.label("Pick your starters", 30, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		var total := 0
-		for id in _starter_ids:
-			total += int(GameData.get_card(id).cost)
-		var budget := int(duel.rules.starter_budget)
-		var note := UIKit.paragraph("Up to %d animals, worth up to %d Acorns. You'll buy more in the shop each round." % [int(duel.rules.starters), budget], 19, UIKit.TEXT)
-		note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		box.add_child(note)
-		var grid := GridContainer.new()
-		grid.columns = 5
-		grid.add_theme_constant_override("h_separation", 6)
-		grid.add_theme_constant_override("v_separation", 6)
-		var scroll := ScrollContainer.new()
-		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-		var animal_ids: Array = duel.pool.filter(func(id): return not GameData.is_tool(id))
-		# As tall as the cards need, up to 3 rows; more scroll.
-		var rows := ceili(animal_ids.size() / 5.0)
-		scroll.custom_minimum_size = Vector2(530, mini(rows, 3) * 140)
-		scroll.add_child(grid)
-		box.add_child(scroll)
-		for id in animal_ids:
-			var card := AnimalCard.create(id, true)
-			card.custom_minimum_size = Vector2(100, 134)
-			card.info = AnimalCard.Info.LEVEL
-			var picked := _starter_ids.has(id)
-			card.highlighted = picked
-			if picked:
-				card.stamp = "PICKED"
-			elif duel.starter_problem(_starter_ids + [id]) != "":
-				card.modulate = Color(1, 1, 1, 0.45)
-			UIKit.on_tap(card, func() -> void:
-				if _starter_ids.has(id):
-					_starter_ids.erase(id)
-				elif duel.starter_problem(_starter_ids + [id]) == "":
-					_starter_ids.append(id)
-				else:
-					Sound.play("error")
-					UIKit.toast(duel.starter_problem(_starter_ids + [id]))
-					return
-				Sound.play("select")
-				again.call(again)
-			)
-			grid.add_child(card)
-		var count_text := "%d of %d picked  ·  %d of %d Acorns" % [_starter_ids.size(), int(duel.rules.starters), total, budget]
-		box.add_child(UIKit.label(count_text, 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-		var go := UIKit.button("Start!", UIKit.GREEN, 28, Vector2(260, 76))
-		go.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		go.disabled = _starter_ids.is_empty()
-		go.pressed.connect(func() -> void:
-			if duel.pick_starters(0, _starter_ids):
-				Sound.play("horn")
-				overlay.queue_free()
-				get_tree().create_timer(0.7).timeout.connect(func() -> void: _rival_says("start"))
-		)
-		box.add_child(go)
-	rebuild.call(rebuild)
+# --- The opponent ----------------------------------------------------------------
 
-
-## A dimmed full-screen layer with a panel in the middle holding `content`.
-func _overlay(content: Control) -> Control:
-	var layer := Control.new()
-	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	layer.z_index = OVER_FIELD  # above flying animals
-	add_child(layer)
-	var dim := ColorRect.new()
-	dim.color = Color(0, 0, 0, 0.55)
-	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	layer.add_child(dim)
-	var center := CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	layer.add_child(center)
-	var panel := UIKit.panel(UIKit.PANEL, 24, 24)
-	panel.custom_minimum_size = Vector2(560, 0)
-	panel.add_child(content)
-	center.add_child(panel)
-	# Dim fades in, the panel pops in.
-	dim.modulate.a = 0.0
-	dim.create_tween().tween_property(dim, "modulate:a", 1.0, 0.2)
-	(func() -> void: UIKit.pop_in(panel, 0.8, Feel.num("ui", "panel_seconds", 0.32))).call_deferred()
-	return layer
-
-
-# --- Every frame -----------------------------------------------------------
-
-func _update_hud() -> void:
-	var phase_names := {"starters": "Starters", "draft": "Shop", "place": "Place", "round_over": "Results", "over": "Done"}
-	var phase: String = phase_names.get(duel.phase, "")
-	if duel.phase == "fight":
-		var left := float(duel.fight_ticks - duel.fight_tick) / duel.sim.tps
-		phase = "%d:%02d" % [floori(left / 60.0), int(left) % 60]
-	_round_label.text = "Round %d · %s" % [duel.round_number, phase] if duel.round_number > 0 else "Draft Duel"
-	_my_acorns.set_value(duel.acorns[0])
-	for team in 2:
-		if duel.hearts[team] != _hearts_shown[team]:
-			var pill := _my_hearts if team == 0 else _their_hearts
-			var lost: bool = duel.hearts[team] < _hearts_shown[team]
-			pill.set_value(duel.hearts[team])
-			if lost:
-				var at := pill.get_global_rect().get_center()
-				_ui_fx.burst("spark", at, 10, 260.0, 0.35, 8.0, [UIStyle.color("heart"), Color("#ffd0d8")], 0.0, 5.0)
-				_ui_fx.burst("star", at, 3, 160.0, 0.5, 7.0, [UIStyle.color("heart")], 400.0, 1.5, 120.0)
-			_hearts_shown[team] = duel.hearts[team]
-	# Interest: what you'd earn if you stopped spending now.
-	var shopping: bool = duel.phase in ["draft", "place"]
-	var interest := duel.interest_on(0)
-	_my_acorns.set_extra("+%d" % interest if shopping and interest > 0 else "")
-	var their_turn_done: bool = (duel.phase == "draft" and duel.done_shopping[1]) or (duel.phase == "place" and duel.ready[1])
-	if their_turn_done != _rival_check.visible:
-		_rival_check.visible = their_turn_done
-		if their_turn_done:
-			(func() -> void: UIKit.pop_in(_rival_check, 0.3, 0.3)).call_deferred()
-	_set_streak(_my_streak, duel.streak[0])
-	_set_streak(_their_streak, duel.streak[1])
-
-
-## A little flame with the number of rounds won in a row (hidden until 2).
-func _streak_chip() -> Control:
-	var chip := UIStyle.hbox("xs")
-	chip.add_theme_constant_override("separation", 0)
-	chip.add_child(UIStyle.icon("flame", UIStyle.color("flame"), 36))
-	var count := UIStyle.label("", "small", UIStyle.color("gold"))
-	count.name = "Count"
-	chip.add_child(count)
-	chip.visible = false
-	chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	return chip
-
-
-func _set_streak(chip: Control, wins: int) -> void:
-	var active := wins >= int(duel.rules.win_streak_from)
-	if active and not chip.visible:
-		chip.visible = true
-		(func() -> void: UIKit.pop_in(chip, 0.4, 0.35)).call_deferred()
-	chip.visible = active
-	(chip.find_child("Count", true, false) as Label).text = str(wins)
-
-
-# --- Habitat synergies ---------------------------------------------------------
-
-## Keeps the tracker, the opponent's badges and the tier celebrations up to
-## date. Rebuilds only when something it shows has changed.
-func _update_synergies() -> void:
-	var shopping: bool = duel.phase in ["draft", "place"]
-	var preview := ""
-	if duel.phase == "draft" and _selected_market >= 0 and _selected_market < duel.shops[0].size():
-		var item: Dictionary = duel.shops[0][_selected_market]
-		if int(item.taken) < 0 and not GameData.is_tool(item.id) and duel.merge_target(0, item.id) < 0:
-			var owned: bool = duel.herds[0].any(func(e): return e.id == item.id)
-			if not owned:
-				preview = Synergies.habitat_of(item.id)
-	var counts := Synergies.counts(duel.herds[0])
-	var theirs := Synergies.active(duel.herds[1])
-	var key := str([shopping, counts, preview, theirs])
-	if key != _tracker_key:
-		_tracker_key = key
-		_build_tracker(counts, preview, shopping)
-		for child in _their_synergies.get_children():
-			child.queue_free()
-		for habitat in GameData.habitat_order:
-			if theirs.has(habitat):
-				_their_synergies.add_child(HabitatBadge.new(habitat, int(theirs[habitat]), 36))
-	# Celebrate each tier the first time it turns on this match.
-	if duel.phase in ["draft", "place", "starters"]:
-		var mine := Synergies.active(duel.herds[0])
-		for habitat in mine:
-			if int(mine[habitat]) > int(_announced.get(habitat, 0)):
-				_announced[habitat] = int(mine[habitat])
-				_celebrate_synergy(habitat, int(mine[habitat]))
-
-
-func _build_tracker(counts: Dictionary, preview: String, shopping: bool) -> void:
-	for child in _tracker.get_children():
-		_tracker.remove_child(child)
-		child.queue_free()
-	_tracker.visible = shopping
-	if not shopping:
-		return
-	var habitats := GameData.habitat_order.filter(func(h): return counts.has(h) or h == preview)
-	# Active tiers first, then the closest to their next tier.
-	habitats.sort_custom(func(a, b):
-		var ta := Synergies.tier_for(int(counts.get(a, 0)))
-		var tb := Synergies.tier_for(int(counts.get(b, 0)))
-		if ta != tb:
-			return ta > tb
-		return int(counts.get(a, 0)) > int(counts.get(b, 0))
-	)
-	for habitat in habitats:
-		_tracker.add_child(_tracker_chip(habitat, int(counts.get(habitat, 0)), habitat == preview))
-
-
-## One pill of the tracker: the habitat's badge and progress, e.g. "Savanna
-## 3/4". Lit in the habitat's color once a tier is on.
-func _tracker_chip(habitat: String, count: int, preview: bool) -> Control:
-	var info := Synergies.info(habitat)
-	var tier := Synergies.tier_for(count)
-	var row := UIStyle.hbox("xs")
-	row.add_child(HabitatBadge.new(habitat, tier, 40))
-	var text := "%s %d/%d" % [info.name, count, Synergies.next_needed(count)]
-	if preview:
-		text = "%s %d+1/%d" % [info.name, count, Synergies.next_needed(count + 1)]
-	row.add_child(UIStyle.label(text, "small", UIStyle.color("gold") if preview else Color(0, 0, 0, 0)))
-	var base := Color(String(info.color)).darkened(0.1) if tier > 0 else UIStyle.color("chip")
-	var chip := UIStyle.chip(row, base)
-	chip.modulate.a = 1.0 if tier > 0 or preview else 0.88
-	UIKit.on_tap(chip, func() -> void: _show_synergy(habitat, count))
-	return chip
-
-
-## The tapped habitat's bonus at each tier, with yours highlighted.
-func _show_synergy(habitat: String, count: int) -> void:
-	var info := Synergies.info(habitat)
-	var box := UIKit.vbox(8)
-	box.add_child(UIKit.paragraph("You have %d different %s animal%s in your herd. Copies of the same animal count once." % [count, info.name, "" if count == 1 else "s"], 20, UIKit.TEXT))
-	var tier := Synergies.tier_for(count)
-	var tiers: Array = GameData.synergy_tiers
-	for i in tiers.size():
-		var on := tier == i + 1
-		var line := UIKit.paragraph("%d animals: %s" % [int(tiers[i]), Synergies.describe(habitat, i + 1)], 21, UIKit.YELLOW if on else (UIKit.TEXT if tier > i else UIKit.TEXT_DIM))
-		box.add_child(line)
-	Modal.open(box, "%s synergy" % info.name)
-
-
-## A tier just turned on: a bouncy pop-up, a sting, and a glow on the
-## animals that are part of it.
-func _celebrate_synergy(habitat: String, tier: int) -> void:
-	var info := Synergies.info(habitat)
-	var color := Color(String(info.color))
-	Sound.play("synergy")
-	_banner("%s x%d!" % [String(info.name).to_upper(), int(GameData.synergy_tiers[tier - 1])], color.lightened(0.25),
-		Feel.count("celebrations", "synergy_text_size", 44), Synergies.describe(habitat, tier))
-	for view in _field.views():
-		if view.team == 0 and view.habitat == habitat:
-			view.glow(color.lightened(0.2), Feel.num("celebrations", "synergy_glow_seconds", 1.4))
-
-
-# --- Big moments --------------------------------------------------------------
-
-## Herd animal `index` just reached 3 stars: a slow-motion close-up, stars
-## and confetti, a sound sting and a bouncy 3 STARS!
-func _celebrate_three_stars(index: int, animal_name: String) -> void:
-	var c := "celebrations"
-	var key := "0/%d/0" % index
-	if _field.celebrate(key):
-		Sound.play("whoosh", -4.0)
-	Sound.play("star3")
-	var view := _field.view_for_key(key)
-	if view != null:
-		var at := view.position + Vector2(0, -UnitSprites.top(view.id) * view.body.k * 0.5)
-		_field.fx.burst("star", at, Feel.count(c, "star3_stars", 22), 260.0, 0.9, 9.0, [Color("#ffe14d"), Color("#ffb03b"), Color.WHITE], 380.0, 1.2, 180.0)
-		_field.fx.burst_confetti(at, Feel.count(c, "star3_confetti", 36))
-	_banner("3 STARS!", Color("#ffe14d"), Feel.count(c, "star3_text_size", 64), animal_name)
-
-
-## Smaller celebrations after a round you won: a comeback (at few hearts)
-## and a flawless round (no animals lost).
-func _celebrate_round() -> void:
-	var c := "celebrations"
-	var r := duel.last_round
-	var lost: Array = r.get("animals_lost", [1, 1])
-	var at := _field.get_global_rect().get_center()
-	var delay := 0.0
-	if duel.hearts[0] <= Feel.count(c, "comeback_hearts", 5):
-		_banner("COMEBACK!", Color("#ff9f43"), Feel.count(c, "banner_size", 54), "Still in it!")
-		_ui_fx.burst_confetti(at, Feel.count(c, "comeback_confetti", 30))
-		Sound.play("fanfare")
-		delay = 1.0
-	if int(lost[0]) == 0 and not duel.herds[0].is_empty():
-		var show_flawless := func() -> void:
-			_banner("FLAWLESS!", Color("#7fe0ff"), Feel.count(c, "banner_size", 54), "Not a single animal lost")
-			_ui_fx.burst("sparkle", at, Feel.count(c, "flawless_sparkles", 18), 260.0, 0.8, 10.0, [Color.WHITE, Color("#bff0ff"), Color("#ffe14d")], -40.0, 2.0)
-			Sound.play("fanfare", 2.0)
-		if delay > 0.0:
-			get_tree().create_timer(delay).timeout.connect(show_flawless)
-		else:
-			show_flawless.call()
-
-
-# --- The rival's reactions -------------------------------------------------
-
-## The rival reacts with one of their emotes (rivals.json) in a bubble by
-## their badge, and their face changes for a moment: at the start, on a big
-## hit, and when a round goes their way or not. One at a time, and not too
-## often (feel.json "rivals").
-func _rival_says(moment: String) -> bool:
-	var emote := GameData.find_by_id(GameData.emotes, opponent.get("emotes", {}).get(moment, ""))
-	var now := Time.get_ticks_msec() / 1000.0
-	if emote.is_empty() or now < _emote_free_at or _their_badge == null or not _result.is_empty():
-		return false
-	var seconds := Feel.num("rivals", "emote_seconds", 2.4)
-	_emote_free_at = now + maxf(seconds, Feel.num("rivals", "emote_gap_seconds", 5.0))
-	Sound.play("emote", -2.0)
-	var portrait := _rival_portrait
-	portrait.mood = {"winning": "happy", "big_hit": "happy", "losing": "sad"}.get(moment, "normal")
-	portrait.pivot_offset = portrait.size / 2.0
-	var bounce := portrait.create_tween()
-	bounce.tween_property(portrait, "scale", Vector2(1.18, 0.88), 0.08)
-	bounce.tween_property(portrait, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	bounce.tween_interval(maxf(0.0, seconds - 0.5))
-	bounce.tween_callback(func() -> void: portrait.mood = "normal")
-
-	var bubble := _emote_bubble(emote)
-	bubble.z_index = OVER_FIELD
-	add_child(bubble)
-	bubble.reset_size()
-	var anchor := portrait.get_global_rect()
-	bubble.position = Vector2(anchor.position.x + anchor.size.x * 0.55, anchor.end.y - 4.0)
-	bubble.position.x = minf(bubble.position.x, get_viewport_rect().size.x - bubble.size.x - 6.0)
-	bubble.pivot_offset = Vector2(12, 0)
-	bubble.scale = Vector2(0.2, 0.2)
-	var tween := bubble.create_tween()
-	tween.tween_property(bubble, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_interval(maxf(0.2, seconds - 0.55))
-	tween.tween_property(bubble, "modulate:a", 0.0, 0.25)
-	tween.tween_callback(bubble.queue_free)
-	return true
-
-
-## A speech bubble with an emote's picture and caption.
-func _emote_bubble(emote: Dictionary) -> Control:
-	var style := UIKit.box(Color.WHITE, 18, 6)
-	style.corner_radius_top_left = 4
-	style.content_margin_left = 8
-	style.content_margin_right = 14
-	style.set_border_width_all(3)
-	style.border_color = UIKit.INK
-	var bubble := PanelContainer.new()
-	bubble.add_theme_stylebox_override("panel", style)
-	bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var row := UIKit.hbox(8)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bubble.add_child(row)
-	var art := IconArt.make(GameData.emote_icon(emote.id), Color(emote.get("color", "#888888")))
-	art.custom_minimum_size = Vector2(46, 46)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(art)
-	var caption := UIKit.label(emote.get("caption", ""), 24, UIKit.INK)
-	caption.add_theme_constant_override("outline_size", 0)
-	caption.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(caption)
-	return bubble
-
-
-## The rival cheers their own big hits (once a round).
-func _on_strong_hit(team: int) -> void:
-	if team == bot.team and _big_hit_round != duel.round_number and _rival_says("big_hit"):
-		_big_hit_round = duel.round_number
-
-
-## Big bouncy words over the field, with a small line under them.
-func _banner(text: String, color: Color, font_size: int, subtitle := "") -> void:
-	# One banner at a time: a second one waits its turn.
-	var now := Time.get_ticks_msec() / 1000.0
-	var wait := _banner_free_at - now
-	_banner_free_at = maxf(now, _banner_free_at) + Feel.num("celebrations", "banner_seconds", 1.4) * 0.8
-	if wait > 0.0:
-		get_tree().create_timer(wait).timeout.connect(_show_banner.bind(text, color, font_size, subtitle))
-	else:
-		_show_banner(text, color, font_size, subtitle)
-
-
-func _show_banner(text: String, color: Color, font_size: int, subtitle := "") -> void:
-	var holder := VBoxContainer.new()
-	holder.alignment = BoxContainer.ALIGNMENT_CENTER
-	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var title := UIKit.label(text, font_size, color, HORIZONTAL_ALIGNMENT_CENTER)
-	title.add_theme_constant_override("outline_size", maxi(8, font_size / 5))
-	title.add_theme_color_override("font_outline_color", UIKit.INK)
-	title.add_theme_constant_override("shadow_offset_y", 5)
-	holder.add_child(title)
-	if subtitle != "":
-		var sub := UIKit.paragraph(subtitle, 22, Color.WHITE)
-		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sub.add_theme_constant_override("outline_size", 6)
-		holder.add_child(sub)
-	_ui_fx.get_parent().add_child(holder)
-	var field_rect := _field.get_global_rect()
-	holder.size = Vector2(field_rect.size.x, 0)
-	holder.reset_size()
-	holder.position = Vector2(field_rect.position.x, field_rect.position.y + field_rect.size.y * 0.3)
-	holder.size.x = field_rect.size.x
-	holder.pivot_offset = holder.size / 2.0
-	holder.scale = Vector2(0.2, 0.2)
-	var seconds := Feel.num("celebrations", "banner_seconds", 1.4)
-	var tween := holder.create_tween()
-	tween.tween_property(holder, "scale", Vector2(1.15, 1.15), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	tween.tween_property(holder, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_SINE)
-	tween.tween_interval(maxf(0.1, seconds - 0.7))
-	tween.set_parallel()
-	tween.tween_property(holder, "modulate:a", 0.0, 0.3)
-	tween.tween_property(holder, "position:y", holder.position.y - 40.0, 0.3)
-	tween.chain().tween_callback(holder.queue_free)
-
-
-## The middle of one of the panel's cards on screen (or the screen's middle).
-func _chip_center(chips: Array, index: int) -> Vector2:
-	if index >= 0 and index < chips.size() and is_instance_valid(chips[index]):
-		return (chips[index] as Control).get_global_rect().get_center()
-	return get_viewport_rect().size / 2.0
-
-
-
-
-
-
-
-
-## Changes whenever the panel under the field needs redrawing.
-func _panel_signature() -> String:
-	var taken := []
-	for item in duel.shops[0]:
-		taken.append([item.id, item.taken])
-	var stars := []
-	for entry in duel.herds[0]:
-		stars.append(entry.stars)
-	return str([duel.phase, duel.round_number, duel.done_shopping, taken, stars, duel.acorns, duel.tools[0],
-		_selected_market, _selected_herd, _selected_tool, _rally_selected, duel.rally_ready[0], _fast, duel.ready,
-		])
-
-
-## The opponent takes a moment over each decision, like a person would.
+## The opponent takes a moment over each pick, like a person would.
 func _opponent_moves(delta: float) -> void:
 	_bot_wait -= delta
-	match duel.phase:
-		"starters":
-			if not duel.starters_picked[bot.team]:
-				bot.pick_starters()
-		"draft":
-			if not duel.done_shopping[bot.team] and _bot_wait <= 0.0:
-				bot.shop()
-				_bot_wait = _rng.randf_range(0.5, 1.0)
-		"place":
-			if not duel.ready[bot.team]:
-				bot.place()
-				_bot_wait = _rng.randf_range(0.6, 1.0)
+	if duel.phase == "pick" and not duel.ready[bot.team] and _bot_wait <= 0.0:
+		bot.pick()
+		var gap := _size("bot_pick_seconds", Vector2(0.4, 0.8))
+		_bot_wait = _rng.randf_range(gap.x, gap.y)
 
 
 func _run_fight(delta: float) -> void:
@@ -769,827 +801,247 @@ func _run_fight(delta: float) -> void:
 		_field.blend = clampf(_accumulator / tick_length, 0.0, 1.0)
 
 
+# --- What happened -----------------------------------------------------------------
+
 func _handle_events(events: Array) -> void:
 	for e in events:
-		var theirs: bool = e.get("team", 0) == bot.team
 		match e.type:
 			"round":
-				_selected_market = -1
-				_selected_herd = -1
-				_announce_round(int(e.bonus_team), int(e.bonus), int(e.streak_bonus[0]))
-				_bot_wait = 1.2
-			"buy":
-				var card := GameData.get_card(e.id)
-				if not theirs:
-					Sound.play("upgrade" if e.merged else "coin")
-					_selected_market = -1
-					if e.merged:
-						_set_status("%s is now %s" % [card.name, _stars_text(e.stars)], UIStyle.color("gold"))
-						if int(e.stars) >= int(duel.rules.star_max):
-							_celebrate_three_stars(int(e.index), card.name)
-			"train":
-				var trained: String = GameData.get_card(e.id).name
-				if not theirs:
-					Sound.play("upgrade")
-					_set_status("%s is now %s" % [trained, _stars_text(e.stars)], UIStyle.color("gold"))
-					if int(e.stars) >= int(duel.rules.star_max):
-						_celebrate_three_stars(int(e.index), trained)
-			"reroll":
-				if not theirs:
-					Sound.play("pop", -4.0)
-					_selected_market = -1
-			"place":
-				Sound.play("pop")
+				_selected_tool = -1
+				_rally_selected = false
+				if _score_bar.visible:
+					_show_view("pick")
 			"fight":
 				Sound.play("horn")
-				_set_status("Fight! Rally your herd once, at just the right moment.")
-				_show_moods()
-			"steal":
-				Sound.play("coin")
-				var thief: String = GameData.get_card(e.id).name
-				if theirs:
-					_set_status("%s's %s steals %d of your Acorns!" % [opponent.name, thief, e.amount], UIKit.YELLOW)
-				else:
-					_set_status("Your %s steals %d Acorns!" % [thief, e.amount], UIKit.YELLOW)
-			"rally":
-				Sound.play("alert", -4.0)
-				if theirs:
-					_set_status("%s rallies its herd!" % opponent.name, UIKit.YELLOW)
+				_show_view("fight")
+				get_tree().create_timer(0.6).timeout.connect(func() -> void: _rival_says("start"))
 			"tool":
 				Sound.play("horn" if e.id == "air_horn" else "tool")
-				if theirs:
-					_set_status("%s used a %s!" % [opponent.name, GameData.get_card(e.id).name], UIKit.YELLOW)
+			"rally":
+				Sound.play("alert", -4.0)
 			"round_over":
 				_selected_tool = -1
 				_rally_selected = false
 				_field.highlight = ""
-				Sound.play("upgrade" if e.winner == 0 else "pop")
-				if e.winner == 0:
-					var field_rect := _field.get_global_rect()
-					var half := Feel.count("effects", "win_confetti", 60) / 2
-					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.25, field_rect.size.y * 0.35), half)
-					_ui_fx.burst_confetti(field_rect.position + Vector2(field_rect.size.x * 0.75, field_rect.size.y * 0.35), half)
-				if e.winner == 0:
-					_celebrate_round()
-				if not duel.is_over() and e.winner != DraftMatch.NO_WINNER:
-					_rival_says("losing" if e.winner == 0 else "winning")
-				var lost: Array = e.hearts_lost
-				if int(lost[0]) > 0:
-					_set_status("You lose %d heart%s." % [lost[0], "" if int(lost[0]) == 1 else "s"], UIKit.HEART)
-				elif int(lost[1]) > 0:
-					_set_status("%s loses %d heart%s!" % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s"], UIKit.YELLOW)
+				_round_result(int(e.winner))
 
 
-func _announce_round(bonus_team: int, bonus: int, streak_paid: int) -> void:
-	var extra := ""
-	if bonus_team == 0:
-		extra = " +%d bonus Acorns." % bonus
-	elif bonus_team == 1:
-		extra = " %s gets %d bonus Acorns." % [opponent.name, bonus]
-	if streak_paid > 0:
-		extra += " Win streak: +%d Acorns!" % streak_paid
-	_set_status("Round %d!%s" % [duel.round_number, extra] if extra != "" else ("Tap a card, then Buy" if duel.round_number == 1 else "Round %d!" % duel.round_number))
+## The quick result: a banner and the score; then on to the next round.
+func _round_result(winner: int) -> void:
+	var c := "celebrations"
+	var size := Feel.count(c, "banner_size", 54)
+	var at := _field.get_global_rect().get_center()
+	if winner == 0:
+		Sound.play("upgrade")
+		var half := Feel.count("effects", "win_confetti", 60) / 2
+		var rect := _field.get_global_rect()
+		UIFx.particles.burst_confetti(rect.position + Vector2(rect.size.x * 0.25, rect.size.y * 0.35), half)
+		UIFx.particles.burst_confetti(rect.position + Vector2(rect.size.x * 0.75, rect.size.y * 0.35), half)
+		if bool(duel.last_round.get("flawless", false)):
+			_banner("FLAWLESS!", Color("#7fe0ff"), size)
+			UIFx.particles.burst("sparkle", at, Feel.count(c, "flawless_sparkles", 18), 260.0, 0.8, 10.0, [Color.WHITE, Color("#bff0ff"), Color("#ffe14d")], -40.0, 2.0)
+			Sound.play("fanfare", 2.0)
+		else:
+			_banner("Round won!", UIStyle.color("gold"), size)
+	elif winner == 1:
+		Sound.play("pop")
+		_banner("Round lost", Color("#ffb3a8"), size)
+	else:
+		_banner("Draw", Color.WHITE, size)
+	if not duel.is_over():
+		_rival_says("losing" if winner == 0 else ("winning" if winner == 1 else "start"))
+		get_tree().create_timer(Feel.num("pick", "result_seconds", 1.8)).timeout.connect(func() -> void:
+			if duel.phase == "round_over":
+				duel.next_round())
 
 
-## "★★" for 2 stars.
-static func _stars_text(stars: int) -> String:
-	return "★".repeat(stars)
-
-
-## Shows which animals came to this fight fired up, and which are sleepy.
-func _show_moods() -> void:
-	for f in duel.sim.fighters:
-		if not f.is_unit():
-			continue
-		var mood := int(f.memory.get("mood", 0))
-		if mood >= MOOD_SHOWN:
-			_field.say(f.x, f.y, "Fired up!", Color("#ffb347"))
-		elif mood <= -MOOD_SHOWN:
-			_field.say(f.x, f.y, "Sleepy", Color("#9fd3ff"))
-
-
-# --- The panel under the field ---------------------------------------------
-
-func _rebuild_panel() -> void:
-	# While shopping, the shop updates in place.
-	if duel.phase == "draft" and not _shop.is_empty() and int(_shop.round) == duel.round_number:
-		_refresh_shop()
+func _celebrate_if_three_stars(id: String, rect: Rect2) -> void:
+	var index := duel.herd_index(0, id)
+	if index < 0 or int(duel.herds[0][index].stars) < int(duel.rules.star_max):
 		return
-	for child in _panel.get_children():
-		_panel.remove_child(child)
+	var c := "celebrations"
+	Sound.play("star3")
+	UIFx.particles.burst("star", rect.get_center(), Feel.count(c, "star3_stars", 22), 260.0, 0.9, 9.0, [Color("#ffe14d"), Color("#ffb03b"), Color.WHITE], 380.0, 1.2, 180.0)
+	UIFx.particles.burst_confetti(rect.get_center(), Feel.count(c, "star3_confetti", 36))
+	_banner("3 STARS!", Color("#ffe14d"), Feel.count(c, "star3_text_size", 64))
+
+
+## Big bouncy words in the middle of the screen.
+func _banner(text: String, color: Color, font_size: int) -> void:
+	# One banner at a time: a second one waits its turn.
+	var now := Time.get_ticks_msec() / 1000.0
+	var wait := _banner_free_at - now
+	_banner_free_at = maxf(now, _banner_free_at) + Feel.num("celebrations", "banner_seconds", 1.4) * 0.8
+	if wait > 0.0:
+		get_tree().create_timer(wait).timeout.connect(_show_banner.bind(text, color, font_size))
+	else:
+		_show_banner(text, color, font_size)
+
+
+func _show_banner(text: String, color: Color, font_size: int) -> void:
+	var title := UIStyle.label(text, "title", color, HORIZONTAL_ALIGNMENT_CENTER)
+	title.add_theme_font_size_override("font_size", font_size)
+	title.add_theme_constant_override("outline_size", UIStyle.outline_for(font_size))
+	title.z_index = OVER_FIELD
+	add_child(title)
+	var screen := get_viewport_rect().size
+	title.size = Vector2(screen.x, 0)
+	title.reset_size()
+	title.size.x = screen.x
+	title.position = Vector2(0, screen.y * 0.36)
+	title.pivot_offset = title.size / 2.0
+	title.scale = Vector2(0.2, 0.2)
+	var seconds := Feel.num("celebrations", "banner_seconds", 1.4)
+	var tween := title.create_tween()
+	tween.tween_property(title, "scale", Vector2(1.15, 1.15), 0.22).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(title, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_SINE)
+	tween.tween_interval(maxf(0.1, seconds - 0.7))
+	tween.set_parallel()
+	tween.tween_property(title, "modulate:a", 0.0, 0.3)
+	tween.tween_property(title, "position:y", title.position.y - 40.0, 0.3)
+	tween.chain().tween_callback(title.queue_free)
+
+
+# --- The fight: Rally and tools -------------------------------------------------------
+
+## The buttons under the field: Rally, then one per tool (each works once a
+## fight). Tap one, then the field.
+func _refresh_actions() -> void:
+	var key := str([duel.phase, duel.rally_ready[0], duel.tools[0], duel.tools_ready[0], _selected_tool, _rally_selected])
+	if key == _actions_key:
+		return
+	_actions_key = key
+	for child in _actions.get_children():
+		_actions.remove_child(child)
 		child.queue_free()
-	_shop = {}
-	if duel.phase != _panel_phase:
-		# A new part of the round: the panel springs in.
-		_panel_phase = duel.phase
-		(func() -> void: UIKit.pop_in(_panel_box, 0.92, Feel.num("ui", "panel_seconds", 0.32))).call_deferred()
-	match duel.phase:
-		"draft":
-			_build_shop()
-		"place":
-			_place_panel()
-		"fight":
-			_fight_panel()
-		"round_over":
-			_round_panel()
-	# Nothing to show (picking starters, match over): no empty panel.
-	_panel_box.visible = _panel.get_child_count() > 0
-
-
-## The strip across the top of the panel: a title on a wooden trail sign
-## (and a short hint under it, if any) on the left, `right` (chips or a
-## button) on the right. Tapping the title calls `on_title`, if given.
-func _heading(title: String, subtitle := "", icon_key := "", right: Control = null, on_title := Callable()) -> void:
-	var row := UIStyle.hbox("s")
-	_fill_heading(row, title, subtitle, icon_key, right, on_title)
-	_panel.add_child(row)
-
-
-func _fill_heading(row: HBoxContainer, title: String, subtitle := "", icon_key := "", right: Control = null, on_title := Callable()) -> void:
-	row.custom_minimum_size.y = UIStyle.num("button", "min_height", 88)
-	if icon_key != "":
-		row.add_child(UIStyle.icon(icon_key, UIStyle.color("gold"), 52))
-	var titles := UIStyle.vbox("xs")
-	titles.add_theme_constant_override("separation", 2)
-	titles.alignment = BoxContainer.ALIGNMENT_CENTER
-	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var widest := 640.0 - (right.get_combined_minimum_size().x + UIStyle.space("s") if right != null else 0.0)
-	var plank := UIStyle.sign(title, "body" if on_title.is_valid() else "large", widest - 80.0)
-	plank.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	titles.add_child(plank)
-	if subtitle != "":
-		var sub := UIStyle.label(subtitle, "small", UIStyle.color("text_soft"))
-		sub.clip_text = true
-		sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-		sub.custom_minimum_size.x = 0
-		titles.add_child(sub)
-	row.add_child(titles)
-	if on_title.is_valid():
-		titles.mouse_filter = Control.MOUSE_FILTER_PASS
-		UIKit.on_tap(titles, on_title)
-	if right != null:
-		right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		row.add_child(right)
-
-
-## A row of big buttons sharing the panel's width.
-func _buttons(row_items: Array) -> HBoxContainer:
-	var row := UIStyle.hbox("s")
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	for b in row_items:
-		(b as Control).size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		row.add_child(b)
-	_panel.add_child(row)
-	return row
-
-
-# Shopping: your own Watering Hole, and training your herd.
-
-## The shop: a strip (title and counts, or the picked card and its Buy or
-## Train button), two rows of three big cards, your herd's slots, and
-## Reroll and Done. Built once a round; _refresh_shop() keeps it up to date.
-func _build_shop() -> void:
-	var strip := UIStyle.hbox("s")
-	strip.custom_minimum_size.y = UIStyle.num("button", "min_height", 88)
-	_panel.add_child(strip)
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", UIStyle.space("s"))
-	grid.add_theme_constant_override("v_separation", UIStyle.space("s"))
-	grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	var cells := []
-	for i in duel.shops[0].size():
-		var cell := Control.new()
-		cell.custom_minimum_size = _shop_card_size()
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		grid.add_child(cell)
-		cells.append(cell)
-	_panel.add_child(grid)
-	var herd_row := UIStyle.hbox("xs")
-	herd_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var herd_cells := []
-	for i in int(duel.rules.herd_max):
-		var cell := Control.new()
-		cell.custom_minimum_size = _herd_slot_size()
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		herd_row.add_child(cell)
-		herd_cells.append(cell)
-	_panel.add_child(herd_row)
-	var reroll := UIStyle.button("Reroll", "secondary", "reroll", int(duel.rules.reroll_cost))
-	reroll.pressed.connect(_reroll_pressed)
-	var finish := UIStyle.button("Done", "primary")
-	finish.pressed.connect(func() -> void:
-		_selected_market = -1
-		_selected_herd = -1
-		duel.finish_shopping(0)
-	)
-	var buttons := _buttons([reroll, finish])
-	_shop = {"round": duel.round_number, "strip": strip, "strip_key": "", "cells": cells, "herd_cells": herd_cells,
-		"reroll": reroll, "done": finish, "shop_key": "", "first": true}
-	_market_cards.clear()
-	_herd_chips.clear()
-	_refresh_shop()
-	_shop.first = false
-	# The herd slots and buttons pop in one after another, after the cards.
-	var step := Feel.num("ui", "stagger_seconds", 0.05)
-	var delay := step * cells.size()
-	for cell in herd_cells:
-		_pop_later(cell, delay)
-		delay += step * 0.6
-	_pop_later(buttons, delay)
-
-
-## Keeps the shop up to date: the strip, the cards (new ones pop in, bought
-## ones fade to a check mark, a picked one lifts), your herd and the buttons.
-func _refresh_shop() -> void:
-	var done: bool = duel.done_shopping[0]
-	_refresh_strip(done)
-	var cells: Array = _shop.cells
-	var key := str(duel.shops[0].map(func(item): return item.id))
-	if key != String(_shop.shop_key):
-		_shop.shop_key = key
-		_deal_cards(not bool(_shop.first))
-	for i in _market_cards.size():
-		_update_market_card(i)
-	# Your herd: a card per animal, an empty slot for each spare place.
-	var herd: Array = duel.herds[0]
-	var herd_cells: Array = _shop.herd_cells
-	_herd_chips.clear()
-	for i in herd_cells.size():
-		var cell: Control = herd_cells[i]
-		var id: String = herd[i].id if i < herd.size() else ""
-		var card: GameCard = cell.get_child(0) if cell.get_child_count() > 0 else null
-		if card == null or card.card_id != id:
-			if card != null:
-				cell.remove_child(card)
-				card.queue_free()
-			card = GameCard.make(id, cell.custom_minimum_size)
-			cell.add_child(card)
-			if id != "":
-				var index := i
-				UIKit.on_tap(card, func() -> void: _select_herd(index))
-				if _landing.has(i):
-					card.modulate.a = 0.0  # shown when the bought card lands
-		if id != "":
-			if card.stars != int(herd[i].stars):
-				card.stars = int(herd[i].stars)
-				card.queue_redraw()
-			card.selected = i == _selected_herd
-			_lift(card, card.selected)
-			_herd_chips.append(card)
-	var reroll: ChunkyButton = _shop.reroll
-	reroll.kind = "secondary" if not done and duel.acorns[0] >= int(duel.rules.reroll_cost) else "disabled"
-	reroll.disabled = done
-	var finish: ChunkyButton = _shop.done
-	finish.disabled = done
-	finish.set_label("Ready" if done else "Done")
-	finish.breathe = not done
-
-
-## The strip changes with what's picked; the new one fades in.
-func _refresh_strip(done: bool) -> void:
-	var market_picked: bool = _selected_market >= 0 and _selected_market < duel.shops[0].size() and int(duel.shops[0][_selected_market].taken) < 0
-	var herd_picked: bool = not market_picked and _selected_herd >= 0 and _selected_herd < duel.herds[0].size()
-	var key := ""
-	if done:
-		key = "done"
-	elif market_picked:
-		key = "market %d %s %s" % [_selected_market, duel.shops[0][_selected_market].id, duel.can_buy(0, _selected_market)]
-	elif herd_picked:
-		key = "herd %d %d %s" % [_selected_herd, int(duel.herds[0][_selected_herd].stars), duel.can_train(0, _selected_herd)]
-	else:
-		key = "idle %d %d" % [duel.herds[0].size(), duel.tools[0].size()]
-	if key == String(_shop.strip_key):
-		return
-	_shop.strip_key = key
-	var strip: HBoxContainer = _shop.strip
-	for child in strip.get_children():
-		strip.remove_child(child)
-		child.queue_free()
-	if done:
-		_fill_heading(strip, "Ready!", "Waiting for %s" % opponent.name)
-	elif market_picked:
-		var item: Dictionary = duel.shops[0][_selected_market]
-		var problem := duel.can_buy(0, _selected_market)
-		var buy := UIStyle.button("Buy", "primary" if problem == "" else "disabled", "", int(item.cost))
-		buy.pressed.connect(func() -> void: _buy(_selected_market))
-		var id: String = item.id
-		_fill_heading(strip, GameData.get_card(id).name, _card_line(id), "", buy, func() -> void: _show_card(id))
-	elif herd_picked:
-		var entry: Dictionary = duel.herds[0][_selected_herd]
-		var price := duel.train_cost(0, _selected_herd)
-		var problem := duel.can_train(0, _selected_herd)
-		var right: Control = null
-		if price >= 0:
-			var train := UIStyle.button("Train", "gold" if problem == "" else "disabled", "upgrade", price)
-			train.pressed.connect(_train_selected)
-			right = train
-		var line := "+%d%% health and bite" % int(duel.rules.star_bonus_pct) if price >= 0 else "Fully trained!"
-		var id: String = entry.id
-		_fill_heading(strip, GameData.get_card(id).name, line, "", right, func() -> void: _show_card(id))
-	else:
-		var counts := UIStyle.hbox("xs")
-		counts.add_child(_count_chip("paw", "%d/%d" % [duel.herds[0].size(), int(duel.rules.herd_max)]))
-		counts.add_child(_count_chip("toolbox", "%d/%d" % [duel.tools[0].size(), int(duel.rules.tools_max)]))
-		_fill_heading(strip, "Watering Hole", "", "", counts)
-	strip.modulate.a = 0.0
-	var tween := strip.create_tween()
-	tween.tween_property(strip, "modulate:a", 1.0, Feel.num("ui", "fade_seconds", 0.15))
-
-
-func _market_card(slot: int) -> GameCard:
-	var item: Dictionary = duel.shops[0][slot]
-	var card := GameCard.make(item.id, _shop_card_size())
-	UIKit.on_tap(card, func() -> void: _on_market_tapped(slot))
-	return card
-
-
-## Deals the shop's cards into their slots: the old ones flip away and the
-## new ones pop in one after another (`animated`), or just appear.
-func _deal_cards(animated: bool) -> void:
-	var cells: Array = _shop.cells
-	var step := Feel.num("ui", "stagger_seconds", 0.05)
-	_market_cards.clear()
-	for i in cells.size():
-		var cell: Control = cells[i]
-		for old in cell.get_children():
-			var leaving := old as Control
-			leaving.set_meta("leaving", true)
-			var out := leaving.create_tween()
-			out.tween_property(leaving, "scale", Vector2(0.2, 0.2), 0.12).set_delay(step * i * 0.5).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_IN)
-			out.parallel().tween_property(leaving, "modulate:a", 0.0, 0.12).set_delay(step * i * 0.5)
-			out.tween_callback(leaving.queue_free)
-		if i >= duel.shops[0].size():
-			continue
-		var card := _market_card(i)
-		cell.add_child(card)
-		_market_cards.append(card)
-		card.scale = Vector2(0.4, 0.4)
-		card.modulate.a = 0.0
-		var tween := card.create_tween()
-		tween.tween_interval((0.14 if animated else 0.0) + step * i)
-		tween.tween_property(card, "modulate:a", 1.0, 0.1)
-		tween.parallel().tween_property(card, "scale", Vector2.ONE, Feel.num("ui", "panel_seconds", 0.32)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-
-## Brings one shop card up to date: price, what you can afford, whether it's
-## picked (it lifts), bought (it fades to a check mark) or a copy of one of
-## yours (a pulsing extra star).
-func _update_market_card(i: int) -> void:
-	var card: GameCard = _market_cards[i]
-	var item: Dictionary = duel.shops[0][i]
-	var taken := int(item.taken)
-	card.cost = int(item.cost)
-	card.affordable = duel.acorns[0] >= int(item.cost) or taken >= 0
-	card.selected = i == _selected_market and taken < 0
-	_lift(card, card.selected)
-	if taken >= 0 and card.done < 1.0 and not card.has_meta("fading"):
-		card.set_meta("fading", true)
-		card.create_tween().tween_property(card, "done", 1.0, 0.25).set_delay(0.15)
-	var target := duel.merge_target(0, item.id) if taken < 0 and not GameData.is_tool(item.id) else -1
-	var stars := int(duel.herds[0][target].stars) + 1 if target >= 0 else 0
-	if stars != card.stars:
-		card.stars = stars
-		card.star_preview = target >= 0
-		card.animate(target >= 0)
-		card.queue_redraw()
-
-
-## Lifts a picked card a little (and lets it back down), smoothly.
-func _lift(card: Control, on: bool) -> void:
-	if bool(card.get_meta("lifted", false)) == on:
-		return
-	card.set_meta("lifted", on)
-	var lift := UIStyle.num("card", "selected_lift", 1.06)
-	card.pivot_offset = card.size / 2.0
-	card.create_tween().tween_property(card, "scale", Vector2.ONE * (lift if on else 1.0), 0.2).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-
-
-## Shop cards bob gently, each a little out of step with the others.
-func _bob_cards(delta: float) -> void:
-	if _shop.is_empty():
-		return
-	_bob_time += delta
-	var amount := Feel.num("ui", "card_bob_pixels", 3.0)
-	var period := maxf(0.2, Feel.num("ui", "card_bob_seconds", 2.6))
-	for i in _market_cards.size():
-		var card: Control = _market_cards[i]
-		if is_instance_valid(card):
-			card.position.y = sin(_bob_time * TAU / period + i * 1.9) * amount
-
-
-## Pops a control in after `delay` seconds.
-func _pop_later(control: Control, delay: float) -> void:
-	control.modulate.a = 0.0
-	get_tree().create_timer(delay).timeout.connect(func() -> void:
-		if is_instance_valid(control):
-			UIKit.pop_in(control, 0.6, Feel.num("ui", "panel_seconds", 0.32)))
-
-
-func _reroll_pressed() -> void:
-	if duel.acorns[0] < int(duel.rules.reroll_cost):
-		Sound.play("error")
-		_set_status("Not enough Acorns", UIStyle.color("danger").lightened(0.4))
-		return
-	Sound.play("whoosh", -6.0)
-	duel.reroll(0)
-
-
-func _shop_card_size() -> Vector2:
-	return SHOP_CARD_SHORT if get_viewport_rect().size.y < SHORT_SCREEN else SHOP_CARD
-
-
-func _herd_slot_size() -> Vector2:
-	return HERD_SLOT_SHORT if get_viewport_rect().size.y < SHORT_SCREEN else HERD_SLOT
-
-
-## One short line about a card for the strip: its ability, or what a copy
-## does.
-func _card_line(id: String) -> String:
-	var card := GameData.get_card(id)
-	if not GameData.is_tool(id) and duel.merge_target(0, id) >= 0:
-		return "A copy: +1 star"
-	var pack := " ×%d" % int(card.count) if int(card.get("count", 1)) > 1 else ""
-	return String(card.ability.name) + pack
-
-
-## The card's full details (stats and ability), in a popup.
-func _show_card(id: String) -> void:
-	Modal.open(AnimalDetail.create(id), GameData.get_card(id).name)
-
-
-## A small chip with an icon and a count, like the herd's "3/6".
-func _count_chip(icon_key: String, text: String) -> Control:
-	var row := UIStyle.hbox("xs")
-	row.add_theme_constant_override("separation", 4)
-	row.add_child(UIStyle.icon(icon_key, Color.WHITE, 36))
-	row.add_child(UIStyle.label(text, "small"))
-	return UIStyle.chip(row)
-
-
-
-
-
-
-
-
-func _train_selected() -> void:
-	var problem := duel.can_train(0, _selected_herd)
-	if problem != "":
-		Sound.play("error")
-		_set_status(problem, UIStyle.color("danger").lightened(0.4))
-		return
-	var index := _selected_herd
-	if duel.train(0, index):
-		_star_up(index)
-
-
-## A herd animal gained a star: it flashes and bounces, and stars burst out.
-func _star_up(index: int) -> void:
-	if _shop.is_empty() or index >= (_shop.herd_cells as Array).size():
-		return
-	var cell: Control = _shop.herd_cells[index]
-	if cell.get_child_count() == 0:
-		return
-	var card: GameCard = cell.get_child(0)
-	card.flash = 1.0
-	card.create_tween().tween_property(card, "flash", 0.0, 0.5).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	_squash(card)
-	UIFx.stars(cell.get_global_rect().get_center(), Feel.count("effects", "upgrade_sparkles", 14) / 2)
-
-
-func _on_market_tapped(slot: int) -> void:
-	if duel.phase != "draft" or int(duel.shops[0][slot].taken) >= 0:
-		return
-	if _selected_market == slot and duel.can_buy(0, slot) == "":
-		_buy(slot)
-		return
-	Sound.play("select")
-	_selected_market = slot
-	_selected_herd = -1
-
-
-func _buy(slot: int) -> void:
-	var problem := duel.can_buy(0, slot)
-	if problem != "":
-		Sound.play("error")
-		_set_status(problem, UIStyle.color("danger").lightened(0.4))
-		return
-	var item: Dictionary = duel.shops[0][slot]
-	var id: String = item.id
-	var from := (_market_cards[slot] as Control).get_global_rect()
-	var tool := GameData.is_tool(id)
-	var target := duel.merge_target(0, id) if not tool else -1
-	var index: int = target if target >= 0 else duel.herds[0].size()
-	if not tool and target < 0:
-		_landing[index] = true
-	duel.buy(0, slot)
-	UIFx.particles.burst_coins(from.get_center(), Feel.count("effects", "coin_burst", 8))
-	if tool:
-		# Tools go in your tool belt: up toward the counts in the strip.
-		var strip: Control = _shop.strip
-		var to := Rect2(strip.get_global_rect().end - Vector2(150, 70), Vector2(60, 60))
-		_fly_card(id, from, to, func() -> void: UIFx.tap(to.get_center()))
-		return
-	var cell: Control = _shop.herd_cells[index]
-	_fly_card(id, from, cell.get_global_rect(), func() -> void: _land(index, target >= 0))
-
-
-## A bought card flies along an arc from the shop to its place.
-func _fly_card(id: String, from: Rect2, to: Rect2, on_land: Callable) -> void:
-	var flyer := GameCard.make(id, from.size)
-	flyer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	flyer.position = from.position
-	flyer.pivot_offset = from.size / 2.0
-	UIFx.air.add_child(flyer)
-	var start := from.get_center()
-	var end := to.get_center()
-	var peak := (start + end) / 2.0 + Vector2(0, -Feel.num("ui", "fly_arc_pixels", 140.0))
-	var end_scale := Vector2(to.size.x / from.size.x, to.size.y / from.size.y)
-	var size := from.size
-	Sound.play("whoosh", -8.0)
-	var tween := flyer.create_tween()
-	tween.tween_method(func(t: float) -> void:
-		var at := start.lerp(peak, t).lerp(peak.lerp(end, t), t)
-		flyer.position = at - size / 2.0
-		flyer.scale = Vector2.ONE.lerp(end_scale, t) * (1.0 + 0.12 * sin(t * PI))
-		flyer.rotation = -0.22 * sin(t * PI)
-	, 0.0, 1.0, Feel.num("ui", "fly_seconds", 0.5)).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tween.tween_callback(func() -> void:
-		flyer.queue_free()
-		on_land.call())
-
-
-## The card lands in your herd: it squashes, bounces, and kicks up dust. A
-## copy instead adds a star to the one already there.
-func _land(index: int, merged: bool) -> void:
-	_landing.erase(index)
-	if _shop.is_empty() or index >= (_shop.herd_cells as Array).size():
-		return
-	var cell: Control = _shop.herd_cells[index]
-	if cell.get_child_count() == 0:
-		return
-	var card: GameCard = cell.get_child(0)
-	card.modulate.a = 1.0
-	_squash(card)
-	var rect := cell.get_global_rect()
-	UIFx.dust(Vector2(rect.get_center().x, rect.end.y - 4.0), rect.size.x * 0.8)
-	Sound.play("land")
-	if merged:
-		_star_up(index)
-
-
-## A quick squash and bounce back.
-func _squash(card: Control) -> void:
-	var amount := Feel.num("ui", "land_squash", 0.22)
-	card.pivot_offset = Vector2(card.size.x / 2.0, card.size.y)
-	card.scale = Vector2(1.0 + amount, 1.0 - amount)
-	var tween := card.create_tween()
-	tween.tween_property(card, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
-	tween.tween_callback(func() -> void:
-		card.pivot_offset = card.size / 2.0
-		card.set_meta("lifted", false))
-
-
-# Placing.
-
-func _place_panel() -> void:
-	var waiting: bool = duel.ready[0]
-	_heading("Place your herd", "Tap an animal, then where it should start." if not waiting else "Waiting for %s..." % opponent.name)
-	var row := UIKit.hbox(8)
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	for i in duel.herds[0].size():
-		row.add_child(_herd_chip(i, Vector2(92, 122)))
-	if duel.herds[0].is_empty():
-		row.add_child(UIKit.label("No animals this round!", 20, UIKit.TEXT_DIM))
-	_panel.add_child(row)
-	if not duel.tools[0].is_empty():
-		var names := []
-		for id in duel.tools[0]:
-			names.append(GameData.get_card(id).name)
-		_panel.add_child(UIKit.label("Tools for the fight: " + ", ".join(names), 18, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
-	var go := UIStyle.button("Ready!", "primary")
-	go.disabled = waiting
-	go.pressed.connect(func() -> void:
-		_selected_herd = -1
-		_field.highlight = ""
-		Sound.play("select")
-		duel.set_ready(0)
-	)
-	_buttons([go])
-
-
-func _herd_chip(index: int, chip_size: Vector2) -> Control:
-	var card := GameCard.make(duel.herds[0][index].id, chip_size)
-	card.stars = int(duel.herds[0][index].stars)
-	card.show_habitat = chip_size.x >= SHOP_CARD.x * 0.6
-	card.selected = index == _selected_herd
-	UIKit.on_tap(card, func() -> void: _select_herd(index))
-	return card
-
-
-func _select_herd(index: int) -> void:
-	if duel.phase == "draft" and not duel.done_shopping[0]:
-		# While shopping, a herd animal is picked to train.
-		Sound.play("select")
-		_selected_herd = -1 if _selected_herd == index else index
-		_selected_market = -1
-		return
-	if duel.phase != "place" or duel.ready[0]:
-		return
-	Sound.play("select")
-	_selected_herd = -1 if _selected_herd == index else index
-	if _selected_herd >= 0:
-		var card := GameData.get_card(duel.herds[0][_selected_herd].id)
-		_field.highlight = "own_half"
-		_set_status("%s: tap where it should start, on your half." % card.name)
-	else:
-		_field.highlight = ""
-
-
-# The fight.
-
-func _fight_panel() -> void:
-	_heading("Fight!", "Tap Rally or a tool, then the field", "tab_battle")
-	var row := UIKit.hbox(8)
-	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_child(_rally_chip())
-	for i in duel.tools[0].size():
-		row.add_child(_tool_chip(i))
-	_panel.add_child(row)
-	var speed := UIStyle.button("Speed ×2" if not _fast else "Normal speed", "secondary", "", -1, "body")
-	speed.pressed.connect(func() -> void: _fast = not _fast)
-	_buttons([speed])
-
-
-## Rally, once a fight: the animals around the spot you tap get fired up.
-func _rally_chip() -> Control:
-	var ready: bool = duel.rally_ready[0]
-	var box := PanelContainer.new()
-	var frame := UIKit.box(UIKit.PANEL, 12, 6)
-	frame.set_border_width_all(4 if _rally_selected else 2)
-	frame.border_color = UIKit.YELLOW if _rally_selected else Color("#ff9f43")
-	box.add_theme_stylebox_override("panel", frame)
-	var row := UIKit.hbox(6)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(row)
-	var art := IconArt.make(GameData.ui_icon("whistle"), Color("#ff9f43"), IconArt.Shape.ROUNDED)
-	art.custom_minimum_size = Vector2(72, 72)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(art)
-	row.add_child(UIKit.label("Rally!" if ready else "Rallied", 20, UIKit.TEXT))
-	if not ready:
-		box.modulate = Color(1, 1, 1, 0.45)
-		return box
-	UIKit.on_tap(box, func() -> void:
-		Sound.play("select")
+	var rally := UIStyle.button("Rally", "gold" if _rally_selected else "secondary", "whistle")
+	rally.disabled = not duel.rally_ready[0] or duel.phase != "fight"
+	rally.pressed.connect(func() -> void:
 		_rally_selected = not _rally_selected
 		_selected_tool = -1
-		_field.highlight = "field" if _rally_selected else ""
-		if _rally_selected:
-			_set_status("Rally: tap where your animals are fighting.")
-	)
-	return box
+		_field.highlight = "field" if _rally_selected else "")
+	_actions.add_child(rally)
+	for i in duel.tools[0].size():
+		var id: String = duel.tools[0][i]
+		var button := ChunkyButton.make("", "gold" if i == _selected_tool else "tool")
+		button.square = true
+		var art := TextureRect.new()
+		art.texture = UIKit.icon(GameData.card_icon(id))
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.custom_minimum_size = Vector2(54, 54)
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		button.content.add_child(art)
+		button.disabled = i >= duel.tools_ready[0].size() or not bool(duel.tools_ready[0][i]) or duel.phase != "fight"
+		var index: int = i
+		button.pressed.connect(func() -> void:
+			_selected_tool = -1 if _selected_tool == index else index
+			_rally_selected = false
+			_field.highlight = "field" if _selected_tool >= 0 else "")
+		_actions.add_child(button)
 
-
-func _tool_chip(index: int) -> Control:
-	var id: String = duel.tools[0][index]
-	var box := PanelContainer.new()
-	var frame := UIKit.box(UIKit.PANEL, 12, 6)
-	frame.set_border_width_all(4 if index == _selected_tool else 2)
-	frame.border_color = UIKit.YELLOW if index == _selected_tool else UIKit.GREY
-	box.add_theme_stylebox_override("panel", frame)
-	var row := UIKit.hbox(6)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(row)
-	var art := UIKit.card_art(id)
-	art.custom_minimum_size = Vector2(72, 72)
-	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(art)
-	row.add_child(UIKit.label(GameData.get_card(id).name, 20, UIKit.TEXT))
-	UIKit.on_tap(box, func() -> void:
-		Sound.play("select")
-		_selected_tool = -1 if _selected_tool == index else index
-		_rally_selected = false
-		_field.highlight = "field" if _selected_tool >= 0 else ""
-		if _selected_tool >= 0:
-			_set_status("%s: tap the field to use it." % GameData.get_card(id).name)
-	)
-	return box
-
-
-# The round's results.
-
-func _round_panel() -> void:
-	var r := duel.last_round
-	var winner := int(r.winner)
-	var title := "You won round %d!" % int(r.round) if winner == 0 else ("%s won round %d" % [opponent.name, int(r.round)] if winner == 1 else "Round %d: a tie" % int(r.round))
-	_heading(title, "", "trophy" if winner == 0 else "")
-	var lines := []
-	var lost: Array = r.hearts_lost
-	var standing: Array = r.standing
-	if winner == 0:
-		lines.append("%s loses %d heart%s (%d of your animals still standing)." % [opponent.name, lost[1], "" if int(lost[1]) == 1 else "s", standing[0]])
-		lines.append("%s gets %d bonus Acorns next round." % [opponent.name, int(duel.rules.loser_bonus)])
-	elif winner == 1:
-		lines.append("You lose %d heart%s (%d of theirs still standing)." % [lost[0], "" if int(lost[0]) == 1 else "s", standing[1]])
-		lines.append("You get %d bonus Acorns next round." % int(duel.rules.loser_bonus))
-	else:
-		lines.append("Nobody loses hearts.")
-	if int(r.stolen[1]) > 0:
-		lines.append("%s's Raccoon stole %d of your Acorns." % [opponent.name, int(r.stolen[1])])
-	var interest: Array = r.get("interest", [0, 0])
-	if int(interest[0]) > 0:
-		lines.append("Interest on your savings: +%d Acorns." % int(interest[0]))
-	var wins := int(duel.streak[0])
-	if duel.streak_bonus(wins) > 0:
-		lines.append("Win streak %d: +%d Acorns next round!" % [wins, duel.streak_bonus(wins)])
-	if duel.round_number + 1 == duel.max_rounds():
-		lines.append("Last round next! Then whoever has more hearts wins.")
-	for line in lines:
-		_panel.add_child(UIKit.label(line, 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	var next := UIStyle.button("Next round", "primary")
-	next.pressed.connect(func() -> void:
-		Sound.play("select")
-		duel.next_round()
-	)
-	_buttons([next])
-
-
-# --- The field -------------------------------------------------------------
 
 func _on_field_tapped(at: Vector2i) -> void:
-	match duel.phase:
-		"place":
-			if duel.ready[0]:
-				return
-			var hit := duel.herd_index_at(0, at.x, at.y)
-			if hit >= 0 and hit != _selected_herd:
-				_select_herd(hit)
-				return
-			if _selected_herd < 0:
-				_set_status("Tap one of your animals first.")
-				return
-			var spot := BattleSim.tile_center(at.x, at.y)
-			if not DraftMatch.can_start_at(0, spot.y):
-				Sound.play("error")
-				_set_status("Animals start on your half of the field.", UIKit.RED.lightened(0.3))
-				return
-			if duel.move(0, _selected_herd, spot.x, spot.y):
-				Sound.play("release", -2.0, 0.08)
-				_selected_herd = -1
-				_field.highlight = ""
-				_set_status("Moved. Tap another animal, or press Ready.")
-		"fight":
-			if _rally_selected:
-				if duel.rally(0, at.x, at.y):
-					_field.add_events(duel.sim.take_events())
-				_rally_selected = false
-				_field.highlight = ""
-				return
-			if _selected_tool < 0:
-				_set_status("Tap Rally or a tool first.")
-				return
-			if duel.use_tool(0, _selected_tool, at.x, at.y):
-				_field.add_events(duel.sim.take_events())
-				_selected_tool = -1
-				_field.highlight = ""
-
-
-## A short message over the bottom of the field that fades after a moment.
-func _set_status(text: String, color := Color.WHITE) -> void:
-	if _toast == null or text == "":
+	if duel.phase != "fight":
 		return
-	_toast_label.text = text
-	_toast_label.add_theme_color_override("font_color", color)
-	# As wide as the text, up to most of the field; longer text wraps.
-	var font := _toast_label.get_theme_font("font")
-	var px := _toast_label.get_theme_font_size("font_size")
-	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, px).x + UIStyle.outline_for(px) * 2.0
-	var widest := minf(_field.size.x - UIStyle.space("l") * 2.0, 600.0)
-	_toast_label.custom_minimum_size.x = minf(text_width, widest)
-	_toast.size = Vector2.ZERO
-	_toast.reset_size()
-	# Pinned to the bottom middle of the field, even as the field resizes.
-	var toast_size := _toast.size
-	var gap := float(UIStyle.space("s"))
-	_toast.anchor_left = 0.5
-	_toast.anchor_right = 0.5
-	_toast.anchor_top = 1.0
-	_toast.anchor_bottom = 1.0
-	_toast.offset_left = -toast_size.x / 2.0
-	_toast.offset_right = toast_size.x / 2.0
-	_toast.offset_top = -toast_size.y - gap
-	_toast.offset_bottom = -gap
-	_toast.pivot_offset = toast_size / 2.0
-	if _toast_tween != null and _toast_tween.is_valid():
-		_toast_tween.kill()
-	_toast.scale = Vector2(0.85, 0.85)
-	_toast_tween = _toast.create_tween()
-	_toast_tween.tween_property(_toast, "modulate:a", 1.0, 0.12)
-	_toast_tween.parallel().tween_property(_toast, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_toast_tween.tween_interval(Feel.num("ui", "toast_seconds", 2.2))
-	_toast_tween.tween_property(_toast, "modulate:a", 0.0, 0.3)
+	if _rally_selected:
+		if duel.rally(0, at.x, at.y):
+			_field.add_events(duel.sim.take_events())
+		_rally_selected = false
+		_field.highlight = ""
+		return
+	if _selected_tool >= 0 and duel.use_tool(0, _selected_tool, at.x, at.y):
+		_field.add_events(duel.sim.take_events())
+		_selected_tool = -1
+		_field.highlight = ""
+
+
+# --- The rival's reactions -------------------------------------------------
+
+## The rival reacts with one of their emotes (rivals.json): a picture in a
+## bubble by their face (no words), and their face changes for a moment.
+func _rival_says(moment: String) -> bool:
+	var emote := GameData.find_by_id(GameData.emotes, opponent.get("emotes", {}).get(moment, ""))
+	var now := Time.get_ticks_msec() / 1000.0
+	if emote.is_empty() or now < _emote_free_at or not _result.is_empty():
+		return false
+	var seconds := Feel.num("rivals", "emote_seconds", 2.4)
+	_emote_free_at = now + maxf(seconds, Feel.num("rivals", "emote_gap_seconds", 5.0))
+	Sound.play("emote", -2.0)
+	var portrait := _rival_portrait
+	portrait.mood = {"winning": "happy", "big_hit": "happy", "losing": "sad"}.get(moment, "normal")
+	portrait.pivot_offset = portrait.size / 2.0
+	var bounce := portrait.create_tween()
+	bounce.tween_property(portrait, "scale", Vector2(1.18, 0.88), 0.08)
+	bounce.tween_property(portrait, "scale", Vector2.ONE, 0.45).set_trans(Tween.TRANS_ELASTIC).set_ease(Tween.EASE_OUT)
+	bounce.tween_interval(maxf(0.0, seconds - 0.5))
+	bounce.tween_callback(func() -> void: portrait.mood = "normal")
+	var bubble := _emote_bubble(emote)
+	bubble.z_index = OVER_FIELD
+	add_child(bubble)
+	bubble.reset_size()
+	var anchor := portrait.get_global_rect()
+	bubble.position = Vector2(anchor.get_center().x - bubble.size.x + 12.0, anchor.end.y + 2.0)
+	bubble.pivot_offset = Vector2(bubble.size.x - 12.0, 0)
+	bubble.scale = Vector2(0.2, 0.2)
+	var tween := bubble.create_tween()
+	tween.tween_property(bubble, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_interval(maxf(0.2, seconds - 0.55))
+	tween.tween_property(bubble, "modulate:a", 0.0, 0.25)
+	tween.tween_callback(bubble.queue_free)
+	return true
+
+
+## A speech bubble with an emote's picture (no words).
+func _emote_bubble(emote: Dictionary) -> Control:
+	var style := UIKit.box(Color.WHITE, 18, 6)
+	style.corner_radius_top_right = 4
+	style.set_border_width_all(3)
+	style.border_color = UIStyle.color("outline")
+	var bubble := PanelContainer.new()
+	bubble.add_theme_stylebox_override("panel", style)
+	bubble.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var art := IconArt.make(GameData.emote_icon(emote.id), Color(emote.get("color", "#888888")))
+	art.custom_minimum_size = Vector2(56, 56)
+	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bubble.add_child(art)
+	return bubble
+
+
+## The rival cheers their own big hits (once a round).
+func _on_strong_hit(team: int) -> void:
+	if team == bot.team and _big_hit_round != duel.round_number and _rival_says("big_hit"):
+		_big_hit_round = duel.round_number
+
+
+# --- Popups ------------------------------------------------------------------------
+
+## A dimmed full-screen layer with a panel in the middle holding `content`.
+## With `tap_outside_closes`, tapping the dim closes it.
+func _overlay(content: Control, tap_outside_closes := false) -> Control:
+	var layer := Control.new()
+	layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.z_index = OVER_FIELD  # above flying animals
+	add_child(layer)
+	var dim := ColorRect.new()
+	dim.color = Color(0, 0, 0, 0.55)
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(dim)
+	if tap_outside_closes:
+		dim.gui_input.connect(func(event: InputEvent) -> void:
+			if event is InputEventMouseButton and event.pressed:
+				layer.queue_free())
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	layer.add_child(center)
+	var panel := UIStyle.panel(content)
+	panel.custom_minimum_size = Vector2(520, 0)
+	center.add_child(panel)
+	dim.modulate.a = 0.0
+	dim.create_tween().tween_property(dim, "modulate:a", 1.0, 0.2)
+	(func() -> void: UIKit.pop_in(panel, 0.8, Feel.num("ui", "panel_seconds", 0.32))).call_deferred()
+	return layer
 
 
 # --- End of the match ------------------------------------------------------
@@ -1602,33 +1054,32 @@ func _end_match() -> void:
 	_record(outcome)
 	Sound.stop_music()
 	Sound.play({"win": "victory", "loss": "defeat", "draw": "reveal"}[outcome])
-	var box := UIKit.vbox(14)
+	var box := UIStyle.vbox("m")
 	var titles := {"win": "Victory!", "loss": "Defeat", "draw": "Draw"}
-	if outcome == "win" and duel.hearts[0] <= Feel.count("celebrations", "comeback_hearts", 5):
+	if outcome == "win" and _most_behind >= 2:
 		titles.win = "Comeback Victory!"
 	var boss_beaten: bool = _result.get("boss_beaten", false)
 	if boss_beaten:
 		titles.win = "Boss Defeated!"
-	var colors := {"win": UIKit.YELLOW, "loss": UIKit.RED, "draw": UIKit.TEXT}
-	box.add_child(UIKit.label(titles[outcome], 52, colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
+	var colors := {"win": UIStyle.color("gold"), "loss": UIStyle.color("danger").lightened(0.3), "draw": UIStyle.color("text")}
+	box.add_child(UIStyle.label(titles[outcome], "title", colors[outcome], HORIZONTAL_ALIGNMENT_CENTER))
 	box.add_child(_rival_reaction(outcome))
-	box.add_child(UIKit.label("Hearts left  %d - %d" % [duel.hearts[0], duel.hearts[1]], 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
-	box.add_child(UIKit.label("%d round%s" % [duel.round_number, "" if duel.round_number == 1 else "s"], 22, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	box.add_child(UIStyle.label("%d - %d" % [duel.wins[0], duel.wins[1]], "title", Color(0, 0, 0, 0), HORIZONTAL_ALIGNMENT_CENTER))
 	if opponent.boss:
 		box.add_child(_boss_lines(boss_beaten))
-	var ok := UIKit.button("OK", UIKit.GREEN, 28, Vector2(220, 84))
+	var ok := UIStyle.button("OK", "primary")
+	ok.min_width = 240.0
 	ok.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	ok.pressed.connect(_back_to_menu)
 	box.add_child(ok)
-	# A beaten boss gets its own moment over the field first.
+	# A beaten boss gets its own moment first.
 	var show_result := func() -> void:
 		_overlay(box)
 		if outcome == "win":
-			# A shower of confetti and coins for the winner.
 			var screen_size := get_viewport_rect().size
 			for i in 3:
-				_ui_fx.burst_confetti(Vector2(screen_size.x * (0.2 + 0.3 * i), screen_size.y * 0.3), Feel.count("effects", "win_confetti", 60) / 2)
-			_ui_fx.burst_coins(screen_size / 2.0 + Vector2(0, -120), Feel.count("effects", "coin_burst", 8) * 2)
+				UIFx.particles.burst_confetti(Vector2(screen_size.x * (0.2 + 0.3 * i), screen_size.y * 0.3), Feel.count("effects", "win_confetti", 60) / 2)
+			UIFx.particles.burst_coins(screen_size / 2.0 + Vector2(0, -120), Feel.count("effects", "coin_burst", 8) * 2)
 	if boss_beaten:
 		_celebrate_boss()
 		get_tree().create_timer(Feel.num("rivals", "boss_celebration_seconds", 1.8)).timeout.connect(show_result)
@@ -1636,71 +1087,56 @@ func _end_match() -> void:
 		show_result.call()
 
 
-## The rival's face and last word at the end: their winning emote if they
-## won, their losing one if you did.
+## The rival's face and their emote at the end: happy if they won, sad if
+## you did.
 func _rival_reaction(outcome: String) -> Control:
-	var row := UIKit.hbox(12)
+	var row := UIStyle.hbox("s")
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var portrait := RangerPortrait.create(opponent, 104)
 	portrait.mood = {"win": "sad", "loss": "happy"}.get(outcome, "normal")
 	row.add_child(portrait)
 	var moment: String = {"win": "losing", "loss": "winning"}.get(outcome, "start")
 	var emote := GameData.find_by_id(GameData.emotes, opponent.get("emotes", {}).get(moment, ""))
-	var words := UIKit.vbox(0)
-	words.alignment = BoxContainer.ALIGNMENT_CENTER
-	words.add_child(UIKit.label(opponent.name, 26, UIKit.TEXT))
 	if not emote.is_empty():
-		words.add_child(_emote_bubble(emote))
-	row.add_child(words)
+		row.add_child(_emote_bubble(emote))
 	return row
 
 
-## Under a boss match's result: the promotion and first-win reward, or what
-## it would have meant.
+## Under a boss match's result: where you've got to, and the first-win reward.
 func _boss_lines(beaten: bool) -> Control:
-	var box := UIKit.vbox(6)
+	var box := UIStyle.vbox("xs")
 	var next := int(opponent.arena_index) + 1
-	var text := ""
-	if beaten:
-		text = "You've earned your place in %s!" % GameData.get_arena(next).name if next < GameData.arenas.size() else "You're the champion of %s!" % GameData.get_arena(next - 1).name
-	else:
-		text = "%s still guards the way. Beat them to reach %s." % [opponent.name, GameData.get_arena(next).name] if next < GameData.arenas.size() else "%s is still the champion here." % opponent.name
-	var line := UIKit.paragraph(text, 21, UIKit.YELLOW if beaten else UIKit.TEXT)
-	line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	box.add_child(line)
+	if beaten and next < GameData.arenas.size():
+		box.add_child(UIStyle.label("On to %s!" % GameData.get_arena(next).name, "body", UIStyle.color("gold"), HORIZONTAL_ALIGNMENT_CENTER))
 	var reward: Dictionary = _result.get("boss_reward", {})
 	if not reward.is_empty():
-		box.add_child(UIKit.label("First boss win reward", 22, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
-		var row := UIKit.hbox(10)
+		var row := UIStyle.hbox("s")
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_child(UIKit.pill(GameData.ui_icon("gold"), UIKit.GOLD, "+%s" % UIKit.format_number(int(reward.gold))))
-		row.add_child(UIKit.pill(GameData.ui_icon("gems"), UIKit.GEMS, "+%d" % int(reward.gems)))
+		var gold := UIStyle.pill("gold", UIStyle.color("gold"), int(reward.gold), true)
+		row.add_child(gold)
+		row.add_child(UIStyle.pill("gems", UIStyle.color("gem"), int(reward.gems)))
 		box.add_child(row)
-		if reward.cage_id != "":
-			box.add_child(UIKit.label("and a %s!" % GameData.cages[reward.cage_id].name, 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	return box
 
 
-## Beating a boss: a gold banner, fireworks of stars and confetti, and coins.
+## Beating a boss: a gold banner, bursts of stars, and coins.
 func _celebrate_boss() -> void:
 	var screen_size := get_viewport_rect().size
-	_banner("BOSS DEFEATED!", UIKit.GOLD, Feel.count("celebrations", "banner_size", 54), opponent.name)
+	_banner("BOSS DEFEATED!", UIStyle.color("gold"), Feel.count("celebrations", "banner_size", 54))
 	Sound.play("fanfare")
 	for i in 4:
 		var at := Vector2(screen_size.x * (0.15 + 0.233 * i), screen_size.y * (0.22 + 0.08 * (i % 2)))
 		get_tree().create_timer(0.25 * i).timeout.connect(func() -> void:
-			_ui_fx.burst("star", at, Feel.count("celebrations", "star3_stars", 22), 300.0, 0.9, 9.0, [UIKit.GOLD, Color("#ffb03b"), Color.WHITE], 380.0, 1.2, 180.0)
-			Sound.play("pop")
-		)
+			UIFx.stars(at, Feel.count("celebrations", "star3_stars", 22) / 2)
+			Sound.play("pop"))
 	get_tree().create_timer(1.1).timeout.connect(func() -> void:
 		Sound.play("star3")
-		_ui_fx.burst_coins(screen_size / 2.0, Feel.count("effects", "coin_burst", 8) * 3)
-	)
+		UIFx.particles.burst_coins(screen_size / 2.0, Feel.count("effects", "coin_burst", 8) * 3))
 
 
 func _record(outcome: String) -> void:
 	_result = Profile.record_match(outcome, int(opponent.trophies), bool(opponent.boss))
-	_result["hearts"] = duel.hearts.duplicate()
+	_result["score"] = duel.wins.duplicate()
 	_result["rival"] = opponent.id
 
 
@@ -1717,3 +1153,11 @@ func _leave_now() -> void:
 	if _result.is_empty():
 		_record("loss")
 	_back_to_menu()
+
+
+## Pops a control in after `delay` seconds.
+func _pop_after(control: Control, delay: float) -> void:
+	control.modulate.a = 0.0
+	get_tree().create_timer(delay).timeout.connect(func() -> void:
+		if is_instance_valid(control):
+			UIKit.pop_in(control, 0.6, Feel.num("ui", "panel_seconds", 0.32)))

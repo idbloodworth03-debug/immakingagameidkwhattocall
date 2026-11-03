@@ -64,14 +64,20 @@ class Fighter:
 	var shield := 0
 	var lifetime := -1            # bait disappears when this reaches 0
 	var lure_radius := 0
-	## Extra per-ability state, e.g. "pounced", "hits", "run".
+	## Its class ("tank", "tank_destroyer", "ranged", "air", "specialist")
+	## and, for a Specialist, its trait (classes.json).
+	var cls := ""
+	var trait_id := ""
+	## Extra per-ability state, e.g. "hits", "burrowing".
 	var memory: Dictionary = {}
 
+	## What it does besides fighting by its class: a Specialist's trait.
 	func ability_id() -> String:
-		return card.get("ability", {}).get("id", "")
+		return trait_id
 
+	## A number for its trait, from classes.json.
 	func param(param_name: String, default: Variant = 0) -> Variant:
-		return card.get("ability", {}).get("params", {}).get(param_name, default)
+		return GameData.traits.get(trait_id, {}).get(param_name, default)
 
 	func has_tag(tag: String) -> bool:
 		return card.get("tags", []).has(tag)
@@ -145,12 +151,13 @@ static func on_own_half(team: int, y: int) -> bool:
 
 
 ## How much of a team's herd is still standing: each animal counts its card's
-## cost (split among a pack, and times its stars in Draft Duel) times the
-## share of health it has left, in thousandths of a cost point.
+## power ("cost" in animals.json; split among a pack, and times its stars in
+## Draft Duel) times the share of health it has left, in thousandths of a
+## power point.
 func herd_value(team: int) -> int:
 	var total := 0
 	for f in units(team):
-		var count := maxi(1, int(f.card.get("count", 1)))
+		var count := group_size(f.card)
 		var stars := maxi(1, int(f.memory.get("stars", 1)))
 		total += int(f.card.cost) * stars * 1000 * f.hp / maxi(1, f.max_hp) / count
 	return total
@@ -277,13 +284,29 @@ func _choose_target(f: Fighter) -> void:
 	f.target = _find_target(f)
 
 
-## Food bait close by first; then the nearest enemy in sight; failing that,
-## the nearest enemy anywhere, so nobody stands around.
+## Food bait close by first; then what its class goes after (Tank Destroyers
+## look for Tanks, Ranged for Air, within reach: classes.json "prefer"); then
+## the nearest enemy, so nobody stands around.
 func _find_target(f: Fighter) -> Fighter:
 	if not f.is_flying():
 		for t in fighters:
 			if t.kind == "bait" and t.alive and t.team != f.team and dist(f, t) <= t.lure_radius:
 				return t
+	var prefer: Dictionary = GameData.class_rules.get("prefer", {}).get(f.cls, {})
+	if not prefer.is_empty():
+		var reach := roundi(float(prefer.get("tiles", 0)) * TILE)
+		var wanted := String(prefer.get("class", ""))
+		var best: Fighter = null
+		var best_dist := 1 << 40
+		for t in fighters:
+			if t.cls != wanted or t.kind == "bait" or not can_target(f, t):
+				continue
+			var d := edge_distance(f, t)
+			if d <= reach and d < best_dist:
+				best = t
+				best_dist = d
+		if best != null:
+			return best
 	var nearest: Fighter = null
 	var nearest_dist := 1 << 40
 	for t in fighters:
@@ -327,23 +350,25 @@ func _move_toward(f: Fighter, goal: Vector2i, step_size: int) -> void:
 	BattleAbilities.on_moved(self, f)
 
 
-## Burrowing animals travel underground straight at the nearest enemy and
-## pop up as soon as one they can attack is close.
+## Burrowing animals travel underground, unseen, to just behind the enemy's
+## last row, and pop up there.
 func _move_burrowed(f: Fighter) -> void:
-	var goal: Fighter = null
-	var best := 1 << 40
+	var back: Fighter = null
 	for t in fighters:
 		if t.alive and t.team != f.team and t.is_unit() and not t.is_flying():
-			var d := edge_distance(f, t)
-			if d <= TILE:
-				f.memory.burrowing = false
-				events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
-				return
-			if d < best:
-				goal = t
-				best = d
-	if goal != null:
-		_move_toward(f, Vector2i(goal.x, goal.y), current_speed(f))
+			# The enemy furthest from the middle, on its own side.
+			if back == null or (t.y < back.y if t.team == 1 else t.y > back.y):
+				back = t
+	if back == null:
+		f.memory.burrowing = false
+		return
+	var behind := TILE if back.team == 1 else -TILE
+	var goal := Vector2i(back.x, clampi(back.y - behind, f.radius, HEIGHT - f.radius))
+	if dist_to_point(f, goal.x, goal.y) <= TILE / 2:
+		f.memory.burrowing = false
+		events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
+		return
+	_move_toward(f, goal, current_speed(f))
 
 
 ## Pushes overlapping animals apart and keeps everyone on the field.
@@ -480,10 +505,11 @@ func allies_near(team: int, px: int, py: int, radius: int) -> Array:
 
 # --- Creating fighters -----------------------------------------------------
 
-## Puts an animal card's animals on the field.
+## Puts an animal card's animals on the field (a swarm brings at most
+## classes.json "swarm_max" of them).
 func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	var card := GameData.get_card(card_id)
-	var count := int(card.get("count", 1))
+	var count := group_size(card)
 	var group := _next_group
 	_next_group += 1
 	var made := []
@@ -518,8 +544,15 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 	var tiles := float(stats.range)
 	f.attack_range = melee if tiles <= 1.0 else roundi(tiles * TILE)
 	f.speed = int(rules.speed_values.get(stats.speed, 60)) * TILE / (60 * tps)
-	f.flying = card.tags.has("flying")
-	f.targets = stats.targets
+	# Its class decides what it can hit, whether it flies, and (for Ranged)
+	# how far it reaches at least.
+	f.cls = String(card.get("class", ""))
+	f.trait_id = String(card.get("trait", ""))
+	var info: Dictionary = GameData.class_info(f.cls)
+	f.flying = bool(info.get("flying", false))
+	f.targets = String(info.get("targets", stats.targets))
+	if info.has("range"):
+		f.attack_range = maxi(f.attack_range, roundi(float(info.range) * TILE))
 	f.radius = unit_radius(card)
 	f.deploy_ticks = deploy_ticks
 	f.x = clampi(x, f.radius, WIDTH - f.radius)
@@ -601,10 +634,15 @@ static func _copy_fields(from: Object, to: Object) -> Object:
 	return to
 
 
+## How many animals a card brings: one, or a few for a swarm.
+static func group_size(card: Dictionary) -> int:
+	return clampi(int(card.get("count", 1)), 1, maxi(1, int(GameData.class_rules.get("swarm_max", 2))))
+
+
 ## How big an animal is on the field: swarm members are small, the
 ## toughest animals are big.
 static func unit_radius(card: Dictionary) -> int:
-	if int(card.get("count", 1)) > 1:
+	if group_size(card) > 1:
 		return 320
 	if float(card.stats.hp) >= 1500:
 		return 700

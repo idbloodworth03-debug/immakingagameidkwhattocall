@@ -1,0 +1,43 @@
+{
+  "_note": "Animal classes (every animal has one, in animals.json \"class\") and the Specialists' traits (\"trait\"). Rows: where a class starts, in tiles back from the middle line (Air hovers over its row). counters: extra damage (percent) one class does to another. A class's targets and range override the animal's own (Ranged reach at least `range` tiles; Air flies). line: the one short line shown when you hold a card.",
+  "classes": [
+    {"id": "tank", "name": "Tank", "icon": "class_tank", "color": "#4f8ef0", "row": "front", "targets": "ground",
+     "line": "Tough. Holds the front line."},
+    {"id": "tank_destroyer", "name": "Tank Destroyer", "icon": "class_tank_destroyer", "color": "#e4523b", "row": "middle", "targets": "ground",
+     "line": "Huge damage to Tanks."},
+    {"id": "ranged", "name": "Ranged", "icon": "class_ranged", "color": "#5ab532", "row": "back", "targets": "air_ground", "range": 5.0,
+     "line": "Hits from afar. Beats Air."},
+    {"id": "air", "name": "Air", "icon": "class_air", "color": "#3fb8e8", "row": "middle", "targets": "air_ground", "flying": true,
+     "line": "Flies. Only Ranged and Air can hit it."},
+    {"id": "specialist", "name": "Specialist", "icon": "class_specialist", "color": "#f2a93b", "row": "middle", "targets": "ground",
+     "line": "Has a special trick."}
+  ],
+  "traits": [
+    {"id": "burrow", "name": "Burrow", "icon": "trait_burrow", "row": "front",
+     "line": "Digs under and pops up behind the enemy."},
+    {"id": "splash", "name": "Splash", "icon": "trait_splash", "row": "back", "radius": 1.6, "pct": 60,
+     "line": "Every hit splashes a group."},
+    {"id": "stun", "name": "Stun", "icon": "trait_stun", "row": "middle", "every": 3, "seconds": 1.0,
+     "line": "Every third hit freezes the target."},
+    {"id": "slow", "name": "Slow", "icon": "trait_slow", "row": "middle", "pct": 40, "seconds": 2.0,
+     "line": "Hits slow enemies down."}
+  ],
+  "counters": [
+    {"from": "tank_destroyer", "to": "tank", "pct": 150},
+    {"from": "ranged", "to": "air", "pct": 50}
+  ],
+  "prefer": {
+    "_note": "Who goes after what first, if it's within this many tiles: Tank Destroyers look for Tanks, Ranged for Air.",
+    "tank_destroyer": {"class": "tank", "tiles": 7.0},
+    "ranged": {"class": "air", "tiles": 6.0}
+  },
+  "rows": {
+    "_note": "Rows in tiles back from the middle line. Animals in a row stand `spacing` tiles apart; a row too full for the field's width wraps into another `depth` tiles further back.",
+    "front": 2.2,
+    "middle": 4.4,
+    "back": 6.6,
+    "spacing": 1.7,
+    "depth": 1.2
+  },
+  "swarm_max": 2
+}

@@ -6,9 +6,9 @@
 (on an iPhone, open it in Safari and *Add to Home Screen*; see below)
 
 Den Duel is an animal battler for iOS and Android, made with Godot 4. In
-**Draft Duel** you pick a few starter animals, shop for more each round and
-train them up to 3 stars, place your herd, and watch the herds battle it out
-on an open field. Lose a fight and you lose hearts; whoever runs out first loses. You
+**Draft Duel** you make 3 picks each round (new animals, tools, or stars for
+animals you have), and the herds fight it out on their own on an open field,
+each animal in its class's row. First to 4 round wins takes the match. You
 free animals from cages (they become your draft pool) and climb through
 arenas. The rarer the card, the rarer the animal in real life: Commons are
 Least Concern species, Legendaries are Critically Endangered.
@@ -24,7 +24,7 @@ Everything runs offline on your computer, saved on the device:
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
 - **Ranger level:** an account level, plus player banners, icons and emotes to unlock
 - **Shop:** daily animal offers, cages, gold packs and cosmetics
-- **Draft Duel** against a computer opponent that gets tougher as you climb: pick 3 starters, then each round shop at your own Watering Hole (with rerolls), train animals up to 3 stars or buy copies for a free star, place your herd on your half with no clock running, then Rally once a fight and use your tools. Each player has 30 hearts; a lost fight costs the round number plus 1 for each enemy animal still standing. Save Acorns for interest (1 per 5 saved, up to 5) and win rounds in a row for streak bonuses. Reaching 3 stars, a comeback and a flawless round get their own celebrations. Every animal has a habitat: 2, 4 or 6 different animals of one habitat turn on a team bonus (Savanna attacks faster, Arctic slows, Rainforest heals...), with a tracker on the field. You play against named **Rival Rangers** (2 or 3 per arena, each with a portrait, a line, a favorite habitat or way of playing, and emotes), with a VS screen before each match; each arena's **boss** guards the way to the next one, and your first win against a boss pays a reward. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
+- **Draft Duel** against named Rival Rangers, best of 7 (first to 4 round wins). Each round you make 3 picks (round 1: 3 starting animals from your collection; then from 5 offered animals and tools, or a star for a herd animal), and the herds fight on their own by class: Tanks in front, Tank Destroyers in the middle, Ranged at the back, Air over the middle, Specialists where their trait works best. Rally once and use each tool once a fight. Each arena's boss guards the way to the next one. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
 - **Look and feel:**
   - every animal is a 3D render, with fur, real markings and its own walk and attack animations (made by our Blender pipeline in `tools/creatures/`)
   - 12 rendered arenas: an open, fenced field with themed scenery around it
@@ -96,7 +96,7 @@ Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.
 - **No sound?** Check the ring/silent switch on the side of the iPhone. Safari mutes web audio in silent mode.
 - **Dev tools:** the web version is a release build, so the developer tools in the profile are hidden.
-- **Testing switches (on right now):** `game/data/testing.json` unlocks every animal and tool, keeps gold and gems topped up at 999,999, keeps your Acorns at 99 in Draft Duel (the opponent plays normally), and shows the Developer tools (+300 trophies and more) at the bottom of your Profile, even on the website. Set each switch to `false` to play normally again, and before any real release: `python3 tools/check_release.py` fails while any is on, and the web build prints a warning.
+- **Testing switches (on right now):** `game/data/testing.json` unlocks every animal and tool, keeps gold and gems topped up at 999,999, and shows the Developer tools (+300 trophies and more) at the bottom of your Profile, even on the website. Set each switch to `false` to play normally again, and before any real release: `python3 tools/check_release.py` fails while any is on, and the web build prints a warning.
 - **Every run's build** is also under *Artifacts* on the run's page (`den-duel-web`), to download or host anywhere else.
 - **Building on your own PC** (optional): run `tools/build_web.sh` (needs Godot and Python), or use Godot's *Project > Export > Web*.
 
@@ -108,8 +108,9 @@ From the repository root (with `godot` on your PATH):
 godot --headless --path game res://tests/test_runner.tscn
 ```
 
-To see how Draft Duel plays out between two bots (match length, hearts lost,
-shopping and how close fights are; takes under a minute):
+To see how Draft Duel plays out between two bots (match length, fight
+length, herd sizes, what the bots pick and how each class does; takes under a
+minute):
 
 ```bash
 godot --headless --path game res://tests/draft_report.tscn -- 40
@@ -153,8 +154,9 @@ files in `game/data/`:
 - **New animal:** copy an entry in `animals.json` and change it. Its `unlock_arena` must be an arena id from `arenas.json`, and its tags must exist in `tags.json`. The ability `id` must be one of the types the battle engine knows (listed in `scripts/battle/battle_abilities.gd`).
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
-- **Draft Duel tuning** (hearts, starters, Acorns, the shop, stars and training, moods, Rally): `draft_rules.json`
-- **Habitat synergies** (tiers, bonuses, icons, colors): `synergies.json`; each animal's habitat is in `animals.json`
+- **Draft Duel tuning** (wins needed, picks, options, tools, stars, Rally): `draft_rules.json`
+- **Classes** (counters, rows, Specialist traits, swarm size): `classes.json`; each animal's class and trait are in `animals.json`
+- **Habitats** (flavor: names, icons, colors): `habitats.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`
 - **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`. The wood, brass and sign pieces themselves are drawn by `python3 tools/make_ui_art.py`
 - **Look and feel** (VS screen and emote timings, animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.

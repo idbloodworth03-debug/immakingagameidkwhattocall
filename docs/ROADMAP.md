@@ -51,11 +51,12 @@
 - [x] Interest, win streaks and big-moment celebrations (3 stars, comebacks, flawless rounds)
 - [x] Habitat synergies at 2, 4 and 6 different animals of a habitat
 - [x] Rival Rangers: 38 named opponents with portraits, lines, styles and emotes; a VS screen; arena bosses that guard promotion, with a first-win reward; quiet easing after 3 losses in a row
+- [x] Simpler rules: best of 7, Pick 3 each round (no shop, Acorns or hearts), five classes with counters and automatic rows, Specialist traits (Burrow, Splash, Stun, Slow), tools once a fight; habitat synergies, per-animal abilities and moods removed
 - [ ] Painted portraits for the Rival Rangers (they're drawn in code for now)
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] A balance pass for the open field, from real play
 - [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
-- [ ] Online Draft Duel: shopping and placing are turns, so it suits online play well
+- [ ] Online Draft Duel: picking is turn-based, so it suits online play well
 
 ## Phase 2: Look and feel (first pass done)
 

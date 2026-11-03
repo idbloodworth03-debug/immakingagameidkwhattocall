@@ -1,8 +1,8 @@
 class_name AnimalDetail
 extends VBoxContainer
-## Everything about one card: stats at its current level, ability, how it
-## plays in Draft Duel and (for animals) conservation status, plus the
-## Upgrade button. Works for Ranger tools too. Shown inside a Modal.
+## Everything about one card: its class (and a Specialist's trait) in one
+## line, stats at its current level, habitat and conservation status, plus
+## the Upgrade button. Works for Ranger tools too. Shown inside a Modal.
 
 const TARGET_NAMES := {"ground": "Ground", "air_ground": "Air & Ground"}
 const SPEED_NAMES := {"slow": "Slow", "medium": "Medium", "fast": "Fast", "very_fast": "Very fast"}
@@ -72,7 +72,6 @@ func _build() -> void:
 	var growth := float(GameData.progression.stat_growth_per_level)
 	var start := GameData.start_level(rarity)
 	var stats: Dictionary = animal.stats
-	_add_stat(grid, "Acorn cost", str(int(animal.cost)))
 	if is_tool:
 		_add_stat(grid, "Area", "%s tiles" % str(stats.get("radius", 0)))
 		for key in ["damage", "heal", "hp"]:
@@ -91,55 +90,26 @@ func _build() -> void:
 		if int(animal.count) > 1:
 			_add_stat(grid, "Count", "x%d" % int(animal.count))
 
-	# Ability
-	var ability_panel := UIKit.well(16)
-	add_child(ability_panel)
-	var ability_box := UIKit.vbox(4)
-	ability_panel.add_child(ability_box)
-	ability_box.add_child(UIKit.label(("Effect: " if is_tool else "Ability: ") + String(animal.ability.name), 24, UIKit.YELLOW))
-	ability_box.add_child(UIKit.paragraph(animal.ability.text, 21, UIKit.TEXT))
-
-	# How it plays in Draft Duel
-	var play_panel := UIKit.well(16)
-	add_child(play_panel)
-	var play_box := UIKit.vbox(4)
-	play_panel.add_child(play_box)
-	play_box.add_child(UIKit.label("In Draft Duel", 24, UIKit.YELLOW))
-	var lines := ["Costs %d Acorns in your shop" % int(animal.cost)]
+	# What it does, in a line: its class (and trait), or the tool's effect.
+	var what := UIKit.well(16)
+	add_child(what)
+	var what_row := UIKit.hbox(12)
+	what.add_child(what_row)
 	if is_tool:
-		lines.append("Use it once, anywhere on the field, during a fight")
+		what_row.add_child(UIKit.paragraph(GameData.card_line(animal_id), 21, UIKit.TEXT))
 	else:
-		lines.append("Joins your herd for the rest of the match, or can be one of your starters")
-		lines.append("Train it to 2 and 3 stars for more health and bite, or buy a second copy for a free star")
-	if not owned:
-		lines.append("Turns up in your shop once you've found it")
-	for line in lines:
-		play_box.add_child(UIKit.paragraph("-  " + line, 21, UIKit.TEXT))
-
-	# Habitat: its synergy, at each tier.
-	var habitat := String(animal.get("habitat", ""))
-	if not is_tool and GameData.synergies.has(habitat):
-		var syn: Dictionary = GameData.synergies[habitat]
-		var habitat_panel := UIKit.well(16)
-		add_child(habitat_panel)
-		var habitat_box := UIKit.vbox(4)
-		habitat_panel.add_child(habitat_box)
-		var habitat_row := UIKit.hbox(8)
-		habitat_row.add_child(UIKit.icon_rect(GameData.ui_icon(syn.icon), Color(syn.color), 32))
-		habitat_row.add_child(UIKit.label("Habitat: %s" % syn.name, 24, Color(syn.color).lightened(0.3)))
-		habitat_box.add_child(habitat_row)
-		var tiers: Array = GameData.synergy_tiers
-		for i in tiers.size():
-			habitat_box.add_child(UIKit.paragraph("%d different %s animals: %s" % [int(tiers[i]), syn.name, Synergies.describe(habitat, i + 1)], 19, UIKit.TEXT))
-
-	# Traits, as little chips
-	if not is_tool:
-		var traits := HFlowContainer.new()
-		traits.add_theme_constant_override("h_separation", 8)
-		traits.add_theme_constant_override("v_separation", 8)
-		add_child(traits)
-		for tag in animal.tags:
-			traits.add_child(_chip(GameData.tag_name(tag), UIKit.PANEL_LIGHT, 18))
+		var cls := GameData.class_info(GameData.class_of(animal_id))
+		what_row.add_child(UIKit.icon_rect(GameData.ui_icon(String(cls.icon)), Color(String(cls.color)), 44))
+		var words := UIKit.vbox(2)
+		words.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var trait_id := GameData.trait_of(animal_id)
+		var title_text := String(cls.name) + (" · " + String(GameData.traits[trait_id].name) if trait_id != "" else "")
+		words.add_child(UIKit.label(title_text, 26, Color(String(cls.color)).lightened(0.35)))
+		words.add_child(UIKit.paragraph(GameData.card_line(animal_id), 20, UIKit.TEXT))
+		what_row.add_child(words)
+		var habitat: Dictionary = GameData.habitats.get(String(animal.get("habitat", "")), {})
+		if not habitat.is_empty():
+			info.add_child(_chip(String(habitat.name), Color(String(habitat.color))))
 
 	# Buttons
 	if owned:

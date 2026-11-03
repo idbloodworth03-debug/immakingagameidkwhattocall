@@ -12,9 +12,11 @@ func test_every_rarity_has_animals() -> void:
 		check(not pools[rarity].is_empty(), "no animals of rarity %s" % rarity)
 
 
-func test_first_arena_fills_the_watering_hole() -> void:
-	var animals := GameData.cards_in_arena(0).filter(func(id): return not GameData.is_tool(id))
-	check(animals.size() >= int(GameData.draft_rules.market_animals), "new players own enough animals for a draft")
+func test_first_arena_fills_the_options() -> void:
+	var cards := GameData.cards_in_arena(0)
+	var animals := cards.filter(func(id): return not GameData.is_tool(id))
+	check(cards.size() >= int(GameData.draft_rules.offer_count), "enough cards to fill the options")
+	check(animals.size() >= int(GameData.draft_rules.picks_per_round), "enough animals for round 1's picks")
 
 
 func test_rarity_matches_conservation_status() -> void:

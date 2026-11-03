@@ -36,9 +36,9 @@ func _rebuild() -> void:
 	_content.add_child(intro)
 	var intro_row := UIKit.hbox(14)
 	intro.add_child(intro_row)
-	var watering_hole := UIKit.icon_rect(GameData.ui_icon("acorn"), UIKit.ACORN, 64)
+	var watering_hole := UIKit.icon_rect(GameData.ui_icon("paw"), UIKit.GREEN, 64)
 	intro_row.add_child(watering_hole)
-	var text := UIKit.paragraph("Every animal and tool you've found can turn up in your Draft Duel shop (or be one of your starters), and it fights at its level. Find more in cages, and level them up with copies and gold.", 21, UIKit.TEXT)
+	var text := UIKit.paragraph("Every animal and tool you've found can turn up in your Draft Duel picks, and it fights at its level. Find more in cages, and level them up with copies and gold.", 21, UIKit.TEXT)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	intro_row.add_child(text)
 

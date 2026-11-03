@@ -2,8 +2,8 @@ class_name AnimalCard
 extends Control
 ## One collectible card, drawn in code so it stays crisp at any size: a
 ## glossy rim in the rarity's color, the animal's portrait standing in a
-## spotlight of its habitat color, a name plate, the Acorn cost in a gem,
-## and the level with copies toward the next upgrade. Epic and Legendary
+## spotlight of its habitat color, a name plate, its class badge, and the
+## level with copies toward the next upgrade. Epic and Legendary
 ## cards shine now and then. Tap it to call `on_tap`.
 
 const SIZE_NORMAL := Vector2(158, 214)
@@ -20,10 +20,6 @@ var highlighted := false:
 	set(value):
 		highlighted = value
 		queue_redraw()
-## A price to show in the corner gem instead of the card's cost (-1: none),
-## in its own color, e.g. red when it's more Acorns than you have.
-var price := -1
-var price_color := UIKit.ACORN
 ## A word stamped across the card, like "YOURS" ("" for none).
 var stamp := ""
 var stamp_color := UIKit.GREEN
@@ -152,11 +148,9 @@ func _draw() -> void:
 	if info != Info.NONE:
 		_draw_info(font, Rect2(margin, plate.end.y + h * 0.025, w - margin * 2, h - margin - plate.end.y - h * 0.025), rarity_color)
 
-	# Acorn cost (or price) gem, overlapping the top-left corner.
-	if price >= 0:
-		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.15, price_color, str(price))
-	elif not dim or _reachable:
-		_draw_gem(font, Vector2(w * 0.13, w * 0.13), w * 0.135, UIKit.ACORN, str(int(animal.get("cost", 0))))
+	# Class badge, overlapping the top-left corner.
+	if not dim or _reachable:
+		UIStyle.draw_class_badge(self, Vector2(w * 0.13, w * 0.13), w * 0.115, GameData.class_of(animal_id))
 	# Habitat badge, overlapping the top-right corner.
 	var habitat_id := String(animal.get("habitat", ""))
 	if habitat_id != "" and not (dim and not _reachable):
@@ -262,16 +256,6 @@ func _draw_info(font: Font, area: Rect2, rarity_color: Color) -> void:
 		if arrow != null:
 			var side := h * 0.9
 			draw_texture_rect(arrow, Rect2(Vector2(bar.end.x - side * 0.85, bar.get_center().y - side / 2.0), Vector2(side, side)), false, Color.WHITE)
-
-
-## A round gem with a number, like the Acorn cost.
-func _draw_gem(font: Font, center: Vector2, radius: float, color: Color, text: String) -> void:
-	draw_circle(center + Vector2(0, 2), radius, Color(UIKit.INK, 0.45))
-	draw_circle(center, radius, UIKit.INK)
-	draw_circle(center, radius - 2.5, color.darkened(0.3))
-	draw_circle(center - Vector2(0, radius * 0.1), radius - 4.0, color)
-	draw_circle(center - Vector2(radius * 0.22, radius * 0.38), radius * 0.32, Color(1, 1, 1, 0.35))
-	_text(font, text, Rect2(center - Vector2(radius, radius), Vector2(radius, radius) * 2.0), int(radius * 1.15), Color.WHITE)
 
 
 ## Centered outlined text, shrunk to fit the width if it has to.

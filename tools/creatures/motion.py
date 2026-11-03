@@ -471,13 +471,13 @@ def cetacean_slide(c, t):
     p = Pose()
     s = _size(c)
     wave = lambda k: math.sin(t * TAU * 2 - k)
-    p.move(y=max(0.0, math.sin(t * TAU * 2)) * s * 0.04, z=max(0.0, wave(0)) * s * 0.04)
-    p.rot("neck", x=wave(0) * 0.12)
-    p.rot("head", x=wave(0.4) * 0.08)
-    p.rot("chest", x=-wave(0.8) * 0.06)
-    p.rot("hips", x=wave(1.2) * 0.06)
+    p.move(y=max(0.0, math.sin(t * TAU * 2)) * s * 0.06, z=max(0.0, wave(0)) * s * 0.07)
+    p.rot("neck", x=wave(0) * 0.2)
+    p.rot("head", x=wave(0.4) * 0.12)
+    p.rot("chest", x=-wave(0.8) * 0.1)
+    p.rot("hips", x=wave(1.2) * 0.1)
     for i, bone in enumerate(("tail1", "tail2", "tail3")):
-        p.rot(bone, x=-wave(1.6 + i * 0.6) * (0.18 + 0.1 * i))
+        p.rot(bone, x=-wave(1.6 + i * 0.6) * (0.28 + 0.14 * i))
     for side in ("L", "R"):
         p.rot("pect." + side, x=0.55 * math.sin(t * TAU * 2 + 0.5))
     return p

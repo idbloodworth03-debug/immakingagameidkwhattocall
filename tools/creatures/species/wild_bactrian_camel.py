@@ -33,7 +33,7 @@ def make():
     c = quadruped("wild_bactrian_camel", J, R, paint=paint, tiles_long=2.4)
     c.voxel = 0.01
     for y in (0.12, -0.18):
-        c.shapes.append(ellipsoid((0, y, 1.0), (0.13, 0.15, 0.16), "hump", "chest" if y > 0 else "hips", blend=0.1))
+        c.shapes.append(ellipsoid((0, y, 1.1), (0.13, 0.13, 0.2), "hump", "chest" if y > 0 else "hips", blend=0.07))
     add_face(c, eye_dir=(-0.75, 0.5, 0.35), eye_radius=0.017, eye_sink=0.007, nose_radius=0, iris="#2a1a10", pupil="round")
     c.cartoon = {"head": 1.6}
     c.fur = {"strands": False, "variation": 0.1, "sheen": 0.2, "bump": 0.3, "roughness": 0.7}

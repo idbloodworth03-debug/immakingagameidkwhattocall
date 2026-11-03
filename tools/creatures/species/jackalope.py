@@ -10,10 +10,10 @@ from paint import Painter
 
 J = dict(SJ)
 sk = np.asarray(J["skull"], float)
-J["ear_tip"] = tuple(np.asarray(J["ear_base"], float) + np.array([-0.005, -0.03, 0.09]))
+J["ear_tip"] = tuple(np.asarray(J["ear_base"], float) + np.array([-0.006, -0.02, 0.042]))
 J["tail_mid"] = tuple(np.asarray(J["tail_base"], float) + np.array([0, -0.025, 0.01]))
 J["tail_end"] = tuple(np.asarray(J["tail_base"], float) + np.array([0, -0.04, 0.02]))
-R = dict(SR, ear_width=SR["ear_width"] * 1.3, ear_round=SR["ear_width"] * 0.35, tail=(0.03, 0.035, 0.03, 0.015))
+R = dict(SR, ear_width=SR["ear_width"] * 0.75, ear_round=SR["ear_width"] * 0.35, tail=(0.03, 0.035, 0.03, 0.015))
 COLORS = {"brown": "#a9825c", "white": "#f6f2ea", "dark": "#6b4e34"}
 
 
@@ -38,7 +38,7 @@ def make():
         fork = base + (top - base) * 0.5
         c.extras.append(Extra("cone", "horn", "head", center=tuple(fork), tip=tuple(fork + np.array([side * r * 0.5, r * 0.3, r * 0.5])),
                               radius=r * 0.1, tip_radius=r * 0.04, color="#e8d2a8"))
-    add_face(c, eye_dir=(-0.75, 0.5, 0.3), eye_radius=0.0085, eye_sink=0.004, nose_radius=0.004, iris="#2a1a10", pupil="round")
+    add_face(c, eye_dir=(-0.75, 0.5, 0.3), eye_radius=0.0055, eye_sink=0.004, nose_radius=0.004, iris="#2a1a10", pupil="round")
     c.fur = {"strands": False, "variation": 0.1, "sheen": 0.3, "bump": 0.15, "roughness": 0.6}
     c.motion = {"gait": "gallop", "attack": "stomp", "rear": 0.4, "stride": 1.2}
     return c

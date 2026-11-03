@@ -349,7 +349,7 @@ def snake(name, j, r, **extra):
     for i in range(len(chain) - 1):
         shapes.append(cone(P(chain[i]), P(chain[i + 1]), radii[i], radii[i + 1], "torso" if i >= 3 else "tail", owners[i], blend=b))
     if r.get("hood"):
-        mid = (P("neck_base") + P("head_base")) / 2 + np.array([0, -r["hood"][1] * 0.6, 0])
+        mid = P("neck_base") * 0.7 + P("withers") * 0.3 + np.array([0, -r["hood"][1] * 0.6, r["hood"][2] * 0.3])
         shapes.append(ellipsoid(tuple(mid), r["hood"], "hood", "neck2", blend=b))
     shapes += [
         ellipsoid(P("skull"), r["skull"], "head", "head", blend=b * 0.6),

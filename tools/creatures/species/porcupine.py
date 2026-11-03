@@ -28,15 +28,15 @@ def make():
     c.voxel = 0.0035
     rng = np.random.default_rng(5)
     # Quills fanning out over the back and tail.
-    for i in range(46):
+    for i in range(70):
         u = rng.uniform(-0.28, 0.18)
         a = rng.uniform(-1.2, 1.2)
         base = np.array([np.sin(a) * 0.1, u, 0.3 + np.cos(a) * 0.05])
         out = np.array([np.sin(a) * 0.5, -0.6, np.cos(a) * 0.8])
         out /= np.linalg.norm(out)
-        tip = base + out * rng.uniform(0.07, 0.11)
+        tip = base + out * rng.uniform(0.1, 0.15)
         bone = "chest" if u > 0.05 else "hips"
-        c.extras.append(Extra("cone", "horn", bone, center=tuple(base), tip=tuple(tip), radius=0.006, tip_radius=0.001,
+        c.extras.append(Extra("cone", "horn", bone, center=tuple(base), tip=tuple(tip), radius=0.009, tip_radius=0.0015,
                               color="#efe6d2"))
     add_face(c, eye_dir=(-0.55, 0.78, 0.25), eye_radius=0.0085, eye_sink=0.005, nose_radius=0.008, iris="#1a100a", pupil="round")
     c.fur = {"strands": False, "variation": 0.15, "sheen": 0.2, "bump": 0.3, "roughness": 0.7}

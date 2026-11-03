@@ -40,9 +40,9 @@ def make():
     c.shapes.append(ellipsoid(tuple(np.asarray(J["withers"]) + (0, -0.03, 0.06)), (0.11, 0.14, 0.1), "torso", "chest", blend=0.08))
     c.shapes.append(ellipsoid(tuple(np.asarray(J["chin"]) + (0, -0.02, -0.05)), (0.035, 0.04, 0.06), "beard", "jaw", blend=0.03))
     for side in (1, -1):
-        base = sk + np.array([side * 0.035, 0.0, 0.06])
-        c.extras.append(Extra("cone", "horn", "head", center=tuple(base), tip=tuple(base + np.array([side * 0.01, -0.07, 0.07])),
-                              radius=0.016, tip_radius=0.003, color="#1e1c1c"))
+        base = sk + np.array([side * 0.035, -0.01, 0.075])
+        c.extras.append(Extra("cone", "horn", "head", center=tuple(base), tip=tuple(base + np.array([side * 0.015, -0.1, 0.11])),
+                              radius=0.02, tip_radius=0.004, color="#1e1c1c"))
     add_face(c, eye_dir=(-0.75, 0.5, 0.35), eye_radius=0.017, eye_sink=0.007, nose_radius=0, iris="#3a2a14", pupil="round")
     c.cartoon = {"head": 1.6}
     c.fur = {"strands": False, "variation": 0.1, "sheen": 0.2, "bump": 0.35, "roughness": 0.7}

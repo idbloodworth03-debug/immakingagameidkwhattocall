@@ -116,6 +116,13 @@ minute):
 godot --headless --path game res://tests/draft_report.tscn -- 40
 ```
 
+To see how strong each animal is as a pick, including the ones still on the
+way (a few minutes; `ONLY=lion,tiger` for just some):
+
+```bash
+godot --headless --path game res://tests/power_report.tscn
+```
+
 ## Where things are
 
 ```

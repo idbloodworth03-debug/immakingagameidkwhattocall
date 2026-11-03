@@ -151,9 +151,11 @@ re-check them before launch.
 The game starts with **20 animals**: 8 Common, 5 Rare, 4 Epic and 3
 Legendary. Each one is modeled, painted, furred and animated (see
 [ART_DIRECTION.md](ART_DIRECTION.md)), and the plan is to get these 20 right
-before adding more. Another 37 are already designed (stats, abilities,
-requirements) and wait in `game/data/animals_later.json`, which the game
-doesn't load.
+before adding more. Another 102 are on the way in
+`game/data/animals_later.json`, which the game doesn't load yet: 37 designed
+earlier, 41 more real animals and 24 mythical creatures (a new Mythic
+rarity). [ROSTER.md](ROSTER.md) lists them all with their class, row,
+rarity, arena and the batch they'll be rendered in.
 
 Each animal has:
 

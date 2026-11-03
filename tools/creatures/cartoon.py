@@ -63,8 +63,9 @@ def _cartoonify(c):
     heads = _descendants(c, "head")
     head_joints = {j for b in c.bones if b.name in heads for j in (b.head, b.tail)} | {"skull"}
 
-    if c.motion.get("body") != "bird":
+    if c.motion.get("body") != "bird" and "elbow.L" in c.joints and "knee.L" in c.joints:
         # Shorter legs (the body comes down to meet them) and a shorter body.
+        # (Bodies without legs, like fish and butterflies, keep their shape.)
         z_belly = np.mean([c.joints[j][2] for j in ("elbow.L", "knee.L") if j in c.joints])
         y_mid = c.joints["spine_mid"][1]
 

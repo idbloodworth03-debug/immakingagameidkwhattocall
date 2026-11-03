@@ -39,6 +39,18 @@ mane grows with its face).
 
 Each animal is one file in `species/`.
 
+Body plans: `anatomy.py` has four-legged animals (`quadruped`, which also
+builds upright primates and sprawling lizards from where their joints go)
+and birds (`bird`). `bodies.py` adds butterflies (`butterfly`), fish and,
+with a flat tail fluke, dolphins and whales (`fish`), shrimp (`shrimp`),
+bats (`bat`) and wings for a four-legged animal (`add_wings`: Pegasus,
+Griffin, Dragon). Each sets `motion["body"]`, which picks its idle, walk
+and death in `motion.py`: butterflies flutter, fish flop and hop on land,
+dolphins and whales belly-slide, shrimp scuttle, winged animals fly with
+their legs tucked. Attacks for them: `spit` (a shot from the mouth),
+`snap` (a shrimp's claw), `flutter_dive` and `winged_dive`; upright animals
+walk with the `biped` gait and lizards add `wiggle`.
+
 ## Running it
 
 Needs Python 3.11 with Blender's Python module:

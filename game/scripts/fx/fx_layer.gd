@@ -124,9 +124,10 @@ func allow_sparks(amount: int) -> bool:
 
 ## A ranged animal's throw: leaves its paw before the hit and lands on it.
 func throw(f: BattleSim.Fighter, to_hit: float) -> void:
-	var flight := minf(0.28, to_hit + 0.15)
+	var look := ShotLooks.look_for(f.card)
+	var flight := minf(0.28, to_hit + 0.15) * ShotLooks.flight_scale(look)
 	projectiles.append({"from": Vector2(f.x, f.y), "to_uid": f.target.uid, "to": Vector2(f.target.x, f.target.y),
-		"launch": time + to_hit - flight, "land": time + to_hit, "trail": []})
+		"launch": time + to_hit - flight, "land": time + to_hit, "trail": [], "look": look})
 
 
 # --- Drawing -----------------------------------------------------------------
@@ -210,31 +211,15 @@ func _draw_projectile(pr: Dictionary) -> void:
 	var target := field.view_for_uid(int(pr.to_uid))
 	if target != null:
 		goal = target.pos
-	var from := field.to_screen(pr.from.x, pr.from.y)
-	var to := field.to_screen(goal.x, goal.y)
-	var s := field.field_scale()
-	# An arc: up and over, a little higher for longer throws.
-	var lift := from.distance_to(to) * 0.35 + 10.0
-	var p := from.lerp(to, t) + Vector2(0, -lift * Ease.arc(t) - 10.0)
-	var trail: Array = pr.trail
-	trail.append(p)
-	if trail.size() > Feel.count("effects", "projectile_trail", 7):
-		trail.pop_front()
-	var r := maxf(3.5, 230.0 * s)
-	# A glowing trail behind it.
-	for i in trail.size():
-		var k := float(i + 1) / float(trail.size())
-		draw_circle(trail[i], r * 0.9 * k, Color(1.0, 0.92, 0.6, 0.35 * k))
-	var glow := Feel.num("effects", "projectile_glow", 0.55)
-	draw_circle(p, r * 2.0, Color(1.0, 0.95, 0.7, 0.25 * glow))
-	draw_circle(p + Vector2(0, 10.0 + lift * Ease.arc(t)) * 0.4, r * 0.8, Color(0, 0, 0, 0.22))
-	draw_circle(p, r + 1.5, Color("#3b2410"))
-	draw_circle(p, r, Color("#a8682c"))
-	draw_circle(p + Vector2(0, -r * 0.45), r * 0.75, Color("#6b4019"))
-	draw_circle(p + Vector2(-r * 0.3, r * 0.15), r * 0.35, Color(1, 1, 1, 0.5))
+	# From the mouth or paws, to the middle of the target (data/shots.json).
+	var from := field.to_screen(pr.from.x, pr.from.y) + Vector2(0, -10.0)
+	var to := field.to_screen(goal.x, goal.y) + Vector2(0, -10.0)
+	var look: Dictionary = pr.get("look", {})
+	ShotLooks.draw(self, look, from, to, t, pr.trail, field.field_scale(), time)
 	if t >= 0.97 and not pr.get("burst", false):
 		pr.burst = true
-		burst("spark", to + Vector2(0, -12), 5, 200.0, 0.2, 6.0, [Color("#fff6b0")], 0.0, 6.0)
+		var color := Color(String(look.get("burst_color", "#fff6b0")))
+		burst(String(look.get("burst", "spark")), to, 5, 200.0, 0.25, 6.0, [color, Color.WHITE], 0.0, 6.0)
 
 
 static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:

@@ -236,6 +236,10 @@ def surface_point(shapes, origin, direction, sink=0.0):
     d = np.asarray(direction, float)
     d /= np.linalg.norm(d)
     p = np.asarray(origin, float).copy()
+    if float(field_value(shapes, p[None, :])[0]) == 0.0:
+        # Exactly at an ellipsoid's center its distance reads 0, as if on the
+        # surface: start a hair off center instead.
+        p += d * 1e-4
     for _ in range(200):
         dist = float(field_value(shapes, p[None, :])[0])
         if dist > 0:

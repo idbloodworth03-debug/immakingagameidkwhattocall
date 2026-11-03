@@ -36,6 +36,7 @@ var progression: Dictionary = {}
 var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
+var shots: Dictionary = {}           # how Ranged animals' shots look (shots.json)
 var testing: Dictionary = {}         # testing switches (testing.json)
 var habitats: Dictionary = {}        # habitat id -> name, icon, color (habitats.json; flavor)
 var habitat_order: Array = []        # habitat ids, in habitats.json order
@@ -92,6 +93,7 @@ func reload() -> void:
 	battle_rules = _load("battle_rules.json")
 	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
+	shots = _load("shots.json")
 	testing = _load("testing.json")
 	var habitat_data: Dictionary = _load("habitats.json")
 	habitats.clear()
@@ -323,6 +325,8 @@ func validate() -> Array:
 		for tag in a.get("tags", []):
 			if not tags.has(tag):
 				problems.append("%s: unknown tag '%s' (add it to tags.json)" % [id, tag])
+		if a.has("shot") and not shots.has(String(a.shot)):
+			problems.append("%s: unknown shot '%s' (see shots.json)" % [id, a.shot])
 
 	for cage_id in cage_order:
 		var cage: Dictionary = cages[cage_id]
@@ -336,6 +340,8 @@ func validate() -> Array:
 		if cage.has("shop_requires_arena") and not arena_index_by_id.has(cage.shop_requires_arena):
 			problems.append("cage %s: unknown arena '%s'" % [cage_id, cage.shop_requires_arena])
 
+	if not shots.has(ShotLooks.DEFAULT):
+		problems.append("shots.json needs a '%s' look (for animals without a shot of their own)" % ShotLooks.DEFAULT)
 	for rarity in draft_rules.get("rarity_weights", {}):
 		if not rarities.has(rarity):
 			problems.append("draft_rules: unknown rarity '%s'" % rarity)

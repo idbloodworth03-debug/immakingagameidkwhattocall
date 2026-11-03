@@ -66,8 +66,11 @@ def _scale(c):
 
 
 def idle(c, t):
-    if c.motion.get("body") == "bird":
+    body = c.motion.get("body")
+    if body == "bird":
         return bird_flap(c, t, power=c.motion.get("hover_power", 0.55))
+    if body in BODY_IDLE:
+        return BODY_IDLE[body](c, t)
     p = Pose()
     s = _scale(c)
     breath = math.sin(t * TAU)
@@ -102,12 +105,17 @@ GAITS = {
     "trot": {"offsets": (0.0, 0.5, 0.5, 0.0), "stance": 0.55, "bobs": 2, "swing": 0.42, "lift": 0.9},
     "walk": {"offsets": (0.0, 0.5, 0.75, 0.25), "stance": 0.66, "bobs": 2, "swing": 0.32, "lift": 0.7},
     "gallop": {"offsets": (0.55, 0.65, 0.0, 0.1), "stance": 0.38, "bobs": 1, "swing": 0.62, "lift": 1.1},
+    # Upright on two legs: each arm swings with the opposite leg.
+    "biped": {"offsets": (0.5, 0.0, 0.0, 0.5), "stance": 0.6, "bobs": 2, "swing": 0.34, "lift": 0.45},
 }
 
 
 def walk(c, t):
-    if c.motion.get("body") == "bird":
+    body = c.motion.get("body")
+    if body == "bird":
         return bird_flap(c, t, power=1.0)
+    if body in BODY_WALK:
+        return BODY_WALK[body](c, t)
     gait = GAITS[c.motion.get("gait", "trot")]
     p = Pose()
     s = _scale(c)
@@ -139,6 +147,12 @@ def walk(c, t):
         p.rot("chest", x=-flex * 0.1)
         p.rot("neck", x=-flex * 0.12)
         p.move(z=max(0.0, math.sin(t * TAU)) * s * 0.06)
+    # Lizards: the spine bends side to side with each step.
+    wiggle = c.motion.get("wiggle", 0.0)
+    if wiggle:
+        p.rot("chest", z=math.sin(t * TAU) * wiggle)
+        p.rot("hips", z=-math.sin(t * TAU) * wiggle)
+        p.rot("neck", z=-math.sin(t * TAU) * wiggle * 0.6)
     p.rot("neck", x=bob * 0.03)
     p.rot("head", x=-bob * 0.03)
     p.rot("ear.L", x=-0.15)
@@ -154,7 +168,9 @@ def attack(c, t):
 
 
 # The frame (0-1) where each attack lands; the game times hits to it.
-HIT_AT = {"pounce_bite": 0.45, "bite": 0.42, "swipe": 0.48, "charge": 0.45, "stomp": 0.52, "throw": 0.5, "dive": 0.5}
+# (Attacks for other bodies are further down; HIT_AT covers them all.)
+HIT_AT = {"pounce_bite": 0.45, "bite": 0.42, "swipe": 0.48, "charge": 0.45, "stomp": 0.52, "throw": 0.5, "dive": 0.5,
+          "spit": 0.5, "snap": 0.45, "flutter_dive": 0.5}
 
 
 def pounce_bite(c, t):
@@ -340,15 +356,248 @@ def bird_fall(c, t):
     return p
 
 
-ATTACKS = {"dive": bird_strike, "pounce_bite": pounce_bite, "bite": bite, "swipe": swipe, "charge": charge, "stomp": stomp, "throw": throw}
+# --- Other bodies (bodies.py) -------------------------------------------------------
+
+def _size(c):
+    """A length to scale motions by, for bodies without legs to measure."""
+    lo = np.min([np.asarray(v, float) for v in c.joints.values()], axis=0)
+    hi = np.max([np.asarray(v, float) for v in c.joints.values()], axis=0)
+    return float(max(hi - lo))
+
+
+def _flutter(p, beat, amp, fore="wing_fore", hind="wing_hind"):
+    """Butterfly wings: both pairs clap up and down, the hind pair a little behind."""
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot(f"{fore}.{side}", x=beat * amp, z=-sign * 0.1 * beat)
+        p.rot(f"{hind}.{side}", x=beat * amp * 0.85)
+
+
+def insect_idle(c, t):
+    """Hovering: quick wingbeats (two a cycle) and a soft bob."""
+    p = Pose()
+    s = _size(c)
+    beat = math.sin(t * TAU * 2)
+    _flutter(p, beat, c.motion.get("flap", 0.9))
+    p.move(z=-beat * s * 0.03)
+    p.rot("tail1", x=0.1 + beat * 0.05)
+    for side in ("L", "R"):
+        p.rot("antenna." + side, x=0.05 * math.sin(t * TAU))
+    return p
+
+
+def insect_walk(c, t):
+    """Flitting along: wider wingbeats, nose a little down, a looping drift."""
+    p = insect_idle(c, t)
+    s = _size(c)
+    p.move(x=math.sin(t * TAU) * s * 0.04, z=math.sin(t * TAU) * s * 0.03)
+    p["root_rot"] = (-0.12, 0.0, math.sin(t * TAU) * 0.15)
+    return p
+
+
+def flutter_dive(c, t):
+    """A butterfly's attack: wings snap shut, it darts at the target and
+    flutters back."""
+    p = Pose()
+    s = _size(c)
+    dive = keys(t, [(0, 0), (0.3, -0.2), (0.5, 1), (0.65, 0.7), (1, 0)])
+    beat = math.sin(t * TAU * 3)
+    _flutter(p, beat * (1 - float(abs(dive))) + float(dive) * 0.9, c.motion.get("flap", 0.9))
+    p.move(y=float(dive) * s * 0.6, z=-float(dive) * s * 0.5)
+    p["root_rot"] = (-float(dive) * 0.5, 0.0, 0.0)
+    return p
+
+
+def insect_fall(c, t):
+    p = Pose()
+    fall = keys(t, [(0, 0), (0.8, 1), (1, 1)])
+    p.move(z=-float(fall) * (c.motion.get("altitude", 0.3) - 0.01))
+    p["root_rot"] = (0.0, float(fall) * 1.3, 0.0)
+    _flutter(p, 1.0, float(fall) * 0.9)
+    return p
+
+
+def fish_idle(c, t):
+    """Lying on its belly: gills pump, side fins flap, the tail swishes."""
+    p = Pose()
+    s = _size(c)
+    breath = math.sin(t * TAU)
+    p.move(z=abs(breath) * s * 0.01)
+    p.rot("jaw", x=-0.06 * (1 + breath))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("pect." + side, z=sign * 0.4 * math.sin(t * TAU * 2), x=0.2 * math.sin(t * TAU * 2 + 1))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, z=math.sin(t * TAU - i * 0.9) * (0.12 + 0.1 * i))
+    p.rot("fin_dorsal", z=0.1 * math.sin(t * TAU + 0.5))
+    return p
+
+
+def fish_hop(c, t):
+    """Flop and hop: curl the tail, spring forward in an arc with a flick,
+    land with a squash and wiggle."""
+    p = Pose()
+    s = _size(c)
+    curl = keys(t, [(0, 0.3), (0.2, 1), (0.35, -0.7), (0.6, 0), (0.85, 0.2), (1, 0.3)])
+    air = max(0.0, math.sin(math.pi * min(max((t - 0.25) / 0.5, 0.0), 1.0)))
+    p.move(y=air * s * 0.08, z=air * s * c.motion.get("hop", 0.28))
+    p["root_rot"] = (air * 0.25 - 0.1 * float(curl), 0.0, 0.0)
+    p.rot("hips", x=-float(curl) * 0.15)
+    p.rot("chest", x=float(curl) * 0.1)
+    p.rot("head", x=float(curl) * 0.1)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-float(curl) * (0.35 + 0.15 * i), z=math.sin(t * TAU * 2 - i) * 0.15)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("pect." + side, z=sign * (0.5 * air + 0.2))
+    return p
+
+
+def cetacean_idle(c, t):
+    """A dolphin or whale resting on its belly: breathing, flippers paddling,
+    the fluke rising and falling."""
+    p = Pose()
+    s = _size(c)
+    wave = math.sin(t * TAU)
+    p.move(z=abs(wave) * s * 0.006)
+    p.rot("head", x=0.05 + wave * 0.04)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-math.sin(t * TAU - i * 0.8) * (0.08 + 0.06 * i) - 0.05)
+    for side in ("L", "R"):
+        p.rot("pect." + side, x=0.25 * math.sin(t * TAU * 2))
+    return p
+
+
+def cetacean_slide(c, t):
+    """Belly-sliding: the body heaves in a wave from head to tail, flippers
+    push, and it surges forward on each heave."""
+    p = Pose()
+    s = _size(c)
+    wave = lambda k: math.sin(t * TAU * 2 - k)
+    p.move(y=max(0.0, math.sin(t * TAU * 2)) * s * 0.04, z=max(0.0, wave(0)) * s * 0.04)
+    p.rot("neck", x=wave(0) * 0.12)
+    p.rot("head", x=wave(0.4) * 0.08)
+    p.rot("chest", x=-wave(0.8) * 0.06)
+    p.rot("hips", x=wave(1.2) * 0.06)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-wave(1.6 + i * 0.6) * (0.18 + 0.1 * i))
+    for side in ("L", "R"):
+        p.rot("pect." + side, x=0.55 * math.sin(t * TAU * 2 + 0.5))
+    return p
+
+
+def crustacean_idle(c, t):
+    """A shrimp waiting: antennae wave, claws open and close a little, the
+    tail fan flicks."""
+    p = Pose()
+    s = _size(c)
+    w = math.sin(t * TAU)
+    p.move(z=w * s * 0.006)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("antenna." + side, x=0.1 * math.sin(t * TAU + sign), z=sign * 0.08 * math.sin(t * TAU * 2))
+        p.rot("claw_finger." + side, x=0.15 * (1 + math.sin(t * TAU * 2)))
+        p.rot("claw_arm." + side, x=0.05 * w)
+    p.rot("tail2", x=0.08 * w)
+    p.rot("tail3", x=0.12 * w)
+    return p
+
+
+def crustacean_scuttle(c, t):
+    """Scuttling: the three pairs of legs step in waves, the body sways and
+    the claws are held up ready."""
+    p = crustacean_idle(c, t)
+    s = _size(c)
+    for n in (1, 2, 3):
+        for side, phase in (("L", 0.0), ("R", 0.5)):
+            q = (t * 2 + phase + n * 0.33) % 1.0
+            swing = math.sin(q * TAU)
+            lift = max(0.0, math.cos(q * TAU))
+            p.rot(f"leg{n}_upper.{side}", x=swing * 0.5, z=0.0)
+            p.rot(f"leg{n}_lower.{side}", x=-lift * 0.5)
+    p.move(z=abs(math.sin(t * TAU * 2)) * s * 0.012)
+    p["root_rot"] = (0.0, 0.0, math.sin(t * TAU * 2) * 0.06)
+    for side in ("L", "R"):
+        p.rot("claw_arm." + side, x=0.15)
+    return p
+
+
+def snap(c, t):
+    """Pistol shrimp: the big claw rises and cocks open, then snaps shut with
+    a jolt of the whole body."""
+    p = crustacean_idle(c, 0.0)
+    big = "." + c.motion.get("big_claw", "R").strip(".")
+    raise_ = keys(t, [(0, 0), (0.3, 1), (0.45, 0.8), (0.7, 0.3), (1, 0)])
+    open_ = keys(t, [(0, 0), (0.3, 1), (0.42, 1), (0.46, -0.1), (1, 0)])
+    jolt = keys(t, [(0, 0), (0.44, 0), (0.48, 1), (0.6, 0), (1, 0)])
+    p.rot("claw_arm" + big, x=float(raise_) * 0.6)
+    p.rot("claw_hand" + big, x=float(raise_) * 0.2)
+    p.rot("claw_finger" + big, x=float(open_) * 0.9)
+    p.move(y=-float(jolt) * _size(c) * 0.05)
+    p.rot("chest", x=float(raise_) * 0.06)
+    return p
+
+
+def spit(c, t):
+    """Shoot from the mouth (spit, squirt, a water jet, a sonar call): rear
+    the head back with the mouth shut, then thrust it forward, mouth open,
+    with a little recoil."""
+    p = Pose()
+    s = _size(c) if "withers" not in c.joints else c.joints["withers"][2] + _size(c) * 0.1
+    rear = keys(t, [(0, 0), (0.3, 1), (0.48, -0.6), (0.65, -0.3), (1, 0)])
+    jaw = keys(t, [(0, 0), (0.42, 0), (0.5, 1), (0.7, 0.6), (1, 0)])
+    p.rot("neck", x=float(rear) * 0.3)
+    p.rot("head", x=float(rear) * 0.25 + float(jaw) * 0.1)
+    p.rot("jaw", x=-float(jaw) * c.motion.get("gape", 0.45))
+    p.rot("chest", x=float(rear) * 0.06)
+    p.move(y=-max(0.0, -float(rear)) * s * 0.06)
+    for side in ("L", "R"):
+        p.rot("ear." + side, x=-0.3 * abs(float(rear)))
+        p.rot("pect." + side, x=0.3 * float(rear))
+    if c.motion.get("body") in ("fish", "cetacean"):
+        for i, bone in enumerate(("tail1", "tail2", "tail3")):
+            p.rot(bone, x=float(rear) * (0.15 + 0.08 * i))
+    return p
+
+
+def winged_flap(c, t, power=1.0):
+    """A four-legged animal with wings in flight: wingbeats like a bird's,
+    front legs tucked, hind legs trailing, and a gentle paddle."""
+    p = bird_flap(c, t, power)
+    paddle = math.sin(t * TAU)
+    for side, k in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.7 + 0.15 * paddle * k, lower=-1.2, foot=-0.6)
+        p.leg("hl." + side, upper=-0.6 - 0.1 * paddle * k, lower=0.3, foot=0.4)
+    _tail(p, t, sway=0.1, droop=-0.3)
+    p.rot("neck", x=0.1)
+    return p
+
+
+def winged_dive(c, t):
+    """Swoops onto the target: wings sweep back, front hooves or talons
+    reach forward, then it beats back up."""
+    p = bird_strike(c, t)
+    reach = keys(t, [(0, 0), (0.35, 0.2), (0.5, 1), (0.65, 0.5), (1, 0)])
+    for side in ("L", "R"):
+        p.leg("fl." + side, upper=0.7 + float(reach) * 0.8, lower=-1.2 + float(reach) * 1.0, foot=-0.6)
+        p.leg("hl." + side, upper=-0.6, lower=0.3, foot=0.4)
+    return p
+
+
+BODY_IDLE = {"insect": insect_idle, "fish": fish_idle, "cetacean": cetacean_idle, "crustacean": crustacean_idle,
+             "winged": lambda c, t: winged_flap(c, t, power=c.motion.get("hover_power", 0.55))}
+BODY_WALK = {"insect": insect_walk, "fish": fish_hop, "cetacean": cetacean_slide, "crustacean": crustacean_scuttle,
+             "winged": winged_flap}
+
+
+ATTACKS = {"dive": bird_strike, "pounce_bite": pounce_bite, "bite": bite, "swipe": swipe, "charge": charge, "stomp": stomp, "throw": throw,
+           "spit": spit, "snap": snap, "flutter_dive": flutter_dive, "winged_dive": winged_dive}
 
 
 def death(c, t):
     """Topple onto the side; legs go limp. The roll pivots under the spine, so
     the body swings out sideways: shift it back over the spot where it stood.
     rest_on_ground then lifts it onto the ground."""
-    if c.motion.get("body") == "bird":
+    if c.motion.get("body") in ("bird", "winged"):
         return bird_fall(c, t)
+    if c.motion.get("body") == "insect":
+        return insect_fall(c, t)
     p = Pose()
     s = _scale(c)
     fall = keys(t, [(0, 0), (0.7, 1), (1, 1)])

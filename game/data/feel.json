@@ -86,9 +86,7 @@
     "tool_confetti": 18,
     "heal_sparkles": 6,
     "win_confetti": 60,
-    "coin_burst": 8,
-    "projectile_trail": 7,
-    "projectile_glow": 0.55
+    "coin_burst": 8
   },
 
   "crowd": {

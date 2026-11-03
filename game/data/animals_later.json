@@ -142,7 +142,8 @@
    }
   },
   "prerequisites": [],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "spray"
  },
  {
   "id": "coyote_pack",
@@ -248,7 +249,8 @@
    }
   },
   "prerequisites": [],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "tongue"
  },
  {
   "id": "snapping_turtle",
@@ -452,7 +454,8 @@
    "params": {}
   },
   "prerequisites": [],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "stone"
  },
  {
   "id": "harbor_seal",
@@ -702,7 +705,8 @@
    }
   },
   "prerequisites": [],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "venom"
  },
  {
   "id": "snow_leopard",
@@ -925,7 +929,8 @@
     "count": 1
    }
   ],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "stone"
  },
  {
   "id": "mountain_gorilla",
@@ -1009,7 +1014,8 @@
     "zone": "river"
    }
   ],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "pebble"
  },
  {
   "id": "komodo_dragon",
@@ -1409,7 +1415,8 @@
     "count": 2
    }
   ],
-  "origin": "designed"
+  "origin": "designed",
+  "shot": "fruit"
  },
  {
   "id": "harpy_eagle",
@@ -2800,7 +2807,7 @@
    "range": 5,
    "targets": "air_ground"
   },
-  "shot": "antler darts",
+  "shot": "darts",
   "moves": "hops",
   "legend": "One theory: rabbits with a virus that grows horn-like bumps on their heads.",
   "prerequisites": [],
@@ -2827,7 +2834,7 @@
    "range": 5,
    "targets": "air_ground"
   },
-  "shot": "horn beam",
+  "shot": "beam",
   "moves": "gallops",
   "legend": "Narwhal tusks were once sold in Europe as unicorn horns.",
   "prerequisites": [],

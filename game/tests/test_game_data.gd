@@ -44,3 +44,16 @@ func test_feel_settings_load() -> void:
 	check(Feel.num("combat", "hitstop_seconds", -1.0) >= 0.0, "hit-stop length is set")
 	check(Feel.count("effects", "max_particles", 0) > 0, "a particle cap is set")
 	check_eq(Feel.num("characters", "no_such_value", 1.5), 1.5, "missing values fall back to the default")
+
+
+func test_ranged_animals_have_known_shots() -> void:
+	check(GameData.shots.has(ShotLooks.DEFAULT), "a default shot look")
+	var later: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/animals_later.json"))
+	for card in GameData.cards.values() + Array(later):
+		if card.get("class", "") == "ranged" and card.has("shot"):
+			check(GameData.shots.has(String(card.shot)), "%s's shot '%s' is in shots.json" % [card.id, card.shot])
+	for card in Array(later):
+		if card.get("class", "") == "ranged":
+			check(card.has("shot"), "%s (on the way) has a shot" % card.id)
+	check(not ShotLooks.look_for({"shot": "lightning"}).is_empty(), "looks are found by name")
+	check_eq(ShotLooks.look_for({}), GameData.shots[ShotLooks.DEFAULT], "no shot: the default")

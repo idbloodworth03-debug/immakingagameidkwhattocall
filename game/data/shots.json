@@ -1,0 +1,20 @@
+{
+  "_note": "How Ranged animals' shots look in flight (animals.json \"shot\"; animals without one throw a \"nut\"). style: ball (a round thing on an arc: nut, stone, fruit, drop, bubble, flame), volley (count thin darts or quills, side by side), jet (a quick straight stream of drops), wave (sonar rings), zap (a lightning bolt, all at once), beam (a straight shining beam) or tongue (shoots out and snaps back). Sizes are in tiles; arc is how high a ball flies (times the distance); colors are [main, shade, outline, light]. trail: how many trail dots; glow 0-1. burst: the particles where it lands.",
+  "nut": {"style": "ball", "size": 0.23, "arc": 0.35, "colors": ["#a8682c", "#6b4019", "#3b2410", "#ffffff"], "trail": 7, "trail_color": "#ffeb99", "glow": 0.55, "burst": "spark", "burst_color": "#fff6b0"},
+  "stone": {"style": "ball", "size": 0.22, "arc": 0.3, "colors": ["#9a958c", "#6d6860", "#33302b", "#ffffff"], "trail": 5, "trail_color": "#e8e2d4", "glow": 0.2, "burst": "dust", "burst_color": "#c9b89a"},
+  "pebble": {"style": "ball", "size": 0.18, "arc": 0.4, "colors": ["#f2e4d0", "#d1b89a", "#5a4632", "#ffffff"], "trail": 5, "trail_color": "#fff4e0", "glow": 0.3, "burst": "spark", "burst_color": "#fff6e0"},
+  "fruit": {"style": "ball", "size": 0.26, "arc": 0.45, "colors": ["#f2b43a", "#d4831c", "#5c3410", "#ffffff"], "leaf": "#5fbf4a", "trail": 6, "trail_color": "#ffe099", "glow": 0.35, "burst": "puff", "burst_color": "#ffd26a"},
+  "spit": {"style": "ball", "size": 0.2, "arc": 0.22, "colors": ["#e9f2ef", "#b9cfc8", "#5d736c", "#ffffff"], "drop": true, "trail": 8, "trail_color": "#dff2ec", "glow": 0.25, "burst": "puff", "burst_color": "#e6f5f0"},
+  "venom": {"style": "ball", "size": 0.18, "arc": 0.2, "colors": ["#9be04a", "#5fa82a", "#2c4d14", "#f4ffd8"], "drop": true, "trail": 8, "trail_color": "#c8f07a", "glow": 0.5, "burst": "puff", "burst_color": "#b6ea6a"},
+  "water": {"style": "ball", "size": 0.19, "arc": 0.15, "colors": ["#7fd3ff", "#3a9fe0", "#1d4f7a", "#ffffff"], "drop": true, "trail": 10, "trail_color": "#bfeaff", "glow": 0.4, "burst": "puff", "burst_color": "#bfeaff"},
+  "bubble": {"style": "ball", "size": 0.26, "arc": 0.05, "colors": ["#dff6ff", "#9fdcf7", "#4a9cc4", "#ffffff"], "hollow": true, "trail": 6, "trail_color": "#e8f9ff", "glow": 0.5, "burst": "sparkle", "burst_color": "#e8f9ff"},
+  "foxfire": {"style": "ball", "size": 0.24, "arc": 0.12, "colors": ["#9fe6ff", "#4ab0ff", "#2a4fbf", "#ffffff"], "flame": true, "trail": 10, "trail_color": "#8fd8ff", "glow": 1.0, "burst": "sparkle", "burst_color": "#bfe9ff"},
+  "quills": {"style": "volley", "count": 3, "size": 0.32, "spread": 0.14, "arc": 0.15, "colors": ["#f3ead8", "#2b2420"], "burst": "spark", "burst_color": "#fff6e0"},
+  "darts": {"style": "volley", "count": 2, "size": 0.3, "spread": 0.12, "arc": 0.2, "colors": ["#e9d2a8", "#8a5a32"], "burst": "spark", "burst_color": "#fff0c8"},
+  "squirt": {"style": "jet", "size": 0.12, "colors": ["#e0303a", "#ff8a8a"], "length": 0.45, "burst": "puff", "burst_color": "#ff8a8a"},
+  "spray": {"style": "jet", "size": 0.2, "colors": ["#d8e27a", "#f4f8c8"], "length": 0.6, "cloud": true, "burst": "puff", "burst_color": "#e6ec9a"},
+  "sonar": {"style": "wave", "size": 0.5, "count": 3, "colors": ["#ffffff", "#ffc6dd"], "burst": "sparkle", "burst_color": "#ffe1ee"},
+  "lightning": {"style": "zap", "size": 0.08, "colors": ["#fff6b0", "#ffd84a", "#ffffff"], "burst": "spark", "burst_color": "#fff6b0"},
+  "beam": {"style": "beam", "size": 0.14, "colors": ["#ffffff", "#ff9ed2", "#9ed8ff", "#fff3a0"], "rainbow": true, "burst": "sparkle", "burst_color": "#ffffff"},
+  "tongue": {"style": "tongue", "size": 0.09, "colors": ["#f08aa0", "#b84a62"], "burst": "puff", "burst_color": "#ffd0dc"}
+}

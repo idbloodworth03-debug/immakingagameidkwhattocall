@@ -40,15 +40,16 @@ def make():
     c = quadruped("axolotl", J, R, paint=paint, tiles_long=1.0)
     c.voxel = 0.008
     sk = np.asarray(J["skull"], float)
-    # Three feathery gill stalks on each side of the head.
+    # Three frilly gill stalks fanning out and up behind each side of the head.
     for side in (1, -1):
-        for k, (dy, dz, ang) in enumerate(((-0.02, 0.07, 0.5), (-0.05, 0.03, 0.0), (-0.07, -0.02, -0.45))):
-            base = sk + (side * 0.15, dy, dz)
-            tip = base + (side * 0.12, -0.12, 0.13 * np.sin(ang) + 0.04)
-            c.shapes.append(cone(base, tip, 0.025, 0.014, "gill", "head", blend=0.015))
-            for u in (0.35, 0.65, 0.92):
+        for k, ang in enumerate((1.15, 0.55, -0.05)):
+            base = sk + (side * 0.13, -0.05, 0.01 + 0.035 * k)
+            d = np.array([side * np.cos(ang) * 0.6, -0.45, np.sin(ang)])
+            tip = base + d / np.linalg.norm(d) * 0.11
+            c.shapes.append(cone(base, tip, 0.014, 0.01, "gill", "head", blend=0.01))
+            for u in (0.45, 0.72, 1.0):
                 at = base + (tip - base) * u
-                c.shapes.append(ellipsoid(tuple(at), (0.028, 0.02, 0.028), "gill", "head", blend=0.012))
+                c.shapes.append(ellipsoid(tuple(at), (0.018, 0.014, 0.018), "gill", "head", blend=0.008))
     # The soft fin along the top of the tail.
     tb, tm, te = (np.asarray(J[k], float) for k in ("tail_base", "tail_mid", "tail_end"))
     c.shapes.append(plate(tb + (0, 0, 0.05), tm + (0, 0, 0.1), te + (0, 0, 0.03), 0.012, 0.01, "fin", "tail2", blend=0.02))

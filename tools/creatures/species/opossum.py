@@ -53,4 +53,6 @@ def make():
              "frizz": 0.004, "lengths": {"tail": 0.0, "tail_tip": 0.0, "ear": 0.0, "snout": 0.4}}
     c.motion = {"gait": "walk", "attack": "bite", "stride": 1.1, "gape": 0.9}
     c.palette = {"eye_line": "#151210"}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "swipe"
     return c

@@ -38,4 +38,7 @@ def paint(mesh, creature):
 def make():
     c = bird("pigeon_flock", J, R, paint=paint, tiles_long=0.95)
     finish(c, R, iris="#d9692a")
-    return flying(c, SPAN, flap=0.85, hover=0.6)
+    c = flying(c, SPAN, flap=0.85, hover=0.6)
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "rake"
+    return c

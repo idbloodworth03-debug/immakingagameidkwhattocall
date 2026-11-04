@@ -60,4 +60,6 @@ def make():
              iris="#c9902a", pupil="round")
     c.fur = {"strands": False, "variation": 0.05, "sheen": 0.3, "bump": 0.2, "roughness": 0.65}
     c.motion = {"gait": "biped", "attack": "swipe", "rear": 0.0, "stride": 1.2, "cycle_tiles": 0.6}
+    # A Stun animal: a big wind-up before the blow that stuns.
+    c.motion["special"] = True
     return c

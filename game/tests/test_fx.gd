@@ -100,3 +100,20 @@ func test_a_knockout_waits_for_its_hit() -> void:
 	check(target.defeat >= 0.0, "then it's knocked out")
 	check(field.view_for_uid(bear.uid)._smug_until > field.now(), "and the bear looks smug")
 	field.free()
+
+
+func test_the_last_knockout_gets_a_close_up() -> void:
+	var made := _field()
+	var field: BattleField = made.field
+	var bear: BattleSim.Fighter = made.bear
+	var boar: BattleSim.Fighter = made.boar
+	boar.alive = false
+	field.add_events([
+		{"type": "hit", "from": bear.uid, "to": boar.uid, "x": boar.x, "y": boar.y, "fx": bear.x, "fy": bear.y, "amount": 900, "dealt": 900, "ranged": false},
+		{"type": "death", "uid": boar.uid, "kind": "unit", "team": 1, "x": boar.x, "y": boar.y},
+	])
+	var wait := field.finish_fight(0)
+	check(wait > 0.5, "the score waits for the slow-motion knockout (%.2f s)" % wait)
+	check(field.is_celebrating(), "the camera pushes in on it")
+	check(field.view_for_uid(bear.uid).is_celebrating(field.now() + 5.0) == false, "the winner's celebration doesn't last forever")
+	field.free()

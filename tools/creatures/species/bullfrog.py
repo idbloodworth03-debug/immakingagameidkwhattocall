@@ -57,4 +57,6 @@ def make():
     c.cartoon = {"head": 1.3, "legs": 0.9}
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.45, "bump": 0.15, "roughness": 0.35, "specular": 0.5}
     c.motion = {"body": "frog", "attack": "spit", "gape": 0.6, "hop": 0.6, "cycle_tiles": 0.9}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "leap"
     return c

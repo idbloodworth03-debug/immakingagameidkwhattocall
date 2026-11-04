@@ -42,4 +42,6 @@ def make():
                               blend=0.02))
     c.tiles_long = 2.4
     c.motion = dict(c.motion, attack="swipe", rear=0.3)
+    # A Stun animal: a big wind-up before the blow that stuns.
+    c.motion["special"] = True
     return c

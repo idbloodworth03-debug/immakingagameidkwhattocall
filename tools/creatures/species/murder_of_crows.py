@@ -26,4 +26,7 @@ def paint(mesh, creature):
 def make():
     c = bird("murder_of_crows", J, R, paint=paint, tiles_long=1.0)
     finish(c, R, iris="#2a1a10")
-    return flying(c, SPAN, flap=0.8, hover=0.55)
+    c = flying(c, SPAN, flap=0.8, hover=0.55)
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "rake"
+    return c

@@ -94,4 +94,6 @@ def make():
              "frizz": 0.006, "clump": 0.5, "lift": 0.8,
              "lengths": {"mane": 1.8, "snout": 0.15, "front_paw": 0.0, "hind_paw": 0.0, "tail_tip": 1.5}}
     c.motion = {"gait": "trot", "attack": "charge", "stride": 0.95, "charge_reach": 0.4}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "bite"
     return c

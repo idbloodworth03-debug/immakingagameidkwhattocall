@@ -60,4 +60,6 @@ def make():
     add_face(c, eye_dir=(-0.75, 0.5, 0.35), eye_radius=0.017, eye_sink=0.008, nose_radius=0.0, iris="#2b1a10", pupil="round")
     c.fur = {"strands": False, "variation": 0.1, "sheen": 0.25, "bump": 0.3, "roughness": 0.7}
     c.motion = {"gait": "walk", "attack": "charge", "stride": 0.95, "charge_reach": 0.35}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "stomp"
     return c

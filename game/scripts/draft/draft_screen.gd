@@ -28,6 +28,11 @@ var _rng := RandomNumberGenerator.new()
 var _accumulator := 0.0
 var _bot_wait := 0.0
 var _fast := false
+## A fight's opening beat (the herds hop in, "FIGHT!"), and how fast it's
+## playing: a dragging ending speeds up (feel.json "choreography").
+var _intro_left := 0.0
+var _speed := 1.0
+var _quiet := 0.0
 var _result: Dictionary = {}
 var _selected_tool := -1
 var _rally_selected := false
@@ -823,10 +828,14 @@ func _opponent_moves(delta: float) -> void:
 
 
 func _run_fight(delta: float) -> void:
+	if _intro_left > 0.0:
+		_intro_left -= delta
+		return  # the opening beat: the herds hop in, then it starts
 	if _field.is_frozen():
 		return  # hit-stop: the fight holds still for a moment
+	_speed_up_ending(delta)
 	var tick_length := 1.0 / duel.sim.tps
-	_accumulator += delta * (2.0 if _fast else 1.0)
+	_accumulator += delta * _speed * (2.0 if _fast else 1.0)
 	var steps := 0
 	while _accumulator >= tick_length and steps < 10 and duel.phase == "fight":
 		bot.update()
@@ -834,10 +843,37 @@ func _run_fight(delta: float) -> void:
 		var events := duel.sim.take_events()
 		_field.add_events(events)
 		BattleField.play_sounds(events)
+		for e in events:
+			if e.type == "death":
+				_quiet = 0.0
 		_accumulator -= tick_length
 		steps += 1
 	if duel.phase == "fight":
 		_field.blend = clampf(_accumulator / tick_length, 0.0, 1.0)
+
+
+## With only a few animals left and nobody knocked out for a while, the
+## fight (and the field with it) gradually plays faster, so the end never
+## drags. Only how fast it plays changes, never what happens.
+func _speed_up_ending(delta: float) -> void:
+	var c := "choreography"
+	var alive := 0
+	for f in duel.sim.fighters:
+		if f.alive and f.is_unit():
+			alive += 1
+	if alive <= Feel.count(c, "stall_animals", 4):
+		_quiet += delta
+	else:
+		_quiet = 0.0
+	var ramp := clampf((_quiet - Feel.num(c, "stall_after_seconds", 3.0)) / maxf(0.1, Feel.num(c, "stall_ramp_seconds", 3.0)), 0.0, 1.0)
+	_speed = move_toward(_speed, 1.0 + ramp * (Feel.num(c, "stall_max_speed", 2.2) - 1.0), delta)
+	_field.playback = _speed
+
+
+func _reset_speed() -> void:
+	_speed = 1.0
+	_quiet = 0.0
+	_field.playback = 1.0
 
 
 # --- What happened -----------------------------------------------------------------
@@ -853,7 +889,12 @@ func _handle_events(events: Array) -> void:
 			"fight":
 				Sound.play("horn")
 				_field.end_celebrations()
+				_reset_speed()
 				_show_view("fight")
+				# The opening beat: both herds hop into place, then FIGHT!
+				_intro_left = Feel.num("choreography", "intro_seconds", 1.1)
+				_field.hop_in()
+				_banner("FIGHT!", UIStyle.color("gold"), Feel.count("choreography", "fight_banner_size", 96))
 				get_tree().create_timer(0.6).timeout.connect(func() -> void: _rival_says("start"))
 			"tool":
 				Sound.play("horn" if e.id == "air_horn" else "tool")
@@ -863,9 +904,14 @@ func _handle_events(events: Array) -> void:
 				_selected_tool = -1
 				_rally_selected = false
 				_field.highlight = ""
-				if int(e.winner) >= 0:
-					_field.celebrate_team(int(e.winner))
-				_round_result(int(e.winner))
+				_reset_speed()
+				# The last knockout in slow motion, then the winners celebrate
+				# and the score pops up.
+				var wait := _field.finish_fight(int(e.winner))
+				if wait > 0.0:
+					get_tree().create_timer(wait).timeout.connect(_round_result.bind(int(e.winner)))
+				else:
+					_round_result(int(e.winner))
 
 
 ## The quick result: the new score, big, then on to the next round.

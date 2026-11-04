@@ -93,6 +93,17 @@ static func attack_style(id: String, anim := "attack") -> String:
 	return String(_sheet(id).get("attack_style", "bite"))
 
 
+## Its body plan (quadruped, biped, bird, winged, insect, fish, cetacean,
+## crustacean, serpent, frog or pinniped), for how the game moves it.
+static func body(id: String) -> String:
+	return String(_sheet(id).get("body", "bird" if attack_style(id) == "dive" else "quadruped"))
+
+
+## Which attack style its Stun wind-up ("special") has, "" if none.
+static func has_special(id: String) -> bool:
+	return has_animation(id, "special")
+
+
 static func pixels_per_tile(id: String) -> float:
 	return float(_sheet(id).get("pixels_per_tile", 64))
 
@@ -111,6 +122,12 @@ static func frame(id: String, anim: String, facing: float, frame_index: int) -> 
 	var flip := angle > 180
 	if flip:
 		angle = 360 - angle
+	if info.has("at"):
+		# Version 3: each animation has its own frame size and anchor, and
+		# every frame says where it is.
+		var at: Array = info.at[str(angle)][f]
+		var size: Vector2 = info.cell_size
+		return {"texture": sheet.texture, "region": Rect2(float(at[0]), float(at[1]), size.x, size.y), "flip": flip, "anchor": info.anchor_point}
 	var cell: Vector2 = sheet.cell_size
 	var pad := float(sheet.padding)
 	var col := f
@@ -137,7 +154,12 @@ static func _sheet(id: String) -> Dictionary:
 		if parsed is Dictionary:
 			sheet = parsed
 			sheet["texture"] = load(texture_path)
-			sheet["cell_size"] = Vector2(float(sheet.cell[0]), float(sheet.cell[1]))
-			sheet["anchor_point"] = Vector2(float(sheet.anchor[0]), float(sheet.anchor[1]))
+			if sheet.has("cell"):
+				sheet["cell_size"] = Vector2(float(sheet.cell[0]), float(sheet.cell[1]))
+				sheet["anchor_point"] = Vector2(float(sheet.anchor[0]), float(sheet.anchor[1]))
+			for info: Dictionary in sheet.animations.values():
+				if info.has("cell"):
+					info["cell_size"] = Vector2(float(info.cell[0]), float(info.cell[1]))
+					info["anchor_point"] = Vector2(float(info.anchor[0]), float(info.anchor[1]))
 	_sheets[id] = sheet
 	return sheet

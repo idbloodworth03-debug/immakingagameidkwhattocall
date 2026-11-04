@@ -23,6 +23,9 @@ var crowded := false
 var _sparks: Array = []
 ## Damage numbers go on top of the particles (which draw as a child).
 var _over: Node2D
+## Health bar pieces, made once per color and size (a big fight draws
+## dozens of bars every frame).
+var _boxes := {}
 
 
 func _init(owner_field: BattleField) -> void:
@@ -169,26 +172,32 @@ func _draw_bars() -> void:
 	var w := Feel.num(c, "health_bar_width", 44.0)
 	var h := Feel.num(c, "health_bar_height", 9.0)
 	var stars_at := []
+	# A bar shows once an animal is hurt, and fades away when it hasn't been
+	# hit for a while (it comes back with the next hit).
+	var hide_after := Feel.num(c, "health_bar_hide_after", 2.5)
+	var fade := maxf(0.05, Feel.num(c, "health_bar_fade_seconds", 0.5))
+	var now := field.now()
 	for view in field.views():
 		if view.defeat >= 0.0 or view.pop < 1.0:
 			continue
-		var show: bool = view.bar_shown < 0.999 or view.bar_trail > view.bar_shown + 0.002
-		if show:
+		var hurt: bool = view.bar_shown < 0.999 or view.bar_trail > view.bar_shown + 0.002
+		var a := clampf(1.0 - (now - float(view.hurt_time()) - hide_after) / fade, 0.0, 1.0) if hurt else 0.0
+		if a > 0.0:
 			var top: Vector2 = view.position + view.head() + Vector2(0, -12.0)
 			var width := w * (0.8 if view.swarm else 1.0)
 			var rect := Rect2(top - Vector2(width / 2.0, h / 2.0), Vector2(width, h))
 			var team_color := BattleField.OWN_COLOR if view.team == 0 else BattleField.ENEMY_COLOR
 			var radius := int(h / 2.0)
-			draw_style_box(UIKit.box(Color(UIKit.INK, 0.9), radius + 2), rect.grow(2.0))
-			draw_style_box(UIKit.box(Color(0.12, 0.14, 0.2), radius), rect)
+			draw_style_box(_box(Color(UIKit.INK, 0.9 * a), radius + 2), rect.grow(2.0))
+			draw_style_box(_box(Color(0.12, 0.14, 0.2, a), radius), rect)
 			var trail := Rect2(rect.position, Vector2(width * clampf(view.bar_trail, 0.0, 1.0), h))
 			if trail.size.x > 1.0:
-				draw_style_box(UIKit.box(Color("#fff1c2"), radius), trail)
+				draw_style_box(_box(Color("#fff1c2", a), radius), trail)
 			var fill := Rect2(rect.position, Vector2(width * clampf(view.bar_shown, 0.0, 1.0), h))
 			if fill.size.x > 1.0:
-				draw_style_box(UIKit.box(team_color.lightened(0.15), radius), fill)
+				draw_style_box(_box(Color(team_color.lightened(0.15), a), radius), fill)
 				var gloss := Rect2(fill.position + Vector2(1, 1), Vector2(maxf(fill.size.x - 2, 0.0), h * 0.38))
-				draw_style_box(UIKit.box(Color(1, 1, 1, 0.35), radius), gloss)
+				draw_style_box(_box(Color(1, 1, 1, 0.35 * a), radius), gloss)
 			if view.stars > 1 and view.shows_stars():
 				stars_at.append([top + Vector2(0, -h - 1.0), view.stars, 5.5])
 		elif view.stars > 1 and view.shows_stars():
@@ -205,6 +214,16 @@ func _draw_bars() -> void:
 		var gap: float = float(s[2]) * 1.85
 		for i in count:
 			UIStyle.draw_particle(self, "star", s[0] + Vector2((i - (count - 1) / 2.0) * gap, 0), float(s[2]), Color("#ffe14d"))
+
+
+## A rounded box for a health bar, reused (its opacity rounded a little so
+## a fading bar doesn't make a new one every frame).
+func _box(color: Color, radius: int) -> StyleBoxFlat:
+	color.a = snappedf(color.a, 0.05)
+	var key := "%s/%d" % [color.to_html(), radius]
+	if not _boxes.has(key):
+		_boxes[key] = UIKit.box(color, radius)
+	return _boxes[key]
 
 
 func _draw_projectile(pr: Dictionary) -> void:

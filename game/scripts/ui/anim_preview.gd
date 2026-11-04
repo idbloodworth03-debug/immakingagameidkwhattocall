@@ -3,8 +3,9 @@ extends Control
 ## animals on a small field, each with a sparring partner, and buttons that
 ## make them act out every animation and reaction on demand: standing, a
 ## fidget, walking, both attacks, getting hit, a big hit, stunned, slowed,
-## nearly beaten, celebrating and knocked out. Starts with the combat polish
-## samples (a Tank, a Tank Destroyer and a flier); Next shows three more.
+## nearly beaten, celebrating, knocked out, a Stun animal's big blow and
+## burrowing. Starts with the combat polish samples (a Tank, a Tank
+## Destroyer and a flier); Next shows three more.
 ##
 ## The little fight is never stepped: the buttons move the animals and
 ## hand the field the same events a fight would.
@@ -17,6 +18,7 @@ const ACTIONS := [
 	["Stand", "idle"], ["Fidget", "fidget"], ["Walk", "walk"], ["Attack", "attack"],
 	["Attack 2", "attack2"], ["Get hit", "hit"], ["Big hit", "big_hit"], ["Stunned", "stun"],
 	["Slowed", "slow"], ["Nearly beaten", "low"], ["Celebrate", "victory"], ["Knockout", "knockout"],
+	["Stun blow", "special"], ["Burrow", "burrow"],
 ]
 
 var field: BattleField
@@ -30,6 +32,7 @@ var _ticks := 0.0
 var _walk_left := 0.0
 var _walk_from: Array = []
 var _respawn_in := -1.0
+var _unburrow_in := -1.0
 var _names: Label
 ## What's being acted out, over the field for a moment.
 var _caption: Label
@@ -151,6 +154,12 @@ func _process(delta: float) -> void:
 			f.prev_x = x
 	_caption_left -= delta
 	_caption.modulate.a = clampf(_caption_left / 0.3, 0.0, 1.0)
+	if _unburrow_in >= 0.0:
+		_unburrow_in -= delta
+		if _unburrow_in < 0.0:
+			for f: BattleSim.Fighter in actors:
+				f.memory.burrowing = false
+				field.add_events([{"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y}])
 	if _respawn_in >= 0.0:
 		_respawn_in -= delta
 		if _respawn_in < 0.0:
@@ -179,7 +188,12 @@ func act(what: String) -> void:
 		"walk":
 			_walk_left = 3.0
 			_walk_from = actors.map(func(f): return f.x)
-		"attack", "attack2":
+		"burrow":
+			# Down into the ground, then up again a moment later.
+			for f: BattleSim.Fighter in actors:
+				f.memory.burrowing = true
+			_unburrow_in = 1.4
+		"attack", "attack2", "special":
 			for i in actors.size():
 				var v := field.view_for_uid(actors[i].uid)
 				if v != null:

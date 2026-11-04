@@ -73,4 +73,6 @@ def make():
     c.fur = {"strands": False, "variation": 0.05, "sheen": 0.3, "bump": 0.2, "roughness": 0.6}
     c.motion = {"gait": "biped", "attack": "bite", "rear": 0.0, "stride": 0.8, "wiggle": 0.12, "cycle_tiles": 0.55}
     c.palette = {"eye_line": "#1b1f12"}
+    # A Stun animal: a big wind-up before the blow that stuns.
+    c.motion["special"] = True
     return c

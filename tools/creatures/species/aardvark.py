@@ -46,4 +46,6 @@ def make():
     c.extras[-1].color = "#e39a9a"
     c.fur = {"strands": False, "variation": 0.1, "sheen": 0.2, "bump": 0.3, "roughness": 0.7}
     c.motion = {"gait": "trot", "attack": "swipe", "rear": 0.3, "stride": 0.95}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "bite"
     return c

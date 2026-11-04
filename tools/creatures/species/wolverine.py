@@ -51,4 +51,6 @@ def make():
     c.fur = {"strands": False, "variation": 0.12, "sheen": 0.3, "bump": 0.3, "roughness": 0.65}
     c.motion = {"gait": "gallop", "attack": "bite", "stride": 1.1, "gape": 0.9}
     c.palette = {"eye_line": "#151210"}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "swipe"
     return c

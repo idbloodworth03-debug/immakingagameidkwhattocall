@@ -32,7 +32,7 @@ def main(species, anim, out, size=220):
     span = float(max(mesh.verts.max(axis=0) - mesh.verts.min(axis=0))) * 1.3
     sc.render.resolution_x = size
     sc.render.resolution_y = size
-    fn, frames, _, loops = motion.ANIMATIONS[anim]
+    fn, frames, _, loops = {**motion.ANIMATIONS, **motion.EXTRA}[anim]
     rows = [(5, span * 0.62), (50, span * 1.0)]
     sheet = Image.new("RGBA", (size * frames, size * len(rows)), (96, 140, 80, 255))
     facing.rotation_euler = (0, 0, -math.pi / 2)

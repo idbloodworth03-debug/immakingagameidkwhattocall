@@ -36,7 +36,7 @@
   },
 
   "combat": {
-    "_note": "Combat juice. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could, so a herd doesn't swing in step; a hit that comes within strike_grace_seconds of a strike lands on that strike. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
+    "_note": "Combat juice. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could, so a herd doesn't swing in step; a hit that comes within strike_grace_seconds of a strike lands on that strike. Health bars show once an animal is hurt and fade away (over health_bar_fade_seconds) when it hasn't been hit for health_bar_hide_after seconds. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
     "windup_squash": 0.12,
     "windup_pull_pixels": 4.0,
     "strike_stretch": 0.16,
@@ -75,6 +75,8 @@
     "health_bar_drain_speed": 3.0,
     "health_bar_trail_delay": 0.4,
     "health_bar_trail_speed": 0.9,
+    "health_bar_hide_after": 2.5,
+    "health_bar_fade_seconds": 0.5,
     "defeat_seconds": 0.6,
     "defeat_hop_pixels": 46.0,
     "defeat_spin_turns": 1.25
@@ -106,7 +108,7 @@
   },
 
   "acting": {
-    "_note": "How animals act, on top of their rendered animations. Each plays its idle and walk at its own pace (up to pace_variety faster or slower). It blinks (blink_seconds, every blink_every seconds) and, standing about with nothing in reach, fidgets now and then (fidget_every; the first after fidget_first). Faces drawn over the eyes: a squint on the wind-up, wide eyes for wide_seconds when hit, dizzy swirls when stunned or knocked out, drowsy lids when slowed, happy eyes when celebrating, a smug look for smug_seconds after a knockout. A hit makes it flinch (flinch_degrees) and bounce (hurt_bounce_pixels over hurt_seconds). Changing animation squashes it a little (transition_squash). Classes move their own way: wind-ups take windup_scale of the sheet's time (a Tank's big slow swing, a Tank Destroyer's quick one); Tanks plod (tank_hop of the walk's hop) with a thump and dust at each step (tank_step_squash); Tank Destroyers lean in (td_lean), crouch and spring at a pounce (td_pounce_pixels) and lunge further (td_lunge); Ranged kick back on every shot (ranged_recoil_pixels); fliers bob (air_bob_pixels at air_bob_speed), swoop (air_swoop_pixels), bank into turns (air_bank_degrees), rise before a dive (air_dive_rise_pixels) and drop into it (air_dive_drop_pixels). The winners celebrate for victory_seconds with bounces of victory_hop_pixels. A knockout poofs, or (defeat_fling_chance) bounces off the screen with a spin over defeat_fling_seconds. Stunned animals wobble (stun_wobble_degrees); slowed ones move at slow_pace with a Zzz every zzz_every seconds. Below sweat_below of their health they sweat (a drop every sweat_every seconds). Setting off, one may trip (trip_chance, for trip_seconds, at most once every trip_cooldown seconds).",
+    "_note": "How animals act, on top of their rendered animations. Each plays its idle and walk at its own pace (up to pace_variety faster or slower). It blinks (blink_seconds, every blink_every seconds) and, standing about with nothing in reach, fidgets now and then (fidget_every; the first after fidget_first). Faces drawn over the eyes: a squint on the wind-up, wide eyes for wide_seconds when hit, dizzy swirls when stunned or knocked out, drowsy lids when slowed, happy eyes when celebrating, a smug look for smug_seconds after a knockout. A hit makes it flinch (flinch_degrees) and bounce (hurt_bounce_pixels over hurt_seconds). Changing animation squashes it a little (transition_squash). Classes move their own way: wind-ups take windup_scale of the sheet's time (a Tank's big slow swing, a Tank Destroyer's quick one); Tanks plod (tank_hop of the walk's hop) with a thump and dust at each step (tank_step_squash); Tank Destroyers lean in (td_lean), crouch and spring at a pounce (td_pounce_pixels) and lunge further (td_lunge); Ranged kick back on every shot (ranged_recoil_pixels); fliers bob (air_bob_pixels at air_bob_speed), swoop (air_swoop_pixels), bank into turns (air_bank_degrees), rise before a dive (air_dive_rise_pixels) and drop into it (air_dive_drop_pixels). The winners celebrate for victory_seconds with bounces of victory_hop_pixels. A knockout poofs, or (defeat_fling_chance) bounces off the screen with a spin over defeat_fling_seconds. Stunned animals wobble (stun_wobble_degrees); slowed ones move at slow_pace with a Zzz every zzz_every seconds. Below sweat_below of their health they sweat (a drop every sweat_every seconds). Setting off, one may trip (trip_chance, for trip_seconds, at most once every trip_cooldown seconds). Specialist traits act too: a Stun animal's stunning blow comes after its rendered wind-up (a chest beat, a hiss, a roar) or, without one, a trembling stare stretching the wind-up by stun_windup_scale; a Slow animal's wind-up is a lazy yawn, slow_windup_scale as long, with drowsy eyes; a Splash animal rises splash_hop_pixels for a belly flop and lands squashed (splash_squash); a Burrow animal sinks into the ground over dig_seconds and pops out with a springy boing over emerge_seconds (emerge_hop_pixels high). Body plans walk their own way: fish wiggle (fish_wiggle_degrees), upright animals waddle (waddle_degrees), snakes ripple, frogs bound, seals and whales slide, shrimp scuttle.",
     "pace_variety": 0.08,
     "blink_seconds": 0.13,
     "blink_every": [2.2, 5.0],
@@ -142,7 +144,33 @@
     "sweat_every": 1.3,
     "trip_chance": 0.03,
     "trip_seconds": 0.45,
-    "trip_cooldown": 25.0
+    "trip_cooldown": 25.0,
+    "stun_windup_scale": 1.8,
+    "slow_windup_scale": 1.5,
+    "splash_hop_pixels": 16.0,
+    "splash_squash": 0.25,
+    "dig_seconds": 0.35,
+    "emerge_seconds": 0.5,
+    "emerge_hop_pixels": 18.0,
+    "fish_wiggle_degrees": 8.0,
+    "waddle_degrees": 5.0
+  },
+
+  "choreography": {
+    "_note": "How a fight is staged. It opens with a beat of intro_seconds: both herds hop into place (intro_hop_pixels high, spread over intro_hop_spread_seconds) and a bouncy FIGHT! banner (fight_banner_size) shows before the fight starts. When stall_animals or fewer are left and nobody has been knocked out for stall_after_seconds, the fight gradually plays faster, up to stall_max_speed after stall_ramp_seconds more (only how fast it plays, never what happens). The last knockout plays in slow motion (final_slow_motion) with a push-in (final_zoom, in over final_zoom_in_seconds, held until final_hold_seconds after the knockout, out over final_zoom_out_seconds); then the winners celebrate and the score shows.",
+    "intro_seconds": 1.1,
+    "intro_hop_pixels": 16.0,
+    "intro_hop_spread_seconds": 0.4,
+    "fight_banner_size": 96,
+    "stall_animals": 4,
+    "stall_after_seconds": 3.0,
+    "stall_ramp_seconds": 3.0,
+    "stall_max_speed": 2.2,
+    "final_slow_motion": 0.35,
+    "final_zoom": 1.18,
+    "final_zoom_in_seconds": 0.2,
+    "final_hold_seconds": 0.5,
+    "final_zoom_out_seconds": 0.4
   },
 
   "effects": {

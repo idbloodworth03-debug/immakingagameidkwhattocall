@@ -44,4 +44,6 @@ def make():
     add_face(c, eye_dir=(-0.7, 0.6, 0.3), eye_radius=0.008, eye_sink=0.003, nose_radius=0, iris="#e8b020", pupil="round")
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.4, "bump": 0.1, "roughness": 0.4, "specular": 0.4}
     c.motion = {"body": "serpent", "attack": "bite", "gape": 0.5, "cycle_tiles": 1.0}
+    # A Stun animal: a big wind-up before the blow that stuns.
+    c.motion["special"] = True
     return c

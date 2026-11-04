@@ -73,4 +73,6 @@ def make():
     add_face(c, eye_dir=(-0.6, 0.7, 0.4), eye_radius=0.006, eye_sink=0.002, nose_radius=0, iris="#111111", pupil="round")
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.35, "bump": 0.0, "roughness": 0.4, "specular": 0.4}
     c.motion = {"body": "crustacean", "attack": "snap", "big_claw": "R", "cycle_tiles": 0.6}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "ram"
     return c

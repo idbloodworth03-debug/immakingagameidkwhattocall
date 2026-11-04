@@ -38,4 +38,7 @@ def make():
     c.shapes.append(ellipsoid((0, sk[1] + R["skull"][1] * 0.55, sk[2] - R["skull"][2] * 0.05),
                               (R["skull"][0] * 1.05, R["skull"][1] * 0.35, R["skull"][2] * 1.05), "face", "head", blend=R["skull"][0] * 0.3))
     finish(c, R, iris="#160c06", eye_dir=(-0.42, 0.88, 0.15), eye=0.3)
-    return flying(c, SPAN, flap=0.6, hover=0.45)
+    c = flying(c, SPAN, flap=0.6, hover=0.45)
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "rake"
+    return c

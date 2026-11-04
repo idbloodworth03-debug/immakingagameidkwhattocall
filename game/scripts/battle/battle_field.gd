@@ -45,6 +45,9 @@ var grass := Color("#5f9e4f")
 var arena_id := ""
 ## How far we are between the last tick and the next (0-1), for smooth motion.
 var blend := 0.0
+## How fast the field plays (the screen speeds a dragging ending up; it
+## steps the fight at the same pace).
+var playback := 1.0
 ## What to light up: "" (nothing), "own_half" (where the player's animals
 ## may start) or "field" (anywhere: aiming a tool or a Rally).
 var highlight := ""
@@ -62,7 +65,8 @@ var _units: Node2D
 var _views := {}
 var _by_uid := {}
 var _time := 0.0
-## A celebration close-up: {"view", "age"} while zooming on an animal.
+## A close-up: {"view", "age", and its zoom, slow motion and timings} while
+## zooming on an animal (a 3-star upgrade, the last knockout of a fight).
 var _focus := {}
 var _freeze := 0.0
 var _freeze_ready := 0.0
@@ -73,6 +77,9 @@ var _impacts: Array = []
 ## Set by a test to keep a note of every hit as it lands (see _land).
 var impact_log: Array = []
 var log_impacts := false
+## The last animal knocked out, and when (for the fight's final close-up).
+var _last_defeated: UnitView
+var _last_defeat_at := -1.0
 
 ## The camera: how big a field it shows (1 = the smallest field), easing
 ## toward the field's real size so it zooms out smoothly as the field grows.
@@ -280,8 +287,49 @@ func celebrate(key: Variant) -> bool:
 	var v: UnitView = _views.get(key, null)
 	if v == null:
 		return false
-	_focus = {"view": v, "age": 0.0}
+	var c := "celebrations"
+	_focus = {"view": v, "age": 0.0, "zoom": Feel.num(c, "star3_zoom", 1.45), "slow": Feel.num(c, "star3_slow_motion", 0.3),
+		"in": Feel.num(c, "star3_zoom_in_seconds", 0.28), "hold": Feel.num(c, "star3_hold_seconds", 0.9),
+		"out": Feel.num(c, "star3_zoom_out_seconds", 0.4)}
 	return true
+
+
+## The fight is over: the last knockout plays in slow motion with a small
+## push-in on it (feel.json "choreography"), then the winners celebrate.
+## Gives how long that takes, so the score can wait for it.
+func finish_fight(winner: int) -> float:
+	var c := "choreography"
+	# The last one knocked out: still waiting for its blow, or already
+	# going down.
+	var last: UnitView = null
+	var at := -1.0
+	for v: UnitView in _views.values():
+		var when := v.doom_at if v.doomed else -1.0
+		if v.defeat >= 0.0 and v.defeat < 1.0 and v == _last_defeated:
+			when = _last_defeat_at
+		if when >= 0.0 and when > at:
+			last = v
+			at = when
+	var wait := 0.0
+	if last != null:
+		var slow := Feel.num(c, "final_slow_motion", 0.35)
+		var hold := maxf(0.0, at - _time) / slow + Feel.num(c, "final_hold_seconds", 0.5)
+		_focus = {"view": last, "age": 0.0, "zoom": Feel.num(c, "final_zoom", 1.18), "slow": slow,
+			"in": Feel.num(c, "final_zoom_in_seconds", 0.2), "hold": maxf(0.2, hold), "out": Feel.num(c, "final_zoom_out_seconds", 0.4)}
+		wait = float(_focus.in) + float(_focus.hold)
+	if winner >= 0:
+		for v: UnitView in _views.values():
+			if v.team == winner and v.defeat < 0.0 and not v.doomed:
+				v.celebrate(_time + wait * Feel.num(c, "final_slow_motion", 0.35) + randf() * 0.3)
+	return wait
+
+
+## Both herds hop into place, one after another, as a fight begins.
+func hop_in() -> void:
+	var spread := Feel.num("choreography", "intro_hop_spread_seconds", 0.4)
+	for v: UnitView in _views.values():
+		if v.defeat < 0.0:
+			v.hop_in(_time + randf() * spread)
 
 
 func is_celebrating() -> bool:
@@ -296,6 +344,9 @@ func _focus_amount(delta: float) -> float:
 	var zoom_in := Feel.num(c, "star3_zoom_in_seconds", 0.28)
 	var hold := Feel.num(c, "star3_hold_seconds", 0.9)
 	var zoom_out := Feel.num(c, "star3_zoom_out_seconds", 0.4)
+	zoom_in = float(_focus.get("in", zoom_in))
+	hold = float(_focus.get("hold", hold))
+	zoom_out = float(_focus.get("out", zoom_out))
 	_focus.age += delta
 	var age: float = _focus.age
 	if age < zoom_in:
@@ -326,14 +377,16 @@ func _gui_input(event: InputEvent) -> void:
 # --- Every frame -----------------------------------------------------------
 
 func _process(delta: float) -> void:
+	delta *= playback
 	var dt := delta
 	_freeze_ready = maxf(0.0, _freeze_ready - delta)
 	if _freeze > 0.0:
 		_freeze -= delta
 		dt = 0.0
 	# A celebration close-up slows everything down while it zooms in.
+	var slow := float(_focus.get("slow", 1.0))
 	var focus := _focus_amount(delta)
-	dt *= lerpf(1.0, Feel.num("celebrations", "star3_slow_motion", 0.3), focus)
+	dt *= lerpf(1.0, slow, focus)
 	_time += dt
 	_trauma = maxf(0.0, _trauma - delta / maxf(0.05, Feel.num("combat", "shake_seconds", 0.3)))
 	var strength := Feel.num("combat", "shake_pixels", 8.0) * _trauma * _trauma
@@ -343,7 +396,7 @@ func _process(delta: float) -> void:
 	if focus > 0.0 and is_instance_valid(_focus.get("view")):
 		var v: UnitView = _focus.view
 		var target := v.position + Vector2(0, -UnitSprites.top(v.id) * v.body.k * 0.4)
-		zoom = lerpf(1.0, Feel.num("celebrations", "star3_zoom", 1.45), focus)
+		zoom = lerpf(1.0, float(_focus.get("zoom", 1.3)), focus)
 		# Bring the animal toward the middle as we zoom in on it.
 		pan = target.lerp(size / 2.0, focus) - target * zoom
 	_world.scale = Vector2(zoom, zoom)
@@ -700,6 +753,8 @@ func _doom(e: Dictionary, at: float) -> void:
 func _defeat_view(v: UnitView) -> void:
 	fx.burst_defeat(v.middle())
 	v.start_defeat()
+	_last_defeated = v
+	_last_defeat_at = _time
 	var winner := v.last_attacker
 	if is_instance_valid(winner) and winner.defeat < 0.0 and not winner.doomed:
 		winner.gloat(_time)
@@ -737,6 +792,9 @@ func _land(hit: Dictionary) -> void:
 		if target.defeat < 0.0:
 			target.hurt(dir, strong)
 		at = target.middle()
+	if attacker != null and attacker.trait_name() == "splash":
+		# A belly flop lands with a splash ring on the ground.
+		fx.effect("ring", to_screen(e.x, e.y), 650 * s, EFFECT_COLORS.splash, 0.4, "", true)
 	# Busy fights keep the biggest hits' sparks and marks (fx.allow_sparks).
 	if fx.allow_sparks(amount) or strong:
 		if strong or not fx.crowded:

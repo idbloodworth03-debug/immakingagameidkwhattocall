@@ -32,6 +32,7 @@ Everything runs offline on your computer, saved on the device:
   - chunky mobile-game fonts
   - a fake-3D finish on every animal (a highlight from the top-left, a cool rim light, soft volume shading, outlines in a dark shade of its own colors)
   - smooth, bouncy animation: breathing, walking hops, squash and stretch, wind-ups and lunges, pop-ins, and cartoon poof-and-stars defeats
+  - fight staging: herds hop into place under a bouncy FIGHT! banner, a dragging ending speeds up, and the last knockout plays in slow motion with a push-in before the winners celebrate; health bars fade away when an animal hasn't been hit for a while
   - acting: each class moves and attacks its own way (Tanks plod and swing slow, Tank Destroyers pounce, Ranged kick back, fliers swoop and dive), and animals blink, fidget, flinch, celebrate and pull cartoon faces (squint, wide eyes, dizzy swirls, drowsy lids, happy eyes)
   - smooth movement: animals ease into and out of a run, keep their pictures from piling up, turn at a cartoon pace, and walk with their feet in step with the ground
   - readable hits: every hit lands on its strike (or when its shot arrives), never before; white hit flashes, knockback, hit sparks, hit-stop and screen shake only on big hits and knockouts, bouncy damage numbers, chunky health bars with a delayed "damage taken" bar

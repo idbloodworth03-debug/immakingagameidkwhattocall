@@ -44,44 +44,71 @@ def clean_alpha(im, floor=14):
     return im
 
 
-def pack(crops, timing, hit, anchor, pixels_per_tile=PIXELS_PER_TILE):
-    """Lays every frame out in a near-square grid. `crops` maps (anim, dir)
-    to equally sized RGBA arrays; `timing` maps anim to (frames, fps, loops);
-    `hit` maps each attack to the share of it where the blow lands.
-    Each animation and direction records where its first frame is."""
-    first = next(iter(crops.values()))[0]
-    cell_h, cell_w = first.shape[:2]
-    total = sum(len(v) for v in crops.values())
-    step_w, step_h = cell_w + PADDING * 2, cell_h + PADDING * 2
-    columns = max(1, int(math.ceil(math.sqrt(total * step_h / step_w))))
-    rows = int(math.ceil(total / columns))
-    sheet = Image.new("RGBA", (columns * step_w, rows * step_h), (0, 0, 0, 0))
+MAX_SHEET = 4096                        # pixels on a side, the most phones take
+
+
+def pack(crops, timing, hit, anchors, pixels_per_tile=PIXELS_PER_TILE):
+    """Packs every frame into one sheet. `crops` maps (anim, dir) to RGBA
+    arrays, all the same size within an animation (each animation is
+    cropped to its own box, so a rearing victory doesn't make every idle
+    frame bigger); `anchors` maps anim to the anchor point in its frames;
+    `timing` maps anim to (frames, fps, loops); `hit` maps each attack to
+    the share of it where the blow lands. Frames are shelf-packed, tallest
+    first, into the narrowest near-square sheet; each animation records its
+    frame size, anchor and where each frame of each direction is."""
+    items = []
+    for (anim, d), images in crops.items():
+        for f, im in enumerate(images):
+            items.append((im.shape[0] + PADDING * 2, im.shape[1] + PADDING * 2, anim, d, f, im))
+    items.sort(key=lambda it: (-it[0], it[2], it[3], it[4]))
+    area = sum(h * w for h, w, *_ in items)
+    widest = max(w for h, w, *_ in items)
+
+    def shelves(width):
+        spots, x, y, shelf = {}, 0, 0, 0
+        for h, w, anim, d, f, im in items:
+            if x + w > width:
+                x, y, shelf = 0, y + shelf, 0
+            spots[(anim, d, f)] = (x + PADDING, y + PADDING)
+            x += w
+            shelf = max(shelf, h)
+        return spots, y + shelf
+
+    best = None
+    for k in np.linspace(0.9, 1.4, 11):
+        width = max(widest, int(math.ceil(math.sqrt(area) * k)))
+        spots, height = shelves(width)
+        side = max(width, height)
+        if best is None or side < best[0]:
+            best = (side, width, height, spots)
+    side, width, height, spots = best
+    if side > MAX_SHEET:
+        raise SystemExit(f"the sheet would be {width}x{height}, over {MAX_SHEET} on a side")
+    sheet = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     meta = {
-        "version": 2,
-        "cell": [int(cell_w), int(cell_h)],
+        "version": 3,
         "padding": PADDING,
-        "columns": columns,
-        "anchor": [round(float(anchor[0]), 1), round(float(anchor[1]), 1)],
         "pixels_per_tile": pixels_per_tile,
         "directions": DIRECTIONS,
         "animations": {},
     }
-    index = 0
     for anim, (count, fps, loops) in timing.items():
-        info = {"frames": count, "fps": fps, "loop": loops, "start": {}}
+        im0 = crops[(anim, DIRECTIONS[0])][0]
+        info = {"frames": count, "fps": fps, "loop": loops,
+                "cell": [int(im0.shape[1]), int(im0.shape[0])],
+                "anchor": [round(float(anchors[anim][0]), 1), round(float(anchors[anim][1]), 1)],
+                "at": {}}
         if anim in hit:
             info["hit"] = hit[anim]
         for d in DIRECTIONS:
-            info["start"][str(d)] = index
-            for im in crops[(anim, d)]:
-                col, row = index % columns, index // columns
-                sheet.paste(Image.fromarray(im), (col * step_w + PADDING, row * step_h + PADDING))
-                index += 1
+            info["at"][str(d)] = [list(spots[(anim, d, f)]) for f in range(len(crops[(anim, d)]))]
+            for f, im in enumerate(crops[(anim, d)]):
+                sheet.paste(Image.fromarray(im), spots[(anim, d, f)])
         meta["animations"][anim] = info
     return sheet, meta
 
 
-def sprite_top(frames, anchor, y0=0):
+def sprite_top(frames, anchor):
     """How far the animal's highest point rises above its anchor while
     idling, in pixels (the median over directions), for placing health bars."""
     tops = []
@@ -94,6 +121,12 @@ def sprite_top(frames, anchor, y0=0):
     return round(float(np.median(tops)), 1) if tops else 0.0
 
 
+def existing_animations(out_dir):
+    """The animations in the sheet already in out_dir (none if there isn't one)."""
+    path = os.path.join(out_dir, "sheet.json")
+    return list(json.load(open(path))["animations"]) if os.path.exists(path) else []
+
+
 def _old_frames(out_dir, side, anchor, anims):
     """The frames of `anims` from the sheet already in out_dir, put back where
     they were in the full rendered frame. Only works while the creature's
@@ -103,26 +136,34 @@ def _old_frames(out_dir, side, anchor, anims):
     if missing:
         raise SystemExit(f"{out_dir}: the old sheet has no {', '.join(missing)}; render those too")
     sheet = np.asarray(Image.open(os.path.join(out_dir, "sheet.webp")).convert("RGBA"))
-    cw, ch = meta["cell"]
-    pad, cols = meta["padding"], meta["columns"]
-    ox, oy = anchor[0] - meta["anchor"][0], anchor[1] - meta["anchor"][1]
-    lines_up = (meta.get("version") == 2 and meta.get("pixels_per_tile") == PIXELS_PER_TILE
-                and abs(ox - round(ox)) < 0.2 and abs(oy - round(oy)) < 0.2
-                and 0 <= ox and ox + cw <= side and 0 <= oy and oy + ch <= side)
-    if not lines_up:
-        raise SystemExit(f"{out_dir}: the old sheet doesn't line up with this creature (offset {ox:.2f}, {oy:.2f}, "
-                         f"cell {cw}x{ch} in a {side} frame); render every animation")
-    ox, oy = int(round(ox)), int(round(oy))
+    if meta.get("pixels_per_tile") != PIXELS_PER_TILE:
+        raise SystemExit(f"{out_dir}: the old sheet is at another scale; render every animation")
     frames = {}
     for anim in anims:
         info = meta["animations"][anim]
         if info["frames"] != motion.ANIMATIONS[anim][1]:
             raise SystemExit(f"{out_dir}: {anim} has a different frame count now; render it again too")
+        if meta.get("version") == 3:
+            cw, ch = info["cell"]
+            ax, ay = info["anchor"]
+        else:
+            cw, ch = meta["cell"]
+            ax, ay = meta["anchor"]
+        ox, oy = anchor[0] - ax, anchor[1] - ay
+        if not (abs(ox - round(ox)) < 0.2 and abs(oy - round(oy)) < 0.2
+                and 0 <= ox and ox + cw <= side and 0 <= oy and oy + ch <= side):
+            raise SystemExit(f"{out_dir}: the old sheet doesn't line up with this creature (offset {ox:.2f}, {oy:.2f}, "
+                             f"cell {cw}x{ch} in a {side} frame); render every animation")
+        ox, oy = int(round(ox)), int(round(oy))
         for d in DIRECTIONS:
             images = []
             for f in range(info["frames"]):
-                i = int(info["start"][str(d)]) + f
-                x, y = (i % cols) * (cw + pad * 2) + pad, (i // cols) * (ch + pad * 2) + pad
+                if meta.get("version") == 3:
+                    x, y = info["at"][str(d)][f]
+                else:
+                    pad, cols = meta["padding"], meta["columns"]
+                    i = int(info["start"][str(d)]) + f
+                    x, y = (i % cols) * (cw + pad * 2) + pad, (i // cols) * (ch + pad * 2) + pad
                 full = np.zeros((side, side, 4), np.uint8)
                 full[oy:oy + ch, ox:ox + cw] = sheet[y:y + ch, x:x + cw]
                 images.append(full)
@@ -163,11 +204,16 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     frames = {}        # (anim, dir) -> list of RGBA arrays
     eyes = {}          # (anim, dir) -> per frame, each eye's [x, y, facing]
     eye_objects = [o for o in bpy.data.objects if o.type == "MESH" and "_eye_" in o.name]
-    animations = motion.animations_for(creature)
-    if anims:
-        frames.update(_old_frames(out_dir, side, anchor, [a for a in animations if a not in anims]))
+    existing = existing_animations(out_dir)
+    animations = motion.animations_for(creature, existing)
+    if anims == "new":
+        # Only what the sheet is missing; the rest is kept.
+        anims = [a for a in animations if a not in existing]
+    kept = [a for a in animations if anims is not None and a not in anims]
+    if kept:
+        frames.update(_old_frames(out_dir, side, anchor, kept))
     for anim, (fn, count, fps, loops) in animations.items():
-        render = not anims or anim in anims
+        render = anims is None or anim in anims
         for d in DIRECTIONS:
             facing.rotation_euler = (0, 0, -math.radians(d))
             images = []
@@ -189,24 +235,31 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     if os.path.exists(tmp):
         os.remove(tmp)
 
-    # Crop every frame to the box that fits them all.
-    alpha = np.zeros((side, side), bool)
-    for images in frames.values():
-        for im in images:
-            alpha |= im[:, :, 3] > 6
-    ys, xs = np.nonzero(alpha)
-    x0, x1 = max(xs.min() - 1, 0), min(xs.max() + 2, side)
-    y0, y1 = max(ys.min() - 1, 0), min(ys.max() + 2, side)
-    crops = {key: [im[y0:y1, x0:x1] for im in images] for key, images in frames.items()}
+    # Crop each animation to the box that fits all its frames.
+    crops, anchors = {}, {}
+    for name in animations:
+        alpha = np.zeros((side, side), bool)
+        for d in DIRECTIONS:
+            for im in frames[(name, d)]:
+                alpha |= im[:, :, 3] > 6
+        ys, xs = np.nonzero(alpha)
+        x0, x1 = max(xs.min() - 1, 0), min(xs.max() + 2, side)
+        y0, y1 = max(ys.min() - 1, 0), min(ys.max() + 2, side)
+        for d in DIRECTIONS:
+            crops[(name, d)] = [im[y0:y1, x0:x1] for im in frames[(name, d)]]
+        anchors[name] = (anchor[0] - x0, anchor[1] - y0)
     timing = {anim: (count, fps, loops) for anim, (fn, count, fps, loops) in animations.items()}
     hit = {"attack": motion.HIT_AT.get(creature.motion.get("attack", "bite"), 0.45)}
     if "attack2" in animations:
         hit["attack2"] = motion.HIT_AT.get(creature.motion["attack2"], 0.45)
-    cell_anchor = (anchor[0] - x0, anchor[1] - y0)
-    sheet, meta = pack(crops, timing, hit, anchor=cell_anchor)
+    if "special" in animations:
+        hit["special"] = motion.HIT_AT["special"]
+    sheet, meta = pack(crops, timing, hit, anchors)
     _add_eyes(meta, eyes, frames, eye_objects, anchor, ppm)
     meta["walk_cycle_tiles"] = round(creature.motion.get("cycle_tiles", creature.tiles_long * 0.75), 3)
-    meta["top"] = sprite_top(frames, anchor, y0)
+    meta["top"] = sprite_top(frames, anchor)
+    # Its body plan, for the game's way of moving it.
+    meta["body"] = creature.motion.get("body") or ("biped" if creature.motion.get("gait") == "biped" else "quadruped")
     meta["attack_style"] = creature.motion.get("attack", "bite")
     if "attack2" in animations:
         meta["attack2_style"] = creature.motion["attack2"]
@@ -215,7 +268,7 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     sheet.save(os.path.join(out_dir, "sheet.webp"), "WEBP", quality=90, method=6)
     with open(os.path.join(out_dir, "sheet.json"), "w") as fh:
         json.dump(meta, fh, indent=1)
-    print(f"sheet {sheet.size[0]}x{sheet.size[1]}, cell {meta['cell'][0]}x{meta['cell'][1]}")
+    print(f"sheet {sheet.size[0]}x{sheet.size[1]}: " + ", ".join(f"{a} {i['cell'][0]}x{i['cell'][1]}" for a, i in meta["animations"].items()))
 
 
 def _eye_spots(sc, cam, side, eye_objects):
@@ -350,13 +403,14 @@ def main():
     parser.add_argument("--style", choices=["cartoon", "real"], default="cartoon",
                         help="cartoon (big head and eyes, outlined) or real proportions with fur")
     parser.add_argument("--anims", help="comma-separated animations to render again, keeping the others "
-                        "from the existing sheet (e.g. --anims death --only sprites)")
+                        "from the existing sheet (e.g. --anims fidget --only sprites); 'new' renders only the "
+                        "animations the sheet doesn't have yet")
     args = parser.parse_args()
     creature = cartoon.load(args.species, style=args.style)
     out_dir = os.path.join(args.out, args.species)
     os.makedirs(out_dir, exist_ok=True)
     if args.only != "portrait":
-        anims = args.anims.split(",") if args.anims else None
+        anims = None if not args.anims else "new" if args.anims == "new" else args.anims.split(",")
         render_sprites(creature, out_dir, args.samples, with_fur=not args.bare, anims=anims)
     if args.only != "sprites":
         render_portrait(creature, out_dir, args.samples, with_fur=not args.bare)

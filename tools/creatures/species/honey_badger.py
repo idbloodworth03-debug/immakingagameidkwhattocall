@@ -87,4 +87,6 @@ def make():
              "lengths": {"tail": 1.2}}
     c.motion = {"gait": "trot", "attack": "bite", "stride": 1.2, "gape": 0.8}
     c.palette = {"eye_line": "#151210"}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "swipe"
     return c

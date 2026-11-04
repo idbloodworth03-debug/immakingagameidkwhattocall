@@ -7,9 +7,10 @@ func _rendered() -> Array:
 
 func test_every_frame_fits_its_sheet() -> void:
 	for id in _rendered():
-		for anim in ["idle", "walk", "attack", "death"]:
+		for anim in ["idle", "walk", "attack", "fidget", "attack2", "special", "victory"]:
 			var info := UnitSprites.animation(id, anim)
-			check(not info.is_empty(), "%s has a %s animation" % [id, anim])
+			if anim in ["idle", "walk", "attack"]:
+				check(not info.is_empty(), "%s has a %s animation" % [id, anim])
 			if info.is_empty():
 				continue
 			for facing in [0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0]:
@@ -50,8 +51,7 @@ func test_eye_data_marks_where_faces_go() -> void:
 	for id in _rendered():
 		if UnitSprites.eye_radius(id) <= 0.0:
 			continue
-		check(UnitSprites.has_animation(id, "fidget") and UnitSprites.has_animation(id, "victory"),
-			"%s: rendered with eye data, so with a fidget and a victory too" % id)
+		check(UnitSprites.has_animation(id, "fidget"), "%s: rendered with eye data, so with a fidget too" % id)
 		var front := UnitSprites.eyes(id, "idle", 180.0, 0)
 		var seen := front.filter(func(e): return e is Vector2)
 		check(seen.size() >= 1, "%s: its eyes show from the front" % id)

@@ -108,4 +108,6 @@ def make():
              iris="#c9a032", pupil="round")
     c.fur = {"variation": 0.18, "sheen": 0.3, "bump": 0.3, "length": 0.06, "density": 22000, "hair_gamma": 2.0}
     c.motion = {"gait": "trot", "attack": "bite", "stride": 1.05}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "pounce_bite"
     return c

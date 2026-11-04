@@ -18,6 +18,7 @@ extends Node2D
 ## "characters").
 
 const SHADER := preload("res://scripts/fx/unit.gdshader")
+const ATTACK_ANIMS := ["attack", "attack2", "special"]
 
 ## What identifies this animal across re-layouts (herd slot), so it isn't
 ## popped in again when the herd is laid out anew.
@@ -115,6 +116,20 @@ var _last_step := 0
 var _defeat_kind := "poof"
 var _defeat_side := 1.0
 var _face_key := ""
+## Its Specialist trait ("burrow", "splash", "stun", "slow" or "") and body
+## plan (UnitSprites.body), for their own ways of moving.
+var _trait := ""
+var _body := ""
+## The attack playing: its wind-up stretched by this much (a lazy Slow
+## swing, a Stun stare), and whether it's the big Stun blow.
+var _attack_k := 1.0
+var _dramatic := false
+var _force_next := ""
+var _dig_at := -100.0
+var _emerge_at := -100.0
+var _was_burrowing := false
+var _shown_dir := 0
+var _hop_in_at := -100.0
 ## Who hit it last (for a smug look when it's knocked out).
 var last_attacker: UnitView
 var face: UnitFace
@@ -198,9 +213,12 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v._walk_tiles = maxf(0.05, UnitSprites.walk_cycle_tiles(v.id))
 	v._windup = float(UnitSprites.animation(v.id, "attack").get("hit", 0.45)) * v._attack_len
 	v._style = "air" if v.flying else v.cls
+	v._trait = f.trait_id
+	v._body = UnitSprites.body(v.id)
+	v._was_burrowing = bool(f.memory.get("burrowing", false))
 	var a := "acting"
 	var slower: float = GameData.feel.get(a, {}).get("windup_scale", {}).get(v._style, 1.0)
-	for anim in ["attack", "attack2"]:
+	for anim in ["attack", "attack2", "special"]:
 		var info := UnitSprites.animation(v.id, anim)
 		if info.is_empty():
 			continue
@@ -292,6 +310,15 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	pos = at
 	# Walking on its own (the fight moved it toward something), not shoved
 	# by its neighbors.
+	# Burrowing: dive into the ground; popping up: boing.
+	var burrowing := bool(f.memory.get("burrowing", false))
+	if burrowing != _was_burrowing:
+		_was_burrowing = burrowing
+		if burrowing:
+			_dig_at = now
+			field.fx.burst("puff", position, 6, 110.0, 0.45, 8.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 110.0)
+		else:
+			_emerge_at = now
 	var run := int(f.memory.get("run", 0))
 	if run > _last_run:
 		_intent = float(t.walk_hold_seconds)
@@ -336,8 +363,8 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	# Start the attack early enough that the strike lands on the hit (a
 	# little later for some, so a herd doesn't swing in step).
 	if has_target and f.deploy_ticks <= 0 and f.stun <= 0 and sim.in_range(f, f.target) and not attacking(now):
-		var next := _next_attack()
-		var windup := _windup_of(next)
+		var next := _upcoming()
+		var windup := _windup_of(String(next[0])) * float(next[1])
 		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
 		if to_hit >= 0.0 and to_hit <= windup:
 			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y))
@@ -388,25 +415,53 @@ func _turn(toward: Vector2, dt: float) -> void:
 
 
 func windup_seconds() -> float:
-	return _windup_of(_attack_anim)
+	return _windup_of(_attack_anim) * _attack_k
+
+
+## How long the attack playing lasts, wind-up and all.
+func _attack_length() -> float:
+	var info: Dictionary = _attacks.get(_attack_anim, {})
+	if info.is_empty():
+		return _attack_len
+	return windup_seconds() + float(info.length) - float(info.windup)
 
 
 func attacking(now: float) -> bool:
-	return now - attack_at < float(_attacks.get(_attack_anim, {}).get("length", _attack_len))
+	return now - attack_at < _attack_length()
 
 
-## The attack it plays next: common animals alternate two.
-func _next_attack() -> String:
-	return "attack2" if _attacks.has("attack2") and _attack_count % 2 == 1 else "attack"
+## The attack it plays next, as [animation, wind-up stretch, the big Stun
+## blow?]: common animals alternate two; a Stun animal's stunning blow gets
+## its rendered wind-up (or a long stare); a Slow animal winds up lazily.
+func _upcoming() -> Array:
+	var a := "acting"
+	if _force_next != "":
+		var forced := _force_next
+		_force_next = ""
+		if forced == "special" and not _attacks.has("special"):
+			return ["attack", Feel.num(a, "stun_windup_scale", 1.8), true]
+		return [forced, 1.0, forced == "special"]
+	var f := fighter
+	if f != null and _trait == "stun":
+		var every := maxi(1, int(f.param("every", 3)))
+		if (int(f.memory.get("hits", 0)) + 1) % every == 0:
+			if _attacks.has("special"):
+				return ["special", 1.0, true]
+			return ["attack", Feel.num(a, "stun_windup_scale", 1.8), true]
+	var anim := "attack2" if _attacks.has("attack2") and _attack_count % 2 == 1 else "attack"
+	return [anim, Feel.num(a, "slow_windup_scale", 1.5) if _trait == "slow" else 1.0, false]
 
 
 func _windup_of(anim: String) -> float:
 	return float(_attacks.get(anim, {}).get("windup", _windup))
 
 
-func _start_attack(anim: String, at: float, toward: Vector2) -> void:
-	_attack_anim = anim
-	_attack_count += 1
+func _start_attack(next: Array, at: float, toward: Vector2) -> void:
+	_attack_anim = String(next[0])
+	_attack_k = float(next[1])
+	_dramatic = bool(next[2])
+	if _attack_anim != "special":
+		_attack_count += 1
 	attack_at = at
 	if toward.length() > 0.0:
 		attack_dir = toward.normalized()
@@ -419,7 +474,7 @@ func _attack_frame(since: float) -> int:
 	var info: Dictionary = _attacks.get(_attack_anim, {})
 	if info.is_empty():
 		return int(since * _attack_fps)
-	var windup := float(info.windup)
+	var windup := windup_seconds()
 	if since < windup:
 		return int(since / maxf(windup, 0.01) * float(info.hit_frame))
 	return mini(int(float(info.hit_frame) + (since - windup) * float(info.fps)), int(info.frames) - 1)
@@ -434,9 +489,9 @@ func time_to_strike(now: float, toward: Vector2) -> float:
 		return windup - since
 	if since < windup + float(_tuning().strike_grace_seconds):
 		return 0.0
-	var next := _next_attack()
+	var next := _upcoming()
 	_start_attack(next, now, toward)
-	return _windup_of(next)
+	return windup_seconds()
 
 
 ## Took a hit from the direction `from_dir` (field space, toward this view).
@@ -469,6 +524,21 @@ func is_celebrating(now: float) -> bool:
 	return _victory_at >= 0.0 and now >= _victory_at and now - _victory_at < Feel.num("acting", "victory_seconds", 2.6)
 
 
+## A hop into place as the fight begins (at `at`, field time).
+func hop_in(at: float) -> void:
+	_hop_in_at = at
+
+
+## When it was last hit (field time), for fading its health bar.
+func hurt_time() -> float:
+	return _hurt_at
+
+
+## Its Specialist trait ("burrow", "splash", "stun", "slow" or "").
+func trait_name() -> String:
+	return _trait
+
+
 ## Fidgets now (the animation preview).
 func fidget_now(now: float) -> void:
 	if _fidget_len > 0.0:
@@ -478,10 +548,7 @@ func fidget_now(now: float) -> void:
 ## Makes its next attack this one ("attack" or "attack2"; the animation
 ## preview).
 func prefer_attack(anim: String) -> void:
-	if anim == "attack2" and _attacks.has("attack2"):
-		_attack_count = 1
-	else:
-		_attack_count = 0
+	_force_next = anim if anim != "attack2" or _attacks.has("attack2") else "attack"
 
 
 ## Knocked someone out: a smug look for a moment and a little chin-up.
@@ -563,6 +630,14 @@ static func _tuning() -> Dictionary:
 			"zzz_every": Feel.num("acting", "zzz_every", 0.9),
 			"sweat_below": Feel.num("acting", "sweat_below", 0.25),
 			"sweat_every": Feel.num("acting", "sweat_every", 1.3),
+			"splash_hop_pixels": Feel.num("acting", "splash_hop_pixels", 16.0),
+			"splash_squash": Feel.num("acting", "splash_squash", 0.25),
+			"dig_seconds": Feel.num("acting", "dig_seconds", 0.35),
+			"emerge_seconds": Feel.num("acting", "emerge_seconds", 0.5),
+			"emerge_hop_pixels": Feel.num("acting", "emerge_hop_pixels", 18.0),
+			"fish_wiggle_degrees": Feel.num("acting", "fish_wiggle_degrees", 8.0),
+			"waddle_degrees": Feel.num("acting", "waddle_degrees", 5.0),
+			"intro_hop_pixels": Feel.num("choreography", "intro_hop_pixels", 16.0),
 			"breathe_amount": Feel.num("characters", "breathe_amount", 0.035),
 			"breathe_speed": Feel.num("characters", "breathe_speed", 2.4),
 			"defeat_hop_pixels": Feel.num("combat", "defeat_hop_pixels", 46.0),
@@ -630,7 +705,7 @@ func animate(dt: float, now: float) -> void:
 	var anim := "idle"
 	var frame := int((now * pace + uid * 0.37) * _idle_fps)
 	var since := now - attack_at
-	var attack_len := float(_attacks.get(_attack_anim, {}).get("length", _attack_len))
+	var attack_len := _attack_length()
 	var windup := windup_seconds()
 	var celebrating := is_celebrating(now)
 	var tripping := now - _trip_at < float(t.trip_seconds)
@@ -660,14 +735,21 @@ func animate(dt: float, now: float) -> void:
 			_fidget_next = now + randf_range(1.0, 3.0)
 	# Changing animation: a little squash eases the cut between pictures.
 	if anim != _prev_anim:
-		if _prev_anim != "" and not anim.begins_with("attack"):
+		if _prev_anim != "" and not anim in ATTACK_ANIMS:
 			squash_v += float(t.transition_squash) * 18.0
 		_prev_anim = anim
+	# Celebrating without a rendered victory: hop, hop, then spin round
+	# through its drawn directions.
+	_shown_dir = _dir8
+	if celebrating and anim != "victory":
+		var cycle := fmod(now - _victory_at, 1.3)
+		if cycle > 0.85:
+			_shown_dir = (_dir8 + int((cycle - 0.85) / 0.45 * 8.0)) % 8
 	# Look the frame up only when it changes.
-	var frame_key := "%s%d/%d" % [anim, frame, _dir8]
+	var frame_key := "%s%d/%d" % [anim, frame, _shown_dir]
 	if frame_key != _frame_key:
 		_frame_key = frame_key
-		body.frame = UnitSprites.frame(id, anim, _dir8 * 45.0, frame)
+		body.frame = UnitSprites.frame(id, anim, _shown_dir * 45.0, frame)
 
 	# Build this frame's offset, stretch and lean.
 	var offset := Vector2.ZERO
@@ -708,11 +790,31 @@ func animate(dt: float, now: float) -> void:
 		sy += step * ws - land * ws * 0.8
 		sx -= step * ws * 0.6 - land * ws * 0.6
 		lean = move_dir.x * float(t.lean_degrees) * lean_k
+		# Each body plan's own gait on top: fish flop and wiggle, upright
+		# animals waddle, snakes ripple, frogs bound, seals and whales slide,
+		# shrimp scuttle.
+		match _body:
+			"fish":
+				lean += sin(walk * TAU * 2.0) * float(t.fish_wiggle_degrees)
+			"biped":
+				lean += sin(walk * TAU) * float(t.waddle_degrees)
+				offset.x += sin(walk * TAU) * 1.5
+			"serpent":
+				sx += sin(walk * TAU * 2.0) * 0.05
+				sy -= sin(walk * TAU * 2.0) * 0.03
+				lift *= 0.2
+			"frog":
+				lift *= 2.2
+			"pinniped", "cetacean":
+				lift *= 0.3
+				sx += step * 0.06
+			"crustacean":
+				lift = absf(sin(walk * TAU * 3.0)) * 1.5
 		var steps := floori(walk * 2.0)
 		if steps != _last_step:
 			_last_step = steps
 			_footfall(t)
-	if anim.begins_with("attack") and defeat < 0.0:
+	if anim in ATTACK_ANIMS and defeat < 0.0:
 		var screen_dir := Vector2(attack_dir.x, attack_dir.y * 0.6).normalized()
 		var lunge := float(t.lunge_pixels)
 		if since < windup:
@@ -735,6 +837,17 @@ func animate(dt: float, now: float) -> void:
 					pull *= 1.3
 				"air":
 					lift += w * float(t.air_dive_rise_pixels)
+			# Traits: a Splash animal rises for a belly flop, a Slow one
+			# stretches in a lazy yawn, the big Stun blow comes with a
+			# trembling stare (when there's no rendered wind-up).
+			match _trait:
+				"splash":
+					lift += sin(w * PI * 0.5) * float(t.splash_hop_pixels)
+				"slow":
+					sy += sin(w * PI) * 0.08
+			if _dramatic and anim == "attack":
+				lean += sin(now * 45.0) * 3.0 * w
+				lift += w * 4.0
 			sy -= w * ws
 			sx += w * ws * 0.7
 			offset -= screen_dir * w * pull
@@ -759,6 +872,10 @@ func animate(dt: float, now: float) -> void:
 				_:
 					offset += screen_dir * strike_t * lunge
 			lean = screen_dir.x * 10.0 * strike_t
+			if _trait == "splash":
+				# Splat: flattened by the belly flop.
+				sx += strike_t * float(t.splash_squash)
+				sy -= strike_t * float(t.splash_squash)
 	if celebrating and defeat < 0.0:
 		# Celebrating: happy bounces (a moment apart, so not in step).
 		var hop_t2 := (now - _victory_at) * 6.0
@@ -797,6 +914,30 @@ func animate(dt: float, now: float) -> void:
 		var h := Ease.arc(hop_t)
 		sy += h * 0.12
 		sx -= h * 0.08
+	# Burrowing: sinking into the ground; popping out: a springy boing.
+	var burrowed := false
+	if _was_burrowing:
+		var dig := (now - _dig_at) / maxf(0.05, float(t.dig_seconds))
+		if dig < 1.0:
+			var sink := Ease.in_cubic(dig)
+			sy *= 1.0 - sink * 0.85
+			sx *= 1.0 + sink * 0.25
+			lift -= sink * 6.0
+		else:
+			burrowed = true
+	var hop_in_t := (now - _hop_in_at) / 0.4
+	if hop_in_t >= 0.0 and hop_in_t < 1.0:
+		lift += Ease.arc(hop_in_t) * float(t.intro_hop_pixels)
+		sy += Ease.arc(hop_in_t) * 0.1
+		sx -= Ease.arc(hop_in_t) * 0.06
+		if hop_in_t + dt / 0.4 >= 1.0:
+			squash_v += 3.0
+	var emerge := (now - _emerge_at) / maxf(0.05, float(t.emerge_seconds))
+	if emerge < 1.0:
+		var boing := Ease.out_elastic(emerge)
+		sy *= lerpf(0.2, 1.0, boing)
+		sx *= lerpf(1.3, 1.0, boing)
+		lift += Ease.arc(emerge) * float(t.emerge_hop_pixels)
 	var opacity := 1.0
 	var rot := lean + _flinch
 	if air and dt > 0.0:
@@ -834,7 +975,7 @@ func animate(dt: float, now: float) -> void:
 	body.position = offset
 	body.scale = Vector2(maxf(sx, 0.01), maxf(sy, 0.01))
 	body.rotation_degrees = rot
-	body.visible = not (f != null and f.memory.get("burrowing", false))
+	body.visible = not burrowed
 	var tint := Color.WHITE
 	if f != null and f.stun > 0:
 		tint = Color(1.0, 1.0, 0.8)
@@ -904,8 +1045,8 @@ func _update_face(t: Dictionary, anim: String, frame: int, now: float, since: fl
 		mode = "happy"
 	elif now - _hurt_at < float(t.wide_seconds):
 		mode = "wide"
-	elif anim.begins_with("attack") and since >= 0.0 and since < windup:
-		mode = "squint"
+	elif anim in ATTACK_ANIMS and since >= 0.0 and since < windup:
+		mode = "drowsy" if _trait == "slow" else "squint"
 	elif now < _smug_until:
 		mode = "smug"
 	elif slowed:
@@ -920,7 +1061,7 @@ func _update_face(t: Dictionary, anim: String, frame: int, now: float, since: fl
 	if key != _face_key or mode == "dizzy":
 		_face_key = key
 		face.mode = mode
-		face.eyes = UnitSprites.eyes(id, anim, _dir8 * 45.0, frame)
+		face.eyes = UnitSprites.eyes(id, anim, _shown_dir * 45.0, frame)
 		face.k = k
 		face.flip = bool(body.frame.get("flip", false))
 		face.spin = now * 7.0

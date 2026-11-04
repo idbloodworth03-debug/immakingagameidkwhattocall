@@ -43,4 +43,8 @@ def make():
     add_face(c, eye_dir=(-0.75, 0.55, 0.35), eye_radius=0.006, eye_sink=0.002, nose_radius=0, iris="#2a2018", pupil="round")
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.45, "bump": 0.05, "roughness": 0.35, "specular": 0.45}
     c.motion = {"body": "serpent", "attack": "bite", "gape": 0.6, "cycle_tiles": 1.0}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "ram"
+    # A Stun animal: a big wind-up before the blow that stuns.
+    c.motion["special"] = True
     return c

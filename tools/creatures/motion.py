@@ -713,12 +713,17 @@ def fidget(c, t):
     flapping, a tail wag. Fliers turn a somersault in the air. Starts and
     ends on the idle pose, so it slips in and out of the idle."""
     body = c.motion.get("body")
-    if body in ("bird", "winged"):
+    if body in ("bird", "winged", "insect"):
         return _air_fidget(c, t)
-    if body is not None:
-        # Bodies without four legs: their idle, a little livelier.
-        return idle(c, (t * 2.0) % 1.0)
+    if body in BODY_FIDGET:
+        return BODY_FIDGET[body](c, t)
     p = idle(c, 0.0)
+    if c.motion.get("gait") == "biped":
+        # Upright animals scratch their head with a hand as they look about.
+        scratch = float(keys(t, [(0, 0), (0.2, 1), (0.75, 1), (0.9, 0), (1, 0)]))
+        rub = math.sin(t * TAU * 6) * scratch
+        p.leg("fl.R", upper=1.9 * scratch, lower=-1.6 * scratch - 0.25 * rub, foot=-0.4 * scratch)
+        p.rot("head", z=-0.2 * scratch, x=0.1 * scratch)
     look = float(keys(t, [(0, 0), (0.16, 1), (0.34, 1), (0.48, -1), (0.6, -1), (0.7, 0), (1, 0)]))
     shake_env = float(keys(t, [(0, 0), (0.66, 0), (0.74, 1), (0.9, 0.35), (1, 0)]))
     shake = math.sin(t * TAU * 8) * shake_env
@@ -741,6 +746,10 @@ def _air_fidget(c, t):
     hover = c.motion.get("hover_power", 0.55)
     flip = float(keys(t, [(0, 0), (0.15, 0), (0.7, 1), (1, 1)]))
     tuck = math.sin(math.pi * min(1.0, max(0.0, (t - 0.1) / 0.65)))
+    if c.motion.get("body") == "insect":
+        p = insect_idle(c, t)
+        _spin(c, p, x=-flip * TAU)
+        return p
     p = winged_flap(c, t, power=hover) if c.motion.get("body") == "winged" else bird_flap(c, t, power=hover)
     # Fold the wings in for the flip (undoing the flap as they tuck).
     _wings(p, upper=-0.3 * tuck, lower=-0.6 * tuck, hand=-0.5 * tuck, sweep=0.5 * tuck)
@@ -800,6 +809,70 @@ def victory(c, t):
     return p
 
 
+def _fish_fidget(c, t):
+    """A fish out of water: two big flops on the spot."""
+    p = fish_hop(c, (t * 2.0) % 1.0)
+    p.move(y=-p.get("root_loc", (0.0, 0.0, 0.0))[1])
+    return p
+
+
+def _cetacean_fidget(c, t):
+    """A whale or dolphin lifts its tail high and waves it, flippers flapping."""
+    p = cetacean_idle(c, 0.0)
+    lift = math.sin(math.pi * t)
+    wave = math.sin(t * TAU * 3) * lift
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-lift * (0.25 + 0.15 * i), z=wave * (0.15 + 0.1 * i))
+    for side in ("L", "R"):
+        p.rot("pect." + side, x=0.6 * wave)
+    p.rot("head", x=0.2 * lift)
+    return p
+
+
+def _crustacean_fidget(c, t):
+    """A shrimp waves both claws over its head and clicks them."""
+    p = crustacean_idle(c, 0.0)
+    up = math.sin(math.pi * t)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("claw_arm." + side, x=0.7 * up, z=sign * 0.25 * math.sin(t * TAU * 3) * up)
+        p.rot("claw_finger." + side, x=0.5 * max(0.0, math.sin(t * TAU * 4)))
+    return p
+
+
+def _serpent_fidget(c, t):
+    """A snake looks one way and the other, flicking its tongue."""
+    p = serpent_idle(c, 0.0)
+    look = float(keys(t, [(0, 0), (0.2, 1), (0.45, 1), (0.6, -1), (0.85, -1), (1, 0)]))
+    p.rot("neck", z=look * 0.35)
+    p.rot("head", z=look * 0.25)
+    p.rot("jaw", x=-0.25 * max(0.0, math.sin(t * TAU * 5)))
+    return p
+
+
+def _frog_fidget(c, t):
+    """A frog hops on the spot."""
+    p = frog_hop(c, t)
+    p.move(y=-p.get("root_loc", (0.0, 0.0, 0.0))[1])
+    return p
+
+
+def _pinniped_fidget(c, t):
+    """A seal tosses its head back and claps its front flippers."""
+    p = pinniped_idle(c, 0.0)
+    toss = math.sin(math.pi * t)
+    clap = max(0.0, math.sin(t * TAU * 3)) * toss
+    p.rot("neck", x=0.35 * toss)
+    p.rot("head", x=0.3 * toss)
+    p.rot("jaw", x=-0.3 * clap)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.5 * toss, splay=-sign * 0.5 * clap)
+    return p
+
+
+BODY_FIDGET = {"fish": _fish_fidget, "cetacean": _cetacean_fidget, "crustacean": _crustacean_fidget,
+               "serpent": _serpent_fidget, "frog": _frog_fidget, "pinniped": _pinniped_fidget}
+
+
 def slam(c, t):
     """A big slow body slam: rear right up with both front paws high, hang
     there a moment, then crash down on the target."""
@@ -837,13 +910,121 @@ def rake(c, t):
     return p
 
 
+def lob(c, t):
+    """Sit up and throw with both front paws from over the head."""
+    p = Pose()
+    sit = float(keys(t, [(0, 0), (0.25, 1), (0.75, 1), (1, 0)]))
+    arm = float(keys(t, [(0, 0), (0.32, -1), (0.5, 1), (0.66, 0.5), (1, 0)]))
+    _rear(c, p, sit * c.motion.get("rear", 0.6))
+    for side in ("L", "R"):
+        p.leg("hl." + side, upper=-0.5 * sit, lower=-0.4 * sit, foot=0.8 * sit)
+        p.leg("fl." + side, upper=0.5 * sit + 1.1 * max(-arm, 0.0) + 0.6 * max(arm, 0.0), lower=-0.8 * sit + 0.5 * max(arm, 0.0))
+    p.rot("neck", x=-0.4 * sit + 0.2 * max(-arm, 0.0))
+    p.rot("head", x=0.15 * max(-arm, 0.0) - 0.15 * max(arm, 0.0))
+    _tail(p, 0.0, sway=0.0, droop=-0.4 * sit)
+    return p
+
+
+def handstand(c, t):
+    """Up onto the front paws, tail high, back end aimed at the target (a
+    skunk's warning)."""
+    p = Pose()
+    up = float(keys(t, [(0, 0), (0.35, 1), (0.6, 1), (1, 0)]))
+    toe_y = c.joints["front_toe.L"][1] - c.joints["root"][1]
+    angle = -up * 0.6
+    p.move(y=toe_y * (1 - math.cos(angle)), z=-toe_y * math.sin(angle))
+    rr = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rr[0] + angle, rr[1], rr[2])
+    puff = float(keys(t, [(0, 0), (0.45, 0), (0.5, 1), (0.7, 0.4), (1, 0)]))
+    for side in ("L", "R"):
+        p.leg("hl." + side, upper=0.4 * up, lower=0.3 * up)
+        p.leg("fl." + side, upper=-0.2 * up)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-(0.5 + 0.3 * puff) * up, z=0.15 * puff * math.sin(t * TAU * 4 + i))
+    p.rot("neck", x=0.35 * up)
+    return p
+
+
+def leap(c, t):
+    """A frog's pounce: crouch, spring onto the target and land."""
+    p = frog_hop(c, t)
+    s = _size(c)
+    reach = float(keys(t, [(0, 0), (0.25, 0), (0.5, 1), (0.7, 0.6), (1, 0)]))
+    p.move(y=reach * s * 0.25 - p.get("root_loc", (0.0, 0.0, 0.0))[1])
+    p.rot("jaw", x=-0.4 * reach)
+    return p
+
+
+def tail_slap(c, t):
+    """Fish, whales and dolphins: curl the tail up and slap it down on the target."""
+    p = BODY_IDLE.get(c.motion.get("body"), idle)(c, 0.0)
+    curl = float(keys(t, [(0, 0), (0.35, 1), (0.5, -0.8), (0.7, -0.2), (1, 0)]))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-curl * (0.35 + 0.2 * i))
+    p.rot("chest", x=0.1 * curl)
+    p.rot("head", x=0.15 * curl)
+    p.move(z=max(curl, 0.0) * _size(c) * 0.04)
+    return p
+
+
+def ram(c, t):
+    """Any body: draw back, then lunge headfirst into the target."""
+    idle_fn = BODY_IDLE.get(c.motion.get("body"), idle)
+    p = idle_fn(c, 0.0)
+    s = _size(c)
+    drive = float(keys(t, [(0, 0), (0.3, -0.35), (0.45, 1), (0.6, 0.8), (1, 0)]))
+    p.move(y=drive * s * 0.18)
+    p.rot("neck", x=-0.3 * max(drive, 0.0) + 0.2 * max(-drive, 0.0))
+    p.rot("head", x=-0.2 * max(drive, 0.0))
+    p.rot("jaw", x=-0.35 * max(drive, 0.0))
+    return p
+
+
+def special(c, t):
+    """A Stun animal's big wind-up before the blow that stuns: primates beat
+    their chest and roar, snakes rear up and hiss with the tail rattling,
+    others rear and roar. The blow lands late (HIT_AT "special")."""
+    body = c.motion.get("body")
+    strike = float(keys(t, [(0, 0), (0.62, 0), (0.72, 1), (0.85, 0.5), (1, 0)]))
+    show = float(keys(t, [(0, 0), (0.12, 1), (0.6, 1), (0.72, 0), (1, 0)]))
+    if body == "serpent":
+        p = serpent_idle(c, 0.0)
+        p.rot("neck", x=0.5 * show - 0.6 * strike, z=0.15 * show * math.sin(t * TAU * 3))
+        p.rot("head", x=-0.2 * show + 0.1 * strike)
+        p.rot("jaw", x=-0.6 * max(show, strike))
+        for i, bone in enumerate(("tail1", "tail2", "tail3")):
+            p.rot(bone, x=-0.4 * show, z=0.25 * show * math.sin(t * TAU * 10 + i))
+        p.move(y=strike * _size(c) * 0.12)
+        return p
+    if body is not None:
+        return ram(c, t)
+    p = idle(c, 0.0)
+    if c.motion.get("gait") == "biped":
+        beat = math.sin(t * TAU * 5) * show
+        for side, sign in (("L", 1), ("R", -1)):
+            # Fists pound the chest in turn, then both swing down on the target.
+            p.leg("fl." + side, upper=1.1 * show + 0.35 * sign * beat + 0.9 * strike, lower=-1.5 * show + 0.6 * strike, foot=-0.3 * show)
+        p.rot("chest", x=-0.1 * show, y=0.08 * beat)
+    else:
+        _rear(c, p, 0.25 * show)
+        for side in ("L", "R"):
+            p.leg("fl." + side, upper=0.3 * show + 0.5 * strike, lower=-0.4 * show)
+    p.rot("neck", x=-0.3 * show)
+    p.rot("head", x=0.35 * show - 0.2 * strike)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.9 * show + 0.4 * strike))
+    p.move(y=strike * _scale(c) * 0.2)
+    return p
+
+
 def attack2(c, t):
     """The second attack (common animals alternate two)."""
     return ATTACKS[c.motion["attack2"]](c, t)
 
 
-ATTACKS.update({"slam": slam, "rake": rake})
-HIT_AT.update({"slam": 0.55, "rake": 0.5})
+ATTACKS.update({"slam": slam, "rake": rake, "lob": lob, "handstand": handstand, "leap": leap,
+                "tail_slap": tail_slap, "ram": ram})
+HIT_AT.update({"slam": 0.55, "rake": 0.5, "lob": 0.5, "handstand": 0.5, "leap": 0.5, "tail_slap": 0.5,
+               "ram": 0.45, "special": 0.72})
 
 
 def death(c, t):
@@ -872,17 +1053,34 @@ ANIMATIONS = {
     "idle": (idle, 8, 6, True),
     "walk": (walk, 8, 12, True),
     "attack": (attack, 10, 16, False),
-    "death": (death, 6, 10, False),
     "fidget": (fidget, 10, 10, False),
-    "victory": (victory, 10, 10, True),
     # Only for animals with a second attack (motion["attack2"]).
     "attack2": (attack2, 10, 16, False),
+    # Only for Stun animals (motion["special"]): the big wind-up.
+    "special": (special, 14, 14, False),
+    # Only kept for the animals rendered with it (the game celebrates
+    # without it otherwise); motion["victory_render"] renders it.
+    "victory": (victory, 10, 10, True),
 }
+# Not in sheets any more (the game's knockouts are a cartoon poof), but kept
+# for previews: python strip.py <id> death
+EXTRA = {"death": (death, 6, 10, False)}
 
 
-def animations_for(c):
-    """The animations this creature has: attack2 only with a second attack."""
-    return {name: spec for name, spec in ANIMATIONS.items() if name != "attack2" or c.motion.get("attack2")}
+def animations_for(c, existing=()):
+    """The animations this creature's sheet has: the second attack and the
+    special only if it has them, the victory only if it's asked for or the
+    sheet in `existing` already has one."""
+    out = {}
+    for name, spec in ANIMATIONS.items():
+        if name == "attack2" and not c.motion.get("attack2"):
+            continue
+        if name == "special" and not c.motion.get("special"):
+            continue
+        if name == "victory" and not (c.motion.get("victory_render") or name in existing):
+            continue
+        out[name] = spec
+    return out
 
 
 # --- Applying poses in Blender --------------------------------------------------------
@@ -919,5 +1117,5 @@ def rest_on_ground(arm, body):
 def preview_pose(arm, creature, spec):
     """spec like 'walk:0.25' or 'attack:0.4'."""
     name, _, when = spec.partition(":")
-    fn = ANIMATIONS[name][0]
+    fn = {**ANIMATIONS, **EXTRA}[name][0]
     apply(arm, fn(creature, float(when or 0)))

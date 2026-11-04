@@ -90,4 +90,6 @@ def make():
              "strand": 0.0004, "lengths": {"tail": 0.0, "tail_tip": 0.0, "front_paw": 0.0, "hind_paw": 0.0, "snout": 0.15,
                                            "cheek": 0.8, "torso": 1.0}}
     c.motion = {"gait": "trot", "attack": "bite", "stride": 1.2}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "pounce_bite"
     return c

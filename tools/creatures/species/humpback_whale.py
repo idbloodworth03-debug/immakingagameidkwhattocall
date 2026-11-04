@@ -55,4 +55,6 @@ def make():
     c.cartoon = {"head": 1.3, "muzzle": 0.9}
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.4, "bump": 0.05, "roughness": 0.4, "specular": 0.45}
     c.motion = {"body": "cetacean", "attack": "snap", "gape": 0.4, "cycle_tiles": 1.4}
+    # Its second attack, alternating with the first (common animals).
+    c.motion["attack2"] = "tail_slap"
     return c

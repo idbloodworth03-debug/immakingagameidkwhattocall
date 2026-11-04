@@ -1,6 +1,7 @@
 {
-  "_note": "Fight tuning. The field is 16 tiles wide and 20 long (bigger for big herds: draft_rules.json \"field\"). Times are in seconds, distances in tiles, speeds in tiles per minute. An animal heading for a target that's still fine looks around for a better one every retarget_seconds (keeps big fights cheap on phones).",
+  "_note": "Fight tuning. The field is 16 tiles wide and 20 long (bigger for big herds: draft_rules.json \"field\"). Times are in seconds, distances in tiles, speeds in tiles per minute. An animal heading for a target that's still fine looks around for a better one every retarget_seconds (keeps big fights cheap on phones), and only switches to one that's clearly better: food bait, the class it goes after, an enemy already in reach, or one at least retarget_margin_tiles closer (so animals don't dither between two enemies).",
   "retarget_seconds": 0.25,
+  "retarget_margin_tiles": 1.0,
   "ticks_per_second": 20,
   "deploy_seconds": 1.0,
   "melee_range": 0.7,

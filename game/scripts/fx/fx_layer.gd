@@ -122,12 +122,16 @@ func allow_sparks(amount: int) -> bool:
 	return true
 
 
-## A ranged animal's throw: leaves its paw before the hit and lands on it.
-func throw(f: BattleSim.Fighter, to_hit: float) -> void:
-	var look := ShotLooks.look_for(f.card)
-	var flight := minf(0.28, to_hit + 0.15) * ShotLooks.flight_scale(look)
-	projectiles.append({"from": Vector2(f.x, f.y), "to_uid": f.target.uid, "to": Vector2(f.target.x, f.target.y),
-		"launch": time + to_hit - flight, "land": time + to_hit, "trail": [], "look": look})
+## A ranged animal's shot: leaves `attacker` when its strike lands (in
+## `delay` seconds) and flies `flight` seconds (or so: some looks fly
+## slower, data/shots.json) to `target`, following it, or to `to` (field
+## units) if it has no view. Gives the real flight time.
+func shoot(attacker: UnitView, target: UnitView, to: Vector2, delay: float, flight: float) -> float:
+	var look := ShotLooks.look_for(GameData.cards.get(attacker.id, {}))
+	flight *= ShotLooks.flight_scale(look)
+	projectiles.append({"attacker": attacker, "target": target, "to": to, "from": Vector2.ZERO,
+		"launch": time + delay, "land": time + delay + flight, "trail": [], "look": look})
+	return flight
 
 
 # --- Drawing -----------------------------------------------------------------
@@ -207,15 +211,16 @@ func _draw_projectile(pr: Dictionary) -> void:
 	if time < pr.launch:
 		return
 	var t := clampf((time - float(pr.launch)) / maxf(float(pr.land) - float(pr.launch), 0.01), 0.0, 1.0)
-	var goal: Vector2 = pr.to
-	var target := field.view_for_uid(int(pr.to_uid))
-	if target != null:
-		goal = target.pos
-	# From the mouth or paws, to the middle of the target (data/shots.json).
-	var from := field.to_screen(pr.from.x, pr.from.y) + Vector2(0, -10.0)
-	var to := field.to_screen(goal.x, goal.y) + Vector2(0, -10.0)
+	# From its mouth or paws as it lets go, to the middle of the target,
+	# following it as it moves (data/shots.json for the look).
+	if not pr.has("launched"):
+		pr.launched = true
+		var shooter: UnitView = pr.attacker if is_instance_valid(pr.attacker) else null
+		pr.from = shooter.middle() if shooter != null else field.to_screen(pr.to.x, pr.to.y)
+	var target: UnitView = pr.target if is_instance_valid(pr.target) else null
+	var to: Vector2 = target.middle() if target != null else field.to_screen(pr.to.x, pr.to.y) + Vector2(0, -10.0)
 	var look: Dictionary = pr.get("look", {})
-	ShotLooks.draw(self, look, from, to, t, pr.trail, field.field_scale(), time)
+	ShotLooks.draw(self, look, pr.from, to, t, pr.trail, field.field_scale(), time)
 	if t >= 0.97 and not pr.get("burst", false):
 		pr.burst = true
 		var color := Color(String(look.get("burst_color", "#fff6b0")))

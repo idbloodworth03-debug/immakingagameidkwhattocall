@@ -7,6 +7,8 @@ extends Node
 ## the fight. From the repository root:
 ##   godot --headless --fixed-fps 60 --path game res://tests/feel_report.tscn -- small 3
 ## (herd size: "small" = 4 a side, "big" = 22 a side; then how many fights).
+## HERD_A=id,id and HERD_B=id,id fight those herds instead of random ones;
+## OUT=file saves the report.
 
 const SIZE := Vector2(720, 1080)
 
@@ -42,6 +44,7 @@ func _ready() -> void:
 			weights.append(total)
 	field = BattleField.new()
 	field.size = SIZE
+	field.log_impacts = true
 	add_child(field)
 	_reset_stats()
 	_next_fight()
@@ -60,8 +63,13 @@ func _next_fight() -> void:
 	duel = DraftMatch.new(rng.randi())
 	for team in 2:
 		var herd := []
+		var given := OS.get_environment("HERD_A" if team == 0 else "HERD_B")
 		for i in herd_size:
 			herd.append({"id": _pick(), "stars": 1})
+		if given != "":
+			herd = []
+			for id in given.split(","):
+				herd.append({"id": id, "stars": 1})
 		duel.herds[team] = herd
 		duel.picks_left[team] = 0
 		duel.picks_made[team] = []
@@ -86,7 +94,9 @@ func _reset_stats() -> void:
 		"switches": 0, "switches_alive": 0, "stuck_seconds": 0.0,
 		"end_seconds": 0.0, "end_hits": 0, "timeouts": 0,
 		"frozen_frames": 0, "freezes": 0, "flash_frames": 0, "number_frames": 0, "bar_frames": 0,
-		"covered_frames": 0, "lockstep_hits": 0, "was_frozen": false,
+		"covered_frames": 0, "covered_by_team": 0, "lockstep_hits": 0, "was_frozen": false, "spread": 0.0,
+		"blips": {},
+		"impacts": 0, "impacts_unread": 0, "impact_late": 0.0, "impacts_together": 0,
 	}
 
 
@@ -95,7 +105,15 @@ func _process(delta: float) -> void:
 	if duel.phase != "fight":
 		_finish_fight()
 		return
-	if field.is_frozen():
+	# Hit-stop: counted here, as the fight holds still.
+	var frozen := field.is_frozen()
+	stats.frames += 1
+	if frozen:
+		stats.frozen_frames += 1
+		if not stats.was_frozen:
+			stats.freezes += 1
+	stats.was_frozen = frozen
+	if frozen:
 		return
 	var tick_length := 1.0 / duel.sim.tps
 	accumulator += delta
@@ -169,13 +187,6 @@ func _check_hits(events: Array) -> void:
 				alive += 1
 		if alive <= 4:
 			stats.end_hits += 1
-		var v := field.view_for_uid(int(e.from))
-		if v != null:
-			# A readable hit: its attack showed a wind-up before it landed.
-			var t: float = field._time
-			var shown := t - v.attack_at
-			if not v.attacking(t) or shown < v.windup_seconds() * 0.6:
-				stats.hits_unread += 1
 	if hits > 0:
 		stats.ticks_with_hits += 1
 		if hits > 1:
@@ -183,15 +194,21 @@ func _check_hits(events: Array) -> void:
 		stats.max_hits_tick = maxi(int(stats.max_hits_tick), hits)
 
 
-func _watch_views(delta: float) -> void:
-	stats.frames += 1
-	var frozen := field.is_frozen()
-	if frozen:
-		stats.frozen_frames += 1
-		if not stats.was_frozen:
-			stats.freezes += 1
-	stats.was_frozen = frozen
+func _watch_views(_delta: float) -> void:
 	stats.number_frames += field.fx.numbers.size()
+	# Hits as they land on screen: did a wind-up show first, how long after
+	# the fight dealt them, and did a teammate's land on the same frame?
+	var landed := {}
+	for hit in field.impact_log:
+		stats.impacts += 1
+		if not hit.read:
+			stats.impacts_unread += 1
+		stats.impact_late += float(hit.late)
+		landed[hit.team] = int(landed.get(hit.team, 0)) + 1
+	for team in landed:
+		if int(landed[team]) > 1:
+			stats.impacts_together += int(landed[team])
+	field.impact_log.clear()
 	var views := field.views()
 	var placed := []
 	for v in views:
@@ -218,8 +235,12 @@ func _watch_views(delta: float) -> void:
 				info.dir_at = now
 			if anim != info.anim:
 				stats.anim_changes += 1
-				if now - float(info.anim_at) < 0.15:
+				# (Not its first change: standing at the start, then off.)
+				if now - float(info.anim_at) < 0.15 and info.has("prev_anim"):
 					stats.anim_blips += 1
+					var what := "%s>%s>%s" % [info.get("prev_anim", "?"), info.anim, anim]
+					stats.blips[what] = int(stats.blips.get(what, 0)) + 1
+				info.prev_anim = info.anim
 				info.anim = anim
 				info.anim_at = now
 			var vel: Vector2 = v.position - info.pos
@@ -242,14 +263,21 @@ func _watch_views(delta: float) -> void:
 	# Animals whose drawn picture is mostly covered by another's (sprites are
 	# much bigger than the circles the fight keeps apart).
 	for a: UnitView in placed:
+		stats.spread += a.spread.length()
 		var ha := UnitSprites.top(a.id) * a.body.k
+		var by_enemy := false
 		for b: UnitView in placed:
 			if a == b or a.flying != b.flying:
 				continue
 			var hb := UnitSprites.top(b.id) * b.body.k
 			if a.position.distance_to(b.position) < 0.35 * (ha + hb):
-				stats.covered_frames += 1
-				break
+				if a.team == b.team:
+					stats.covered_by_team += 1
+					by_enemy = false
+					break
+				by_enemy = true
+		if by_enemy:
+			stats.covered_frames += 1
 	# Animals drawn on top of each other (the same height: both on the
 	# ground, or both flying).
 	var s := field.field_scale()
@@ -288,14 +316,20 @@ func _report() -> void:
 		"  animation changes     %.2f per animal-second; %.0f%% last under 0.15 s (flicker)" % [stats.anim_changes / secs, 100.0 * stats.anim_blips / maxf(1, stats.anim_changes)],
 		"  jitter                %.1f%% of animal-frames reverse direction on screen" % [100.0 * stats.jitter / uf],
 		"  walking               %.0f%% of frames; %.0f%% of those sideways/backwards (sliding), %.0f%% while in range (pushed)" % [100.0 * stats.walk_frames / uf, 100.0 * stats.strafe_frames / maxf(1, stats.walk_frames), 100.0 * stats.pushed_walk / maxf(1, stats.walk_frames)],
-		"  overlaps              %.1f%% of pairs overlap as circles; %.0f%% of animal-frames have their picture mostly covered by another animal" % [100.0 * stats.overlap_pairs / maxf(1, stats.pair_checks), 100.0 * stats.covered_frames / uf],
+		"  overlaps              %.1f%% of pairs overlap as circles; %.0f%% of animal-frames have their picture mostly covered by a teammate, %.0f%% only by an enemy it's fighting (screen nudge %.2f tiles on average)" % [100.0 * stats.overlap_pairs / maxf(1, stats.pair_checks), 100.0 * stats.covered_by_team / uf, 100.0 * stats.covered_frames / uf, stats.spread / uf / 1000.0],
 		"  hit-stop              the whole fight is frozen %.0f%% of the time, %.1f freezes per second" % [100.0 * stats.frozen_frames / maxf(1, stats.frames), stats.freezes / maxf(0.1, stats.frames / 60.0)],
 		"  clutter               %.0f%% of animal-frames flashing white, %.1f damage numbers on screen on average, %.0f%% of animal-frames show a health bar" % [100.0 * stats.flash_frames / uf, float(stats.number_frames) / maxf(1, stats.frames), 100.0 * stats.bar_frames / uf],
-		"  hits                  %d; %.0f%% land without a visible wind-up; %.0f%% in lockstep with a teammate of the same rhythm (max %d hits in one tick)" % [stats.hits, 100.0 * stats.hits_unread / maxf(1, stats.hits), 100.0 * stats.lockstep_hits / maxf(1, stats.hits), stats.max_hits_tick],
+		"  hits                  %d; %.0f%% land on screen without a visible wind-up, %.2f s after the fight deals them on average; %.0f%% land on the same frame as a teammate's (%.0f%% dealt in step with a teammate of the same rhythm, max %d in one tick)" % [stats.hits, 100.0 * stats.impacts_unread / maxf(1, stats.impacts), stats.impact_late / maxf(1, stats.impacts), 100.0 * stats.impacts_together / maxf(1, stats.impacts), 100.0 * stats.lockstep_hits / maxf(1, stats.hits), stats.max_hits_tick],
 		"  target switches       %.2f per animal-second; %.0f%% leave a target that's still standing" % [stats.switches / secs, 100.0 * stats.switches_alive / maxf(1, stats.switches)],
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
 	]
+	var blips: Array = stats.blips.keys()
+	blips.sort_custom(func(x, y): return int(stats.blips[x]) > int(stats.blips[y]))
+	var top := []
+	for b in blips.slice(0, 4):
+		top.append("%s %d" % [b, stats.blips[b]])
+	lines.append("  flicker kinds         " + ", ".join(top))
 	for line in lines:
 		print(line)
 	var out := OS.get_environment("OUT")

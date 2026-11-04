@@ -115,6 +115,7 @@ var rng := RandomNumberGenerator.new()
 var deploy_ticks := 0
 var melee := 0
 var retarget_ticks := 1
+var retarget_margin := 0
 ## The field's size this fight, and the line between the two halves.
 var width := WIDTH
 var height := HEIGHT
@@ -132,6 +133,7 @@ func _init(levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> voi
 	deploy_ticks = roundi(float(rules.deploy_seconds) * tps)
 	melee = roundi(float(rules.melee_range) * TILE)
 	retarget_ticks = maxi(1, roundi(float(rules.get("retarget_seconds", 0.0)) * tps))
+	retarget_margin = roundi(float(rules.get("retarget_margin_tiles", 0.0)) * TILE)
 	for team_index in 2:
 		var team := Team.new()
 		team.levels = levels[team_index]
@@ -302,7 +304,29 @@ func _choose_target(f: Fighter) -> void:
 		# (animals take turns), which keeps big fights cheap.
 		if (tick + f.uid) % retarget_ticks != 0:
 			return
+		# And only leave it for one clearly better, so animals don't dither
+		# between two enemies.
+		var found := _find_target(f)
+		if found != null and _clearly_better(f, found, f.target):
+			f.target = found
+		return
 	f.target = _find_target(f)
+
+
+## Whether `found` (what _find_target picked) is worth leaving `current`
+## for: food bait, the class it goes after, an enemy already in reach, or
+## one at least retarget_margin_tiles closer.
+func _clearly_better(f: Fighter, found: Fighter, current: Fighter) -> bool:
+	if found == current:
+		return false
+	if found.kind == "bait" or current.kind == "bait":
+		return true
+	var wanted := String(GameData.class_rules.get("prefer", {}).get(f.cls, {}).get("class", ""))
+	if wanted != "" and found.cls == wanted and current.cls != wanted:
+		return true
+	if in_range(f, found):
+		return true
+	return edge_distance(f, found) + retarget_margin < edge_distance(f, current)
 
 
 ## Food bait close by first; then what its class goes after (Tank Destroyers
@@ -451,11 +475,15 @@ func _attack(f: Fighter, t: Fighter) -> void:
 	f.stealthed = false
 	f.memory.attacked = true
 	f.memory.last_combat = tick
-	events.append({
+	var hit := {
 		"type": "hit", "from": f.uid, "from_kind": f.kind, "to": t.uid, "to_kind": t.kind,
 		"x": t.x, "y": t.y, "fx": f.x, "fy": f.y, "amount": amount, "ranged": f.attack_range > 1500,
-	})
+	}
+	events.append(hit)
+	var hp_before := t.hp
 	deal_damage(t, amount, f)
+	# What it really took (after shields), for the screen's health bar.
+	hit.dealt = maxi(0, hp_before - maxi(t.hp, 0))
 	BattleAbilities.after_hit(self, f, t, amount)
 	f.memory.run = 0
 

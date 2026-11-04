@@ -365,7 +365,10 @@ check (`crowd` in `feel.json`). From 24 animals on the field:
   otherwise everyone goes for the nearest enemy it can reach (Food Bait close
   by comes first). An animal on its way to a target that's still fine looks
   around for a better one 4 times a second (`retarget_seconds`), which keeps
-  big fights cheap on a phone.
+  big fights cheap on a phone, and only switches for one that's clearly
+  better: Food Bait, the class it goes after, an enemy already in reach, or
+  one at least a tile closer (`retarget_margin_tiles`), so animals don't
+  dither between two enemies.
 - Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
 

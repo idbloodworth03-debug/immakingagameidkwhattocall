@@ -36,7 +36,7 @@
   },
 
   "combat": {
-    "_note": "Combat juice. Hit-stop briefly pauses the whole fight on strong hits (a hit doing at least strong_hit_pct of the target's health, a charge, a pounce or a dive). Shake is in pixels.",
+    "_note": "Combat juice. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could, so a herd doesn't swing in step; a hit that comes within strike_grace_seconds of a strike lands on that strike. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
     "windup_squash": 0.12,
     "windup_pull_pixels": 4.0,
     "strike_stretch": 0.16,
@@ -47,9 +47,16 @@
     "spring_stiffness": 320.0,
     "spring_damping": 16.0,
     "strong_hit_pct": 22,
+    "big_hit_pct": 35,
     "hitstop_seconds": 0.055,
     "hitstop_defeat_seconds": 0.07,
-    "hitstop_cooldown": 0.3,
+    "hitstop_cooldown": 0.9,
+    "impact_jitter_seconds": 0.08,
+    "strike_grace_seconds": 0.1,
+    "defeat_after_hit_seconds": 0.1,
+    "shot_tiles_per_second": 14.0,
+    "shot_min_seconds": 0.12,
+    "shot_max_seconds": 0.32,
     "shake_pixels": 8.0,
     "shake_strong_hit": 0.12,
     "shake_defeat": 0.08,
@@ -73,6 +80,31 @@
     "defeat_spin_turns": 1.25
   },
 
+  "movement": {
+    "_note": "How animals move on screen. Only the drawing: where an animal is in the fight never changes. It follows its place in the fight like a spring (follow_rate, higher = snappier; each animal's differs by up to follow_variety, so a row doesn't move as one block), easing into and out of a run, and wanders up to march_wobble_tiles while marching (about every march_wobble_seconds). Animals are nudged apart on screen until their pictures are spread_body_share of their height apart (enemies in a scrap spread_enemy_share of that, a flier over an animal on the ground spread_air_share; one straight behind another also steps aside by spread_sideways, so a line staggers), at spread_rate, by at most spread_max_tiles, drifting back at spread_return_rate once there's room. They turn at turn_degrees_per_second toward where they walk or what they fight (a push never turns them), switch to the next of their 8 drawn directions only once turn_hysteresis_degrees past halfway, and pinch a little (turn_squash, for turn_squash_seconds) as they do. They walk only when moving on their own faster than walk_min_speed_tiles a second (for at least walk_hold_seconds); the walk plays as fast as the feet cover the ground (walk_stride_match 1 = exactly), kept between walk_min_fps and walk_max_fps. Stopping gives a small settling bounce (arrive_squash).",
+    "follow_rate": 12.0,
+    "follow_variety": 0.25,
+    "march_wobble_tiles": 0.1,
+    "march_wobble_seconds": 2.6,
+    "spread_body_share": 0.45,
+    "spread_enemy_share": 1.0,
+    "spread_sideways": 0.5,
+    "spread_air_share": 0.5,
+    "spread_rate": 8.0,
+    "spread_return_rate": 1.0,
+    "spread_max_tiles": 1.0,
+    "turn_degrees_per_second": 720.0,
+    "turn_hysteresis_degrees": 12.0,
+    "turn_squash": 0.1,
+    "turn_squash_seconds": 0.12,
+    "walk_min_speed_tiles": 0.15,
+    "walk_hold_seconds": 0.15,
+    "walk_stride_match": 1.0,
+    "walk_min_fps": 5.0,
+    "walk_max_fps": 16.0,
+    "arrive_squash": 0.1
+  },
+
   "effects": {
     "_note": "Particles. max_particles caps how many can be on screen at once (lower it on slow phones).",
     "max_particles": 320,
@@ -90,14 +122,15 @@
   },
 
   "crowd": {
-    "_note": "Keeping big fights readable and smooth. A fight is crowded from crowded_from_units animals on the field: bursts use particles_when_crowded of their particles, ordinary hits lose their claw and bite marks, fewer sparks and numbers show, and (plain_animals_when_crowded) the animals skip their shader so many of a kind draw together; that look is chosen as the herds come on, not mid-fight. Hit sparks: at most hit_sparks_max bursts at once (hit_sparks_when_crowded when crowded), each counting for spark_seconds; when that many are showing, a bigger hit takes the place of the smallest. Damage numbers work the same way (combat number_max_on_screen; numbers_when_crowded when crowded).",
+    "_note": "Keeping big fights readable and smooth. A fight is crowded from crowded_from_units animals on the field: bursts use particles_when_crowded of their particles, ordinary hits lose their claw and bite marks, fewer sparks and numbers show, and (plain_animals_when_crowded) the animals skip their shader so many of a kind draw together; that look is chosen as the herds come on, not mid-fight. Hit sparks: at most hit_sparks_max bursts at once (hit_sparks_when_crowded when crowded), each counting for spark_seconds; when that many are showing, a bigger hit takes the place of the smallest. Damage numbers work the same way (combat number_max_on_screen; numbers_when_crowded when crowded). Hit-stop pauses come at most once every hitstop_cooldown_when_crowded (a crowded fight has a knockout every moment).",
     "crowded_from_units": 24,
     "plain_animals_when_crowded": true,
     "particles_when_crowded": 0.5,
     "hit_sparks_max": 12,
     "hit_sparks_when_crowded": 6,
     "spark_seconds": 0.25,
-    "numbers_when_crowded": 6
+    "numbers_when_crowded": 6,
+    "hitstop_cooldown_when_crowded": 2.0
   },
 
   "camera": {

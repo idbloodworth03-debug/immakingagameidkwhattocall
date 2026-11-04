@@ -10,12 +10,17 @@ extends Control
 ##   units   one UnitView per animal, sorted by depth (scripts/fx/unit_view.gd)
 ##   fx      particles, damage numbers, health bars, projectiles (fx_layer.gd)
 ##
-## Strong hits briefly freeze the fight (hit-stop): the screen asks
-## is_frozen() before stepping the battle. How everything looks and moves
-## comes from data/feel.json.
+## A hit shows when it lands, not when the fight deals it: the attacker's
+## wind-up plays first (and a shot flies) and only then do the flash, the
+## sparks, the number, the health bar's drop and a defeat show (_impacts).
+## Big hits briefly freeze the fight (hit-stop): the screen asks
+## is_frozen() before stepping the battle. Animals are nudged apart on
+## screen so their pictures don't pile up (_spread_views); that never moves
+## them in the fight. How everything looks and moves comes from
+## data/feel.json.
 
 signal tapped(at: Vector2i)
-## A strong hit (see _on_hit) by one of `team`'s animals.
+## A strong hit (see _land) by one of `team`'s animals.
 signal strong_hit(team: int)
 
 const OWN_COLOR := Color("#3d7fd9")
@@ -62,6 +67,12 @@ var _focus := {}
 var _freeze := 0.0
 var _freeze_ready := 0.0
 var _trauma := 0.0
+## Hits on their way: {"at": when they land, "e": the fight's event,
+## "target", "attacker": views, "after": events that land with them}.
+var _impacts: Array = []
+## Set by a test to keep a note of every hit as it lands (see _land).
+var impact_log: Array = []
+var log_impacts := false
 
 ## The camera: how big a field it shows (1 = the smallest field), easing
 ## toward the field's real size so it zooms out smoothly as the field grows.
@@ -237,7 +248,8 @@ func hit_stop(seconds: float) -> void:
 	if seconds <= 0.0 or _freeze_ready > 0.0:
 		return
 	_freeze = maxf(_freeze, seconds)
-	_freeze_ready = Feel.num("combat", "hitstop_cooldown", 0.3)
+	# A crowded fight has a knockout every moment: pause for fewer of them.
+	_freeze_ready = Feel.num("crowd", "hitstop_cooldown_when_crowded", 2.0) if fx.crowded else Feel.num("combat", "hitstop_cooldown", 0.9)
 
 
 ## Shakes the field; `amount` from 0 to 1 (bigger shakes stack).
@@ -323,6 +335,8 @@ func _process(delta: float) -> void:
 	_check_crowd()
 	if sim != null:
 		_sync_views(dt)
+		_spread_views(dt)
+	_land_due()
 	fx._process_fx(dt)
 	_ambient(delta)
 	for v in _views.values():
@@ -358,15 +372,95 @@ func _sync_views(dt: float) -> void:
 		_by_uid[f.uid] = v
 	for key in _views.keys():
 		var v: UnitView = _views[key]
-		if not seen.has(key) and v.defeat < 0.0:
+		if v.doomed and v.defeat < 0.0:
+			# Beaten, waiting for the last hits to land: settle where it stands.
+			if dt > 0.0:
+				v.follow(v.pos + v.spread, Vector2.ZERO, dt)
+		elif not seen.has(key) and v.defeat < 0.0:
 			# Gone without a fight (the herds were cleared): no fuss.
 			_drop_view(key)
+
+
+## Nudges animals apart on screen until their pictures don't cover each
+## other (the pictures are bigger than the room each takes in the fight),
+## easing back once there's space. Only the drawing moves. A flier and an
+## animal under it are nudged less (they're at different heights).
+## Neighbors are found with a coarse grid, so big herds stay cheap.
+func _spread_views(dt: float) -> void:
+	if dt <= 0.0:
+		return
+	var m := "movement"
+	var enemy_share := Feel.num(m, "spread_enemy_share", 1.0)
+	var sideways := Feel.num(m, "spread_sideways", 0.5)
+	var air_share := Feel.num(m, "spread_air_share", 0.5)
+	var cell := 2500.0
+	var list: Array[UnitView] = []
+	var grid := {}
+	for v: UnitView in _views.values():
+		if v.defeat >= 0.0 or v.doomed or v.fighter == null or v.fighter.memory.get("burrowing", false) or v.hop_t < 1.0:
+			continue
+		var c := v.pos + v.spread
+		var gk := (floori(c.x / cell) + 64) * 4096 + floori(c.y / cell) + 64
+		if not grid.has(gk):
+			grid[gk] = []
+		grid[gk].append(list.size())
+		list.append(v)
+	for i in list.size():
+		var a := list[i]
+		var ca := a.pos + a.spread
+		var gx := floori(ca.x / cell) + 64
+		var gy := floori(ca.y / cell) + 64
+		for x in range(gx - 1, gx + 2):
+			for y in range(gy - 1, gy + 2):
+				for j: int in grid.get(x * 4096 + y, []):
+					if j <= i:
+						continue
+					var b := list[j]
+					var want := (a.spread_r + b.spread_r) * (1.0 if a.team == b.team else enemy_share)
+					if a.flying != b.flying:
+						want *= air_share
+					var d := ca - (b.pos + b.spread)
+					var dist2 := d.length_squared()
+					if dist2 >= want * want:
+						continue
+					var dist := sqrt(dist2)
+					# Exactly on top of each other: part them in a set direction.
+					var n := d / dist if dist > 1.0 else Vector2.from_angle(float((a.uid * 31 + b.uid * 17) % 628) / 100.0)
+					# One straight behind the other: step aside as well, so a
+					# line staggers instead of staying single file.
+					var side := 1.0 if (a.uid + b.uid) % 2 == 0 else -1.0
+					n = (n + Vector2(side * sideways * (1.0 - absf(n.x)), 0.0)).normalized()
+					var share := (want - dist) * 0.5
+					a.push += n * share
+					b.push -= n * share
+	var k := 1.0 - exp(-dt * Feel.num(m, "spread_rate", 8.0))
+	var back := exp(-dt * Feel.num(m, "spread_return_rate", 1.0))
+	var most := Feel.num(m, "spread_max_tiles", 1.0) * 1000.0
+	for v in list:
+		v.spread = ((v.spread + v.push * k) * back).limit_length(most)
+		v.push = Vector2.ZERO
 
 
 func _remove_finished() -> void:
 	for key in _views.keys():
 		if _views[key].is_done():
 			_drop_view(key)
+
+
+## Every hit whose time has come lands, and every beaten animal whose last
+## hit has landed is defeated.
+func _land_due() -> void:
+	if not _impacts.is_empty():
+		var due: Array = []
+		var later: Array = []
+		for hit in _impacts:
+			(due if float(hit.at) <= _time else later).append(hit)
+		_impacts = later
+		for hit in due:
+			_land(hit)
+	for v: UnitView in _views.values():
+		if v.doomed and v.defeat < 0.0 and _time >= v.doom_at:
+			_defeat_view(v)
 
 
 func _drop_view(key: Variant) -> void:
@@ -482,82 +576,166 @@ static func _soft_texture() -> GradientTexture2D:
 
 # --- Effects ---------------------------------------------------------------
 
-## Turns battle events into animation and effects.
+## Turns battle events into animation and effects. A hit is shown when it
+## lands (see _schedule_hit); what it caused (a defeat, a splash, a stun:
+## the events right after it) waits and lands with it.
 func add_events(events: Array) -> void:
-	var s := _scale()
+	var chain: Dictionary = {}
 	for e in events:
 		match e.type:
-			"tool":
-				var at := to_screen(e.x, e.y)
-				var color: Color = EFFECT_COLORS.get(e.effect, Color.WHITE)
-				fx.effect("ring", at, maxi(e.radius, 600) * s, color, 0.6, "", true)
-				fx.effect("icon", at - Vector2(0, 10), maxi(e.radius, 900) * s, color, 0.7)
-				fx.burst("puff", at, 8, 160.0, 0.5, 12.0, [Color(color, 0.85), Color(1, 1, 1, 0.8)], 0.0, 3.0)
-				fx.burst("sparkle", at, 6, 200.0, 0.5, 7.0, [color.lightened(0.4), Color.WHITE], -40.0, 3.0)
-				if e.effect in ["flare", "air_horn"]:
-					shake(Feel.num("combat", "shake_tool", 0.25))
 			"hit":
-				_on_hit(e)
+				chain = _schedule_hit(e)
 			"death":
-				var v := view_for_uid(e.uid)
-				if v != null:
-					fx.burst_defeat(v.middle())
-					v.start_defeat()
-					hit_stop(Feel.num("combat", "hitstop_defeat_seconds", 0.07))
-					shake(Feel.num("combat", "shake_defeat", 0.08))
+				_doom(e, float(chain.at) if not chain.is_empty() else _time)
+			"splash", "stun":
+				if not chain.is_empty() and float(chain.at) > _time:
+					chain.after.append(e)
 				else:
-					fx.burst("puff", to_screen(e.x, e.y), 6, 90.0, 0.4, 10.0, [Color(1, 1, 1, 0.9)], -30.0, 3.0)
-			"emerge":
-				# A burrower pops up: a spray of earth.
-				var at := to_screen(e.x, e.y)
-				fx.effect("dust", at, 900 * s, Color("#b49a78"), 0.55, "", true)
-				fx.burst("puff", at, 6, 120.0, 0.45, 9.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 120.0)
-			"splash":
-				var at := to_screen(e.x, e.y)
-				fx.effect("ring", at, e.radius * s, EFFECT_COLORS.splash, 0.45, "", true)
-				fx.burst("puff", at, 6, 150.0, 0.4, 7.0, [Color("#bfeaff"), Color.WHITE], 260.0, 2.0, 140.0)
-			"stun":
-				var v := view_for_uid(e.uid)
-				var top := v.middle() - Vector2(0, 18) if v != null else to_screen(e.x, e.y)
-				fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
-			"sleep":
-				var at := to_screen(e.x, e.y) - Vector2(0, 18)
-				fx.burst("sparkle", at, 5, 50.0, 1.0, 7.0, [EFFECT_COLORS.tranq_dart, Color.WHITE], -70.0, 2.0)
+					_show(e)
+			_:
+				chain = {}
+				_show(e)
 
 
-func _on_hit(e: Dictionary) -> void:
+## Effects for an event, now.
+func _show(e: Dictionary) -> void:
 	var s := _scale()
+	match e.type:
+		"tool":
+			var at := to_screen(e.x, e.y)
+			var color: Color = EFFECT_COLORS.get(e.effect, Color.WHITE)
+			fx.effect("ring", at, maxi(e.radius, 600) * s, color, 0.6, "", true)
+			fx.effect("icon", at - Vector2(0, 10), maxi(e.radius, 900) * s, color, 0.7)
+			fx.burst("puff", at, 8, 160.0, 0.5, 12.0, [Color(color, 0.85), Color(1, 1, 1, 0.8)], 0.0, 3.0)
+			fx.burst("sparkle", at, 6, 200.0, 0.5, 7.0, [color.lightened(0.4), Color.WHITE], -40.0, 3.0)
+			if e.effect in ["flare", "air_horn"]:
+				shake(Feel.num("combat", "shake_tool", 0.25))
+		"emerge":
+			# A burrower pops up: a spray of earth.
+			var at := to_screen(e.x, e.y)
+			fx.effect("dust", at, 900 * s, Color("#b49a78"), 0.55, "", true)
+			fx.burst("puff", at, 6, 120.0, 0.45, 9.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 120.0)
+		"splash":
+			var at := to_screen(e.x, e.y)
+			fx.effect("ring", at, e.radius * s, EFFECT_COLORS.splash, 0.45, "", true)
+			fx.burst("puff", at, 6, 150.0, 0.4, 7.0, [Color("#bfeaff"), Color.WHITE], 260.0, 2.0, 140.0)
+			Sound.play("pop", -6.0, 0.2)
+		"stun":
+			var v := view_for_uid(e.uid)
+			var top := v.middle() - Vector2(0, 18) if v != null else to_screen(e.x, e.y)
+			fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
+			Sound.play("pop", -6.0, 0.2)
+		"sleep":
+			var at := to_screen(e.x, e.y) - Vector2(0, 18)
+			fx.burst("sparkle", at, 5, 50.0, 1.0, 7.0, [EFFECT_COLORS.tranq_dart, Color.WHITE], -70.0, 2.0)
+
+
+## A hit the fight just dealt: the attacker's strike plays (its wind-up
+## first, if none is showing yet), a shot flies if it's thrown, and the hit
+## lands when that strike or shot does. Until then the target's health bar
+## doesn't drop.
+func _schedule_hit(e: Dictionary) -> Dictionary:
 	var target := view_for_uid(e.to)
 	var attacker := view_for_uid(e.from)
-	var dir := Vector2(e.x - e.fx, e.y - e.fy).normalized()
-	var strong := false
+	var hit := {"at": _time, "e": e, "target": target, "attacker": attacker, "after": [], "sim_at": _time, "read": false}
+	if attacker != null and attacker.defeat < 0.0 and not attacker.doomed:
+		var toward := Vector2(e.x - e.fx, e.y - e.fy)
+		var delay := attacker.time_to_strike(_time, toward)
+		var strike_at := _time + delay
+		hit.read = attacker.attacking(strike_at) and strike_at - attacker.attack_at >= attacker.windup_seconds() * 0.6
+		if bool(e.get("ranged", false)):
+			var c := "combat"
+			var tiles := toward.length() / 1000.0
+			var flight := clampf(tiles / maxf(0.1, Feel.num(c, "shot_tiles_per_second", 14.0)), Feel.num(c, "shot_min_seconds", 0.12), Feel.num(c, "shot_max_seconds", 0.32))
+			flight = fx.shoot(attacker, target, Vector2(e.x, e.y), delay, flight)
+			delay += flight
+		hit.at = _time + delay
 	if target != null and target.fighter != null:
-		strong = float(e.amount) >= float(target.fighter.max_hp) * Feel.num("combat", "strong_hit_pct", 22) / 100.0
+		hit.max_hp = target.fighter.max_hp
+		target.pending_damage += int(e.get("dealt", e.amount))
+		target.incoming += 1
+		target.update_hp()
+	if float(hit.at) <= _time:
+		_land(hit)
+	else:
+		_impacts.append(hit)
+	return hit
+
+
+## A beaten animal: its defeat shows once the hits on their way to it land
+## (at `at` or later), or now.
+func _doom(e: Dictionary, at: float) -> void:
+	var v := view_for_uid(e.uid)
+	if v == null:
+		fx.burst("puff", to_screen(e.x, e.y), 6, 90.0, 0.4, 10.0, [Color(1, 1, 1, 0.9)], -30.0, 3.0)
+		return
+	v.doomed = true
+	v.doom_at = maxf(v.doom_at, at)
+	for hit in _impacts:
+		if hit.target == v:
+			v.doom_at = maxf(v.doom_at, float(hit.at))
+	# A beat after the last hit lands, so the flinch reads before the poof.
+	v.doom_at += Feel.num("combat", "defeat_after_hit_seconds", 0.1)
+	if v.doom_at <= _time:
+		_defeat_view(v)
+
+
+func _defeat_view(v: UnitView) -> void:
+	fx.burst_defeat(v.middle())
+	v.start_defeat()
+	Sound.play("death", -6.0, 0.15)
+	# A pack animal's knockout is small news; anyone else's gets a beat.
+	if not v.swarm:
+		hit_stop(Feel.num("combat", "hitstop_defeat_seconds", 0.07))
+	shake(Feel.num("combat", "shake_defeat", 0.08))
+
+
+## A hit lands: the target flinches and flashes, sparks fly, its number pops
+## and its bar drops. Big hits (feel.json big_hit_pct) also freeze the
+## fight for a moment and shake it; ordinary ones don't.
+func _land(hit: Dictionary) -> void:
+	var e: Dictionary = hit.e
+	var s := _scale()
+	var target: UnitView = hit.target if is_instance_valid(hit.target) else null
+	var attacker: UnitView = hit.attacker if is_instance_valid(hit.attacker) else null
+	var dir := Vector2(e.x - e.fx, e.y - e.fy).normalized()
+	var amount := int(e.amount)
+	var max_hp := float(hit.get("max_hp", 0))
+	var c := "combat"
+	var strong := max_hp > 0.0 and amount >= max_hp * Feel.num(c, "strong_hit_pct", 22) / 100.0
+	var big := max_hp > 0.0 and amount >= max_hp * Feel.num(c, "big_hit_pct", 35) / 100.0
 	var style := UnitSprites.attack_style(attacker.id) if attacker != null else ""
 	if style in ["charge", "stomp", "pounce_bite", "dive"]:
-		strong = strong or float(e.amount) >= 150.0
-	if attacker != null:
-		attacker.strike(_time, Vector2(e.x - e.fx, e.y - e.fy))
+		strong = strong or amount >= 150
 	var at := to_screen(e.x, e.y)
 	if target != null:
-		target.hurt(dir, strong)
+		target.pending_damage = maxi(0, target.pending_damage - int(e.get("dealt", amount)))
+		target.incoming = maxi(0, target.incoming - 1)
+		target.update_hp()
+		if target.defeat < 0.0:
+			target.hurt(dir, strong)
 		at = target.middle()
 	# Busy fights keep the biggest hits' sparks and marks (fx.allow_sparks).
-	if fx.allow_sparks(int(e.amount)) or strong:
+	if fx.allow_sparks(amount) or strong:
 		if strong or not fx.crowded:
-			_impact(style, at, dir, s)
+			_impact(style, at, dir, s, big)
 		fx.burst_hit(at, strong, Vector2(dir.x, dir.y * 0.6))
 	var kind := "hurt_enemy" if target == null or target.team == 1 else "hurt_own"
-	fx.number(at + Vector2(0, -10), int(e.amount), kind, strong, target.key if target != null else null)
-	if strong:
-		hit_stop(Feel.num("combat", "hitstop_seconds", 0.055))
-		shake(Feel.num("combat", "shake_strong_hit", 0.12))
-		if attacker != null:
-			strong_hit.emit(attacker.team)
+	fx.number(at + Vector2(0, -10), amount, kind, strong, target.key if target != null else null)
+	Sound.play("hit", -7.0, 0.2)
+	if big:
+		hit_stop(Feel.num(c, "hitstop_seconds", 0.055))
+		shake(Feel.num(c, "shake_strong_hit", 0.12))
+	if strong and attacker != null:
+		strong_hit.emit(attacker.team)
+	for after in hit.after:
+		_show(after)
+	if log_impacts:
+		impact_log.append({"time": _time, "team": attacker.team if attacker != null else -1, "read": bool(hit.get("read", false)), "late": _time - float(hit.sim_at)})
 
 
 ## A hit effect that fits how the attacker fights.
-func _impact(style: String, at: Vector2, dir: Vector2, s: float) -> void:
+func _impact(style: String, at: Vector2, dir: Vector2, s: float, big: bool) -> void:
 	var effect := {}
 	match style:
 		"swipe":
@@ -569,24 +747,23 @@ func _impact(style: String, at: Vector2, dir: Vector2, s: float) -> void:
 		"stomp":
 			fx.effect("ring", at, 1500 * s, Color("#a88a62"), 0.45, "", true)
 			effect = fx.effect("dust", at, 1000 * s, Color("#c9b08a"), 0.6)
-			shake(Feel.num("combat", "shake_stomp", 0.18))
+			if big:
+				shake(Feel.num("combat", "shake_stomp", 0.18))
 		"dive":
 			effect = fx.effect("feathers", at, 500 * s, Color("#f1ede4"), 0.5)
 	if not effect.is_empty():
 		effect.dir = dir
 
 
-## The sounds that go with battle events (tools, hits, deaths...).
+## The sounds that go with battle events as they happen (tools, a burrower
+## popping up...). Hits, defeats, splashes and stuns sound when they land
+## on screen (see _land).
 static func play_sounds(events: Array) -> void:
 	for e in events:
 		match e.type:
 			"tool":
 				Sound.play("horn" if e.card == "air_horn" else "tool")
-			"hit":
-				Sound.play("hit", -7.0, 0.2)
-			"death":
-				Sound.play("death", -6.0, 0.15)
-			"emerge", "sleep", "stun", "splash":
+			"emerge", "sleep":
 				Sound.play("pop", -6.0, 0.2)
 
 

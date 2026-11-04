@@ -179,6 +179,24 @@ func test_ranged_go_for_air() -> void:
 	check(squirrel.target == falcon, "Air in reach comes first")
 
 
+func test_animals_stick_to_their_target() -> void:
+	var sim := _sim()
+	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
+	var raccoon: BattleSim.Fighter = _ready_now(sim.spawn(1, "raccoon", 8 * T, 7 * T))[0]
+	# The enemies hold still, so only the bear's choice changes.
+	sim.stun(raccoon, 200)
+	_run(sim, 0.1)
+	check(bear.target == raccoon, "the bear heads for the raccoon")
+	var squirrel: BattleSim.Fighter = _ready_now(sim.spawn(1, "gray_squirrel", 11 * T, 8 * T))[0]
+	sim.stun(squirrel, 200)
+	_run(sim, 0.5)
+	check(bear.target == raccoon, "it doesn't switch for one only a little closer")
+	var boar: BattleSim.Fighter = _ready_now(sim.spawn(1, "wild_boar", 8 * T, 11 * T))[0]
+	sim.stun(boar, 200)
+	_run(sim, 0.5)
+	check(bear.target == boar, "it does for one much closer")
+
+
 func test_burrowers_pop_up_behind_the_enemy() -> void:
 	var sim := _sim()
 	var fox: BattleSim.Fighter = _ready_now(sim.spawn(0, "red_fox", 4 * T, 12 * T))[0]

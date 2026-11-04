@@ -17,6 +17,8 @@ extends Control
 const MENU_SCENE := "res://scenes/main.tscn"
 ## Draws popups above the field (flying animals sit a step higher).
 const OVER_FIELD := 10
+## The debug slow-motion speeds (0 = paused, with a Step button).
+const DEBUG_SPEEDS := [1.0, 0.5, 0.25, 0.1, 0.0]
 
 var duel: DraftMatch
 var bot: DraftBot
@@ -249,10 +251,46 @@ func _build_fight_view() -> VBoxContainer:
 	_field.tapped.connect(_on_field_tapped)
 	_field.strong_hit.connect(_on_strong_hit)
 	view.add_child(_field)
+	if OS.is_debug_build() or GameData.testing.get("show_dev_tools", false):
+		_field.add_child(_debug_speed_buttons())
 	_actions = UIStyle.hbox("s")
 	_actions.alignment = BoxContainer.ALIGNMENT_CENTER
 	view.add_child(_actions)
 	return view
+
+
+## For testing only (debug builds, or show_dev_tools in testing.json): a
+## small button over the field's corner that slows the whole game down
+## (1x, 0.5x, 0.25x, 0.1x) or pauses it, with Step to go on a frame at a
+## time, for looking at a fight closely.
+func _debug_speed_buttons() -> Control:
+	var row := HBoxContainer.new()
+	row.position = Vector2(8, 8)
+	row.z_index = 5  # over the arena and animals the field adds after it
+	row.add_theme_constant_override("separation", 6)
+	var speed := UIStyle.button("1x", "secondary", "", -1, "small")
+	var step := UIStyle.button("Step", "secondary", "", -1, "small")
+	step.visible = false
+	var index := [0]
+	speed.pressed.connect(func() -> void:
+		index[0] = (index[0] + 1) % DEBUG_SPEEDS.size()
+		var rate: float = DEBUG_SPEEDS[index[0]]
+		Engine.time_scale = rate
+		speed.text_label.text = "Paused" if rate == 0.0 else "%sx" % str(rate)
+		step.visible = rate == 0.0)
+	step.pressed.connect(func() -> void:
+		Engine.time_scale = 1.0
+		await get_tree().process_frame
+		await get_tree().process_frame
+		if index[0] == DEBUG_SPEEDS.size() - 1:
+			Engine.time_scale = 0.0)
+	row.add_child(speed)
+	row.add_child(step)
+	return row
+
+
+func _exit_tree() -> void:
+	Engine.time_scale = 1.0
 
 
 ## Shows the pick view or the fight view, with a quick slide and fade.

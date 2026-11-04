@@ -32,10 +32,11 @@ Everything runs offline on your computer, saved on the device:
   - chunky mobile-game fonts
   - a fake-3D finish on every animal (a highlight from the top-left, a cool rim light, soft volume shading, outlines in a dark shade of its own colors)
   - smooth, bouncy animation: breathing, walking hops, squash and stretch, wind-ups and lunges, pop-ins, and cartoon poof-and-stars defeats
-  - combat juice: white hit flashes, knockback, hit sparks, hit-stop and screen shake on big hits, bouncy damage numbers, chunky health bars with a delayed "damage taken" bar
+  - smooth movement: animals ease into and out of a run, keep their pictures from piling up, turn at a cartoon pace, and walk with their feet in step with the ground
+  - readable hits: every hit lands on its strike (or when its shot arrives), never before; white hit flashes, knockback, hit sparks, hit-stop and screen shake only on big hits and knockouts, bouncy damage numbers, chunky health bars with a delayed "damage taken" bar
   - particles (sparkles, stars, puffs, confetti, coins), drifting cloud shadows, swaying grass and petals or snow, bouncy buttons and popups
   - sound effects and music, which players can switch off
-- **Tests:** 105 automated tests for the rules, the fight engine and Draft Duel, plus a report that plays bot-vs-bot matches
+- **Tests:** 109 automated tests for the rules, the fight engine and Draft Duel, plus reports that play bot-vs-bot matches (how Draft Duel plays out, how strong each animal is, how fights look)
 
 Not built yet:
 
@@ -129,6 +130,20 @@ the way too) as often as Draft Duel offers each rarity. `SCALE=id:1.2` tries a
 change to an animal's health and damage first, `FIGHTS=240` measures more
 carefully, and `OUT=file.txt` saves the results.
 
+To see how fights look (twitchy turning, flicker, pictures covering each
+other, sliding feet, hits shown before their strike, hit-stop, clutter,
+target hopping, slow endings), from bot-vs-bot fights through the real battle
+view: `small` is 4 animals a side, `big` 22, then how many fights
+(`HERD_A=lion,tiger HERD_B=...` for given herds):
+
+```bash
+godot --headless --fixed-fps 60 --path game res://tests/feel_report.tscn -- small 8
+```
+
+In Draft Duel, a small button over the field's top-left corner (debug builds,
+or `show_dev_tools` in `testing.json`) slows the game to 0.5x, 0.25x or 0.1x,
+or pauses it with **Step** to go a frame at a time.
+
 ## Where things are
 
 ```
@@ -173,7 +188,7 @@ files in `game/data/`:
 - **Habitats** (flavor: names, icons, colors): `habitats.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`
 - **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`. The wood, brass and sign pieces themselves are drawn by `python3 tools/make_ui_art.py`
-- **Look and feel** (VS screen and emote timings, animal shader, squash and stretch, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion, the camera's zoom, and how big fights keep effects in check): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
+- **Look and feel** (VS screen and emote timings, animal shader, how animals move on screen, squash and stretch, hit timing, hit-stop, screen shake, damage numbers, health bars, particle counts, button bounce, ambient motion, the camera's zoom, and how big fights keep effects in check): `feel.json`. Set `characters.shader_enabled` to false for a lighter version on slow phones.
 - **Cage odds:** `cages.json`
 - **Trophy and leveling numbers:** `progression.json`
 - **Emotes, quick chats, banners and icons:** their own files

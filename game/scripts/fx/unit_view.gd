@@ -7,13 +7,17 @@ extends Node2D
 ## and knockback when hit, a white flash, a pop-in when it appears, a hop
 ## when it's moved, and a cartoon defeat (a hop, a spin and a poof).
 ##
-## Only looks: it reads the fighter, never changes it. The node itself draws
-## the ground shadow and team ring; its Body child draws the sprite with the
-## unit shader (fake-3D highlight, rim light, colored outline, flash). The
-## numbers live in data/feel.json.
+## Only looks: it reads the fighter, never changes it. Where it's drawn
+## follows the fighter smoothly (easing into and out of a run, nudged apart
+## from animals it would cover, a little loose in a marching row), so the
+## fight's steps never show. It faces where it's going or what it's fighting,
+## turning at a cartoon pace, and a push never turns it. The node itself
+## draws the ground shadow and team ring; its Body child draws the sprite
+## with the unit shader (fake-3D highlight, rim light, colored outline,
+## flash). The numbers live in data/feel.json ("movement", "combat",
+## "characters").
 
 const SHADER := preload("res://scripts/fx/unit.gdshader")
-const TURN_SPEED := 600.0     # degrees per second
 
 ## What identifies this animal across re-layouts (herd slot), so it isn't
 ## popped in again when the herd is laid out anew.
@@ -25,10 +29,29 @@ var field: BattleField
 var fighter: BattleSim.Fighter
 var flying := false
 var swarm := false
-## Field position (thousandths of a tile), smoothed.
+## Field position (thousandths of a tile): where the fight has it now.
 var pos := Vector2.ZERO
+## Where it's drawn (field units) and how fast that's moving: it follows
+## `pos` (plus its nudge apart from others) like a spring, so it eases into
+## and out of a run instead of starting and stopping dead.
+var shown := Vector2.ZERO
+var shown_v := Vector2.ZERO
+## A nudge on screen away from animals it would cover (the field works it
+## out each frame); `push` is this frame's, `spread_r` how far its picture
+## reaches, in field units.
+var spread := Vector2.ZERO
+var push := Vector2.ZERO
+var spread_r := 500.0
 var facing := 0.0
 var stars := 1
+## Damage already dealt in the fight whose hit hasn't landed on screen yet
+## (the strike or shot is still on its way), and how many such hits.
+var pending_damage := 0
+var incoming := 0
+## Beaten in the fight; the defeat shows at doom_at, once the hits on their
+## way have landed.
+var doomed := false
+var doom_at := 0.0
 
 # Motion state
 var walk := 0.0
@@ -50,6 +73,14 @@ var defeat := -1.0            # 0 to 1 while being defeated; -1 while fine
 var defeat_spin := 1.0
 var idle_phase := 0.0
 var _sparkle_in := 0.0        # a 3-star animal's next sparkle
+## The direction drawn (0-7, eighths of a turn), which changes only once
+## `facing` is well past the halfway mark (no flicker between two).
+var _dir8 := 0
+var _turn_pinch := 0.0        # a quick squash as it turns to a new direction
+var _follow_k := 1.0          # its own follow speed (a row isn't a rigid block)
+var _intent := 0.0            # walking on its own (not pushed) for this long yet
+var _last_run := 0
+var _march := 0.0             # 0-1: how much it's marching (its wobble in the row)
 ## Its sprite sheet's speeds and sizes (see make()), and the frame it's on.
 var _idle_fps := 6.0
 var _attack_fps := 12.0
@@ -114,6 +145,8 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.swarm = int(f.card.get("count", 1)) > 1
 	v.facing = 0.0 if f.team == 0 else 180.0
 	v.pos = Vector2(f.x, f.y)
+	v.shown = v.pos
+	v._dir8 = posmod(roundi(v.facing / 45.0), 8)
 	v.walk = randf()
 	v.idle_phase = randf() * TAU
 	v.stars = int(f.memory.get("stars", 1))
@@ -127,6 +160,13 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v._per_tile = UnitSprites.pixels_per_tile(v.id)
 	v._walk_tiles = maxf(0.05, UnitSprites.walk_cycle_tiles(v.id))
 	v._windup = float(UnitSprites.animation(v.id, "attack").get("hit", 0.45)) * v._attack_len
+	# How far its picture reaches (field units), for keeping animals from
+	# covering each other on screen.
+	var c := "characters"
+	var drawn := Feel.num(c, "sprite_scale", 1.6) * (Feel.num(c, "swarm_scale", 0.8) if v.swarm else 1.0)
+	v.spread_r = UnitSprites.top(v.id) / v._per_tile * 1000.0 * drawn * Feel.num("movement", "spread_body_share", 0.45)
+	v._follow_k = 1.0 + randf_range(-1.0, 1.0) * Feel.num("movement", "follow_variety", 0.25)
+	v._last_run = int(f.memory.get("run", 0))
 	v.body = Body.new()
 	if Feel.on("characters", "shader_enabled"):
 		var material := ShaderMaterial.new()
@@ -163,50 +203,112 @@ static func _apply_look(material: ShaderMaterial) -> void:
 func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	fighter = f
 	uid = f.uid
-	hp_ratio = float(f.hp) / maxf(1.0, float(f.max_hp))
+	update_hp()
 	var new_stars := int(f.memory.get("stars", 1))
 	if new_stars > stars:
 		upgrade = 1.0
 		field.fx.burst_upgrade(self)
 	stars = new_stars
+	var t := _tuning()
 	var jump := at.distance_to(pos)
 	if jump > 900.0 and hop_t >= 1.0:
 		# Moved to a new spot all at once (placed, laid out again, knocked
 		# back): hop there.
-		hop_from = pos
+		hop_from = render_pos()
 		hop_t = 0.0
-		hop_seconds = Feel.num("characters", "move_hop_seconds", 0.32) * clampf(jump / 4000.0, 0.5, 1.0)
-	var moved := at - pos
+		hop_seconds = float(t.move_hop_seconds) * clampf(jump / 4000.0, 0.5, 1.0)
+	var goal_v := (at - pos) / dt if dt > 0.0 else Vector2.ZERO
 	pos = at
+	# Walking on its own (the fight moved it toward something), not shoved
+	# by its neighbors.
+	var run := int(f.memory.get("run", 0))
+	if run > _last_run:
+		_intent = float(t.walk_hold_seconds)
+	_last_run = run
+	_intent -= dt
 	if hop_t < 1.0:
-		moved = Vector2.ZERO
-	if moved.length() > 1.0:
-		moving = 0.12
-		move_dir = moved.normalized()
-		_turn(moved, dt)
-		walk += moved.length() / 1000.0 / _walk_tiles
-	else:
+		shown = pos + spread
+		shown_v = Vector2.ZERO
+		goal_v = Vector2.ZERO
+	elif dt > 0.0:
+		var march := _march_offset(now, t)
+		follow(pos + spread + march, goal_v, dt)
+	var speed := shown_v.length()
+	if hop_t >= 1.0 and _intent > 0.0 and speed > float(t.walk_min_speed):
+		moving = float(t.walk_hold_seconds)
+		move_dir = shown_v / speed
+		# The legs keep pace with the ground they cover (within limits, so a
+		# slow giant doesn't play its walk one frame a second).
+		var cycle := _walk_tiles * 1000.0 * float(t.walk_stride) * (float(t.swarm_scale) if swarm else 1.0)
+		var fps := clampf(speed / maxf(cycle, 1.0) * _walk_frames, float(t.walk_min_fps), float(t.walk_max_fps))
+		walk += fps / _walk_frames * dt
+	elif moving > 0.0:
 		moving = maxf(0.0, moving - dt)
-		if f.target != null and f.target.alive:
-			_turn(Vector2(f.target.x - f.x, f.target.y - f.y), dt)
-	# Start the attack early enough that the bite lands on the hit.
+		if moving <= 0.0:
+			# Arriving: a small settling bounce instead of a slide.
+			squash_v += float(t.arrive_squash) * sqrt(float(t.spring_stiffness)) * 1.6
+	_march = move_toward(_march, 1.0 if moving > 0.0 else 0.0, dt * 2.5)
+	# Facing: where it's walking, else what it's fighting. A push never turns it.
 	var sim := field.sim
-	if f.target != null and f.target.alive and f.deploy_ticks <= 0 and sim.in_range(f, f.target) and not attacking(now):
+	var has_target := f.target != null and f.target.alive
+	if attacking(now) and now >= attack_at:
+		_turn(attack_dir, dt)
+	elif moving > 0.0:
+		_turn(move_dir, dt)
+	elif has_target:
+		_turn(Vector2(f.target.x - f.x, f.target.y - f.y), dt)
+	# Start the attack early enough that the strike lands on the hit (a
+	# little later for some, so a herd doesn't swing in step).
+	if has_target and f.deploy_ticks <= 0 and f.stun <= 0 and sim.in_range(f, f.target) and not attacking(now):
 		var windup := windup_seconds()
 		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
 		if to_hit >= 0.0 and to_hit <= windup:
-			attack_at = now - (windup - to_hit)
+			attack_at = now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds)
 			attack_dir = Vector2(f.target.x - f.x, f.target.y - f.y).normalized()
-			if f.attack_range > 1500:
-				field.fx.throw(f, to_hit)
+
+
+## The health it shows: the fight's, plus the damage from hits still on their way.
+func update_hp() -> void:
+	if fighter != null:
+		hp_ratio = clampf(float(fighter.hp + pending_damage) / maxf(1.0, float(fighter.max_hp)), 0.0, 1.0)
+
+
+## Eases where it's drawn toward `goal` (moving at `goal_v`): a critically
+## damped spring that keeps up with a steady walk and eases in and out of
+## it, the same at any frame rate.
+func follow(goal: Vector2, goal_v: Vector2, dt: float) -> void:
+	var w := float(_tuning().follow_rate) * _follow_k
+	var e := shown - goal
+	var ev := shown_v - goal_v
+	var decay := exp(-w * dt)
+	var lead := ev + w * e
+	shown = goal + (e + lead * dt) * decay
+	shown_v = goal_v + (ev - w * lead * dt) * decay
+
+
+## A slow wander while marching, so a row moves as a loose crowd rather
+## than one block (none while standing).
+func _march_offset(now: float, t: Dictionary) -> Vector2:
+	var amount := float(t.march_wobble) * 1000.0 * _march
+	if amount <= 0.0:
+		return Vector2.ZERO
+	var p := now / maxf(0.2, float(t.march_wobble_seconds)) * TAU
+	return Vector2(sin(p * 0.83 + idle_phase), sin(p * 1.17 + idle_phase * 1.7) * 0.8) * amount
 
 
 func _turn(toward: Vector2, dt: float) -> void:
-	if toward.length() < 1.0:
+	if toward.length() < 1e-3:
 		return
+	var t := _tuning()
 	var goal := rad_to_deg(atan2(toward.x, -toward.y))
 	var diff := wrapf(goal - facing, -180.0, 180.0)
-	facing += clampf(diff, -TURN_SPEED * dt, TURN_SPEED * dt)
+	var rate := float(t.turn_speed) * dt
+	facing = wrapf(facing + clampf(diff, -rate, rate), 0.0, 360.0)
+	# The drawn direction moves on only once well past halfway to the next.
+	var off := wrapf(facing - _dir8 * 45.0, -180.0, 180.0)
+	if absf(off) > 22.5 + float(t.turn_hysteresis):
+		_dir8 = posmod(roundi(facing / 45.0), 8)
+		_turn_pinch = 1.0
 
 
 func windup_seconds() -> float:
@@ -214,15 +316,22 @@ func windup_seconds() -> float:
 
 
 func attacking(now: float) -> bool:
-	return now - attack_at < UnitSprites.duration(id, "attack")
+	return now - attack_at < _attack_len
 
 
-## Starts the strike now (a hit with no attack showing, often the first).
-func strike(now: float, toward: Vector2) -> void:
-	if not attacking(now):
-		attack_at = now - windup_seconds()
+## Seconds until this animal's strike lands, for a hit the fight just dealt.
+## If no wind-up is showing it starts one now, so every hit is seen coming.
+func time_to_strike(now: float, toward: Vector2) -> float:
+	var since := now - attack_at
+	var windup := windup_seconds()
+	if since < windup and attacking(now):
+		return windup - since
+	if since < windup + float(_tuning().strike_grace_seconds):
+		return 0.0
+	attack_at = now
 	if toward.length() > 0.0:
 		attack_dir = toward.normalized()
+	return windup
 
 
 ## Took a hit from the direction `from_dir` (field space, toward this view).
@@ -230,8 +339,8 @@ func hurt(from_dir: Vector2, strong: bool) -> void:
 	flash = 1.0
 	var c := "combat"
 	squash += Feel.num(c, "hit_squash", 0.2) * (1.5 if strong else 1.0)
-	var push := Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
-	knock += Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push
+	var push_px := Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
+	knock += Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push_px
 	trail_hold = Feel.num(c, "health_bar_trail_delay", 0.4)
 
 
@@ -255,7 +364,25 @@ static func _tuning() -> Dictionary:
 	var now := Engine.get_process_frames()
 	if now != _tuned_frame:
 		_tuned_frame = now
+		var m := "movement"
 		_tuned = {
+			"arrive_squash": Feel.num(m, "arrive_squash", 0.1),
+			"follow_rate": Feel.num(m, "follow_rate", 12.0),
+			"march_wobble": Feel.num(m, "march_wobble_tiles", 0.1),
+			"march_wobble_seconds": Feel.num(m, "march_wobble_seconds", 2.6),
+			"turn_speed": Feel.num(m, "turn_degrees_per_second", 720.0),
+			"turn_hysteresis": Feel.num(m, "turn_hysteresis_degrees", 12.0),
+			"turn_squash": Feel.num(m, "turn_squash", 0.1),
+			"turn_squash_seconds": Feel.num(m, "turn_squash_seconds", 0.12),
+			"walk_hold_seconds": Feel.num(m, "walk_hold_seconds", 0.15),
+			"walk_min_speed": Feel.num(m, "walk_min_speed_tiles", 0.15) * 1000.0,
+			"walk_stride": Feel.num("characters", "sprite_scale", 1.6) * Feel.num(m, "walk_stride_match", 1.0),
+			"walk_min_fps": Feel.num(m, "walk_min_fps", 5.0),
+			"walk_max_fps": Feel.num(m, "walk_max_fps", 16.0),
+			"swarm_scale": Feel.num("characters", "swarm_scale", 0.8),
+			"move_hop_seconds": Feel.num("characters", "move_hop_seconds", 0.32),
+			"impact_jitter_seconds": Feel.num("combat", "impact_jitter_seconds", 0.06),
+			"strike_grace_seconds": Feel.num("combat", "strike_grace_seconds", 0.1),
 			"bob_pixels": Feel.num("characters", "bob_pixels", 1.5),
 			"breathe_amount": Feel.num("characters", "breathe_amount", 0.035),
 			"breathe_speed": Feel.num("characters", "breathe_speed", 2.4),
@@ -298,6 +425,7 @@ func animate(dt: float, now: float) -> void:
 	flash = maxf(0.0, flash - dt / maxf(0.01, float(t.hit_flash_seconds)))
 	pop = minf(1.0, pop + dt / maxf(0.01, float(t.spawn_pop_seconds)))
 	upgrade = maxf(0.0, upgrade - dt / 0.6)
+	_turn_pinch = maxf(0.0, _turn_pinch - dt / maxf(0.01, float(t.turn_squash_seconds)))
 	if hop_t < 1.0:
 		hop_t = minf(1.0, hop_t + dt / maxf(0.05, hop_seconds))
 	if defeat >= 0.0:
@@ -327,10 +455,10 @@ func animate(dt: float, now: float) -> void:
 		anim = "walk"
 		frame = int(walk * _walk_frames)
 	# Look the frame up only when it changes.
-	var frame_key := "%s%d/%d" % [anim, frame, roundi(fposmod(facing, 360.0) / 45.0) % 8]
+	var frame_key := "%s%d/%d" % [anim, frame, _dir8]
 	if frame_key != _frame_key:
 		_frame_key = frame_key
-		body.frame = UnitSprites.frame(id, anim, facing, frame)
+		body.frame = UnitSprites.frame(id, anim, _dir8 * 45.0, frame)
 
 	# Build this frame's offset, stretch and lean.
 	var offset := Vector2.ZERO
@@ -377,6 +505,11 @@ func animate(dt: float, now: float) -> void:
 	# Hit reaction.
 	sx += squash
 	sy -= squash
+	# Turning to a new direction: a quick pinch hides the swap of pictures.
+	if _turn_pinch > 0.0:
+		var pinch := Ease.arc(1.0 - _turn_pinch) * float(t.turn_squash)
+		sx -= pinch
+		sy += pinch * 0.4
 	offset += knock
 	# Popping in: drop in and bounce up to full size.
 	if pop < 1.0:
@@ -463,8 +596,8 @@ static func region_uv(frame: Dictionary) -> Vector4:
 ## Where it's drawn on the field: mid-hop, between the old spot and the new.
 func render_pos() -> Vector2:
 	if hop_t >= 1.0:
-		return pos
-	return hop_from.lerp(pos, Ease.in_out_sine(hop_t))
+		return shown
+	return hop_from.lerp(shown, Ease.in_out_sine(hop_t))
 
 
 ## A pack's stars show over one of its animals only, not all of them.

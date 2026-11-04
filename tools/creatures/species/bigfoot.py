@@ -36,4 +36,5 @@ def make():
         toe = np.asarray(G.J["hind_toe"], float) * (-side, 1, 1)
         c.shapes.append(ellipsoid(tuple(toe + (0, 0.04, 0.015)), (0.07, 0.13, 0.04), "hind_paw", bone, blend=0.03))
     c.motion = dict(c.motion, attack="swipe", stride=1.1)
+    c.motion.pop("special", None)  # not a Stun animal like the gorilla it's built from
     return c

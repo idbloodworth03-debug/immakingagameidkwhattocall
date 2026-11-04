@@ -38,5 +38,6 @@ def make():
                               radius=0.022, tip_radius=0.008, color="#d9e6f2"))
     c.fur = dict(c.fur, sheen=0.35)
     c.motion = dict(c.motion, attack="stomp", stride=0.85)
+    c.motion.pop("special", None)  # not a Stun animal like the gorilla it's built from
     c.palette = {"eye_line": "#5a7a96", "mouth": "#5a6a8a"}
     return c

@@ -35,4 +35,5 @@ def make():
             e.color = "#f0a830"
     c.tiles_long = 1.2
     c.motion = dict(c.motion, attack="pounce_bite", stride=1.2)
+    c.motion.pop("attack2", None)  # one attack (only common animals have two)
     return c

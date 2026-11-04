@@ -19,14 +19,14 @@ R = dict(RC.R)
 R.update({"snout_base": 0.026, "snout_end": 0.009, "ear_width": 0.04, "ear_round": 0.018, "ear_thick": 0.003,
           "tail": (0.02, 0.013, 0.009, 0.005), "tail_blend": 0.012})
 
-COLORS = {"gray": "#8e8b88", "frost": "#d9d6d0", "white": "#f2efe9", "black": "#211e1e", "pink": "#e9a9ae", "tail": "#d8b9b4"}
+COLORS = {"gray": "#6b6764", "frost": "#b9b5b0", "white": "#f2efe9", "black": "#211e1e", "pink": "#e9a9ae", "tail": "#d8b9b4"}
 
 
 def paint(mesh, creature):
     p = Painter(mesh, COLORS)
     v = p.v
     p.fill("gray")
-    p.where("frost", lambda v, n: p.smooth(n[:, 2], 0.3, 0.4), 0.45)
+    p.where("frost", lambda v, n: p.smooth(n[:, 2], 0.3, 0.4), 0.3)
     for region in ("head", "snout", "jaw", "cheek"):
         p.region(region, "white", 0.95)
     p.region_where("snout", "pink", lambda v, n: p.smooth(v[:, 1] - 0.38, 0.0, 0.01))

@@ -54,7 +54,7 @@ R = {
     "tail": (0.03, 0.024, 0.016, 0.01), "tail_blend": 0.02,
 }
 
-COLORS = {"black": "#1b1918", "silver": "#d9d7d2", "gray": "#8c8a86", "claw": "#e8dccb"}
+COLORS = {"black": "#1b1918", "silver": "#cfccc6", "gray": "#8c8a86", "claw": "#e8dccb"}
 
 
 def paint(mesh, creature):
@@ -62,10 +62,10 @@ def paint(mesh, creature):
     v, n = p.v, p.n
     p.fill("black")
     # The silver mantle: everything on top, from the crown to the tail.
-    top = p.smooth(n[:, 2], 0.05, 0.3) * p.smooth(v[:, 2] - 0.2, 0.0, 0.03)
+    top = p.smooth(n[:, 2], 0.45, 0.25) * p.smooth(v[:, 2] - 0.21, 0.0, 0.02)
     snout = p.mesh.region_weight("snout") + p.mesh.region_weight("jaw")
     legs = sum(p.mesh.region_weight(r) for r in ("front_upper", "front_lower", "front_paw", "hind_lower", "hind_paw", "thigh"))
-    p.blend("silver", np.clip(top * (1 - snout) * (1 - legs) * p.smooth(0.31 - v[:, 1], 0.0, 0.02), 0, 1))
+    p.blend("silver", np.clip(top * (1 - snout) * (1 - legs) * p.smooth(0.272 - v[:, 1], 0.0, 0.012), 0, 1))
     p.blend("gray", top * (1 - snout) * p.smooth(0.08 - np.abs(v[:, 2] - 0.22) - np.abs(n[:, 2]) * 0.02, 0.0, 0.02) * 0.3)
     p.speckle(0.1)
     return p.colors

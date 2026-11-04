@@ -94,5 +94,5 @@ def make():
     c.fur = {"variation": 0.2, "sheen": 0.25, "bump": 0.35, "length": 0.07, "density": 9000, "hair_gamma": 2.1,
              "frizz": 0.004, "clump": 0.4,
              "lengths": {"cheek": 1.1, "tail": 0.9, "tail_tip": 0.9, "head": 0.5, "front_paw": 0.4, "hind_paw": 0.4}}
-    c.motion = {"gait": "walk", "attack": "swipe", "rear": 0.32, "stride": 0.9}
+    c.motion = {"gait": "walk", "attack": "swipe", "attack2": "slam", "rear": 0.32, "stride": 0.9}
     return c

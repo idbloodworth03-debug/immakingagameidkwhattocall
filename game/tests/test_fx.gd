@@ -44,3 +44,59 @@ func test_crowded_fights_use_fewer_particles() -> void:
 	fx.particles.clear()
 	fx.burst("puff", Vector2.ZERO, 10, 100.0, 0.5, 5.0, [Color.WHITE])
 	check_eq(fx.particles.size(), 5, "half the particles")
+
+
+## A field (built by hand: not in the scene tree), with a bear and a boar
+## squaring up.
+func _field() -> Dictionary:
+	var field := BattleField.new()
+	field.size = Vector2(720, 1080)
+	field._ready()
+	var sim := BattleSim.new([{}, {}], 1)
+	field.sim = sim
+	field.blend = 1.0
+	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * BattleSim.TILE, 11 * BattleSim.TILE)[0]
+	var boar: BattleSim.Fighter = sim.spawn(1, "wild_boar", 8 * BattleSim.TILE, 9 * BattleSim.TILE)[0]
+	field._process(1.0 / 60.0)
+	return {"field": field, "bear": bear, "boar": boar}
+
+
+func test_hits_show_when_the_strike_lands() -> void:
+	var made := _field()
+	var field: BattleField = made.field
+	var bear: BattleSim.Fighter = made.bear
+	var boar: BattleSim.Fighter = made.boar
+	var target := field.view_for_uid(boar.uid)
+	var hit := {"type": "hit", "from": bear.uid, "to": boar.uid, "x": boar.x, "y": boar.y, "fx": bear.x, "fy": bear.y,
+		"amount": 100, "dealt": 100, "ranged": false}
+	field.add_events([hit])
+	var windup := field.view_for_uid(bear.uid).windup_seconds()
+	check(windup > 0.1, "the bear winds up first (%.2f s)" % windup)
+	check(target.flash == 0.0 and target.pending_damage == 100, "nothing shows on the boar yet, and its bar holds")
+	var waited := 0.0
+	while target.flash == 0.0 and waited < 2.0:
+		field._process(1.0 / 60.0)
+		waited += 1.0 / 60.0
+	check(absf(waited - windup) < 0.05, "it lands on the strike (%.2f s for a %.2f s wind-up)" % [waited, windup])
+	check_eq(target.pending_damage, 0, "and the bar drops then")
+	field.free()
+
+
+func test_a_knockout_waits_for_its_hit() -> void:
+	var made := _field()
+	var field: BattleField = made.field
+	var bear: BattleSim.Fighter = made.bear
+	var boar: BattleSim.Fighter = made.boar
+	var target := field.view_for_uid(boar.uid)
+	boar.alive = false
+	field.add_events([
+		{"type": "hit", "from": bear.uid, "to": boar.uid, "x": boar.x, "y": boar.y, "fx": bear.x, "fy": bear.y, "amount": 900, "dealt": 900, "ranged": false},
+		{"type": "death", "uid": boar.uid, "kind": "unit", "team": 1, "x": boar.x, "y": boar.y},
+	])
+	field._process(1.0 / 60.0)
+	check(target.defeat < 0.0, "no poof before the blow lands")
+	for i in 60:
+		field._process(1.0 / 60.0)
+	check(target.defeat >= 0.0, "then it's knocked out")
+	check(field.view_for_uid(bear.uid)._smug_until > field.now(), "and the bear looks smug")
+	field.free()

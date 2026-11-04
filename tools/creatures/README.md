@@ -24,10 +24,16 @@ mane grows with its face).
 3. **Fur** (`fur.py`): real hair strands grown from the skin, colored by
    the paint underneath, combed back and down.
 4. **Motion** (`motion.py`): idle, walk (trot, walk or gallop), attack
-   (pounce-bite, bite, swipe, charge, stomp, throw) and death, as poses.
+   (pounce-bite, bite, swipe, charge, stomp, throw) and death, as poses;
+   and a fidget (a look around and a head shake; fliers somersault), a
+   looping victory (rearing up and roaring, or a happy bounce; fliers
+   twirl) and, for animals with `motion["attack2"]`, a second attack to
+   alternate with (a bear's `slam`, a bird's talon `rake`).
 5. **Render** (`sprites.py`): Cycles with Freestyle outlines, an
    orthographic camera at the game's 50-degree angle, five directions (the
-   game mirrors the other three).
+   game mirrors the other three). It also writes where the eyes are in
+   every frame (and how big they are and the skin color around them) into
+   `sheet.json`, so the game can draw blinks and cartoon faces over them.
 6. **Arenas** (`arena.py`): one picture per arena, from the same camera,
    with the ground stretched so tiles come out square. The ground's colors
    (grass, tile stripes, the halfway line and center ring, flowers) are
@@ -72,8 +78,10 @@ python set_import.py                     # after Godot imports the new files
 animal with fur instead. `python arena.py` renders the arenas (about 5
 minutes each; `--only <arena>` for one).
 
-A full animal takes about 7-15 minutes on four CPU cores. To redo one
-animation after changing it in `motion.py`, keeping the rest of the sheet:
+A full animal takes about 7-15 minutes on four CPU cores (the fidget,
+victory and second attack add about half again). To redo one animation
+after changing it in `motion.py`, keeping the rest of the sheet (the eye
+data is written again for every animation):
 
 ```bash
 python sprites.py red_fox --anims death --only sprites

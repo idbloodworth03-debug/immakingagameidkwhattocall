@@ -228,6 +228,23 @@ func views() -> Array:
 	return _views.values()
 
 
+## The field's own clock (seconds; stops during hit-stop, slows in a close-up).
+func now() -> float:
+	return _time
+
+
+## The winning herd celebrates, each a moment apart (feel.json "acting").
+func celebrate_team(team: int) -> void:
+	for v: UnitView in _views.values():
+		if v.team == team and v.defeat < 0.0 and not v.doomed:
+			v.celebrate(_time + randf() * 0.3)
+
+
+func end_celebrations() -> void:
+	for v: UnitView in _views.values():
+		v.stop_celebrating()
+
+
 func view_for_uid(uid: int) -> UnitView:
 	return _by_uid.get(uid, null)
 
@@ -683,6 +700,9 @@ func _doom(e: Dictionary, at: float) -> void:
 func _defeat_view(v: UnitView) -> void:
 	fx.burst_defeat(v.middle())
 	v.start_defeat()
+	var winner := v.last_attacker
+	if is_instance_valid(winner) and winner.defeat < 0.0 and not winner.doomed:
+		winner.gloat(_time)
 	Sound.play("death", -6.0, 0.15)
 	# A pack animal's knockout is small news; anyone else's gets a beat.
 	if not v.swarm:
@@ -712,6 +732,8 @@ func _land(hit: Dictionary) -> void:
 		target.pending_damage = maxi(0, target.pending_damage - int(e.get("dealt", amount)))
 		target.incoming = maxi(0, target.incoming - 1)
 		target.update_hp()
+		if attacker != null:
+			target.last_attacker = attacker
 		if target.defeat < 0.0:
 			target.hurt(dir, strong)
 		at = target.middle()

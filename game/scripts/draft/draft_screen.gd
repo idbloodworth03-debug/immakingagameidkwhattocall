@@ -852,6 +852,7 @@ func _handle_events(events: Array) -> void:
 					_show_view("pick")
 			"fight":
 				Sound.play("horn")
+				_field.end_celebrations()
 				_show_view("fight")
 				get_tree().create_timer(0.6).timeout.connect(func() -> void: _rival_says("start"))
 			"tool":
@@ -862,6 +863,8 @@ func _handle_events(events: Array) -> void:
 				_selected_tool = -1
 				_rally_selected = false
 				_field.highlight = ""
+				if int(e.winner) >= 0:
+					_field.celebrate_team(int(e.winner))
 				_round_result(int(e.winner))
 
 

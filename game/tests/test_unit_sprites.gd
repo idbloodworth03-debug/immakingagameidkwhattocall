@@ -44,3 +44,27 @@ func test_attacks_land_mid_animation() -> void:
 func test_rendered_animals_have_portraits() -> void:
 	for id in _rendered():
 		check(UnitSprites.portrait(id) != null, "%s has a card portrait" % id)
+
+
+func test_eye_data_marks_where_faces_go() -> void:
+	for id in _rendered():
+		if UnitSprites.eye_radius(id) <= 0.0:
+			continue
+		check(UnitSprites.has_animation(id, "fidget") and UnitSprites.has_animation(id, "victory"),
+			"%s: rendered with eye data, so with a fidget and a victory too" % id)
+		var front := UnitSprites.eyes(id, "idle", 180.0, 0)
+		var seen := front.filter(func(e): return e is Vector2)
+		check(seen.size() >= 1, "%s: its eyes show from the front" % id)
+		check(UnitSprites.eyes(id, "idle", 0.0, 0).all(func(e): return e == null), "%s: and not from behind" % id)
+		check_eq(UnitSprites.eyes(id, "idle", 270.0, 0), UnitSprites.eyes(id, "idle", 90.0, 0),
+			"%s: a mirrored frame's eyes are the same data (the drawing mirrors them)" % id)
+		check(UnitSprites.eyes(id, "walk", 180.0, 99).size() == front.size(), "%s: a looping frame wraps" % id)
+
+
+func test_second_attacks_land_mid_animation() -> void:
+	for id in _rendered():
+		if not UnitSprites.has_animation(id, "attack2"):
+			continue
+		var hit := float(UnitSprites.animation(id, "attack2").get("hit", -1.0))
+		check(hit > 0.2 and hit < 0.8, "%s: the second attack's hit comes partway through (%.2f)" % [id, hit])
+		check(UnitSprites.attack_style(id, "attack2") != UnitSprites.attack_style(id), "%s: and it's a different attack" % id)

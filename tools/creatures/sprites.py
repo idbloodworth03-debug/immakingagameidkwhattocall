@@ -46,7 +46,8 @@ def clean_alpha(im, floor=14):
 
 def pack(crops, timing, hit, anchor, pixels_per_tile=PIXELS_PER_TILE):
     """Lays every frame out in a near-square grid. `crops` maps (anim, dir)
-    to equally sized RGBA arrays; `timing` maps anim to (frames, fps, loops).
+    to equally sized RGBA arrays; `timing` maps anim to (frames, fps, loops);
+    `hit` maps each attack to the share of it where the blow lands.
     Each animation and direction records where its first frame is."""
     first = next(iter(crops.values()))[0]
     cell_h, cell_w = first.shape[:2]
@@ -68,8 +69,8 @@ def pack(crops, timing, hit, anchor, pixels_per_tile=PIXELS_PER_TILE):
     index = 0
     for anim, (count, fps, loops) in timing.items():
         info = {"frames": count, "fps": fps, "loop": loops, "start": {}}
-        if anim == "attack":
-            info["hit"] = hit
+        if anim in hit:
+            info["hit"] = hit[anim]
         for d in DIRECTIONS:
             info["start"][str(d)] = index
             for im in crops[(anim, d)]:
@@ -98,6 +99,9 @@ def _old_frames(out_dir, side, anchor, anims):
     they were in the full rendered frame. Only works while the creature's
     size and the camera are unchanged since that sheet was rendered."""
     meta = json.load(open(os.path.join(out_dir, "sheet.json")))
+    missing = [a for a in anims if a not in meta["animations"]]
+    if missing:
+        raise SystemExit(f"{out_dir}: the old sheet has no {', '.join(missing)}; render those too")
     sheet = np.asarray(Image.open(os.path.join(out_dir, "sheet.webp")).convert("RGBA"))
     cw, ch = meta["cell"]
     pad, cols = meta["padding"], meta["columns"]
@@ -157,25 +161,33 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     import tempfile
     tmp = os.path.join(tempfile.gettempdir(), f"_{creature.name}_frame.png")
     frames = {}        # (anim, dir) -> list of RGBA arrays
+    eyes = {}          # (anim, dir) -> per frame, each eye's [x, y, facing]
+    eye_objects = [o for o in bpy.data.objects if o.type == "MESH" and "_eye_" in o.name]
+    animations = motion.animations_for(creature)
     if anims:
-        frames.update(_old_frames(out_dir, side, anchor, [a for a in motion.ANIMATIONS if a not in anims]))
-    for anim, (fn, count, fps, loops) in motion.ANIMATIONS.items():
-        if anims and anim not in anims:
-            continue
+        frames.update(_old_frames(out_dir, side, anchor, [a for a in animations if a not in anims]))
+    for anim, (fn, count, fps, loops) in animations.items():
+        render = not anims or anim in anims
         for d in DIRECTIONS:
             facing.rotation_euler = (0, 0, -math.radians(d))
             images = []
+            spots = []
             for f in range(count):
                 t = f / count if loops else f / max(count - 1, 1)
                 motion.apply(arm, fn(creature, t))
                 if anim == "death":
                     motion.rest_on_ground(arm, body)
-                sc.render.filepath = tmp
-                bpy.ops.render.render(write_still=True)
-                images.append(clean_alpha(np.asarray(Image.open(tmp).convert("RGBA"))))
-            frames[(anim, d)] = images
-            print(f"  {creature.name} {anim} {d}deg: {count} frames", flush=True)
-    os.remove(tmp)
+                spots.append(_eye_spots(sc, cam, side, eye_objects))
+                if render:
+                    sc.render.filepath = tmp
+                    bpy.ops.render.render(write_still=True)
+                    images.append(clean_alpha(np.asarray(Image.open(tmp).convert("RGBA"))))
+            eyes[(anim, d)] = spots
+            if render:
+                frames[(anim, d)] = images
+                print(f"  {creature.name} {anim} {d}deg: {count} frames", flush=True)
+    if os.path.exists(tmp):
+        os.remove(tmp)
 
     # Crop every frame to the box that fits them all.
     alpha = np.zeros((side, side), bool)
@@ -186,18 +198,78 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     x0, x1 = max(xs.min() - 1, 0), min(xs.max() + 2, side)
     y0, y1 = max(ys.min() - 1, 0), min(ys.max() + 2, side)
     crops = {key: [im[y0:y1, x0:x1] for im in images] for key, images in frames.items()}
-    timing = {anim: (count, fps, loops) for anim, (fn, count, fps, loops) in motion.ANIMATIONS.items()}
-    hit = motion.HIT_AT.get(creature.motion.get("attack", "bite"), 0.45)
-    sheet, meta = pack(crops, timing, hit, anchor=(anchor[0] - x0, anchor[1] - y0))
+    timing = {anim: (count, fps, loops) for anim, (fn, count, fps, loops) in animations.items()}
+    hit = {"attack": motion.HIT_AT.get(creature.motion.get("attack", "bite"), 0.45)}
+    if "attack2" in animations:
+        hit["attack2"] = motion.HIT_AT.get(creature.motion["attack2"], 0.45)
+    cell_anchor = (anchor[0] - x0, anchor[1] - y0)
+    sheet, meta = pack(crops, timing, hit, anchor=cell_anchor)
+    _add_eyes(meta, eyes, frames, eye_objects, anchor, ppm)
     meta["walk_cycle_tiles"] = round(creature.motion.get("cycle_tiles", creature.tiles_long * 0.75), 3)
     meta["top"] = sprite_top(frames, anchor, y0)
     meta["attack_style"] = creature.motion.get("attack", "bite")
+    if "attack2" in animations:
+        meta["attack2_style"] = creature.motion["attack2"]
 
     os.makedirs(out_dir, exist_ok=True)
     sheet.save(os.path.join(out_dir, "sheet.webp"), "WEBP", quality=90, method=6)
     with open(os.path.join(out_dir, "sheet.json"), "w") as fh:
         json.dump(meta, fh, indent=1)
     print(f"sheet {sheet.size[0]}x{sheet.size[1]}, cell {meta['cell'][0]}x{meta['cell'][1]}")
+
+
+def _eye_spots(sc, cam, side, eye_objects):
+    """Where each eye is in the rendered frame (pixels) and how squarely it
+    faces the camera (1 straight at it, 0 edge-on, below 0 turned away)."""
+    from bpy_extras.object_utils import world_to_camera_view
+    from mathutils import Vector
+    bpy.context.view_layer.update()
+    view = (cam.matrix_world.to_3x3() @ Vector((0, 0, -1))).normalized()
+    spots = []
+    for o in eye_objects:
+        m = o.matrix_world
+        uv = world_to_camera_view(sc, cam, m.translation)
+        outward = (m.to_3x3() @ Vector((0, 0, 1))).normalized()
+        spots.append([float(uv.x) * side, (1.0 - float(uv.y)) * side, float(-outward.dot(view))])
+    return spots
+
+
+def _add_eyes(meta, eyes, frames, eye_objects, anchor, ppm):
+    """Writes where the eyes are into the sheet's data, for the game to draw
+    blinks and faces over them: per animation and direction, per frame, each
+    eye as [x, y] from the anchor (pixels in the sheet) or null when it
+    faces away. Also how big an eye is and the color of the skin around it
+    (sampled from the rendered idle, for eyelids)."""
+    if not eye_objects:
+        return
+    # An eye's radius in pixels: its size in meters times pixels per meter.
+    size = eye_objects[0].matrix_world.to_scale()
+    radius = float(size[0] + size[1]) / 2 * ppm
+    meta["eye_radius"] = round(radius, 2)
+    out = {}
+    for (anim, d), spots in eyes.items():
+        per_frame = []
+        for spot in spots:
+            per_frame.append([[round(x - anchor[0], 1), round(y - anchor[1], 1)] if facing > 0.15 else None
+                              for x, y, facing in spot])
+        out.setdefault(anim, {})[str(d)] = per_frame
+    meta["eyes"] = out
+    # The skin just above an eye, from the idle facing down the screen.
+    key = ("idle", 180) if ("idle", 180) in frames else next(iter(frames))
+    im = frames[key][0]
+    colors = []
+    for x, y, facing in eyes[key][0]:
+        if facing <= 0.15:
+            continue
+        for k in range(-2, 3):
+            px, py = int(round(x + k * radius * 0.3)), int(round(y - radius * 1.45))
+            if 0 <= py < im.shape[0] and 0 <= px < im.shape[1] and im[py, px, 3] > 200:
+                rgb = im[py, px, :3].astype(float)
+                if rgb.mean() > 40:           # skip the dark outline
+                    colors.append(rgb)
+    if colors:
+        c = np.median(np.array(colors), axis=0)
+        meta["lid_color"] = "#%02x%02x%02x" % tuple(int(v) for v in c)
 
 
 def _scene_points():

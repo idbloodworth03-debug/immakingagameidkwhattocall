@@ -3,9 +3,11 @@ extends RefCounted
 ## Rendered animal sprites, made by tools/creatures (Blender).
 ##
 ## Each animal has art/units/<id>/sheet.webp, holding every frame of its
-## idle, walk, attack and death animations from five directions, and
-## sheet.json saying where each frame is. Left-facing frames are the
-## right-facing ones mirrored. art/units/<id>/portrait.webp is its card art.
+## idle, walk, attack and death animations from five directions (and, for
+## animals rendered with them, a fidget, a victory and a second attack), and
+## sheet.json saying where each frame is and where the eyes are in it.
+## Left-facing frames are the right-facing ones mirrored.
+## art/units/<id>/portrait.webp is its card art.
 
 const ROOT := "res://art/units/"
 
@@ -28,6 +30,44 @@ static func animation(id: String, anim: String) -> Dictionary:
 	return _sheet(id).get("animations", {}).get(anim, {})
 
 
+static func has_animation(id: String, anim: String) -> bool:
+	return not animation(id, anim).is_empty()
+
+
+## Where the eyes are in a frame, in sheet pixels from the anchor (null for
+## an eye turned away), for drawing blinks and faces over them. Empty when
+## the sheet has no eye data. Takes the same `facing` and `frame_index` as
+## frame(); mirrored frames need the x flipped, as the frame is.
+static func eyes(id: String, anim: String, facing: float, frame_index: int) -> Array:
+	var sheet := _sheet(id)
+	var all: Dictionary = sheet.get("eyes", {})
+	if not all.has(anim):
+		return []
+	var info: Dictionary = sheet.animations[anim]
+	var count := int(info.frames)
+	var f := posmod(frame_index, count) if info.loop else clampi(frame_index, 0, count - 1)
+	var angle := (roundi(fposmod(facing, 360.0) / 45.0) % 8) * 45
+	if angle > 180:
+		angle = 360 - angle
+	var frames: Array = all[anim].get(str(angle), [])
+	if f >= frames.size():
+		return []
+	var out := []
+	for e: Variant in frames[f]:
+		out.append(Vector2(float(e[0]), float(e[1])) if e is Array else null)
+	return out
+
+
+## How big an eye is (radius in sheet pixels), 0 without eye data.
+static func eye_radius(id: String) -> float:
+	return float(_sheet(id).get("eye_radius", 0.0))
+
+
+## The color of the skin around the eyes, for eyelids.
+static func lid_color(id: String) -> Color:
+	return Color(String(_sheet(id).get("lid_color", "#7a5a3a")))
+
+
 ## Seconds an animation lasts (once through).
 static func duration(id: String, anim: String) -> float:
 	var info := animation(id, anim)
@@ -46,8 +86,10 @@ static func top(id: String) -> float:
 
 
 ## How the animal attacks (pounce_bite, bite, swipe, charge, stomp, throw,
-## dive), for matching hit effects.
-static func attack_style(id: String) -> String:
+## dive...), for matching hit effects; "attack2" for its second attack.
+static func attack_style(id: String, anim := "attack") -> String:
+	if anim == "attack2":
+		return String(_sheet(id).get("attack2_style", _sheet(id).get("attack_style", "bite")))
 	return String(_sheet(id).get("attack_style", "bite"))
 
 

@@ -94,6 +94,6 @@ def make():
     add_face(c, eye_dir=(-0.75, 0.55, 0.3), eye_radius=0.0068, eye_sink=0.003, nose_radius=0, iris="#1a0d06", pupil="round")
     c.palette = {"eye_line": "#e2b236", "eye_line_size": 1.45}
     c.fur = {"strands": False, "variation": 0.12, "sheen": 0.1, "bump": 0.2, "roughness": 0.65}
-    c.motion = {"body": "bird", "attack": "dive", "altitude": 0.42, "flap": 0.8, "hover_power": 0.5,
+    c.motion = {"body": "bird", "attack": "dive", "attack2": "rake", "altitude": 0.42, "flap": 0.8, "hover_power": 0.5,
                 "cycle_tiles": 1.4}
     return c

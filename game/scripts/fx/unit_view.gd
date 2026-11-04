@@ -81,6 +81,43 @@ var _follow_k := 1.0          # its own follow speed (a row isn't a rigid block)
 var _intent := 0.0            # walking on its own (not pushed) for this long yet
 var _last_run := 0
 var _march := 0.0             # 0-1: how much it's marching (its wobble in the row)
+
+## Acting (feel.json "acting"): its class's way of moving and attacking,
+## faces, fidgets, blinks, a celebration and a few comic touches.
+var _style := ""              # tank, tank_destroyer, ranged, air or specialist
+## Its attacks ("attack", and "attack2" if it has a second to alternate
+## with): {anim: {"windup", "length", "hit_frame", "fps"}}, and which plays.
+var _attacks := {}
+var _attack_anim := "attack"
+var _attack_count := 0
+var _anim_speed := 1.0        # its own idle and walk pace (no two in step)
+var _fidget_len := 0.0
+var _fidget_fps := 10.0
+var _victory_fps := 10.0
+var _blink_at := -100.0
+var _blink_next := 0.0
+var _fidget_at := -100.0
+var _fidget_next := 0.0
+var _hurt_at := -100.0
+var _hurt_power := 1.0
+var _flinch := 0.0
+var _flinch_v := 0.0
+var _smug_until := -100.0
+var _victory_at := -1.0       # celebrating since (field time); -1 when not
+var _trip_at := -100.0
+var _trip_ready := 0.0
+var _sweat_in := 0.0
+var _zzz_in := 0.0
+var _bank := 0.0
+var _last_facing := 0.0
+var _prev_anim := ""
+var _last_step := 0
+var _defeat_kind := "poof"
+var _defeat_side := 1.0
+var _face_key := ""
+## Who hit it last (for a smug look when it's knocked out).
+var last_attacker: UnitView
+var face: UnitFace
 ## Its sprite sheet's speeds and sizes (see make()), and the frame it's on.
 var _idle_fps := 6.0
 var _attack_fps := 12.0
@@ -160,6 +197,27 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v._per_tile = UnitSprites.pixels_per_tile(v.id)
 	v._walk_tiles = maxf(0.05, UnitSprites.walk_cycle_tiles(v.id))
 	v._windup = float(UnitSprites.animation(v.id, "attack").get("hit", 0.45)) * v._attack_len
+	v._style = "air" if v.flying else v.cls
+	var a := "acting"
+	var slower: float = GameData.feel.get(a, {}).get("windup_scale", {}).get(v._style, 1.0)
+	for anim in ["attack", "attack2"]:
+		var info := UnitSprites.animation(v.id, anim)
+		if info.is_empty():
+			continue
+		var fps := float(info.get("fps", 16))
+		var length := float(info.frames) / fps
+		var hit := float(info.get("hit", 0.45))
+		v._attacks[anim] = {"windup": hit * length * slower, "length": hit * length * slower + (1.0 - hit) * length,
+			"hit_frame": hit * float(info.frames), "frames": float(info.frames), "fps": fps}
+	if UnitSprites.has_animation(v.id, "fidget"):
+		v._fidget_len = UnitSprites.duration(v.id, "fidget")
+		v._fidget_fps = float(UnitSprites.animation(v.id, "fidget").get("fps", 10))
+	v._victory_fps = float(UnitSprites.animation(v.id, "victory").get("fps", 10))
+	v._anim_speed = 1.0 + randf_range(-1.0, 1.0) * Feel.num(a, "pace_variety", 0.08)
+	var now := owner_field.now()
+	v._blink_next = now + randf_range(0.5, 4.0)
+	var first := _range(a, "fidget_first", Vector2(2.0, 9.0))
+	v._fidget_next = now + randf_range(first.x, first.y)
 	# How far its picture reaches (field units), for keeping animals from
 	# covering each other on screen.
 	var c := "characters"
@@ -176,8 +234,21 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 		v._material = material
 		v.body.material = material
 	v.add_child(v.body)
+	v.face = UnitFace.new()
+	v.face.radius = UnitSprites.eye_radius(v.id)
+	v.face.lid = UnitSprites.lid_color(v.id)
+	v.face.visible = false
+	v.body.add_child(v.face)
 	v.z_index = 1 if v.flying else 0
 	return v
+
+
+## A [low, high] pair from feel.json.
+static func _range(section: String, key: String, fallback: Vector2) -> Vector2:
+	var value: Variant = GameData.feel.get(section, {}).get(key, null)
+	if value is Array and (value as Array).size() == 2:
+		return Vector2(float(value[0]), float(value[1]))
+	return fallback
 
 
 ## The shader's look settings from feel.json.
@@ -235,6 +306,11 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		follow(pos + spread + march, goal_v, dt)
 	var speed := shown_v.length()
 	if hop_t >= 1.0 and _intent > 0.0 and speed > float(t.walk_min_speed):
+		if moving <= 0.0 and now >= _trip_ready and randf() < float(t.trip_chance):
+			# Now and then, setting off, it trips over its own feet.
+			_trip_at = now
+			_trip_ready = now + float(t.trip_cooldown)
+			field.fx.burst("puff", position, 3, 50.0, 0.4, 5.0, [Color("#c9b08a", 0.8)], -30.0, 3.0)
 		moving = float(t.walk_hold_seconds)
 		move_dir = shown_v / speed
 		# The legs keep pace with the ground they cover (within limits, so a
@@ -260,11 +336,11 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	# Start the attack early enough that the strike lands on the hit (a
 	# little later for some, so a herd doesn't swing in step).
 	if has_target and f.deploy_ticks <= 0 and f.stun <= 0 and sim.in_range(f, f.target) and not attacking(now):
-		var windup := windup_seconds()
+		var next := _next_attack()
+		var windup := _windup_of(next)
 		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
 		if to_hit >= 0.0 and to_hit <= windup:
-			attack_at = now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds)
-			attack_dir = Vector2(f.target.x - f.x, f.target.y - f.y).normalized()
+			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y))
 
 
 ## The health it shows: the fight's, plus the damage from hits still on their way.
@@ -312,11 +388,41 @@ func _turn(toward: Vector2, dt: float) -> void:
 
 
 func windup_seconds() -> float:
-	return _windup
+	return _windup_of(_attack_anim)
 
 
 func attacking(now: float) -> bool:
-	return now - attack_at < _attack_len
+	return now - attack_at < float(_attacks.get(_attack_anim, {}).get("length", _attack_len))
+
+
+## The attack it plays next: common animals alternate two.
+func _next_attack() -> String:
+	return "attack2" if _attacks.has("attack2") and _attack_count % 2 == 1 else "attack"
+
+
+func _windup_of(anim: String) -> float:
+	return float(_attacks.get(anim, {}).get("windup", _windup))
+
+
+func _start_attack(anim: String, at: float, toward: Vector2) -> void:
+	_attack_anim = anim
+	_attack_count += 1
+	attack_at = at
+	if toward.length() > 0.0:
+		attack_dir = toward.normalized()
+
+
+## The frame of an attack `since` seconds in: the wind-up plays at its
+## class's pace (a Tank's big slow swing, a Tank Destroyer's quick one), the
+## rest at the sheet's.
+func _attack_frame(since: float) -> int:
+	var info: Dictionary = _attacks.get(_attack_anim, {})
+	if info.is_empty():
+		return int(since * _attack_fps)
+	var windup := float(info.windup)
+	if since < windup:
+		return int(since / maxf(windup, 0.01) * float(info.hit_frame))
+	return mini(int(float(info.hit_frame) + (since - windup) * float(info.fps)), int(info.frames) - 1)
 
 
 ## Seconds until this animal's strike lands, for a hit the fight just dealt.
@@ -328,10 +434,9 @@ func time_to_strike(now: float, toward: Vector2) -> float:
 		return windup - since
 	if since < windup + float(_tuning().strike_grace_seconds):
 		return 0.0
-	attack_at = now
-	if toward.length() > 0.0:
-		attack_dir = toward.normalized()
-	return windup
+	var next := _next_attack()
+	_start_attack(next, now, toward)
+	return _windup_of(next)
 
 
 ## Took a hit from the direction `from_dir` (field space, toward this view).
@@ -342,6 +447,47 @@ func hurt(from_dir: Vector2, strong: bool) -> void:
 	var push_px := Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
 	knock += Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push_px
 	trail_hold = Feel.num(c, "health_bar_trail_delay", 0.4)
+	# A flinch: a quick tilt away from the blow and a little bounce, eyes wide.
+	_hurt_at = field.now()
+	_hurt_power = 1.5 if strong else 1.0
+	var away := signf(from_dir.x) if absf(from_dir.x) > 0.1 else (1.0 if randf() < 0.5 else -1.0)
+	_flinch_v += away * Feel.num("acting", "flinch_degrees", 9.0) * 30.0 * _hurt_power
+
+
+## The winning herd celebrates (from `at`, a moment apart so they aren't in
+## step) for feel.json "acting" victory_seconds.
+func celebrate(at: float) -> void:
+	_victory_at = at
+	_fidget_at = -100.0
+
+
+func stop_celebrating() -> void:
+	_victory_at = -1.0
+
+
+func is_celebrating(now: float) -> bool:
+	return _victory_at >= 0.0 and now >= _victory_at and now - _victory_at < Feel.num("acting", "victory_seconds", 2.6)
+
+
+## Fidgets now (the animation preview).
+func fidget_now(now: float) -> void:
+	if _fidget_len > 0.0:
+		_fidget_at = now
+
+
+## Makes its next attack this one ("attack" or "attack2"; the animation
+## preview).
+func prefer_attack(anim: String) -> void:
+	if anim == "attack2" and _attacks.has("attack2"):
+		_attack_count = 1
+	else:
+		_attack_count = 0
+
+
+## Knocked someone out: a smug look for a moment and a little chin-up.
+func gloat(now: float) -> void:
+	_smug_until = now + Feel.num("acting", "smug_seconds", 1.0)
+	squash_v -= 2.5
 
 
 func start_defeat() -> void:
@@ -350,6 +496,9 @@ func start_defeat() -> void:
 	defeat = 0.0
 	flash = 1.0
 	defeat_spin = -1.0 if randf() < 0.5 else 1.0
+	# Most poof into a cloud; some bounce off the screen with a comic spin.
+	_defeat_kind = "fling" if randf() < Feel.num("acting", "defeat_fling_chance", 0.3) else "poof"
+	_defeat_side = signf(knock.x) if absf(knock.x) > 0.5 else defeat_spin
 	fighter = null
 
 
@@ -384,6 +533,36 @@ static func _tuning() -> Dictionary:
 			"impact_jitter_seconds": Feel.num("combat", "impact_jitter_seconds", 0.06),
 			"strike_grace_seconds": Feel.num("combat", "strike_grace_seconds", 0.1),
 			"bob_pixels": Feel.num("characters", "bob_pixels", 1.5),
+			"trip_chance": Feel.num("acting", "trip_chance", 0.03),
+			"trip_cooldown": Feel.num("acting", "trip_cooldown", 25.0),
+			"trip_seconds": Feel.num("acting", "trip_seconds", 0.45),
+			"blink_seconds": Feel.num("acting", "blink_seconds", 0.13),
+			"blink_every": _range("acting", "blink_every", Vector2(2.2, 5.0)),
+			"fidget_every": _range("acting", "fidget_every", Vector2(7.0, 14.0)),
+			"wide_seconds": Feel.num("acting", "wide_seconds", 0.35),
+			"hurt_seconds": Feel.num("acting", "hurt_seconds", 0.32),
+			"hurt_bounce_pixels": Feel.num("acting", "hurt_bounce_pixels", 5.0),
+			"transition_squash": Feel.num("acting", "transition_squash", 0.05),
+			"tank_hop": Feel.num("acting", "tank_hop", 0.45),
+			"tank_step_squash": Feel.num("acting", "tank_step_squash", 0.06),
+			"td_lean": Feel.num("acting", "td_lean", 1.7),
+			"td_lunge": Feel.num("acting", "td_lunge", 1.9),
+			"td_pounce_pixels": Feel.num("acting", "td_pounce_pixels", 9.0),
+			"ranged_recoil_pixels": Feel.num("acting", "ranged_recoil_pixels", 5.0),
+			"air_bob_pixels": Feel.num("acting", "air_bob_pixels", 4.0),
+			"air_bob_speed": Feel.num("acting", "air_bob_speed", 2.6),
+			"air_swoop_pixels": Feel.num("acting", "air_swoop_pixels", 5.0),
+			"air_bank_degrees": Feel.num("acting", "air_bank_degrees", 16.0),
+			"air_dive_rise_pixels": Feel.num("acting", "air_dive_rise_pixels", 8.0),
+			"air_dive_drop_pixels": Feel.num("acting", "air_dive_drop_pixels", 10.0),
+			"victory_hop_pixels": Feel.num("acting", "victory_hop_pixels", 9.0),
+			"victory_seconds": Feel.num("acting", "victory_seconds", 2.6),
+			"fling_seconds": Feel.num("acting", "defeat_fling_seconds", 0.9),
+			"stun_wobble_degrees": Feel.num("acting", "stun_wobble_degrees", 7.0),
+			"slow_pace": Feel.num("acting", "slow_pace", 0.5),
+			"zzz_every": Feel.num("acting", "zzz_every", 0.9),
+			"sweat_below": Feel.num("acting", "sweat_below", 0.25),
+			"sweat_every": Feel.num("acting", "sweat_every", 1.3),
 			"breathe_amount": Feel.num("characters", "breathe_amount", 0.035),
 			"breathe_speed": Feel.num("characters", "breathe_speed", 2.4),
 			"defeat_hop_pixels": Feel.num("combat", "defeat_hop_pixels", 46.0),
@@ -429,7 +608,10 @@ func animate(dt: float, now: float) -> void:
 	if hop_t < 1.0:
 		hop_t = minf(1.0, hop_t + dt / maxf(0.05, hop_seconds))
 	if defeat >= 0.0:
-		defeat = minf(1.0, defeat + dt / maxf(0.05, float(t.defeat_seconds)))
+		var lasts := float(t.fling_seconds) if _defeat_kind == "fling" else float(t.defeat_seconds)
+		defeat = minf(1.0, defeat + dt / maxf(0.05, lasts))
+	_flinch_v += (-stiff * _flinch - damp * _flinch_v) * dt
+	_flinch += _flinch_v * dt
 	# The health bar drains smoothly; the "damage taken" part waits, then follows.
 	bar_shown = move_toward(bar_shown, hp_ratio, dt * float(t.health_bar_drain_speed))
 	if hp_ratio > bar_trail:
@@ -441,19 +623,46 @@ func animate(dt: float, now: float) -> void:
 
 	var k := field.sprite_k_per_tile(_per_tile, swarm)
 	body.k = k
+	var f := fighter
+	var stunned := f != null and f.stun > 0
+	var slowed := f != null and f.slow > 0
+	var pace := _anim_speed * (float(t.slow_pace) if slowed else 1.0)
 	var anim := "idle"
-	var frame := int((now + uid * 0.37) * _idle_fps)
+	var frame := int((now * pace + uid * 0.37) * _idle_fps)
 	var since := now - attack_at
-	var attack_len := _attack_len
-	if defeat >= 0.0:
-		anim = "attack"
+	var attack_len := float(_attacks.get(_attack_anim, {}).get("length", _attack_len))
+	var windup := windup_seconds()
+	var celebrating := is_celebrating(now)
+	var tripping := now - _trip_at < float(t.trip_seconds)
+	if defeat >= 0.0 or stunned:
 		frame = 0
 	elif since >= 0.0 and since < attack_len:
-		anim = "attack"
-		frame = int(since * _attack_fps)
+		anim = _attack_anim
+		frame = _attack_frame(since)
+	elif celebrating and UnitSprites.has_animation(id, "victory"):
+		anim = "victory"
+		frame = int((now - _victory_at) * _victory_fps * pace)
 	elif moving > 0.0 and hop_t >= 1.0:
 		anim = "walk"
 		frame = int(walk * _walk_frames)
+	elif now - _fidget_at < _fidget_len and not celebrating:
+		anim = "fidget"
+		frame = int((now - _fidget_at) * _fidget_fps)
+	# A fidget now and then, while standing about with nothing in reach.
+	if dt > 0.0 and _fidget_len > 0.0 and now >= _fidget_next:
+		var every: Vector2 = t.fidget_every
+		if anim == "idle" and defeat < 0.0 and not stunned and not celebrating and not _in_a_scrap():
+			_fidget_at = now
+			_fidget_next = now + randf_range(every.x, every.y)
+			anim = "fidget"
+			frame = 0
+		else:
+			_fidget_next = now + randf_range(1.0, 3.0)
+	# Changing animation: a little squash eases the cut between pictures.
+	if anim != _prev_anim:
+		if _prev_anim != "" and not anim.begins_with("attack"):
+			squash_v += float(t.transition_squash) * 18.0
+		_prev_anim = anim
 	# Look the frame up only when it changes.
 	var frame_key := "%s%d/%d" % [anim, frame, _dir8]
 	if frame_key != _frame_key:
@@ -466,45 +675,107 @@ func animate(dt: float, now: float) -> void:
 	var sy := 1.0
 	var lean := 0.0
 	var lift := 0.0
-	if anim == "idle" and defeat < 0.0:
+	var air := _style == "air"
+	if anim in ["idle", "fidget", "victory"] and defeat < 0.0:
 		# Breathing: a slow squash and stretch, and a gentle bob.
-		var b := sin(now * float(t.breathe_speed) + idle_phase)
+		var b := sin(now * float(t.breathe_speed) * pace + idle_phase)
 		var amount := float(t.breathe_amount)
 		sy += b * amount
 		sx -= b * amount * 0.6
 		offset.y -= (b * 0.5 + 0.5) * float(t.bob_pixels)
+	if air and defeat < 0.0:
+		# Fliers bob as they hover and swoop gently as they fly.
+		lift += (sin(now * float(t.air_bob_speed) * pace + idle_phase) * 0.5 + 0.5) * float(t.air_bob_pixels)
+		if anim == "walk":
+			lift += (sin(now * 1.7 + idle_phase) * 0.5 + 0.5) * float(t.air_swoop_pixels)
 	elif anim == "walk":
 		# Little hops in step with the walk cycle: stretched in the air,
-		# squashed on landing, leaning into the run.
+		# squashed on landing, leaning into the run. Tanks plod low and
+		# heavy; Tank Destroyers lean right into it.
 		var step := absf(sin(walk * TAU))
-		lift = step * float(t.walk_hop_pixels)
-		var land := 1.0 - step
+		var hop := float(t.walk_hop_pixels)
 		var ws := float(t.walk_squash)
+		var lean_k := 1.0
+		match _style:
+			"tank":
+				hop *= float(t.tank_hop)
+				ws *= 1.5
+				lean_k = 0.6
+			"tank_destroyer":
+				lean_k = float(t.td_lean)
+		lift = step * hop
+		var land := 1.0 - step
 		sy += step * ws - land * ws * 0.8
 		sx -= step * ws * 0.6 - land * ws * 0.6
-		lean = move_dir.x * float(t.lean_degrees)
-	elif anim == "attack" and defeat < 0.0:
-		var windup := windup_seconds()
+		lean = move_dir.x * float(t.lean_degrees) * lean_k
+		var steps := floori(walk * 2.0)
+		if steps != _last_step:
+			_last_step = steps
+			_footfall(t)
+	if anim.begins_with("attack") and defeat < 0.0:
 		var screen_dir := Vector2(attack_dir.x, attack_dir.y * 0.6).normalized()
+		var lunge := float(t.lunge_pixels)
 		if since < windup:
-			# Anticipation: squash down and pull back.
+			# Anticipation: squash down and pull back (a Tank rears back
+			# further; a Tank Destroyer crouches, then springs; a flier rises).
 			var w := Ease.in_out_sine(since / maxf(windup, 0.01))
 			var ws := float(t.windup_squash)
+			var pull := float(t.windup_pull_pixels)
+			match _style:
+				"tank":
+					pull *= 1.6
+					ws *= 1.3
+					lift += w * 3.0
+				"tank_destroyer":
+					ws *= 1.4
+					var leap := clampf((since / maxf(windup, 0.01) - 0.7) / 0.3, 0.0, 1.0)
+					lift += sin(leap * PI * 0.5) * float(t.td_pounce_pixels)
+					offset += screen_dir * leap * lunge * float(t.td_lunge) * 0.6
+				"ranged":
+					pull *= 1.3
+				"air":
+					lift += w * float(t.air_dive_rise_pixels)
 			sy -= w * ws
 			sx += w * ws * 0.7
-			offset -= screen_dir * w * float(t.windup_pull_pixels)
+			offset -= screen_dir * w * pull
 		else:
-			# The strike: a fast stretch and lunge, then settle back.
+			# The strike: a fast stretch and lunge, then settle back. A shot
+			# kicks the shooter back instead; a flier dives in and pulls up.
 			var after := (since - windup) / maxf(attack_len - windup, 0.05)
 			var strike_t := 1.0 - Ease.out_cubic(after)
 			var st := float(t.strike_stretch)
 			sy += strike_t * st
 			sx -= strike_t * st * 0.6
-			offset += screen_dir * strike_t * float(t.lunge_pixels)
+			match _style:
+				"ranged":
+					offset -= screen_dir * strike_t * float(t.ranged_recoil_pixels)
+				"tank_destroyer":
+					offset += screen_dir * strike_t * lunge * float(t.td_lunge)
+				"tank":
+					offset += screen_dir * strike_t * lunge * 1.2
+				"air":
+					offset += screen_dir * strike_t * lunge * 1.5
+					lift -= strike_t * float(t.air_dive_drop_pixels)
+				_:
+					offset += screen_dir * strike_t * lunge
 			lean = screen_dir.x * 10.0 * strike_t
-	# Hit reaction.
+	if celebrating and defeat < 0.0:
+		# Celebrating: happy bounces (a moment apart, so not in step).
+		var hop_t2 := (now - _victory_at) * 6.0
+		lift += absf(sin(hop_t2)) * float(t.victory_hop_pixels)
+		sy += absf(cos(hop_t2)) * 0.04
+	# Hit reaction: a squash, a little bounce and a flinch away from the blow.
 	sx += squash
 	sy -= squash
+	var hurt_t := (now - _hurt_at) / maxf(0.05, float(t.hurt_seconds))
+	if hurt_t < 1.0:
+		lift += Ease.arc(hurt_t) * float(t.hurt_bounce_pixels) * _hurt_power
+	if tripping:
+		# Tripping over its own feet: pitch forward, squash, recover.
+		var trip := Ease.arc((now - _trip_at) / float(t.trip_seconds))
+		lean += (move_dir.x if absf(move_dir.x) > 0.2 else 1.0) * 28.0 * trip
+		sy -= 0.12 * trip
+		sx += 0.08 * trip
 	# Turning to a new direction: a quick pinch hides the swap of pictures.
 	if _turn_pinch > 0.0:
 		var pinch := Ease.arc(1.0 - _turn_pinch) * float(t.turn_squash)
@@ -527,19 +798,36 @@ func animate(dt: float, now: float) -> void:
 		sy += h * 0.12
 		sx -= h * 0.08
 	var opacity := 1.0
-	var rot := lean
+	var rot := lean + _flinch
+	if air and dt > 0.0:
+		# Banking into turns.
+		var turning := wrapf(facing - _last_facing, -180.0, 180.0) / dt
+		var bank := clampf(turning * 0.05, -float(t.air_bank_degrees), float(t.air_bank_degrees))
+		_bank = lerpf(_bank, bank, 1.0 - exp(-dt * 6.0))
+	_last_facing = facing
+	rot += _bank
+	if stunned and defeat < 0.0:
+		rot += sin(now * 9.0 + idle_phase) * float(t.stun_wobble_degrees)
 	if defeat >= 0.0:
-		# A cartoon knockout: hop up, spin, shrink and vanish in a poof.
 		var d := defeat
-		lift += Ease.arc(minf(1.0, d * 1.15)) * float(t.defeat_hop_pixels)
-		rot += defeat_spin * float(t.defeat_spin_turns) * 360.0 * Ease.out_cubic(d)
-		var shrink := 1.0 - Ease.in_cubic(d)
-		sx *= shrink
-		sy *= shrink
-		opacity = 1.0 - Ease.in_cubic(d)
+		if _defeat_kind == "fling":
+			# Bounced off the screen with a comic spin, fading as it goes.
+			lift += 520.0 * d - 120.0 * d * d
+			offset.x += _defeat_side * 260.0 * d
+			rot += defeat_spin * 2.5 * 360.0 * d
+			opacity = 1.0 - clampf((d - 0.65) / 0.35, 0.0, 1.0)
+		else:
+			# A cartoon knockout: hop up, spin, shrink and vanish in a poof.
+			lift += Ease.arc(minf(1.0, d * 1.15)) * float(t.defeat_hop_pixels)
+			rot += defeat_spin * float(t.defeat_spin_turns) * 360.0 * Ease.out_cubic(d)
+			var shrink := 1.0 - Ease.in_cubic(d)
+			sx *= shrink
+			sy *= shrink
+			opacity = 1.0 - Ease.in_cubic(d)
 	offset.y -= lift
+	_update_face(t, anim, frame, now, since, windup, celebrating, stunned, slowed, k)
+	_comic_touches(t, dt, slowed, k)
 
-	var f := fighter
 	if f != null:
 		if f.stealthed and f.revealed <= 0:
 			opacity *= 0.45 if team == 0 else 0.15
@@ -576,6 +864,86 @@ func animate(dt: float, now: float) -> void:
 		tint.a = opacity
 	body.self_modulate = tint
 	body.queue_redraw()
+
+
+## In reach of what it's fighting (no fidgeting then).
+func _in_a_scrap() -> bool:
+	var f := fighter
+	return f != null and f.target != null and f.target.alive and field.sim != null and field.sim.in_range(f, f.target)
+
+
+## A foot coming down: a Tank's heavy step thumps with a puff of dust; a
+## Tank Destroyer kicks up dust behind it now and then.
+func _footfall(t: Dictionary) -> void:
+	if field.fx.crowded and randf() < 0.6:
+		return
+	var dust := Color("#c9b08a", 0.75)
+	match _style:
+		"tank":
+			squash_v += float(t.tank_step_squash) * 20.0
+			var heavy := fighter != null and fighter.radius >= 700
+			field.fx.burst("puff", position + Vector2(randf_range(-6.0, 6.0), 0), 2 if heavy else 1, 40.0, 0.45, 6.0 if heavy else 4.5, [dust], -15.0, 3.0)
+		"tank_destroyer":
+			if randf() < 0.4:
+				var back := -Vector2(move_dir.x, move_dir.y * 0.6)
+				field.fx.particle("puff", position + back * 6.0, back * 60.0, 0.35, 3.5, dust, 0.0, 3.0)
+
+
+## Which face to draw over its eyes this frame, if any.
+func _update_face(t: Dictionary, anim: String, frame: int, now: float, since: float, windup: float, celebrating: bool, stunned: bool, slowed: bool, k: float) -> void:
+	if face.radius <= 0.0:
+		return
+	if now >= _blink_next:
+		var every: Vector2 = t.blink_every
+		_blink_at = now
+		_blink_next = now + randf_range(every.x, every.y)
+	var mode := ""
+	if defeat >= 0.0 or stunned:
+		mode = "dizzy"
+	elif celebrating:
+		mode = "happy"
+	elif now - _hurt_at < float(t.wide_seconds):
+		mode = "wide"
+	elif anim.begins_with("attack") and since >= 0.0 and since < windup:
+		mode = "squint"
+	elif now < _smug_until:
+		mode = "smug"
+	elif slowed:
+		mode = "drowsy"
+	elif now - _blink_at < float(t.blink_seconds):
+		mode = "blink"
+	if mode == "":
+		face.visible = false
+		_face_key = ""
+		return
+	var key := "%s/%s" % [mode, _frame_key]
+	if key != _face_key or mode == "dizzy":
+		_face_key = key
+		face.mode = mode
+		face.eyes = UnitSprites.eyes(id, anim, _dir8 * 45.0, frame)
+		face.k = k
+		face.flip = bool(body.frame.get("flip", false))
+		face.spin = now * 7.0
+		face.visible = not face.eyes.is_empty()
+		face.queue_redraw()
+
+
+## Sweat drops when it's nearly beaten, and Zzz while slowed.
+func _comic_touches(t: Dictionary, dt: float, slowed: bool, k: float) -> void:
+	if dt <= 0.0 or defeat >= 0.0 or fighter == null:
+		return
+	var top := position + body.position + Vector2(0, -UnitSprites.top(id) * k)
+	if hp_ratio < float(t.sweat_below):
+		_sweat_in -= dt
+		if _sweat_in <= 0.0:
+			_sweat_in = float(t.sweat_every) * randf_range(0.8, 1.3)
+			var side := 1.0 if randf() < 0.5 else -1.0
+			field.fx.effect("drop", top + Vector2(side * UnitSprites.top(id) * k * 0.3, 6.0), 5.0, Color("#8fd3ff"), 0.7)
+	if slowed:
+		_zzz_in -= dt
+		if _zzz_in <= 0.0:
+			_zzz_in = float(t.zzz_every)
+			field.fx.effect("zzz", top + Vector2(8.0, -2.0), 9.0, Color("#e9f2ff"), 1.3)
 
 
 func _set_param(m: ShaderMaterial, slot: int, param: String, value: float) -> void:

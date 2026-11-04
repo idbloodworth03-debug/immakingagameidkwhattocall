@@ -290,6 +290,22 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 				canvas.draw_set_transform(at, ang + t * 3.0, Vector2(1.0, 0.35))
 				canvas.draw_circle(Vector2.ZERO, 6.0, Color(color, 1.0 - t))
 				canvas.draw_set_transform(Vector2.ZERO)
+		"drop":
+			# A sweat drop sliding off a worried animal.
+			var at := p + Vector2(0, 10.0 * Ease.in_cubic(t))
+			var a := 1.0 - Ease.in_cubic(t)
+			var tip := at + Vector2(0, -r * 1.3)
+			canvas.draw_colored_polygon(PackedVector2Array([tip, at + Vector2(-r * 0.7, -r * 0.2), at + Vector2(r * 0.7, -r * 0.2)]), Color(color, a))
+			canvas.draw_circle(at, r * 0.72, Color(color, a))
+			canvas.draw_circle(at + Vector2(-r * 0.25, -r * 0.2), r * 0.22, Color(1, 1, 1, a * 0.9))
+		"zzz":
+			# Sleepy Zzz drifting up and away.
+			for i in 3:
+				var u := clampf(t * 1.4 - i * 0.18, 0.0, 1.0)
+				if u <= 0.0 or u >= 1.0:
+					continue
+				var at := p + Vector2(i * r * 0.9 + sin(u * 5.0) * 3.0, -u * r * 3.5)
+				_draw_text(canvas, at, "z", int(r * (1.2 + i * 0.35)), Color(color, 1.0 - Ease.in_cubic(u)), 3)
 		"icon":
 			var texture := UIKit.icon(fx.text)
 			if texture != null:

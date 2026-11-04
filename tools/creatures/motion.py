@@ -685,6 +685,167 @@ ATTACKS = {"dive": bird_strike, "pounce_bite": pounce_bite, "bite": bite, "swipe
            "spit": spit, "snap": snap, "flutter_dive": flutter_dive, "winged_dive": winged_dive}
 
 
+# --- Personality and celebrations ----------------------------------------------------
+
+def _pivot(c):
+    """Roughly the middle of the body (armature space), to spin around."""
+    zs = [j[2] for j in c.joints.values()]
+    return np.array([0.0, c.joints["root"][1], (min(zs) + max(zs)) / 2])
+
+
+def _spin(c, p, x=0.0, z=0.0):
+    """Turns the whole animal (x: nose up, z: to its left) about the middle
+    of its body rather than its feet, so a flip or a twirl stays in place."""
+    rr = p.get("root_rot", (0.0, 0.0, 0.0))
+    rx, rz = rr[0] + x, rr[2] + z
+    cx, sx, cz, sz = math.cos(rx), math.sin(rx), math.cos(rz), math.sin(rz)
+    rot_x = np.array([[1, 0, 0], [0, cx, -sx], [0, sx, cx]])
+    rot_z = np.array([[cz, -sz, 0], [sz, cz, 0], [0, 0, 1]])
+    pivot = _pivot(c)
+    shift = pivot - rot_z @ rot_x @ pivot
+    p["root_rot"] = (rx, rr[1], rz)
+    p.move(*shift)
+
+
+def fidget(c, t):
+    """A moment of personality while it stands about (the game plays it now
+    and then): a look one way and the other, a head shake with the ears
+    flapping, a tail wag. Fliers turn a somersault in the air. Starts and
+    ends on the idle pose, so it slips in and out of the idle."""
+    body = c.motion.get("body")
+    if body in ("bird", "winged"):
+        return _air_fidget(c, t)
+    if body is not None:
+        # Bodies without four legs: their idle, a little livelier.
+        return idle(c, (t * 2.0) % 1.0)
+    p = idle(c, 0.0)
+    look = float(keys(t, [(0, 0), (0.16, 1), (0.34, 1), (0.48, -1), (0.6, -1), (0.7, 0), (1, 0)]))
+    shake_env = float(keys(t, [(0, 0), (0.66, 0), (0.74, 1), (0.9, 0.35), (1, 0)]))
+    shake = math.sin(t * TAU * 8) * shake_env
+    p.rot("neck", x=0.12 * abs(look), z=look * 0.4)
+    p.rot("head", x=-0.06 * abs(look), y=shake * 0.5, z=look * 0.3 + shake * 0.12)
+    p.rot("chest", y=shake * 0.12, z=shake * 0.08)
+    p.rot("hips", z=-shake * 0.06)
+    for side, sign in (("L", 1), ("R", -1)):
+        # Ears perk up to look, then flop about in the shake.
+        p.rot("ear." + side, x=-0.25 * abs(look), z=sign * shake * 0.6)
+    wag = math.sin(t * TAU * 4) * math.sin(math.pi * t)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.25 * math.sin(math.pi * t), z=wag * (0.3 + 0.15 * i))
+    _trunk(p, x=0.4 * abs(look), z=look * 0.4 + shake * 0.3)
+    return p
+
+
+def _air_fidget(c, t):
+    """A somersault in the air with the wings tucked, then a flap."""
+    hover = c.motion.get("hover_power", 0.55)
+    flip = float(keys(t, [(0, 0), (0.15, 0), (0.7, 1), (1, 1)]))
+    tuck = math.sin(math.pi * min(1.0, max(0.0, (t - 0.1) / 0.65)))
+    p = winged_flap(c, t, power=hover) if c.motion.get("body") == "winged" else bird_flap(c, t, power=hover)
+    # Fold the wings in for the flip (undoing the flap as they tuck).
+    _wings(p, upper=-0.3 * tuck, lower=-0.6 * tuck, hand=-0.5 * tuck, sweep=0.5 * tuck)
+    s = c.motion.get("altitude", 0.5)
+    p.move(z=math.sin(math.pi * t) * s * 0.25)
+    _spin(c, p, x=-flip * TAU)
+    p.rot("neck", x=0.2 * tuck)
+    return p
+
+
+def victory(c, t):
+    """A short goofy celebration, looping: bears and others that rear rise up
+    on their hind legs waving their paws and roaring; others bounce on the
+    spot with their head up and mouth open. Fliers twirl as they flap."""
+    body = c.motion.get("body")
+    if body in ("bird", "winged"):
+        p = winged_flap(c, (t * 2) % 1, power=1.2) if body == "winged" else bird_flap(c, (t * 2) % 1, power=1.2)
+        s = c.motion.get("altitude", 0.5)
+        p.move(z=math.sin(t * TAU) * s * 0.12)
+        _spin(c, p, z=t * TAU)
+        p.rot("neck", x=0.25)
+        p.rot("head", x=0.2)
+        p.rot("jaw", x=-0.3 * max(0.0, math.sin(t * TAU * 2)))
+        return p
+    if body is not None:
+        return idle(c, (t * 3.0) % 1.0)
+    p = idle(c, 0.0)
+    s = _scale(c)
+    cheer = 0.5 - 0.5 * math.cos(t * TAU)
+    if c.motion.get("victory", "rear" if c.motion.get("rear", 0.0) >= 0.3 else "hop") == "rear":
+        # Up on the hind legs, waving the front paws in turn, roaring.
+        _rear(c, p, c.motion.get("victory_rear", 0.75) * float(keys(t, [(0, 0.15), (0.25, 1), (0.75, 1), (1, 0.15)])))
+        wave = math.sin(t * TAU * 2)
+        for side, sign in (("L", 1), ("R", -1)):
+            p.leg("fl." + side, upper=0.7 + 0.45 * wave * sign, lower=-0.7 - 0.3 * wave * sign, foot=-0.3)
+            p.leg("hl." + side, upper=-0.3, lower=-0.2, foot=0.35)
+        p.rot("neck", x=-0.25)
+        p.rot("head", x=0.35)
+        p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.4 + 0.6 * cheer))
+    else:
+        # A happy bounce: crouch, spring up with the legs tucked, land.
+        hop = max(0.0, math.sin(t * TAU))
+        crouch = max(0.0, -math.sin(t * TAU))
+        p.move(z=hop * s * 0.35 - crouch * s * 0.08)
+        for side in ("L", "R"):
+            p.leg("fl." + side, upper=hop * 0.5 - crouch * 0.2, lower=-hop * 0.7 - crouch * 0.4, foot=-hop * 0.3)
+            p.leg("hl." + side, upper=-hop * 0.4 + crouch * 0.3, lower=-hop * 0.3 - crouch * 0.5, foot=hop * 0.4 + crouch * 0.5)
+        p.rot("neck", x=-0.1 - 0.2 * hop)
+        p.rot("head", x=0.25 * hop)
+        p.rot("jaw", x=-c.motion.get("gape", 0.5) * 0.7 * hop)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, x=-0.2, z=sign * 0.2 * cheer)
+    wag = math.sin(t * TAU * 3)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.35, z=wag * (0.3 + 0.15 * i))
+    _trunk(p, x=1.0 * cheer, z=0.2 * wag)
+    return p
+
+
+def slam(c, t):
+    """A big slow body slam: rear right up with both front paws high, hang
+    there a moment, then crash down on the target."""
+    p = Pose()
+    s = _scale(c)
+    rise = float(keys(t, [(0, 0), (0.3, 1), (0.42, 1.05), (0.55, -0.12), (0.72, 0), (1, 0)]))
+    _rear(c, p, rise * c.motion.get("rear", 0.3) * 1.7)
+    drive = float(keys(t, [(0, 0), (0.42, 0), (0.55, 1), (0.72, 0.6), (1, 0)]))
+    p.move(y=drive * s * 0.25, z=-max(-rise, 0.0) * s * 0.06)
+    for side in ("L", "R"):
+        p.leg("fl." + side, upper=0.9 * max(rise, 0.0) + 0.3 * drive, lower=-0.8 * max(rise, 0.0), foot=-0.3 * max(rise, 0.0))
+        p.leg("hl." + side, upper=-0.3 * max(rise, 0.0), lower=-0.25 * max(rise, 0.0), foot=0.35 * max(rise, 0.0))
+        p.rot("ear." + side, x=-0.4 * abs(rise))
+    p.rot("neck", x=-0.3 * max(rise, 0.0) - 0.3 * drive)
+    p.rot("head", x=-0.15 * drive)
+    p.rot("jaw", x=-0.4 * c.motion.get("gape", 0.5) * max(rise, 0.0))
+    _trunk(p, x=1.1 * max(rise, 0.0) - 0.5 * drive)
+    return p
+
+
+def rake(c, t):
+    """A bird's talon rake: brake in the air with the wings flared, swing the
+    feet forward, claws out, then beat back."""
+    p = bird_flap(c, 0.0, power=c.motion.get("hover_power", 0.55))
+    flare = float(keys(t, [(0, 0), (0.3, 1), (0.55, 1), (0.8, 0.3), (1, 0)]))
+    claws = float(keys(t, [(0, 0), (0.3, 0.2), (0.5, 1), (0.7, 0.4), (1, 0)]))
+    s = c.motion.get("altitude", 0.5)
+    p.move(y=claws * s * 0.35, z=-claws * s * 0.3)
+    p["root_rot"] = (flare * 0.55, 0.0, 0.0)
+    _wings(p, upper=flare * 0.9, lower=flare * 0.3, hand=flare * 0.2, sweep=-flare * 0.2)
+    for side in ("L", "R"):
+        p.rot("leg." + side, x=claws * 1.9)
+    p.rot("neck", x=-flare * 0.3)
+    p.rot("jaw", x=-claws * 0.35)
+    return p
+
+
+def attack2(c, t):
+    """The second attack (common animals alternate two)."""
+    return ATTACKS[c.motion["attack2"]](c, t)
+
+
+ATTACKS.update({"slam": slam, "rake": rake})
+HIT_AT.update({"slam": 0.55, "rake": 0.5})
+
+
 def death(c, t):
     """Topple onto the side; legs go limp. The roll pivots under the spine, so
     the body swings out sideways: shift it back over the spot where it stood.
@@ -712,7 +873,16 @@ ANIMATIONS = {
     "walk": (walk, 8, 12, True),
     "attack": (attack, 10, 16, False),
     "death": (death, 6, 10, False),
+    "fidget": (fidget, 10, 10, False),
+    "victory": (victory, 10, 10, True),
+    # Only for animals with a second attack (motion["attack2"]).
+    "attack2": (attack2, 10, 16, False),
 }
+
+
+def animations_for(c):
+    """The animations this creature has: attack2 only with a second attack."""
+    return {name: spec for name, spec in ANIMATIONS.items() if name != "attack2" or c.motion.get("attack2")}
 
 
 # --- Applying poses in Blender --------------------------------------------------------

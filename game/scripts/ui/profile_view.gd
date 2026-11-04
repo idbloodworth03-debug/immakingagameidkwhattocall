@@ -188,6 +188,7 @@ func _dev_tools() -> Control:
 		["+500 XP", func() -> void: Profile.add_xp(500)],
 		["Unlock all animals", func() -> void: Profile.dev_unlock_all_animals()],
 		["Reset profile", _confirm_reset],
+		["Animation preview", func() -> void: Transition.go("res://scenes/anim_preview.tscn")],
 	]
 	for action in actions:
 		var b := UIKit.button(action[0], UIKit.GREY.darkened(0.1), 21, Vector2(0, 62))

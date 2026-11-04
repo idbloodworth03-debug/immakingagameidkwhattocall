@@ -144,20 +144,36 @@ their rarity's range and wait for a decision.
 | Sphinx | Specialist (Stun) | Middle | Mythic | 7. Red Rock Canyon | 0.78 |
 | Baku | Specialist (Slow) | Middle | Mythic | 9. Emerald Jungle | 0.77 |
 
-## Designed, not rendered yet (0)
+## Mythics and the real animals behind them (24)
 
-| Animal | Class | Row | Rarity | Found in | Batch | Power |
-|---|---|---|---|---|---|---|
+Each Mythic's card has a Ranger Journal with this line; a linked animal opens its card.
 
-## New real animals, not rendered yet (0)
-
-| Animal | Class | Row | Rarity | Found in | Batch | Power |
-|---|---|---|---|---|---|---|
-
-## Mythical creatures, not rendered yet (0)
-
-| Mythic | Class | Row | Found from | Batch | Power | Behind the legend |
-|---|---|---|---|---|---|---|
+| Mythic | Behind the legend | Links to |
+|---|---|---|
+| Phoenix | One theory: Egypt's sacred Bennu bird, drawn as a heron, inspired the Greek phoenix. |  |
+| Dragon | In China, fossil bones were long sold as 'dragon bones' for medicine. |  |
+| Griffin | One theory suggests ancient fossil hunters mistook dinosaur skeletons for griffins. |  |
+| Pegasus | From Greek myth: the winged horse tamed by the hero Bellerophon. |  |
+| Roc | One theory: the giant elephant bird of Madagascar, now extinct. |  |
+| Kitsune | Kitsune are the red foxes of Japanese folklore; fox statues guard Inari shrines all over Japan. | Red Fox |
+| Qilin | When a giraffe was brought to the Chinese emperor in 1414, people called it a qilin. |  |
+| Jackalope | One theory: rabbits with a virus that grows horn-like bumps on their heads. |  |
+| Unicorn | Narwhal tusks were once sold in Europe as unicorn horns. |  |
+| Yeti | A 2017 DNA study found most supposed Yeti samples came from bears. | Brown Bear |
+| Bigfoot | One theory: many sightings are black bears walking on their hind legs. |  |
+| Black Tortoise | From Chinese star lore: the guardian of the north, a tortoise wound with a snake. |  |
+| Fenrir | From Norse myth: a giant wolf the gods could only hold with a magic ribbon. |  |
+| Nemean Lion | Lions really lived in ancient Greece, until about 2,000 years ago. | Lion |
+| Cerberus | From Greek myth: the three-headed dog that guards the gate of the underworld. |  |
+| Manticore | One theory: Greek writers heard Persian tales of the tiger and turned it into a monster. | Tiger |
+| Chupacabra | Many 'chupacabras' found in the US turned out to be coyotes with mange. | Coyote Pack |
+| Loch Ness Monster | A 2018 DNA survey of Loch Ness found lots of eel DNA and no reptile DNA. |  |
+| Mongolian Death Worm | Told by nomads of the Gobi Desert; explorer Roy Chapman Andrews wrote about it in 1926. |  |
+| Kraken | Likely inspired by sightings of giant squid. |  |
+| Hydra | The tiny freshwater hydra, which regrows when cut, was named after it. |  |
+| Basilisk | The real basilisk lizard, which runs across water, was named after it. |  |
+| Sphinx | Egypt's Great Sphinx, a lion with a human head, was carved about 4,500 years ago. |  |
+| Baku | In Japanese, the word for tapir is baku, and the dream-eater is often drawn like one. | Malayan Tapir |
 
 ## Class balance
 

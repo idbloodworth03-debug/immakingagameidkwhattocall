@@ -2880,5 +2880,372 @@
    "range": 1,
    "targets": "ground"
   }
+ },
+ {
+  "id": "yeti",
+  "name": "Yeti",
+  "rarity": "mythic",
+  "unlock_arena": "frozen_tundra",
+  "habitat": "mountains",
+  "class": "tank",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "primate",
+   "mountain"
+  ],
+  "stats": {
+   "hp": 2540,
+   "damage": 220,
+   "hit_speed": 1.6,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "A 2017 DNA study found most supposed Yeti samples came from bears.",
+  "legend_card": "brown_bear"
+ },
+ {
+  "id": "bigfoot",
+  "name": "Bigfoot",
+  "rarity": "mythic",
+  "unlock_arena": "whispering_woods",
+  "habitat": "forest",
+  "class": "tank",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "primate",
+   "forest"
+  ],
+  "stats": {
+   "hp": 2690,
+   "damage": 239,
+   "hit_speed": 1.5,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "One theory: many sightings are black bears walking on their hind legs."
+ },
+ {
+  "id": "black_tortoise",
+  "name": "Black Tortoise",
+  "rarity": "mythic",
+  "unlock_arena": "coral_coast",
+  "habitat": "ocean",
+  "class": "tank",
+  "cost": 8,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "reptile",
+   "shelled"
+  ],
+  "stats": {
+   "hp": 3550,
+   "damage": 152,
+   "hit_speed": 2.0,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "From Chinese star lore: the guardian of the north, a tortoise wound with a snake."
+ },
+ {
+  "id": "fenrir",
+  "name": "Fenrir",
+  "rarity": "mythic",
+  "unlock_arena": "frozen_tundra",
+  "habitat": "arctic",
+  "class": "tank_destroyer",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "canine",
+   "predator"
+  ],
+  "stats": {
+   "hp": 1130,
+   "damage": 260,
+   "hit_speed": 1.1,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "From Norse myth: a giant wolf the gods could only hold with a magic ribbon."
+ },
+ {
+  "id": "nemean_lion",
+  "name": "Nemean Lion",
+  "rarity": "mythic",
+  "unlock_arena": "sunbaked_savanna",
+  "habitat": "savanna",
+  "class": "tank_destroyer",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "big_cat",
+   "predator"
+  ],
+  "stats": {
+   "hp": 1440,
+   "damage": 252,
+   "hit_speed": 1.2,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "Lions really lived in ancient Greece, until about 2,000 years ago.",
+  "legend_card": "lion"
+ },
+ {
+  "id": "cerberus",
+  "name": "Cerberus",
+  "rarity": "mythic",
+  "unlock_arena": "last_sanctuary",
+  "habitat": "plains",
+  "class": "tank_destroyer",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "canine",
+   "predator"
+  ],
+  "stats": {
+   "hp": 1400,
+   "damage": 242,
+   "hit_speed": 1.0,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "From Greek myth: the three-headed dog that guards the gate of the underworld."
+ },
+ {
+  "id": "manticore",
+  "name": "Manticore",
+  "rarity": "mythic",
+  "unlock_arena": "sunbaked_savanna",
+  "habitat": "savanna",
+  "class": "tank_destroyer",
+  "cost": 6,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "big_cat",
+   "predator"
+  ],
+  "stats": {
+   "hp": 1150,
+   "damage": 283,
+   "hit_speed": 1.1,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "One theory: Greek writers heard Persian tales of the tiger and turned it into a monster.",
+  "legend_card": "tiger"
+ },
+ {
+  "id": "chupacabra",
+  "name": "Chupacabra",
+  "rarity": "mythic",
+  "unlock_arena": "red_rock_canyon",
+  "habitat": "plains",
+  "class": "tank_destroyer",
+  "cost": 4,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "predator",
+   "nocturnal"
+  ],
+  "stats": {
+   "hp": 960,
+   "damage": 296,
+   "hit_speed": 0.9,
+   "speed": "very_fast",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "Many 'chupacabras' found in the US turned out to be coyotes with mange.",
+  "legend_card": "coyote_pack"
+ },
+ {
+  "id": "loch_ness_monster",
+  "name": "Loch Ness Monster",
+  "rarity": "mythic",
+  "unlock_arena": "misty_marsh",
+  "habitat": "wetlands",
+  "class": "specialist",
+  "trait": "burrow",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "reptile",
+   "aquatic"
+  ],
+  "stats": {
+   "hp": 5450,
+   "damage": 545,
+   "hit_speed": 1.5,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "A 2018 DNA survey of Loch Ness found lots of eel DNA and no reptile DNA."
+ },
+ {
+  "id": "mongolian_death_worm",
+  "name": "Mongolian Death Worm",
+  "rarity": "mythic",
+  "unlock_arena": "red_rock_canyon",
+  "habitat": "plains",
+  "class": "specialist",
+  "trait": "burrow",
+  "cost": 5,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "desert",
+   "burrower"
+  ],
+  "stats": {
+   "hp": 1880,
+   "damage": 418,
+   "hit_speed": 1.1,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "Told by nomads of the Gobi Desert; explorer Roy Chapman Andrews wrote about it in 1926."
+ },
+ {
+  "id": "kraken",
+  "name": "Kraken",
+  "rarity": "mythic",
+  "unlock_arena": "coral_coast",
+  "habitat": "ocean",
+  "class": "specialist",
+  "trait": "splash",
+  "cost": 8,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "marine"
+  ],
+  "stats": {
+   "hp": 4890,
+   "damage": 449,
+   "hit_speed": 1.6,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "Likely inspired by sightings of giant squid."
+ },
+ {
+  "id": "hydra",
+  "name": "Hydra",
+  "rarity": "mythic",
+  "unlock_arena": "misty_marsh",
+  "habitat": "wetlands",
+  "class": "specialist",
+  "trait": "splash",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "reptile",
+   "wetland"
+  ],
+  "stats": {
+   "hp": 2810,
+   "damage": 281,
+   "hit_speed": 1.2,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "The tiny freshwater hydra, which regrows when cut, was named after it."
+ },
+ {
+  "id": "basilisk",
+  "name": "Basilisk",
+  "rarity": "mythic",
+  "unlock_arena": "misty_marsh",
+  "habitat": "plains",
+  "class": "specialist",
+  "trait": "stun",
+  "cost": 6,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "reptile"
+  ],
+  "stats": {
+   "hp": 1770,
+   "damage": 315,
+   "hit_speed": 1.1,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "The real basilisk lizard, which runs across water, was named after it."
+ },
+ {
+  "id": "sphinx",
+  "name": "Sphinx",
+  "rarity": "mythic",
+  "unlock_arena": "red_rock_canyon",
+  "habitat": "plains",
+  "class": "specialist",
+  "trait": "stun",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mythic",
+   "big_cat"
+  ],
+  "stats": {
+   "hp": 2240,
+   "damage": 252,
+   "hit_speed": 1.4,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "Egypt's Great Sphinx, a lion with a human head, was carved about 4,500 years ago."
+ },
+ {
+  "id": "baku",
+  "name": "Baku",
+  "rarity": "mythic",
+  "unlock_arena": "emerald_jungle",
+  "habitat": "forest",
+  "class": "specialist",
+  "trait": "slow",
+  "cost": 5,
+  "count": 1,
+  "tags": [
+   "mythic"
+  ],
+  "stats": {
+   "hp": 2350,
+   "damage": 274,
+   "hit_speed": 1.3,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  },
+  "legend": "In Japanese, the word for tapir is baku, and the dream-eater is often drawn like one.",
+  "legend_card": "malayan_tapir"
  }
 ]

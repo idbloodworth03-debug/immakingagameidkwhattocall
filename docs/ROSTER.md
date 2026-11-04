@@ -17,7 +17,7 @@ about 0.46 for Common, 0.54 for Rare, 0.64 for Epic, 0.75 for Legendary and
 0.75-0.80 for Mythic. The original 20 are shown as they are: some are outside
 their rarity's range and wait for a decision.
 
-## In the game (107)
+## In the game (122)
 
 | Animal | Class | Row | Rarity | Found in | Power |
 |---|---|---|---|---|---|
@@ -128,6 +128,21 @@ their rarity's range and wait for a decision.
 | Pygmy Three-toed Sloth | Specialist (Slow) | Middle | Legendary (CR) | 12. Last Sanctuary | 0.77 |
 | Slow Loris | Specialist (Slow) | Middle | Epic (EN) | 9. Emerald Jungle | 0.66 |
 | Chinese Giant Salamander | Specialist (Slow) | Middle | Legendary (CR) | 10. Cloudpeak Mountains | 0.78 |
+| Yeti | Tank | Front | Mythic | 8. Frozen Tundra | 0.77 |
+| Bigfoot | Tank | Front | Mythic | 4. Whispering Woods | 0.75 |
+| Black Tortoise | Tank | Front | Mythic | 11. Coral Coast | 0.80 |
+| Fenrir | Tank Destroyer | Middle | Mythic | 8. Frozen Tundra | 0.80 |
+| Nemean Lion | Tank Destroyer | Middle | Mythic | 6. Sunbaked Savanna | 0.78 |
+| Cerberus | Tank Destroyer | Middle | Mythic | 12. Last Sanctuary | 0.74 |
+| Manticore | Tank Destroyer | Middle | Mythic | 6. Sunbaked Savanna | 0.80 |
+| Chupacabra | Tank Destroyer | Middle | Mythic | 7. Red Rock Canyon | 0.77 |
+| Loch Ness Monster | Specialist (Burrow) | Front (then underground) | Mythic | 5. Misty Marsh | 0.80 |
+| Mongolian Death Worm | Specialist (Burrow) | Front (then underground) | Mythic | 7. Red Rock Canyon | 0.78 |
+| Kraken | Specialist (Splash) | Back | Mythic | 11. Coral Coast | 0.80 |
+| Hydra | Specialist (Splash) | Back | Mythic | 5. Misty Marsh | 0.77 |
+| Basilisk | Specialist (Stun) | Middle | Mythic | 5. Misty Marsh | 0.80 |
+| Sphinx | Specialist (Stun) | Middle | Mythic | 7. Red Rock Canyon | 0.78 |
+| Baku | Specialist (Slow) | Middle | Mythic | 9. Emerald Jungle | 0.77 |
 
 ## Designed, not rendered yet (0)
 
@@ -139,32 +154,17 @@ their rarity's range and wait for a decision.
 | Animal | Class | Row | Rarity | Found in | Batch | Power |
 |---|---|---|---|---|---|---|
 
-## Mythical creatures, not rendered yet (15)
+## Mythical creatures, not rendered yet (0)
 
 | Mythic | Class | Row | Found from | Batch | Power | Behind the legend |
 |---|---|---|---|---|---|---|
-| Yeti | Tank | Front | 8. Frozen Tundra | 4 | 0.77 | A 2017 DNA study found most supposed Yeti samples came from bears. (links to: Brown Bear) |
-| Bigfoot | Tank | Front | 4. Whispering Woods | 4 | 0.75 | One theory: many sightings are black bears walking on their hind legs. |
-| Black Tortoise | Tank | Front | 11. Coral Coast | 4 | 0.80 | From Chinese star lore: the guardian of the north, a tortoise wound with a snake. |
-| Fenrir | Tank Destroyer | Middle | 8. Frozen Tundra | 4 | 0.80 | From Norse myth: a giant wolf the gods could only hold with a magic ribbon. |
-| Nemean Lion | Tank Destroyer | Middle | 6. Sunbaked Savanna | 4 | 0.78 | Lions really lived in ancient Greece, until about 2,000 years ago. (links to: Lion) |
-| Cerberus | Tank Destroyer | Middle | 12. Last Sanctuary | 4 | 0.74 | From Greek myth: the three-headed dog that guards the gate of the underworld. |
-| Manticore | Tank Destroyer | Middle | 6. Sunbaked Savanna | 4 | 0.80 | One theory: Greek writers heard Persian tales of the tiger and turned it into a monster. (links to: Tiger) |
-| Chupacabra | Tank Destroyer | Middle | 7. Red Rock Canyon | 4 | 0.77 | Many 'chupacabras' found in the US turned out to be coyotes with mange. (links to: Coyote Pack) |
-| Loch Ness Monster | Specialist (Burrow) | Front (then underground) | 5. Misty Marsh | 4 | 0.80 | A 2018 DNA survey of Loch Ness found lots of eel DNA and no reptile DNA. |
-| Mongolian Death Worm | Specialist (Burrow) | Front (then underground) | 7. Red Rock Canyon | 4 | 0.78 | Told by nomads of the Gobi Desert; explorer Roy Chapman Andrews wrote about it in 1926. |
-| Kraken | Specialist (Splash) | Back | 11. Coral Coast | 4 | 0.80 | Likely inspired by sightings of giant squid. |
-| Hydra | Specialist (Splash) | Back | 5. Misty Marsh | 4 | 0.77 | The tiny freshwater hydra, which regrows when cut, was named after it. |
-| Basilisk | Specialist (Stun) | Middle | 5. Misty Marsh | 4 | 0.80 | The real basilisk lizard, which runs across water, was named after it. |
-| Sphinx | Specialist (Stun) | Middle | 7. Red Rock Canyon | 4 | 0.78 | Egypt's Great Sphinx, a lion with a human head, was carved about 4,500 years ago. |
-| Baku | Specialist (Slow) | Middle | 9. Emerald Jungle | 4 | 0.77 | In Japanese, the word for tapir is baku, and the dream-eater is often drawn like one. (links to: Malayan Tapir) |
 
 ## Class balance
 
 | Class | In the game | On the way | All | Average power (all) |
 |---|---|---|---|---|
-| Tank | 19 | 3 | 22 | 0.64 |
-| Tank Destroyer | 21 | 5 | 26 | 0.61 |
+| Tank | 22 | 0 | 22 | 0.64 |
+| Tank Destroyer | 26 | 0 | 26 | 0.61 |
 | Ranged | 20 | 0 | 20 | 0.60 |
 | Air | 21 | 0 | 21 | 0.59 |
-| Specialist | 26 | 7 | 33 | 0.62 |
+| Specialist | 33 | 0 | 33 | 0.62 |

@@ -15,6 +15,8 @@ const STATUS_NAMES := {
 	"VU": "Vulnerable",
 	"EN": "Endangered",
 	"CR": "Critically Endangered",
+	# Never assessed (no snapping shrimp has been): shown as Common.
+	"NE": "Not Evaluated",
 }
 
 const UNLOCK_TYPES := ["default", "ranger_level", "arena", "animal", "shop"]

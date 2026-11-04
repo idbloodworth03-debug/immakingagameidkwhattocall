@@ -3,7 +3,7 @@
 ## Phase 0: Foundation (done)
 
 - [x] Godot 4 project set up for phones: portrait, scales to any screen, mobile renderer
-- [x] All game content as data: 20 animals (37 more waiting), 12 arenas, 6 cages, emotes, quick chats, banners and icons
+- [x] All game content as data: 57 animals (65 more on the way), 12 arenas, 7 cages, emotes, quick chats, banners and icons
 - [x] Rules with automated tests: trophies, arena floors, card leveling, Ranger level, cage rolls and odds, release requirements
 - [x] Offline save with currencies, collection, deck, cage slots and cosmetics
 - [x] Menus in the usual mobile card game layout: Shop, Animals, Battle, Clan and Events tabs; profile; Trophy Road; cage opening
@@ -78,7 +78,7 @@
 - [x] Visual polish pass: fake-3D shader on the animals, squash-and-stretch animation, combat juice (hit flash, knockback, hit-stop, shake, damage numbers, health bars, poof defeats), particles, bouncy UI, ambient motion; all tunable in `data/feel.json`
 - [ ] Blinking: needs eye-closed frames from the Blender pipeline (about an hour of rendering for all 20 animals)
 - [ ] Render the tools' effects and the cages in the same style
-- [ ] Bring back more animals from `animals_later.json` once the first 20 feel right (their release requirements, energy abilities and "dens only" targets need reworking for Draft Duel first)
+- [ ] Roster expansion: batch 1 (Air and Ranged, 37) is in; batches 2-4 (65) are designed, tuned and rendering (docs/ROSTER.md)
 
 ## Phase 3: Online play
 

@@ -18,7 +18,7 @@ Least Concern species, Legendaries are Critically Endangered.
 Everything runs offline on your computer, saved on the device:
 
 - **Menus:** five tabs laid out like other mobile card games (Shop, Animals, Battle, Clan, Events)
-- **Cards:** 20 animals in 4 rarities, each with stats and an ability, plus 6 Ranger tools (37 more animals are designed and waiting)
+- **Cards:** 57 animals in 5 rarities (Common to Mythic), each with a class and stats, plus 6 Ranger tools (65 more animals and Mythics are designed and on the way; see docs/ROSTER.md)
 - **Collection:** the animals and tools you've freed are your Draft Duel starters and shop, at their levels; level them up with copies and gold
 - **Trophies:** 12 arenas on a Trophy Road, and new animals unlock as you climb
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen

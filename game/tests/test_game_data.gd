@@ -26,7 +26,7 @@ func test_starting_cards_fill_the_options() -> void:
 
 
 func test_rarity_matches_conservation_status() -> void:
-	var expected := {"common": ["LC"], "rare": ["NT", "VU"], "epic": ["EN"], "legendary": ["CR"]}
+	var expected := {"common": ["LC", "NE"], "rare": ["NT", "VU"], "epic": ["EN"], "legendary": ["CR"]}
 	for id in GameData.card_order:
 		var card: Dictionary = GameData.cards[id]
 		if card.kind == "animal" and card.rarity != "mythic":

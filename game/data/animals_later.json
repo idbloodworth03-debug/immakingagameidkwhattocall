@@ -1,40 +1,5 @@
 [
  {
-  "id": "pigeon_flock",
-  "name": "Pigeon Flock",
-  "rarity": "common",
-  "status": "LC",
-  "unlock_arena": "rescue_center",
-  "habitat": "city",
-  "class": "air",
-  "cost": 2,
-  "count": 3,
-  "tags": [
-   "bird",
-   "flying",
-   "urban",
-   "flock"
-  ],
-  "stats": {
-   "hp": 190,
-   "damage": 81,
-   "hit_speed": 1.0,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "dodge",
-   "name": "Scatter",
-   "text": "Each pigeon has a 25% chance to dodge an attack.",
-   "params": {
-    "chance": 25
-   }
-  },
-  "prerequisites": [],
-  "origin": "designed"
- },
- {
   "id": "opossum",
   "name": "Opossum",
   "rarity": "common",
@@ -50,8 +15,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 1760,
-   "damage": 262,
+   "hp": 1590,
+   "damage": 236,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -68,82 +33,6 @@
   },
   "prerequisites": [],
   "origin": "designed"
- },
- {
-  "id": "murder_of_crows",
-  "name": "Murder of Crows",
-  "rarity": "common",
-  "status": "LC",
-  "unlock_arena": "city_park",
-  "habitat": "city",
-  "class": "air",
-  "cost": 3,
-  "count": 3,
-  "tags": [
-   "bird",
-   "flying",
-   "urban",
-   "flock"
-  ],
-  "stats": {
-   "hp": 200,
-   "damage": 101,
-   "hit_speed": 1.0,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "pack_bonus",
-   "name": "Mob",
-   "text": "+15% damage for each other allied Bird nearby (up to 5).",
-   "params": {
-    "tag": "bird",
-    "damage_pct": 15,
-    "radius": 3,
-    "max_stacks": 5
-   }
-  },
-  "prerequisites": [],
-  "origin": "designed"
- },
- {
-  "id": "striped_skunk",
-  "name": "Striped Skunk",
-  "rarity": "common",
-  "status": "LC",
-  "unlock_arena": "city_park",
-  "habitat": "city",
-  "class": "ranged",
-  "cost": 2,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "urban",
-   "forest",
-   "nocturnal"
-  ],
-  "stats": {
-   "hp": 500,
-   "damage": 97,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 1,
-   "targets": "ground"
-  },
-  "ability": {
-   "id": "death_cloud",
-   "name": "Stink Cloud",
-   "text": "When defeated, leaves a stink cloud that slows enemies by 35% for 4 seconds.",
-   "params": {
-    "radius": 2.5,
-    "slow_pct": 35,
-    "duration": 4
-   }
-  },
-  "prerequisites": [],
-  "origin": "designed",
-  "shot": "spray"
  },
  {
   "id": "coyote_pack",
@@ -163,7 +52,7 @@
   ],
   "stats": {
    "hp": 400,
-   "damage": 96,
+   "damage": 97,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -184,75 +73,6 @@
   "origin": "designed"
  },
  {
-  "id": "barn_owl",
-  "name": "Barn Owl",
-  "rarity": "common",
-  "status": "LC",
-  "unlock_arena": "prairie_fields",
-  "habitat": "plains",
-  "class": "air",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "nocturnal",
-   "prairie",
-   "predator"
-  ],
-  "stats": {
-   "hp": 610,
-   "damage": 232,
-   "hit_speed": 1.4,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "stealth",
-   "name": "Silent Flight",
-   "text": "Invisible to enemies until its first attack.",
-   "params": {}
-  },
-  "prerequisites": [],
-  "origin": "designed"
- },
- {
-  "id": "bullfrog",
-  "name": "Bullfrog",
-  "rarity": "common",
-  "status": "LC",
-  "unlock_arena": "misty_marsh",
-  "habitat": "wetlands",
-  "class": "ranged",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "amphibian",
-   "wetland",
-   "aquatic"
-  ],
-  "stats": {
-   "hp": 360,
-   "damage": 90,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 3,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "pull",
-   "name": "Tongue Lash",
-   "text": "Its first hit on a flying enemy yanks it down to the ground for 2 seconds.",
-   "params": {
-    "duration": 2
-   }
-  },
-  "prerequisites": [],
-  "origin": "designed",
-  "shot": "tongue"
- },
- {
   "id": "snapping_turtle",
   "name": "Snapping Turtle",
   "rarity": "common",
@@ -269,8 +89,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 1740,
-   "damage": 271,
+   "hp": 1570,
+   "damage": 245,
    "hit_speed": 1.5,
    "speed": "slow",
    "range": 1,
@@ -302,8 +122,8 @@
    "savanna"
   ],
   "stats": {
-   "hp": 870,
-   "damage": 200,
+   "hp": 710,
+   "damage": 164,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -334,8 +154,8 @@
    "pack"
   ],
   "stats": {
-   "hp": 510,
-   "damage": 107,
+   "hp": 430,
+   "damage": 89,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -370,8 +190,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 1070,
-   "damage": 199,
+   "hp": 940,
+   "damage": 175,
    "hit_speed": 1.0,
    "speed": "medium",
    "range": 1,
@@ -406,8 +226,8 @@
    "herd"
   ],
   "stats": {
-   "hp": 2010,
-   "damage": 229,
+   "hp": 1750,
+   "damage": 200,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -423,39 +243,6 @@
   },
   "prerequisites": [],
   "origin": "designed"
- },
- {
-  "id": "mountain_goat",
-  "name": "Mountain Goat",
-  "rarity": "common",
-  "status": "LC",
-  "unlock_arena": "cloudpeak_mountains",
-  "habitat": "arctic",
-  "class": "ranged",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "mountain",
-   "herd"
-  ],
-  "stats": {
-   "hp": 570,
-   "damage": 104,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 1,
-   "targets": "ground"
-  },
-  "ability": {
-   "id": "jump_river",
-   "name": "Cliff Leaper",
-   "text": "Leaps straight across the river instead of walking to a bridge.",
-   "params": {}
-  },
-  "prerequisites": [],
-  "origin": "designed",
-  "shot": "stone"
  },
  {
   "id": "harbor_seal",
@@ -474,8 +261,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 1410,
-   "damage": 235,
+   "hp": 1210,
+   "damage": 201,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -510,8 +297,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 1250,
-   "damage": 251,
+   "hp": 1190,
+   "damage": 239,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -546,8 +333,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 2620,
-   "damage": 154,
+   "hp": 2120,
+   "damage": 125,
    "hit_speed": 1.3,
    "speed": "slow",
    "range": 1,
@@ -582,8 +369,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 1390,
-   "damage": 216,
+   "hp": 1320,
+   "damage": 206,
    "hit_speed": 1.0,
    "speed": "medium",
    "range": 1,
@@ -618,8 +405,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 2590,
-   "damage": 259,
+   "hp": 2510,
+   "damage": 251,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -653,8 +440,8 @@
    "big_cat"
   ],
   "stats": {
-   "hp": 920,
-   "damage": 270,
+   "hp": 900,
+   "damage": 263,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -673,42 +460,6 @@
   "origin": "designed"
  },
  {
-  "id": "king_cobra",
-  "name": "King Cobra",
-  "rarity": "rare",
-  "status": "VU",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "rainforest",
-  "class": "ranged",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "reptile",
-   "jungle",
-   "venomous"
-  ],
-  "stats": {
-   "hp": 550,
-   "damage": 122,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 2,
-   "targets": "ground"
-  },
-  "ability": {
-   "id": "poison",
-   "name": "Hood Flare",
-   "text": "Strikes from 2 tiles away. Venom deals 40 damage per second for 4 seconds.",
-   "params": {
-    "dps": 40,
-    "duration": 4
-   }
-  },
-  "prerequisites": [],
-  "origin": "designed",
-  "shot": "venom"
- },
- {
   "id": "snow_leopard",
   "name": "Snow Leopard",
   "rarity": "rare",
@@ -725,8 +476,8 @@
    "big_cat"
   ],
   "stats": {
-   "hp": 750,
-   "damage": 239,
+   "hp": 700,
+   "damage": 222,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -757,8 +508,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 2260,
-   "damage": 229,
+   "hp": 1870,
+   "damage": 190,
    "hit_speed": 1.4,
    "speed": "slow",
    "range": 1,
@@ -793,8 +544,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 1840,
-   "damage": 238,
+   "hp": 1740,
+   "damage": 226,
    "hit_speed": 1.3,
    "speed": "slow",
    "range": 1,
@@ -829,8 +580,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1410,
-   "damage": 427,
+   "hp": 920,
+   "damage": 279,
    "hit_speed": 0.9,
    "speed": "fast",
    "range": 1,
@@ -851,88 +602,6 @@
   "origin": "designed"
  },
  {
-  "id": "whooping_crane",
-  "name": "Whooping Crane",
-  "rarity": "epic",
-  "status": "EN",
-  "unlock_arena": "misty_marsh",
-  "habitat": "wetlands",
-  "class": "air",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "wetland"
-  ],
-  "stats": {
-   "hp": 760,
-   "damage": 177,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 2,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "heal_burst",
-   "name": "Courtship Dance",
-   "text": "When released, heals all nearby allies for 200.",
-   "params": {
-    "amount": 200,
-    "radius": 4
-   }
-  },
-  "prerequisites": [
-   {
-    "type": "allies_with_tag",
-    "tag": "wetland",
-    "count": 1
-   }
-  ],
-  "origin": "designed"
- },
- {
-  "id": "chimpanzee",
-  "name": "Chimpanzee",
-  "rarity": "epic",
-  "status": "EN",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "rainforest",
-  "class": "ranged",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "jungle",
-   "primate"
-  ],
-  "stats": {
-   "hp": 650,
-   "damage": 108,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 4.5,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "stun_hits",
-   "name": "Tool User",
-   "text": "Throws rocks. Every fourth throw stuns for 1 second.",
-   "params": {
-    "every": 4,
-    "duration": 1
-   }
-  },
-  "prerequisites": [
-   {
-    "type": "deployed_count",
-    "count": 1
-   }
-  ],
-  "origin": "designed",
-  "shot": "stone"
- },
- {
   "id": "mountain_gorilla",
   "name": "Mountain Gorilla",
   "rarity": "epic",
@@ -950,8 +619,8 @@
    "primate"
   ],
   "stats": {
-   "hp": 2350,
-   "damage": 269,
+   "hp": 1880,
+   "damage": 215,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -976,48 +645,6 @@
   "origin": "designed"
  },
  {
-  "id": "sea_otter",
-  "name": "Sea Otter",
-  "rarity": "epic",
-  "status": "EN",
-  "unlock_arena": "coral_coast",
-  "habitat": "ocean",
-  "class": "ranged",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "marine",
-   "aquatic"
-  ],
-  "stats": {
-   "hp": 560,
-   "damage": 100,
-   "hit_speed": 1.0,
-   "speed": "fast",
-   "range": 1,
-   "targets": "ground"
-  },
-  "ability": {
-   "id": "heal_aura",
-   "name": "Raft Up",
-   "text": "Heals nearby allied Aquatic animals for 30 HP per second.",
-   "params": {
-    "hps": 30,
-    "radius": 3,
-    "tag": "aquatic"
-   }
-  },
-  "prerequisites": [
-   {
-    "type": "zone",
-    "zone": "river"
-   }
-  ],
-  "origin": "designed",
-  "shot": "pebble"
- },
- {
   "id": "komodo_dragon",
   "name": "Komodo Dragon",
   "rarity": "epic",
@@ -1034,8 +661,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1900,
-   "damage": 249,
+   "hp": 1500,
+   "damage": 196,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,
@@ -1077,8 +704,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1370,
-   "damage": 304,
+   "hp": 1110,
+   "damage": 247,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -1125,8 +752,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 1800,
-   "damage": 378,
+   "hp": 1540,
+   "damage": 322,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -1169,8 +796,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 3330,
-   "damage": 333,
+   "hp": 3020,
+   "damage": 302,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -1213,8 +840,8 @@
    "herd"
   ],
   "stats": {
-   "hp": 2530,
-   "damage": 380,
+   "hp": 2210,
+   "damage": 331,
    "hit_speed": 1.2,
    "speed": "fast",
    "range": 1,
@@ -1258,8 +885,8 @@
    "colony"
   ],
   "stats": {
-   "hp": 980,
-   "damage": 221,
+   "hp": 870,
+   "damage": 195,
    "hit_speed": 1.0,
    "speed": "medium",
    "range": 1,
@@ -1302,8 +929,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 2430,
-   "damage": 404,
+   "hp": 1990,
+   "damage": 330,
    "hit_speed": 1.2,
    "speed": "slow",
    "range": 1,
@@ -1329,557 +956,6 @@
   "origin": "designed"
  },
  {
-  "id": "philippine_eagle",
-  "name": "Philippine Eagle",
-  "rarity": "legendary",
-  "status": "CR",
-  "unlock_arena": "last_sanctuary",
-  "habitat": "rainforest",
-  "class": "air",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "jungle",
-   "predator"
-  ],
-  "stats": {
-   "hp": 890,
-   "damage": 283,
-   "hit_speed": 1.5,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "ability": {
-   "id": "grab",
-   "name": "Sky Snatch",
-   "text": "Swoops on a ground enemy, lifting it for 1.5 seconds and dealing triple damage.",
-   "params": {
-    "damage_mult": 3,
-    "lift_seconds": 1.5
-   }
-  },
-  "prerequisites": [
-   {
-    "type": "unique"
-   },
-   {
-    "type": "match_time",
-    "seconds": 90
-   }
-  ],
-  "origin": "designed"
- },
- {
-  "id": "sumatran_orangutan",
-  "name": "Sumatran Orangutan",
-  "rarity": "legendary",
-  "status": "CR",
-  "unlock_arena": "last_sanctuary",
-  "habitat": "rainforest",
-  "class": "ranged",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "jungle",
-   "primate"
-  ],
-  "stats": {
-   "hp": 1320,
-   "damage": 145,
-   "hit_speed": 1.4,
-   "speed": "medium",
-   "range": 1,
-   "targets": "ground"
-  },
-  "ability": {
-   "id": "heal_aura",
-   "name": "Forest Gardener",
-   "text": "Plants a fruit tree when released that heals nearby allies 50 HP per second for 8 seconds.",
-   "params": {
-    "hps": 50,
-    "radius": 3,
-    "duration": 8
-   }
-  },
-  "prerequisites": [
-   {
-    "type": "unique"
-   },
-   {
-    "type": "allies_with_tag",
-    "tag": "jungle",
-    "count": 2
-   }
-  ],
-  "origin": "designed",
-  "shot": "fruit"
- },
- {
-  "id": "harpy_eagle",
-  "name": "Harpy Eagle",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Harpia harpyja",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "rainforest",
-  "class": "air",
-  "cost": 5,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "predator",
-   "jungle"
-  ],
-  "stats": {
-   "hp": 700,
-   "damage": 220,
-   "hit_speed": 1.4,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "stellers_sea_eagle",
-  "name": "Steller's Sea Eagle",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Haliaeetus pelagicus",
-  "unlock_arena": "frozen_tundra",
-  "habitat": "ocean",
-  "class": "air",
-  "cost": 5,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "predator",
-   "tundra"
-  ],
-  "stats": {
-   "hp": 680,
-   "damage": 200,
-   "hit_speed": 1.4,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "snowy_owl",
-  "name": "Snowy Owl",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Bubo scandiacus",
-  "unlock_arena": "frozen_tundra",
-  "habitat": "arctic",
-  "class": "air",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "predator",
-   "tundra"
-  ],
-  "stats": {
-   "hp": 670,
-   "damage": 208,
-   "hit_speed": 1.3,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "glides",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "hyacinth_macaw",
-  "name": "Hyacinth Macaw",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Anodorhynchus hyacinthinus",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "rainforest",
-  "class": "air",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "jungle"
-  ],
-  "stats": {
-   "hp": 620,
-   "damage": 177,
-   "hit_speed": 1.1,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "helmeted_hornbill",
-  "name": "Helmeted Hornbill",
-  "rarity": "legendary",
-  "status": "CR",
-  "species": "Rhinoplax vigil",
-  "unlock_arena": "last_sanctuary",
-  "habitat": "rainforest",
-  "class": "air",
-  "cost": 5,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "jungle"
-  ],
-  "stats": {
-   "hp": 1070,
-   "damage": 308,
-   "hit_speed": 1.5,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "atlantic_puffin",
-  "name": "Atlantic Puffin",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Fratercula arctica",
-  "unlock_arena": "frozen_tundra",
-  "habitat": "ocean",
-  "class": "air",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "marine"
-  ],
-  "stats": {
-   "hp": 560,
-   "damage": 161,
-   "hit_speed": 1.0,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "whirring wings",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "wandering_albatross",
-  "name": "Wandering Albatross",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Diomedea exulans",
-  "unlock_arena": "frozen_tundra",
-  "habitat": "ocean",
-  "class": "air",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "bird",
-   "flying",
-   "marine"
-  ],
-  "stats": {
-   "hp": 790,
-   "damage": 191,
-   "hit_speed": 1.3,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "soars",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "flying_fox_colony",
-  "name": "Flying Fox Colony",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Pteropus poliocephalus",
-  "unlock_arena": "city_park",
-  "habitat": "forest",
-  "class": "air",
-  "cost": 4,
-  "count": 3,
-  "tags": [
-   "mammal",
-   "flying",
-   "colony",
-   "nocturnal",
-   "swarm"
-  ],
-  "stats": {
-   "hp": 290,
-   "damage": 94,
-   "hit_speed": 1.0,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps (bat wings)",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "monarch_butterflies",
-  "name": "Monarch Butterflies",
-  "rarity": "rare",
-  "status": "VU",
-  "species": "Danaus plexippus plexippus",
-  "unlock_arena": "city_park",
-  "habitat": "plains",
-  "class": "air",
-  "cost": 2,
-  "count": 4,
-  "tags": [
-   "insect",
-   "flying",
-   "swarm"
-  ],
-  "stats": {
-   "hp": 240,
-   "damage": 93,
-   "hit_speed": 0.9,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flutters",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "wild_bactrian_camel",
-  "name": "Wild Bactrian Camel",
-  "rarity": "epic",
-  "status": "EN",
-  "species": "Camelus ferus",
-  "unlock_arena": "red_rock_canyon",
-  "habitat": "plains",
-  "class": "ranged",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "herd",
-   "desert"
-  ],
-  "stats": {
-   "hp": 980,
-   "damage": 118,
-   "hit_speed": 1.5,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "spit",
-  "moves": "walks",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "porcupine",
-  "name": "Porcupine",
-  "rarity": "common",
-  "status": "LC",
-  "species": "Erethizon dorsatum",
-  "unlock_arena": "whispering_woods",
-  "habitat": "forest",
-  "class": "ranged",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "rodent",
-   "forest",
-   "nocturnal"
-  ],
-  "stats": {
-   "hp": 520,
-   "damage": 95,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "quills",
-  "moves": "waddles",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "texas_horned_lizard",
-  "name": "Texas Horned Lizard",
-  "rarity": "common",
-  "status": "LC",
-  "species": "Phrynosoma cornutum",
-  "unlock_arena": "red_rock_canyon",
-  "habitat": "plains",
-  "class": "ranged",
-  "cost": 2,
-  "count": 1,
-  "tags": [
-   "reptile",
-   "desert",
-   "armored"
-  ],
-  "stats": {
-   "hp": 370,
-   "damage": 92,
-   "hit_speed": 1.1,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "squirt",
-  "moves": "scuttles",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "archerfish",
-  "name": "Archerfish",
-  "rarity": "common",
-  "status": "LC",
-  "species": "Toxotes jaculatrix",
-  "unlock_arena": "misty_marsh",
-  "habitat": "wetlands",
-  "class": "ranged",
-  "cost": 2,
-  "count": 1,
-  "tags": [
-   "fish",
-   "aquatic",
-   "wetland"
-  ],
-  "stats": {
-   "hp": 320,
-   "damage": 104,
-   "hit_speed": 1.0,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "water",
-  "moves": "flops and hops",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "pink_river_dolphin",
-  "name": "Pink River Dolphin",
-  "rarity": "epic",
-  "status": "EN",
-  "species": "Inia geoffrensis",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "wetlands",
-  "class": "ranged",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "aquatic",
-   "jungle"
-  ],
-  "stats": {
-   "hp": 800,
-   "damage": 140,
-   "hit_speed": 1.2,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "sonar",
-  "moves": "belly-slides",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "bonobo",
-  "name": "Bonobo",
-  "rarity": "epic",
-  "status": "EN",
-  "species": "Pan paniscus",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "rainforest",
-  "class": "ranged",
-  "cost": 4,
-  "count": 1,
-  "tags": [
-   "mammal",
-   "primate",
-   "jungle"
-  ],
-  "stats": {
-   "hp": 640,
-   "damage": 110,
-   "hit_speed": 1.1,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "fruit",
-  "moves": "knuckle-walks",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
-  "id": "pistol_shrimp",
-  "name": "Pistol Shrimp",
-  "rarity": "common",
-  "status": "NE",
-  "species": "Alpheus heterochaelis",
-  "unlock_arena": "coral_coast",
-  "habitat": "ocean",
-  "class": "ranged",
-  "cost": 2,
-  "count": 1,
-  "tags": [
-   "crustacean",
-   "aquatic",
-   "marine"
-  ],
-  "stats": {
-   "hp": 160,
-   "damage": 131,
-   "hit_speed": 1.4,
-   "speed": "fast",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "bubble",
-  "moves": "scuttles",
-  "prerequisites": [],
-  "origin": "new"
- },
- {
   "id": "galapagos_giant_tortoise",
   "name": "Galápagos Giant Tortoise",
   "rarity": "legendary",
@@ -1896,8 +972,8 @@
    "island"
   ],
   "stats": {
-   "hp": 5240,
-   "damage": 240,
+   "hp": 3500,
+   "damage": 160,
    "hit_speed": 1.8,
    "speed": "slow",
    "range": 1,
@@ -1924,8 +1000,8 @@
    "marine"
   ],
   "stats": {
-   "hp": 3330,
-   "damage": 150,
+   "hp": 2310,
+   "damage": 104,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -1951,8 +1027,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 3230,
-   "damage": 289,
+   "hp": 2340,
+   "damage": 210,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -1979,8 +1055,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 2420,
-   "damage": 276,
+   "hp": 2080,
+   "damage": 237,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,
@@ -2007,8 +1083,8 @@
    "wetland"
   ],
   "stats": {
-   "hp": 2950,
-   "damage": 341,
+   "hp": 2050,
+   "damage": 237,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -2034,8 +1110,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 2650,
-   "damage": 354,
+   "hp": 1840,
+   "damage": 246,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -2063,8 +1139,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 1140,
-   "damage": 294,
+   "hp": 900,
+   "damage": 233,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -2092,8 +1168,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 940,
-   "damage": 298,
+   "hp": 760,
+   "damage": 241,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -2120,8 +1196,8 @@
    "tundra"
   ],
   "stats": {
-   "hp": 1000,
-   "damage": 233,
+   "hp": 730,
+   "damage": 171,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -2149,8 +1225,8 @@
    "wetland"
   ],
   "stats": {
-   "hp": 2280,
-   "damage": 426,
+   "hp": 1550,
+   "damage": 291,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -2177,8 +1253,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1680,
-   "damage": 389,
+   "hp": 1230,
+   "damage": 286,
    "hit_speed": 1.3,
    "speed": "fast",
    "range": 1,
@@ -2205,8 +1281,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1310,
-   "damage": 394,
+   "hp": 970,
+   "damage": 292,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -2234,8 +1310,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 1010,
-   "damage": 311,
+   "hp": 690,
+   "damage": 211,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -2263,8 +1339,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 4410,
-   "damage": 551,
+   "hp": 4940,
+   "damage": 617,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,
@@ -2293,8 +1369,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 1030,
-   "damage": 272,
+   "hp": 890,
+   "damage": 236,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -2323,8 +1399,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 1950,
-   "damage": 358,
+   "hp": 1240,
+   "damage": 228,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -2353,8 +1429,8 @@
    "prairie"
   ],
   "stats": {
-   "hp": 5790,
-   "damage": 506,
+   "hp": 4990,
+   "damage": 436,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -2381,8 +1457,8 @@
    "marine"
   ],
   "stats": {
-   "hp": 3280,
-   "damage": 239,
+   "hp": 2280,
+   "damage": 166,
    "hit_speed": 1.8,
    "speed": "slow",
    "range": 1,
@@ -2409,8 +1485,8 @@
    "marine"
   ],
   "stats": {
-   "hp": 2460,
-   "damage": 320,
+   "hp": 1870,
+   "damage": 243,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -2438,8 +1514,8 @@
    "wetland"
   ],
   "stats": {
-   "hp": 1350,
-   "damage": 322,
+   "hp": 940,
+   "damage": 223,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -2467,8 +1543,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 1480,
-   "damage": 279,
+   "hp": 1090,
+   "damage": 206,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -2497,8 +1573,8 @@
    "island"
   ],
   "stats": {
-   "hp": 1190,
-   "damage": 320,
+   "hp": 970,
+   "damage": 260,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -2526,8 +1602,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 3950,
-   "damage": 395,
+   "hp": 2860,
+   "damage": 286,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -2556,8 +1632,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 1850,
-   "damage": 461,
+   "hp": 1470,
+   "damage": 366,
    "hit_speed": 1.2,
    "speed": "slow",
    "range": 1,
@@ -2585,8 +1661,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 3980,
-   "damage": 429,
+   "hp": 2500,
+   "damage": 269,
    "hit_speed": 1.4,
    "speed": "slow",
    "range": 1,
@@ -2595,250 +1671,6 @@
   "moves": "wiggles",
   "prerequisites": [],
   "origin": "new"
- },
- {
-  "id": "phoenix",
-  "name": "Phoenix",
-  "rarity": "mythic",
-  "unlock_arena": "last_sanctuary",
-  "habitat": "plains",
-  "class": "air",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "bird",
-   "flying"
-  ],
-  "stats": {
-   "hp": 1050,
-   "damage": 234,
-   "hit_speed": 1.2,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "legend": "One theory: Egypt's sacred Bennu bird, drawn as a heron, inspired the Greek phoenix.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "dragon",
-  "name": "Dragon",
-  "rarity": "mythic",
-  "unlock_arena": "cloudpeak_mountains",
-  "habitat": "mountains",
-  "class": "air",
-  "cost": 8,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "reptile",
-   "flying"
-  ],
-  "stats": {
-   "hp": 1400,
-   "damage": 249,
-   "hit_speed": 1.6,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "legend": "In China, fossil bones were long sold as 'dragon bones' for medicine.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "griffin",
-  "name": "Griffin",
-  "rarity": "mythic",
-  "unlock_arena": "sunbaked_savanna",
-  "habitat": "mountains",
-  "class": "air",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "bird",
-   "big_cat",
-   "flying"
-  ],
-  "stats": {
-   "hp": 1050,
-   "damage": 227,
-   "hit_speed": 1.3,
-   "speed": "fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "legend": "One theory suggests ancient fossil hunters mistook dinosaur skeletons for griffins.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "pegasus",
-  "name": "Pegasus",
-  "rarity": "mythic",
-  "unlock_arena": "cloudpeak_mountains",
-  "habitat": "mountains",
-  "class": "air",
-  "cost": 5,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "flying"
-  ],
-  "stats": {
-   "hp": 1050,
-   "damage": 190,
-   "hit_speed": 1.1,
-   "speed": "very_fast",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "flaps",
-  "legend": "From Greek myth: the winged horse tamed by the hero Bellerophon.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "roc",
-  "name": "Roc",
-  "rarity": "mythic",
-  "unlock_arena": "cloudpeak_mountains",
-  "habitat": "mountains",
-  "class": "air",
-  "cost": 8,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "bird",
-   "flying"
-  ],
-  "stats": {
-   "hp": 1570,
-   "damage": 235,
-   "hit_speed": 1.8,
-   "speed": "medium",
-   "range": 1,
-   "targets": "air_ground"
-  },
-  "moves": "soars",
-  "legend": "One theory: the giant elephant bird of Madagascar, now extinct.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "kitsune",
-  "name": "Kitsune",
-  "rarity": "mythic",
-  "unlock_arena": "whispering_woods",
-  "habitat": "forest",
-  "class": "ranged",
-  "cost": 5,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "canine"
-  ],
-  "stats": {
-   "hp": 600,
-   "damage": 150,
-   "hit_speed": 1.1,
-   "speed": "fast",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "foxfire",
-  "moves": "trots",
-  "legend": "Kitsune are the red foxes of Japanese folklore; fox statues guard Inari shrines all over Japan.",
-  "legend_card": "red_fox",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "qilin",
-  "name": "Qilin",
-  "rarity": "mythic",
-  "unlock_arena": "emerald_jungle",
-  "habitat": "forest",
-  "class": "ranged",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "herd"
-  ],
-  "stats": {
-   "hp": 990,
-   "damage": 154,
-   "hit_speed": 1.3,
-   "speed": "medium",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "lightning",
-  "moves": "prances",
-  "legend": "When a giraffe was brought to the Chinese emperor in 1414, people called it a qilin.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "jackalope",
-  "name": "Jackalope",
-  "rarity": "mythic",
-  "unlock_arena": "prairie_fields",
-  "habitat": "plains",
-  "class": "ranged",
-  "cost": 3,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "prairie"
-  ],
-  "stats": {
-   "hp": 390,
-   "damage": 129,
-   "hit_speed": 0.9,
-   "speed": "very_fast",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "darts",
-  "moves": "hops",
-  "legend": "One theory: rabbits with a virus that grows horn-like bumps on their heads.",
-  "prerequisites": [],
-  "origin": "mythic"
- },
- {
-  "id": "unicorn",
-  "name": "Unicorn",
-  "rarity": "mythic",
-  "unlock_arena": "whispering_woods",
-  "habitat": "forest",
-  "class": "ranged",
-  "cost": 6,
-  "count": 1,
-  "tags": [
-   "mythic",
-   "herd"
-  ],
-  "stats": {
-   "hp": 820,
-   "damage": 164,
-   "hit_speed": 1.4,
-   "speed": "fast",
-   "range": 5,
-   "targets": "air_ground"
-  },
-  "shot": "beam",
-  "moves": "gallops",
-  "legend": "Narwhal tusks were once sold in Europe as unicorn horns.",
-  "prerequisites": [],
-  "origin": "mythic"
  },
  {
   "id": "yeti",
@@ -2855,8 +1687,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 4570,
-   "damage": 396,
+   "hp": 2540,
+   "damage": 220,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,
@@ -2883,8 +1715,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 4770,
-   "damage": 424,
+   "hp": 2690,
+   "damage": 239,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -2910,8 +1742,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 6460,
-   "damage": 276,
+   "hp": 3550,
+   "damage": 152,
    "hit_speed": 2.0,
    "speed": "slow",
    "range": 1,
@@ -2937,8 +1769,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1920,
-   "damage": 440,
+   "hp": 1130,
+   "damage": 260,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -2964,8 +1796,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 2310,
-   "damage": 404,
+   "hp": 1440,
+   "damage": 252,
    "hit_speed": 1.2,
    "speed": "fast",
    "range": 1,
@@ -2992,8 +1824,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 2170,
-   "damage": 376,
+   "hp": 1400,
+   "damage": 242,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -3019,8 +1851,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1740,
-   "damage": 428,
+   "hp": 1150,
+   "damage": 283,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -3047,8 +1879,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 1400,
-   "damage": 432,
+   "hp": 960,
+   "damage": 296,
    "hit_speed": 0.9,
    "speed": "very_fast",
    "range": 1,
@@ -3076,8 +1908,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 5980,
-   "damage": 598,
+   "hp": 5450,
+   "damage": 545,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -3104,8 +1936,8 @@
    "burrower"
   ],
   "stats": {
-   "hp": 2760,
-   "damage": 613,
+   "hp": 1880,
+   "damage": 418,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -3131,8 +1963,8 @@
    "marine"
   ],
   "stats": {
-   "hp": 5840,
-   "damage": 536,
+   "hp": 4890,
+   "damage": 449,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -3159,8 +1991,8 @@
    "wetland"
   ],
   "stats": {
-   "hp": 4280,
-   "damage": 428,
+   "hp": 2810,
+   "damage": 281,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -3186,8 +2018,8 @@
    "reptile"
   ],
   "stats": {
-   "hp": 2520,
-   "damage": 448,
+   "hp": 1770,
+   "damage": 315,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -3213,8 +2045,8 @@
    "big_cat"
   ],
   "stats": {
-   "hp": 3670,
-   "damage": 413,
+   "hp": 2240,
+   "damage": 252,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -3239,8 +2071,8 @@
    "mythic"
   ],
   "stats": {
-   "hp": 3830,
-   "damage": 447,
+   "hp": 2350,
+   "damage": 274,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,

@@ -17,7 +17,7 @@ about 0.46 for Common, 0.54 for Rare, 0.64 for Epic, 0.75 for Legendary and
 0.75-0.80 for Mythic. The original 20 are shown as they are: some are outside
 their rarity's range and wait for a decision.
 
-## In the game (82)
+## In the game (107)
 
 | Animal | Class | Row | Rarity | Found in | Power |
 |---|---|---|---|---|---|
@@ -103,41 +103,41 @@ their rarity's range and wait for a decision.
 | Saola | Tank | Front | Legendary (CR) | 10. Cloudpeak Mountains | 0.78 |
 | African Penguins | Specialist (Splash) | Back | Legendary (CR) | 11. Coral Coast | 0.76 |
 | Kakapo | Specialist (Stun) | Middle | Legendary (CR) | 12. Last Sanctuary | 0.76 |
+| Galápagos Giant Tortoise | Tank | Front | Legendary (CR) | 12. Last Sanctuary | 0.77 |
+| West Indian Manatee | Tank | Front | Rare (VU) | 5. Misty Marsh | 0.53 |
+| Malayan Tapir | Tank | Front | Epic (EN) | 9. Emerald Jungle | 0.65 |
+| Gaur | Tank | Front | Rare (VU) | 4. Whispering Woods | 0.57 |
+| Pygmy Hippo | Tank | Front | Epic (EN) | 5. Misty Marsh | 0.65 |
+| Andean Bear | Tank | Front | Rare (VU) | 10. Cloudpeak Mountains | 0.60 |
+| Tasmanian Devil | Tank Destroyer | Middle | Epic (EN) | 4. Whispering Woods | 0.68 |
+| Iberian Lynx | Tank Destroyer | Middle | Rare (VU) | 4. Whispering Woods | 0.57 |
+| Wolverine | Tank Destroyer | Middle | Common (LC) | 8. Frozen Tundra | 0.49 |
+| Gharial | Tank Destroyer | Middle | Legendary (CR) | 12. Last Sanctuary | 0.78 |
+| Great Hammerhead Shark | Tank Destroyer | Middle | Legendary (CR) | 11. Coral Coast | 0.72 |
+| Shoebill | Tank Destroyer | Middle | Rare (VU) | 5. Misty Marsh | 0.56 |
+| Fossa | Tank Destroyer | Middle | Rare (VU) | 9. Emerald Jungle | 0.57 |
+| Northern Hairy-nosed Wombat | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 6. Sunbaked Savanna | 0.77 |
+| Greater Bilby | Specialist (Burrow) | Front (then underground) | Rare (VU) | 3. Prairie Fields | 0.56 |
+| Aardvark | Specialist (Burrow) | Front (then underground) | Common (LC) | 6. Sunbaked Savanna | 0.48 |
+| Gopher Tortoise | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 3. Prairie Fields | 0.77 |
+| Humpback Whale | Specialist (Splash) | Back | Common (LC) | 11. Coral Coast | 0.46 |
+| Giant Manta Ray | Specialist (Splash) | Back | Epic (EN) | 11. Coral Coast | 0.65 |
+| Electric Eel | Specialist (Stun) | Middle | Common (LC) | 5. Misty Marsh | 0.45 |
+| Howler Monkey | Specialist (Stun) | Middle | Rare (VU) | 9. Emerald Jungle | 0.53 |
+| Philippine Tarsier | Specialist (Stun) | Middle | Rare (NT) | 12. Last Sanctuary | 0.62 |
+| Pygmy Three-toed Sloth | Specialist (Slow) | Middle | Legendary (CR) | 12. Last Sanctuary | 0.77 |
+| Slow Loris | Specialist (Slow) | Middle | Epic (EN) | 9. Emerald Jungle | 0.66 |
+| Chinese Giant Salamander | Specialist (Slow) | Middle | Legendary (CR) | 10. Cloudpeak Mountains | 0.78 |
 
 ## Designed, not rendered yet (0)
 
 | Animal | Class | Row | Rarity | Found in | Batch | Power |
 |---|---|---|---|---|---|---|
 
-## New real animals, not rendered yet (25)
+## New real animals, not rendered yet (0)
 
 | Animal | Class | Row | Rarity | Found in | Batch | Power |
 |---|---|---|---|---|---|---|
-| Galápagos Giant Tortoise *Chelonoidis porteri* | Tank | Front | Legendary (CR) | 12. Last Sanctuary | 3 | 0.77 |
-| West Indian Manatee *Trichechus manatus* | Tank | Front | Rare (VU) | 5. Misty Marsh | 3 | 0.53 |
-| Malayan Tapir *Tapirus indicus* | Tank | Front | Epic (EN) | 9. Emerald Jungle | 3 | 0.65 |
-| Gaur *Bos gaurus* | Tank | Front | Rare (VU) | 4. Whispering Woods | 3 | 0.57 |
-| Pygmy Hippo *Choeropsis liberiensis* | Tank | Front | Epic (EN) | 5. Misty Marsh | 3 | 0.65 |
-| Andean Bear *Tremarctos ornatus* | Tank | Front | Rare (VU) | 10. Cloudpeak Mountains | 3 | 0.60 |
-| Tasmanian Devil *Sarcophilus harrisii* | Tank Destroyer | Middle | Epic (EN) | 4. Whispering Woods | 3 | 0.68 |
-| Iberian Lynx *Lynx pardinus* | Tank Destroyer | Middle | Rare (VU) | 4. Whispering Woods | 3 | 0.57 |
-| Wolverine *Gulo gulo* | Tank Destroyer | Middle | Common (LC) | 8. Frozen Tundra | 3 | 0.49 |
-| Gharial *Gavialis gangeticus* | Tank Destroyer | Middle | Legendary (CR) | 12. Last Sanctuary | 3 | 0.78 |
-| Great Hammerhead Shark *Sphyrna mokarran* | Tank Destroyer | Middle | Legendary (CR) | 11. Coral Coast | 3 | 0.72 |
-| Shoebill *Balaeniceps rex* | Tank Destroyer | Middle | Rare (VU) | 5. Misty Marsh | 3 | 0.56 |
-| Fossa *Cryptoprocta ferox* | Tank Destroyer | Middle | Rare (VU) | 9. Emerald Jungle | 3 | 0.57 |
-| Northern Hairy-nosed Wombat *Lasiorhinus krefftii* | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 6. Sunbaked Savanna | 3 | 0.77 |
-| Greater Bilby *Macrotis lagotis* | Specialist (Burrow) | Front (then underground) | Rare (VU) | 3. Prairie Fields | 3 | 0.56 |
-| Aardvark *Orycteropus afer* | Specialist (Burrow) | Front (then underground) | Common (LC) | 6. Sunbaked Savanna | 3 | 0.48 |
-| Gopher Tortoise *Gopherus polyphemus* | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 3. Prairie Fields | 3 | 0.77 |
-| Humpback Whale *Megaptera novaeangliae* | Specialist (Splash) | Back | Common (LC) | 11. Coral Coast | 3 | 0.46 |
-| Giant Manta Ray *Mobula birostris* | Specialist (Splash) | Back | Epic (EN) | 11. Coral Coast | 3 | 0.65 |
-| Electric Eel *Electrophorus electricus* | Specialist (Stun) | Middle | Common (LC) | 5. Misty Marsh | 3 | 0.45 |
-| Howler Monkey *Alouatta palliata* | Specialist (Stun) | Middle | Rare (VU) | 9. Emerald Jungle | 3 | 0.53 |
-| Philippine Tarsier *Carlito syrichta* | Specialist (Stun) | Middle | Rare (NT) | 12. Last Sanctuary | 3 | 0.62 |
-| Pygmy Three-toed Sloth *Bradypus pygmaeus* | Specialist (Slow) | Middle | Legendary (CR) | 12. Last Sanctuary | 3 | 0.77 |
-| Slow Loris *Nycticebus coucang* | Specialist (Slow) | Middle | Epic (EN) | 9. Emerald Jungle | 3 | 0.66 |
-| Chinese Giant Salamander *Andrias davidianus* | Specialist (Slow) | Middle | Legendary (CR) | 10. Cloudpeak Mountains | 3 | 0.78 |
 
 ## Mythical creatures, not rendered yet (15)
 
@@ -163,8 +163,8 @@ their rarity's range and wait for a decision.
 
 | Class | In the game | On the way | All | Average power (all) |
 |---|---|---|---|---|
-| Tank | 13 | 9 | 22 | 0.64 |
-| Tank Destroyer | 14 | 12 | 26 | 0.61 |
+| Tank | 19 | 3 | 22 | 0.64 |
+| Tank Destroyer | 21 | 5 | 26 | 0.61 |
 | Ranged | 20 | 0 | 20 | 0.60 |
 | Air | 21 | 0 | 21 | 0.59 |
-| Specialist | 14 | 19 | 33 | 0.62 |
+| Specialist | 26 | 7 | 33 | 0.62 |

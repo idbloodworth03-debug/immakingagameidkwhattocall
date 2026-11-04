@@ -217,7 +217,9 @@ func _watch_views(_delta: float) -> void:
 		stats.unit_frames += 1
 		if v.flash > 0.3:
 			stats.flash_frames += 1
-		if v.hp_ratio < 1.0:
+		# A health bar showing (hurt, and not yet faded away).
+		var shown_for := Feel.num("combat", "health_bar_hide_after", 2.5) + Feel.num("combat", "health_bar_fade_seconds", 0.5)
+		if v.hp_ratio < 1.0 and field.now() - v.hurt_time() < shown_for:
 			stats.bar_frames += 1
 		var key_text: String = v._frame_key
 		var anim := key_text.rstrip("0123456789/")

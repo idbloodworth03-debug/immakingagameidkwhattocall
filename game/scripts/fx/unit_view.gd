@@ -128,6 +128,9 @@ var _force_next := ""
 var _dig_at := -100.0
 var _emerge_at := -100.0
 var _was_burrowing := false
+## The longest any of its wind-ups can be, and how tall it is (cached).
+var _longest_windup := 1.0
+var _top := 40.0
 var _shown_dir := 0
 var _hop_in_at := -100.0
 ## Who hit it last (for a smug look when it's knocked out).
@@ -143,7 +146,7 @@ var _walk_tiles := 1.0
 var _windup := 0.2
 var _frame_key := ""
 ## Tuning from feel.json, read once a frame for every animal (see _tuning()).
-static var _tuned := {}
+static var _tuned: Tune
 static var _tuned_frame := -1
 ## What the shader was last given (gold, flash, opacity; the frame).
 var _shader_values := [-1.0, -1.0, -1.0]
@@ -176,6 +179,16 @@ class Body:
 	extends Node2D
 	var frame: Dictionary = {}
 	var k := 1.0
+	## What it last drew (it's drawn again only when that changes; moving,
+	## squashing and turning it is just its transform).
+	var _drawn: Dictionary = {}
+	var _drawn_k := 0.0
+
+	func redraw_if_changed() -> void:
+		if frame != _drawn or k != _drawn_k:
+			_drawn = frame
+			_drawn_k = k
+			queue_redraw()
 
 	func _draw() -> void:
 		if frame.is_empty():
@@ -227,6 +240,11 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 		var hit := float(info.get("hit", 0.45))
 		v._attacks[anim] = {"windup": hit * length * slower, "length": hit * length * slower + (1.0 - hit) * length,
 			"hit_frame": hit * float(info.frames), "frames": float(info.frames), "fps": fps}
+	v._top = UnitSprites.top(v.id)
+	var longest := 0.0
+	for info: Dictionary in v._attacks.values():
+		longest = maxf(longest, float(info.windup))
+	v._longest_windup = maxf(longest, v._windup) * maxf(1.0, maxf(Feel.num(a, "stun_windup_scale", 1.8), Feel.num(a, "slow_windup_scale", 1.5)))
 	if UnitSprites.has_animation(v.id, "fidget"):
 		v._fidget_len = UnitSprites.duration(v.id, "fidget")
 		v._fidget_fps = float(UnitSprites.animation(v.id, "fidget").get("fps", 10))
@@ -329,8 +347,10 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		shown_v = Vector2.ZERO
 		goal_v = Vector2.ZERO
 	elif dt > 0.0:
-		var march := _march_offset(now, t)
-		follow(pos + spread + march, goal_v, dt)
+		var goal := pos + spread
+		if _march > 0.0:
+			goal += _march_offset(now, t)
+		follow(goal, goal_v, dt)
 	var speed := shown_v.length()
 	if hop_t >= 1.0 and _intent > 0.0 and speed > float(t.walk_min_speed):
 		if moving <= 0.0 and now >= _trip_ready and randf() < float(t.trip_chance):
@@ -363,9 +383,9 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	# Start the attack early enough that the strike lands on the hit (a
 	# little later for some, so a herd doesn't swing in step).
 	if has_target and f.deploy_ticks <= 0 and f.stun <= 0 and sim.in_range(f, f.target) and not attacking(now):
-		var next := _upcoming()
-		var windup := _windup_of(String(next[0])) * float(next[1])
 		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
+		var next: Array = _upcoming() if to_hit >= 0.0 and to_hit <= _longest_windup else []
+		var windup := _windup_of(String(next[0])) * float(next[1]) if not next.is_empty() else -1.0
 		if to_hit >= 0.0 and to_hit <= windup:
 			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y))
 
@@ -391,7 +411,7 @@ func follow(goal: Vector2, goal_v: Vector2, dt: float) -> void:
 
 ## A slow wander while marching, so a row moves as a loose crowd rather
 ## than one block (none while standing).
-func _march_offset(now: float, t: Dictionary) -> Vector2:
+func _march_offset(now: float, t: Tune) -> Vector2:
 	var amount := float(t.march_wobble) * 1000.0 * _march
 	if amount <= 0.0:
 		return Vector2.ZERO
@@ -434,12 +454,11 @@ func attacking(now: float) -> bool:
 ## blow?]: common animals alternate two; a Stun animal's stunning blow gets
 ## its rendered wind-up (or a long stare); a Slow animal winds up lazily.
 func _upcoming() -> Array:
-	var a := "acting"
+	var t := _tuning()
 	if _force_next != "":
 		var forced := _force_next
-		_force_next = ""
 		if forced == "special" and not _attacks.has("special"):
-			return ["attack", Feel.num(a, "stun_windup_scale", 1.8), true]
+			return ["attack", t.stun_windup_scale, true]
 		return [forced, 1.0, forced == "special"]
 	var f := fighter
 	if f != null and _trait == "stun":
@@ -447,9 +466,9 @@ func _upcoming() -> Array:
 		if (int(f.memory.get("hits", 0)) + 1) % every == 0:
 			if _attacks.has("special"):
 				return ["special", 1.0, true]
-			return ["attack", Feel.num(a, "stun_windup_scale", 1.8), true]
+			return ["attack", t.stun_windup_scale, true]
 	var anim := "attack2" if _attacks.has("attack2") and _attack_count % 2 == 1 else "attack"
-	return [anim, Feel.num(a, "slow_windup_scale", 1.5) if _trait == "slow" else 1.0, false]
+	return [anim, t.slow_windup_scale if _trait == "slow" else 1.0, false]
 
 
 func _windup_of(anim: String) -> float:
@@ -457,6 +476,7 @@ func _windup_of(anim: String) -> float:
 
 
 func _start_attack(next: Array, at: float, toward: Vector2) -> void:
+	_force_next = ""
 	_attack_anim = String(next[0])
 	_attack_k = float(next[1])
 	_dramatic = bool(next[2])
@@ -521,7 +541,7 @@ func stop_celebrating() -> void:
 
 
 func is_celebrating(now: float) -> bool:
-	return _victory_at >= 0.0 and now >= _victory_at and now - _victory_at < Feel.num("acting", "victory_seconds", 2.6)
+	return _victory_at >= 0.0 and now >= _victory_at and now - _victory_at < _tuning().victory_seconds
 
 
 ## A hop into place as the fight begins (at `at`, field time).
@@ -575,94 +595,197 @@ func is_done() -> bool:
 
 # --- Every frame -------------------------------------------------------------
 
-## The feel.json numbers every animal's animation uses, read once a frame.
-static func _tuning() -> Dictionary:
-	var now := Engine.get_process_frames()
-	if now != _tuned_frame:
-		_tuned_frame = now
-		var m := "movement"
-		_tuned = {
-			"arrive_squash": Feel.num(m, "arrive_squash", 0.1),
-			"follow_rate": Feel.num(m, "follow_rate", 12.0),
-			"march_wobble": Feel.num(m, "march_wobble_tiles", 0.1),
-			"march_wobble_seconds": Feel.num(m, "march_wobble_seconds", 2.6),
-			"turn_speed": Feel.num(m, "turn_degrees_per_second", 720.0),
-			"turn_hysteresis": Feel.num(m, "turn_hysteresis_degrees", 12.0),
-			"turn_squash": Feel.num(m, "turn_squash", 0.1),
-			"turn_squash_seconds": Feel.num(m, "turn_squash_seconds", 0.12),
-			"walk_hold_seconds": Feel.num(m, "walk_hold_seconds", 0.15),
-			"walk_min_speed": Feel.num(m, "walk_min_speed_tiles", 0.15) * 1000.0,
-			"walk_stride": Feel.num("characters", "sprite_scale", 1.6) * Feel.num(m, "walk_stride_match", 1.0),
-			"walk_min_fps": Feel.num(m, "walk_min_fps", 5.0),
-			"walk_max_fps": Feel.num(m, "walk_max_fps", 16.0),
-			"swarm_scale": Feel.num("characters", "swarm_scale", 0.8),
-			"move_hop_seconds": Feel.num("characters", "move_hop_seconds", 0.32),
-			"impact_jitter_seconds": Feel.num("combat", "impact_jitter_seconds", 0.06),
-			"strike_grace_seconds": Feel.num("combat", "strike_grace_seconds", 0.1),
-			"bob_pixels": Feel.num("characters", "bob_pixels", 1.5),
-			"trip_chance": Feel.num("acting", "trip_chance", 0.03),
-			"trip_cooldown": Feel.num("acting", "trip_cooldown", 25.0),
-			"trip_seconds": Feel.num("acting", "trip_seconds", 0.45),
-			"blink_seconds": Feel.num("acting", "blink_seconds", 0.13),
-			"blink_every": _range("acting", "blink_every", Vector2(2.2, 5.0)),
-			"fidget_every": _range("acting", "fidget_every", Vector2(7.0, 14.0)),
-			"wide_seconds": Feel.num("acting", "wide_seconds", 0.35),
-			"hurt_seconds": Feel.num("acting", "hurt_seconds", 0.32),
-			"hurt_bounce_pixels": Feel.num("acting", "hurt_bounce_pixels", 5.0),
-			"transition_squash": Feel.num("acting", "transition_squash", 0.05),
-			"tank_hop": Feel.num("acting", "tank_hop", 0.45),
-			"tank_step_squash": Feel.num("acting", "tank_step_squash", 0.06),
-			"td_lean": Feel.num("acting", "td_lean", 1.7),
-			"td_lunge": Feel.num("acting", "td_lunge", 1.9),
-			"td_pounce_pixels": Feel.num("acting", "td_pounce_pixels", 9.0),
-			"ranged_recoil_pixels": Feel.num("acting", "ranged_recoil_pixels", 5.0),
-			"air_bob_pixels": Feel.num("acting", "air_bob_pixels", 4.0),
-			"air_bob_speed": Feel.num("acting", "air_bob_speed", 2.6),
-			"air_swoop_pixels": Feel.num("acting", "air_swoop_pixels", 5.0),
-			"air_bank_degrees": Feel.num("acting", "air_bank_degrees", 16.0),
-			"air_dive_rise_pixels": Feel.num("acting", "air_dive_rise_pixels", 8.0),
-			"air_dive_drop_pixels": Feel.num("acting", "air_dive_drop_pixels", 10.0),
-			"victory_hop_pixels": Feel.num("acting", "victory_hop_pixels", 9.0),
-			"victory_seconds": Feel.num("acting", "victory_seconds", 2.6),
-			"fling_seconds": Feel.num("acting", "defeat_fling_seconds", 0.9),
-			"stun_wobble_degrees": Feel.num("acting", "stun_wobble_degrees", 7.0),
-			"slow_pace": Feel.num("acting", "slow_pace", 0.5),
-			"zzz_every": Feel.num("acting", "zzz_every", 0.9),
-			"sweat_below": Feel.num("acting", "sweat_below", 0.25),
-			"sweat_every": Feel.num("acting", "sweat_every", 1.3),
-			"splash_hop_pixels": Feel.num("acting", "splash_hop_pixels", 16.0),
-			"splash_squash": Feel.num("acting", "splash_squash", 0.25),
-			"dig_seconds": Feel.num("acting", "dig_seconds", 0.35),
-			"emerge_seconds": Feel.num("acting", "emerge_seconds", 0.5),
-			"emerge_hop_pixels": Feel.num("acting", "emerge_hop_pixels", 18.0),
-			"fish_wiggle_degrees": Feel.num("acting", "fish_wiggle_degrees", 8.0),
-			"waddle_degrees": Feel.num("acting", "waddle_degrees", 5.0),
-			"intro_hop_pixels": Feel.num("choreography", "intro_hop_pixels", 16.0),
-			"breathe_amount": Feel.num("characters", "breathe_amount", 0.035),
-			"breathe_speed": Feel.num("characters", "breathe_speed", 2.4),
-			"defeat_hop_pixels": Feel.num("combat", "defeat_hop_pixels", 46.0),
-			"defeat_seconds": Feel.num("combat", "defeat_seconds", 0.6),
-			"defeat_spin_turns": Feel.num("combat", "defeat_spin_turns", 1.25),
-			"gold_glow": Feel.num("celebrations", "gold_glow", 0.85),
-			"gold_sparkle_seconds": Feel.num("celebrations", "gold_sparkle_seconds", 0.7),
-			"health_bar_drain_speed": Feel.num("combat", "health_bar_drain_speed", 3.0),
-			"health_bar_trail_speed": Feel.num("combat", "health_bar_trail_speed", 0.9),
-			"hit_flash_seconds": Feel.num("combat", "hit_flash_seconds", 0.11),
-			"lean_degrees": Feel.num("characters", "lean_degrees", 7.0),
-			"lunge_pixels": Feel.num("combat", "lunge_pixels", 12.0),
-			"move_hop_pixels": Feel.num("characters", "move_hop_pixels", 22.0),
-			"spawn_drop_pixels": Feel.num("characters", "spawn_drop_pixels", 26.0),
-			"spawn_pop_seconds": Feel.num("characters", "spawn_pop_seconds", 0.5),
-			"spring_damping": Feel.num("combat", "spring_damping", 16.0),
-			"spring_stiffness": Feel.num("combat", "spring_stiffness", 320.0),
-			"strike_stretch": Feel.num("combat", "strike_stretch", 0.16),
-			"upgrade_pop": Feel.num("characters", "upgrade_pop", 0.3),
-			"walk_hop_pixels": Feel.num("characters", "walk_hop_pixels", 5.0),
-			"walk_squash": Feel.num("characters", "walk_squash", 0.07),
-			"windup_pull_pixels": Feel.num("combat", "windup_pull_pixels", 4.0),
-			"windup_squash": Feel.num("combat", "windup_squash", 0.12),
-		}
+## The feel.json numbers every animal's animation uses, read once a frame
+## into typed fields (a big fight reads them thousands of times a frame).
+class Tune:
+	var stun_windup_scale := 0.0
+	var slow_windup_scale := 0.0
+	var shadow_width := 0.0
+	var shadow_alpha := 0.0
+	var team_ring_alpha := 0.0
+	var class_badge_radius := 0.0
+	var arrive_squash := 0.0
+	var follow_rate := 0.0
+	var march_wobble := 0.0
+	var march_wobble_seconds := 0.0
+	var turn_speed := 0.0
+	var turn_hysteresis := 0.0
+	var turn_squash := 0.0
+	var turn_squash_seconds := 0.0
+	var walk_hold_seconds := 0.0
+	var walk_min_speed := 0.0
+	var walk_stride := 0.0
+	var walk_min_fps := 0.0
+	var walk_max_fps := 0.0
+	var swarm_scale := 0.0
+	var move_hop_seconds := 0.0
+	var impact_jitter_seconds := 0.0
+	var strike_grace_seconds := 0.0
+	var bob_pixels := 0.0
+	var trip_chance := 0.0
+	var trip_cooldown := 0.0
+	var trip_seconds := 0.0
+	var blink_seconds := 0.0
+	var blink_every := Vector2.ZERO
+	var fidget_every := Vector2.ZERO
+	var wide_seconds := 0.0
+	var hurt_seconds := 0.0
+	var hurt_bounce_pixels := 0.0
+	var transition_squash := 0.0
+	var tank_hop := 0.0
+	var tank_step_squash := 0.0
+	var td_lean := 0.0
+	var td_lunge := 0.0
+	var td_pounce_pixels := 0.0
+	var ranged_recoil_pixels := 0.0
+	var air_bob_pixels := 0.0
+	var air_bob_speed := 0.0
+	var air_swoop_pixels := 0.0
+	var air_bank_degrees := 0.0
+	var air_dive_rise_pixels := 0.0
+	var air_dive_drop_pixels := 0.0
+	var victory_hop_pixels := 0.0
+	var victory_seconds := 0.0
+	var fling_seconds := 0.0
+	var stun_wobble_degrees := 0.0
+	var slow_pace := 0.0
+	var zzz_every := 0.0
+	var sweat_below := 0.0
+	var sweat_every := 0.0
+	var splash_hop_pixels := 0.0
+	var splash_squash := 0.0
+	var dig_seconds := 0.0
+	var emerge_seconds := 0.0
+	var emerge_hop_pixels := 0.0
+	var fish_wiggle_degrees := 0.0
+	var waddle_degrees := 0.0
+	var intro_hop_pixels := 0.0
+	var breathe_amount := 0.0
+	var breathe_speed := 0.0
+	var defeat_hop_pixels := 0.0
+	var defeat_seconds := 0.0
+	var defeat_spin_turns := 0.0
+	var gold_glow := 0.0
+	var gold_sparkle_seconds := 0.0
+	var health_bar_drain_speed := 0.0
+	var health_bar_trail_speed := 0.0
+	var hit_flash_seconds := 0.0
+	var lean_degrees := 0.0
+	var lunge_pixels := 0.0
+	var move_hop_pixels := 0.0
+	var spawn_drop_pixels := 0.0
+	var spawn_pop_seconds := 0.0
+	var spring_damping := 0.0
+	var spring_stiffness := 0.0
+	var strike_stretch := 0.0
+	var upgrade_pop := 0.0
+	var walk_hop_pixels := 0.0
+	var walk_squash := 0.0
+	var windup_pull_pixels := 0.0
+	var windup_squash := 0.0
+
+
+static func _tuning() -> Tune:
+	if _tuned == null:
+		refresh_tuning()
 	return _tuned
+
+
+## Reads feel.json again (the field calls this once a frame, so tuning can
+## be changed while the game runs).
+static func refresh_tuning() -> void:
+	var now := Engine.get_process_frames()
+	if now != _tuned_frame or _tuned == null:
+		_tuned_frame = now
+		if _tuned == null:
+			_tuned = Tune.new()
+		var t := _tuned
+		var m := "movement"
+		t.stun_windup_scale = Feel.num("acting", "stun_windup_scale", 1.8)
+		t.slow_windup_scale = Feel.num("acting", "slow_windup_scale", 1.5)
+		t.shadow_width = Feel.num("characters", "shadow_width", 1.25)
+		t.shadow_alpha = Feel.num("characters", "shadow_alpha", 0.34)
+		t.team_ring_alpha = Feel.num("characters", "team_ring_alpha", 0.9)
+		t.class_badge_radius = Feel.num("characters", "class_badge_radius", 9.0)
+		t.arrive_squash = Feel.num(m, "arrive_squash", 0.1)
+		t.follow_rate = Feel.num(m, "follow_rate", 12.0)
+		t.march_wobble = Feel.num(m, "march_wobble_tiles", 0.1)
+		t.march_wobble_seconds = Feel.num(m, "march_wobble_seconds", 2.6)
+		t.turn_speed = Feel.num(m, "turn_degrees_per_second", 720.0)
+		t.turn_hysteresis = Feel.num(m, "turn_hysteresis_degrees", 12.0)
+		t.turn_squash = Feel.num(m, "turn_squash", 0.1)
+		t.turn_squash_seconds = Feel.num(m, "turn_squash_seconds", 0.12)
+		t.walk_hold_seconds = Feel.num(m, "walk_hold_seconds", 0.15)
+		t.walk_min_speed = Feel.num(m, "walk_min_speed_tiles", 0.15) * 1000.0
+		t.walk_stride = Feel.num("characters", "sprite_scale", 1.6) * Feel.num(m, "walk_stride_match", 1.0)
+		t.walk_min_fps = Feel.num(m, "walk_min_fps", 5.0)
+		t.walk_max_fps = Feel.num(m, "walk_max_fps", 16.0)
+		t.swarm_scale = Feel.num("characters", "swarm_scale", 0.8)
+		t.move_hop_seconds = Feel.num("characters", "move_hop_seconds", 0.32)
+		t.impact_jitter_seconds = Feel.num("combat", "impact_jitter_seconds", 0.06)
+		t.strike_grace_seconds = Feel.num("combat", "strike_grace_seconds", 0.1)
+		t.bob_pixels = Feel.num("characters", "bob_pixels", 1.5)
+		t.trip_chance = Feel.num("acting", "trip_chance", 0.03)
+		t.trip_cooldown = Feel.num("acting", "trip_cooldown", 25.0)
+		t.trip_seconds = Feel.num("acting", "trip_seconds", 0.45)
+		t.blink_seconds = Feel.num("acting", "blink_seconds", 0.13)
+		t.blink_every = _range("acting", "blink_every", Vector2(2.2, 5.0))
+		t.fidget_every = _range("acting", "fidget_every", Vector2(7.0, 14.0))
+		t.wide_seconds = Feel.num("acting", "wide_seconds", 0.35)
+		t.hurt_seconds = Feel.num("acting", "hurt_seconds", 0.32)
+		t.hurt_bounce_pixels = Feel.num("acting", "hurt_bounce_pixels", 5.0)
+		t.transition_squash = Feel.num("acting", "transition_squash", 0.05)
+		t.tank_hop = Feel.num("acting", "tank_hop", 0.45)
+		t.tank_step_squash = Feel.num("acting", "tank_step_squash", 0.06)
+		t.td_lean = Feel.num("acting", "td_lean", 1.7)
+		t.td_lunge = Feel.num("acting", "td_lunge", 1.9)
+		t.td_pounce_pixels = Feel.num("acting", "td_pounce_pixels", 9.0)
+		t.ranged_recoil_pixels = Feel.num("acting", "ranged_recoil_pixels", 5.0)
+		t.air_bob_pixels = Feel.num("acting", "air_bob_pixels", 4.0)
+		t.air_bob_speed = Feel.num("acting", "air_bob_speed", 2.6)
+		t.air_swoop_pixels = Feel.num("acting", "air_swoop_pixels", 5.0)
+		t.air_bank_degrees = Feel.num("acting", "air_bank_degrees", 16.0)
+		t.air_dive_rise_pixels = Feel.num("acting", "air_dive_rise_pixels", 8.0)
+		t.air_dive_drop_pixels = Feel.num("acting", "air_dive_drop_pixels", 10.0)
+		t.victory_hop_pixels = Feel.num("acting", "victory_hop_pixels", 9.0)
+		t.victory_seconds = Feel.num("acting", "victory_seconds", 2.6)
+		t.fling_seconds = Feel.num("acting", "defeat_fling_seconds", 0.9)
+		t.stun_wobble_degrees = Feel.num("acting", "stun_wobble_degrees", 7.0)
+		t.slow_pace = Feel.num("acting", "slow_pace", 0.5)
+		t.zzz_every = Feel.num("acting", "zzz_every", 0.9)
+		t.sweat_below = Feel.num("acting", "sweat_below", 0.25)
+		t.sweat_every = Feel.num("acting", "sweat_every", 1.3)
+		t.splash_hop_pixels = Feel.num("acting", "splash_hop_pixels", 16.0)
+		t.splash_squash = Feel.num("acting", "splash_squash", 0.25)
+		t.dig_seconds = Feel.num("acting", "dig_seconds", 0.35)
+		t.emerge_seconds = Feel.num("acting", "emerge_seconds", 0.5)
+		t.emerge_hop_pixels = Feel.num("acting", "emerge_hop_pixels", 18.0)
+		t.fish_wiggle_degrees = Feel.num("acting", "fish_wiggle_degrees", 8.0)
+		t.waddle_degrees = Feel.num("acting", "waddle_degrees", 5.0)
+		t.intro_hop_pixels = Feel.num("choreography", "intro_hop_pixels", 16.0)
+		t.breathe_amount = Feel.num("characters", "breathe_amount", 0.035)
+		t.breathe_speed = Feel.num("characters", "breathe_speed", 2.4)
+		t.defeat_hop_pixels = Feel.num("combat", "defeat_hop_pixels", 46.0)
+		t.defeat_seconds = Feel.num("combat", "defeat_seconds", 0.6)
+		t.defeat_spin_turns = Feel.num("combat", "defeat_spin_turns", 1.25)
+		t.gold_glow = Feel.num("celebrations", "gold_glow", 0.85)
+		t.gold_sparkle_seconds = Feel.num("celebrations", "gold_sparkle_seconds", 0.7)
+		t.health_bar_drain_speed = Feel.num("combat", "health_bar_drain_speed", 3.0)
+		t.health_bar_trail_speed = Feel.num("combat", "health_bar_trail_speed", 0.9)
+		t.hit_flash_seconds = Feel.num("combat", "hit_flash_seconds", 0.11)
+		t.lean_degrees = Feel.num("characters", "lean_degrees", 7.0)
+		t.lunge_pixels = Feel.num("combat", "lunge_pixels", 12.0)
+		t.move_hop_pixels = Feel.num("characters", "move_hop_pixels", 22.0)
+		t.spawn_drop_pixels = Feel.num("characters", "spawn_drop_pixels", 26.0)
+		t.spawn_pop_seconds = Feel.num("characters", "spawn_pop_seconds", 0.5)
+		t.spring_damping = Feel.num("combat", "spring_damping", 16.0)
+		t.spring_stiffness = Feel.num("combat", "spring_stiffness", 320.0)
+		t.strike_stretch = Feel.num("combat", "strike_stretch", 0.16)
+		t.upgrade_pop = Feel.num("characters", "upgrade_pop", 0.3)
+		t.walk_hop_pixels = Feel.num("characters", "walk_hop_pixels", 5.0)
+		t.walk_squash = Feel.num("characters", "walk_squash", 0.07)
+		t.windup_pull_pixels = Feel.num("combat", "windup_pull_pixels", 4.0)
+		t.windup_squash = Feel.num("combat", "windup_squash", 0.12)
 
 
 
@@ -707,7 +830,7 @@ func animate(dt: float, now: float) -> void:
 	var since := now - attack_at
 	var attack_len := _attack_length()
 	var windup := windup_seconds()
-	var celebrating := is_celebrating(now)
+	var celebrating := _victory_at >= 0.0 and is_celebrating(now)
 	var tripping := now - _trip_at < float(t.trip_seconds)
 	if defeat >= 0.0 or stunned:
 		frame = 0
@@ -725,7 +848,7 @@ func animate(dt: float, now: float) -> void:
 		frame = int((now - _fidget_at) * _fidget_fps)
 	# A fidget now and then, while standing about with nothing in reach.
 	if dt > 0.0 and _fidget_len > 0.0 and now >= _fidget_next:
-		var every: Vector2 = t.fidget_every
+		var every := t.fidget_every
 		if anim == "idle" and defeat < 0.0 and not stunned and not celebrating and not _in_a_scrap():
 			_fidget_at = now
 			_fidget_next = now + randf_range(every.x, every.y)
@@ -966,7 +1089,9 @@ func animate(dt: float, now: float) -> void:
 			sy *= shrink
 			opacity = 1.0 - Ease.in_cubic(d)
 	offset.y -= lift
-	_update_face(t, anim, frame, now, since, windup, celebrating, stunned, slowed, k)
+	if face.radius > 0.0 and (face.visible or now >= _blink_next or defeat >= 0.0 or stunned or slowed or celebrating
+			or now - _hurt_at < t.wide_seconds or now < _smug_until or (since >= 0.0 and since < windup)):
+		_update_face(t, anim, frame, now, since, windup, celebrating, stunned, slowed, k)
 	_comic_touches(t, dt, slowed, k)
 
 	if f != null:
@@ -1004,7 +1129,7 @@ func animate(dt: float, now: float) -> void:
 		tint = tint.lerp(Color(2.0, 2.0, 2.0), flash * 0.6)
 		tint.a = opacity
 	body.self_modulate = tint
-	body.queue_redraw()
+	body.redraw_if_changed()
 
 
 ## In reach of what it's fighting (no fidgeting then).
@@ -1015,7 +1140,7 @@ func _in_a_scrap() -> bool:
 
 ## A foot coming down: a Tank's heavy step thumps with a puff of dust; a
 ## Tank Destroyer kicks up dust behind it now and then.
-func _footfall(t: Dictionary) -> void:
+func _footfall(t: Tune) -> void:
 	if field.fx.crowded and randf() < 0.6:
 		return
 	var dust := Color("#c9b08a", 0.75)
@@ -1031,11 +1156,11 @@ func _footfall(t: Dictionary) -> void:
 
 
 ## Which face to draw over its eyes this frame, if any.
-func _update_face(t: Dictionary, anim: String, frame: int, now: float, since: float, windup: float, celebrating: bool, stunned: bool, slowed: bool, k: float) -> void:
+func _update_face(t: Tune, anim: String, frame: int, now: float, since: float, windup: float, celebrating: bool, stunned: bool, slowed: bool, k: float) -> void:
 	if face.radius <= 0.0:
 		return
 	if now >= _blink_next:
-		var every: Vector2 = t.blink_every
+		var every := t.blink_every
 		_blink_at = now
 		_blink_next = now + randf_range(every.x, every.y)
 	var mode := ""
@@ -1070,16 +1195,16 @@ func _update_face(t: Dictionary, anim: String, frame: int, now: float, since: fl
 
 
 ## Sweat drops when it's nearly beaten, and Zzz while slowed.
-func _comic_touches(t: Dictionary, dt: float, slowed: bool, k: float) -> void:
-	if dt <= 0.0 or defeat >= 0.0 or fighter == null:
+func _comic_touches(t: Tune, dt: float, slowed: bool, k: float) -> void:
+	if dt <= 0.0 or defeat >= 0.0 or fighter == null or (hp_ratio >= t.sweat_below and not slowed):
 		return
-	var top := position + body.position + Vector2(0, -UnitSprites.top(id) * k)
+	var top := position + body.position + Vector2(0, -_top * k)
 	if hp_ratio < float(t.sweat_below):
 		_sweat_in -= dt
 		if _sweat_in <= 0.0:
 			_sweat_in = float(t.sweat_every) * randf_range(0.8, 1.3)
 			var side := 1.0 if randf() < 0.5 else -1.0
-			field.fx.effect("drop", top + Vector2(side * UnitSprites.top(id) * k * 0.3, 6.0), 5.0, Color("#8fd3ff"), 0.7)
+			field.fx.effect("drop", top + Vector2(side * _top * k * 0.3, 6.0), 5.0, Color("#8fd3ff"), 0.7)
 	if slowed:
 		_zzz_in -= dt
 		if _zzz_in <= 0.0:
@@ -1149,12 +1274,13 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 		return
 	# The shadow shrinks and fades as the animal leaves the ground.
 	var air := clampf(lift / 40.0, 0.0, 0.7)
-	var shadow_w := radius * Feel.num(c, "shadow_width", 1.25) * (1.0 - air * 0.5)
-	GroundArt.draw(canvas, GroundArt.Cell.SHADOW, at, shadow_w * 1.1, 0.42, Color(0.05, 0.1, 0.05, Feel.num(c, "shadow_alpha", 0.34) * 1.3 * (1.0 - air) * fade))
+	var t := _tuning()
+	var shadow_w := radius * t.shadow_width * (1.0 - air * 0.5)
+	GroundArt.draw(canvas, GroundArt.Cell.SHADOW, at, shadow_w * 1.1, 0.42, Color(0.05, 0.1, 0.05, t.shadow_alpha * 1.3 * (1.0 - air) * fade))
 	# Team ring, flattened to sit on the ground.
 	var team_color := BattleField.OWN_COLOR if team == 0 else BattleField.ENEMY_COLOR
 	var ring := radius * 1.45
-	var ring_alpha := Feel.num(c, "team_ring_alpha", 0.9) * fade
+	var ring_alpha := t.team_ring_alpha * fade
 	if f != null and f.stealthed and f.revealed <= 0:
 		ring_alpha *= 0.4 if team == 0 else 0.1
 	GroundArt.draw(canvas, GroundArt.Cell.DISC, at, ring, 0.42, Color(team_color, 0.16 * ring_alpha))
@@ -1172,5 +1298,5 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, 0.42, Color.WHITE)
 		if cls != "":
 			# Its class, as a small badge just under its feet.
-			var badge := Feel.num(c, "class_badge_radius", 9.0)
+			var badge := t.class_badge_radius
 			badges.append([cls, at + Vector2(0, ring * 0.42 + badge * 0.9), badge, minf(fade, 0.95)])

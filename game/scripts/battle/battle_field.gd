@@ -80,6 +80,7 @@ var log_impacts := false
 ## The last animal knocked out, and when (for the fight's final close-up).
 var _last_defeated: UnitView
 var _last_defeat_at := -1.0
+var _spread_dt := 0.0
 
 ## The camera: how big a field it shows (1 = the smallest field), easing
 ## toward the field's real size so it zooms out smoothly as the field grows.
@@ -403,9 +404,14 @@ func _process(delta: float) -> void:
 	_world.position = pan + shake_offset
 	_follow_field(delta)
 	_check_crowd()
+	UnitView.refresh_tuning()
 	if sim != null:
 		_sync_views(dt)
-		_spread_views(dt)
+		# Every other frame is plenty for the gentle nudges apart.
+		_spread_dt += dt
+		if Engine.get_process_frames() % 2 == 0:
+			_spread_views(_spread_dt)
+			_spread_dt = 0.0
 	_land_due()
 	fx._process_fx(dt)
 	_ambient(delta)
@@ -421,8 +427,8 @@ func _process(delta: float) -> void:
 func _sync_views(dt: float) -> void:
 	var seen := {}
 	_by_uid.clear()
-	for f in sim.fighters:
-		if not f.alive or not f.is_unit() or not UnitSprites.has(f.card.id):
+	for f: BattleSim.Fighter in sim.fighters:
+		if not f.alive or not f.is_unit():
 			continue
 		var key: Variant = f.memory.get("view_key", f.uid)
 		var v: UnitView = _views.get(key, null)
@@ -431,6 +437,9 @@ func _sync_views(dt: float) -> void:
 			v = null
 		var at := Vector2(lerpf(f.prev_x, f.x, blend), lerpf(f.prev_y, f.y, blend))
 		if v == null:
+			# (Looked up only for a new view: a big fight syncs dozens a frame.)
+			if not UnitSprites.has(f.card.id):
+				continue
 			v = UnitView.make(self, f, key)
 			v.set_shaded(not _plain)
 			_views[key] = v

@@ -55,7 +55,8 @@ func test_eye_data_marks_where_faces_go() -> void:
 		var front := UnitSprites.eyes(id, "idle", 180.0, 0)
 		var seen := front.filter(func(e): return e is Vector2)
 		check(seen.size() >= 1, "%s: its eyes show from the front" % id)
-		check(UnitSprites.eyes(id, "idle", 0.0, 0).all(func(e): return e == null), "%s: and not from behind" % id)
+		var behind := UnitSprites.eyes(id, "idle", 0.0, 0).filter(func(e): return e is Vector2)
+		check(behind.size() <= seen.size(), "%s: no more of them from behind (a hippo's, on top of its head, still show)" % id)
 		check_eq(UnitSprites.eyes(id, "idle", 270.0, 0), UnitSprites.eyes(id, "idle", 90.0, 0),
 			"%s: a mirrored frame's eyes are the same data (the drawing mirrors them)" % id)
 		check(UnitSprites.eyes(id, "walk", 180.0, 99).size() == front.size(), "%s: a looping frame wraps" % id)

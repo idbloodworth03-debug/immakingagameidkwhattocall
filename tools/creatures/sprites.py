@@ -151,7 +151,7 @@ def _old_frames(out_dir, side, anchor, anims):
             ax, ay = meta["anchor"]
         ox, oy = anchor[0] - ax, anchor[1] - ay
         if not (abs(ox - round(ox)) < 0.2 and abs(oy - round(oy)) < 0.2
-                and 0 <= ox and ox + cw <= side and 0 <= oy and oy + ch <= side):
+                and 0 <= round(ox) and round(ox) + cw <= side and 0 <= round(oy) and round(oy) + ch <= side):
             raise SystemExit(f"{out_dir}: the old sheet doesn't line up with this creature (offset {ox:.2f}, {oy:.2f}, "
                              f"cell {cw}x{ch} in a {side} frame); render every animation")
         ox, oy = int(round(ox)), int(round(oy))

@@ -1611,5 +1611,632 @@
   },
   "shot": "beam",
   "legend": "Narwhal tusks were once sold in Europe as unicorn horns."
+ },
+ {
+  "id": "opossum",
+  "name": "Opossum",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "rescue_center",
+  "habitat": "city",
+  "class": "tank",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "urban",
+   "nocturnal"
+  ],
+  "stats": {
+   "hp": 1590,
+   "damage": 236,
+   "hit_speed": 1.2,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "coyote_pack",
+  "name": "Coyote Pack",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "prairie_fields",
+  "habitat": "plains",
+  "class": "tank_destroyer",
+  "cost": 4,
+  "count": 2,
+  "tags": [
+   "mammal",
+   "canine",
+   "prairie",
+   "pack"
+  ],
+  "stats": {
+   "hp": 400,
+   "damage": 97,
+   "hit_speed": 1.0,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "snapping_turtle",
+  "name": "Snapping Turtle",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "misty_marsh",
+  "habitat": "wetlands",
+  "class": "tank",
+  "cost": 4,
+  "count": 1,
+  "tags": [
+   "reptile",
+   "wetland",
+   "aquatic",
+   "shelled"
+  ],
+  "stats": {
+   "hp": 1570,
+   "damage": 245,
+   "hit_speed": 1.5,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "honey_badger",
+  "name": "Honey Badger",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "sunbaked_savanna",
+  "habitat": "savanna",
+  "class": "tank_destroyer",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "savanna"
+  ],
+  "stats": {
+   "hp": 710,
+   "damage": 164,
+   "hit_speed": 1.0,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "spotted_hyenas",
+  "name": "Spotted Hyenas",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "sunbaked_savanna",
+  "habitat": "savanna",
+  "class": "tank_destroyer",
+  "cost": 4,
+  "count": 2,
+  "tags": [
+   "mammal",
+   "savanna",
+   "pack"
+  ],
+  "stats": {
+   "hp": 430,
+   "damage": 89,
+   "hit_speed": 1.0,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "rattlesnake",
+  "name": "Rattlesnake",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "red_rock_canyon",
+  "habitat": "plains",
+  "class": "specialist",
+  "trait": "stun",
+  "cost": 2,
+  "count": 1,
+  "tags": [
+   "reptile",
+   "desert",
+   "venomous"
+  ],
+  "stats": {
+   "hp": 940,
+   "damage": 175,
+   "hit_speed": 1.0,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "moose",
+  "name": "Moose",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "frozen_tundra",
+  "habitat": "arctic",
+  "class": "tank",
+  "cost": 5,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "tundra",
+   "forest",
+   "herd"
+  ],
+  "stats": {
+   "hp": 1750,
+   "damage": 200,
+   "hit_speed": 1.5,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "harbor_seal",
+  "name": "Harbor Seal",
+  "rarity": "common",
+  "status": "LC",
+  "unlock_arena": "coral_coast",
+  "habitat": "ocean",
+  "class": "specialist",
+  "trait": "splash",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "marine",
+   "aquatic"
+  ],
+  "stats": {
+   "hp": 1210,
+   "damage": 201,
+   "hit_speed": 1.1,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "platypus",
+  "name": "Platypus",
+  "rarity": "rare",
+  "status": "NT",
+  "unlock_arena": "rescue_center",
+  "habitat": "wetlands",
+  "class": "specialist",
+  "trait": "slow",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "wetland",
+   "aquatic",
+   "venomous"
+  ],
+  "stats": {
+   "hp": 1190,
+   "damage": 239,
+   "hit_speed": 1.1,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "eastern_box_turtle",
+  "name": "Eastern Box Turtle",
+  "rarity": "rare",
+  "status": "VU",
+  "unlock_arena": "city_park",
+  "habitat": "forest",
+  "class": "tank",
+  "cost": 2,
+  "count": 1,
+  "tags": [
+   "reptile",
+   "forest",
+   "urban",
+   "shelled"
+  ],
+  "stats": {
+   "hp": 2120,
+   "damage": 125,
+   "hit_speed": 1.3,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "gila_monster",
+  "name": "Gila Monster",
+  "rarity": "rare",
+  "status": "NT",
+  "unlock_arena": "red_rock_canyon",
+  "habitat": "plains",
+  "class": "specialist",
+  "trait": "slow",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "reptile",
+   "desert",
+   "venomous"
+  ],
+  "stats": {
+   "hp": 1320,
+   "damage": 206,
+   "hit_speed": 1.0,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "walrus",
+  "name": "Walrus",
+  "rarity": "rare",
+  "status": "VU",
+  "unlock_arena": "frozen_tundra",
+  "habitat": "ocean",
+  "class": "specialist",
+  "trait": "splash",
+  "cost": 5,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "tundra",
+   "marine",
+   "aquatic"
+  ],
+  "stats": {
+   "hp": 2510,
+   "damage": 251,
+   "hit_speed": 1.6,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "jaguar",
+  "name": "Jaguar",
+  "rarity": "rare",
+  "status": "NT",
+  "unlock_arena": "emerald_jungle",
+  "habitat": "rainforest",
+  "class": "tank_destroyer",
+  "cost": 4,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "jungle",
+   "predator",
+   "big_cat"
+  ],
+  "stats": {
+   "hp": 900,
+   "damage": 263,
+   "hit_speed": 1.1,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "snow_leopard",
+  "name": "Snow Leopard",
+  "rarity": "rare",
+  "status": "VU",
+  "unlock_arena": "cloudpeak_mountains",
+  "habitat": "arctic",
+  "class": "tank_destroyer",
+  "cost": 4,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "mountain",
+   "predator",
+   "big_cat"
+  ],
+  "stats": {
+   "hp": 700,
+   "damage": 222,
+   "hit_speed": 1.0,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "giant_panda",
+  "name": "Giant Panda",
+  "rarity": "rare",
+  "status": "VU",
+  "unlock_arena": "cloudpeak_mountains",
+  "habitat": "mountains",
+  "class": "tank",
+  "cost": 5,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "mountain",
+   "forest"
+  ],
+  "stats": {
+   "hp": 1870,
+   "damage": 190,
+   "hit_speed": 1.4,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "loggerhead_turtle",
+  "name": "Loggerhead Turtle",
+  "rarity": "rare",
+  "status": "VU",
+  "unlock_arena": "coral_coast",
+  "habitat": "ocean",
+  "class": "tank",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "reptile",
+   "marine",
+   "aquatic",
+   "shelled"
+  ],
+  "stats": {
+   "hp": 1740,
+   "damage": 226,
+   "hit_speed": 1.3,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "black_footed_ferret",
+  "name": "Black-footed Ferret",
+  "rarity": "epic",
+  "status": "EN",
+  "unlock_arena": "prairie_fields",
+  "habitat": "plains",
+  "class": "specialist",
+  "trait": "burrow",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "prairie",
+   "burrower",
+   "predator"
+  ],
+  "stats": {
+   "hp": 920,
+   "damage": 279,
+   "hit_speed": 0.9,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "mountain_gorilla",
+  "name": "Mountain Gorilla",
+  "rarity": "epic",
+  "status": "EN",
+  "unlock_arena": "cloudpeak_mountains",
+  "habitat": "mountains",
+  "class": "specialist",
+  "trait": "stun",
+  "cost": 7,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "mountain",
+   "jungle",
+   "primate"
+  ],
+  "stats": {
+   "hp": 1880,
+   "damage": 215,
+   "hit_speed": 1.5,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "komodo_dragon",
+  "name": "Komodo Dragon",
+  "rarity": "epic",
+  "status": "EN",
+  "unlock_arena": "coral_coast",
+  "habitat": "ocean",
+  "class": "tank_destroyer",
+  "cost": 5,
+  "count": 1,
+  "tags": [
+   "reptile",
+   "island",
+   "venomous",
+   "predator"
+  ],
+  "stats": {
+   "hp": 1500,
+   "damage": 196,
+   "hit_speed": 1.3,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "red_wolf",
+  "name": "Red Wolf",
+  "rarity": "legendary",
+  "status": "CR",
+  "unlock_arena": "whispering_woods",
+  "habitat": "forest",
+  "class": "tank_destroyer",
+  "cost": 4,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "canine",
+   "forest",
+   "pack",
+   "predator"
+  ],
+  "stats": {
+   "hp": 1110,
+   "damage": 247,
+   "hit_speed": 1.0,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "axolotl",
+  "name": "Axolotl",
+  "rarity": "legendary",
+  "status": "CR",
+  "unlock_arena": "misty_marsh",
+  "habitat": "wetlands",
+  "class": "specialist",
+  "trait": "slow",
+  "cost": 3,
+  "count": 1,
+  "tags": [
+   "amphibian",
+   "wetland",
+   "aquatic"
+  ],
+  "stats": {
+   "hp": 1540,
+   "damage": 322,
+   "hit_speed": 1.1,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "sunda_pangolin",
+  "name": "Sunda Pangolin",
+  "rarity": "legendary",
+  "status": "CR",
+  "unlock_arena": "emerald_jungle",
+  "habitat": "rainforest",
+  "class": "specialist",
+  "trait": "burrow",
+  "cost": 4,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "jungle",
+   "armored",
+   "shelled"
+  ],
+  "stats": {
+   "hp": 3020,
+   "damage": 302,
+   "hit_speed": 1.1,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "saola",
+  "name": "Saola",
+  "rarity": "legendary",
+  "status": "CR",
+  "unlock_arena": "cloudpeak_mountains",
+  "habitat": "mountains",
+  "class": "tank",
+  "cost": 6,
+  "count": 1,
+  "tags": [
+   "mammal",
+   "mountain",
+   "jungle",
+   "herd"
+  ],
+  "stats": {
+   "hp": 2210,
+   "damage": 331,
+   "hit_speed": 1.2,
+   "speed": "fast",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "african_penguins",
+  "name": "African Penguins",
+  "rarity": "legendary",
+  "status": "CR",
+  "unlock_arena": "coral_coast",
+  "habitat": "ocean",
+  "class": "specialist",
+  "trait": "splash",
+  "cost": 4,
+  "count": 3,
+  "tags": [
+   "bird",
+   "marine",
+   "aquatic",
+   "colony"
+  ],
+  "stats": {
+   "hp": 870,
+   "damage": 195,
+   "hit_speed": 1.0,
+   "speed": "medium",
+   "range": 1,
+   "targets": "ground"
+  }
+ },
+ {
+  "id": "kakapo",
+  "name": "Kakapo",
+  "rarity": "legendary",
+  "status": "CR",
+  "unlock_arena": "last_sanctuary",
+  "habitat": "forest",
+  "class": "specialist",
+  "trait": "stun",
+  "cost": 2,
+  "count": 1,
+  "tags": [
+   "bird",
+   "island",
+   "nocturnal"
+  ],
+  "stats": {
+   "hp": 1990,
+   "damage": 330,
+   "hit_speed": 1.2,
+   "speed": "slow",
+   "range": 1,
+   "targets": "ground"
+  }
  }
 ]

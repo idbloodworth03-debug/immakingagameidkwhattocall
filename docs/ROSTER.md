@@ -17,7 +17,7 @@ about 0.46 for Common, 0.54 for Rare, 0.64 for Epic, 0.75 for Legendary and
 0.75-0.80 for Mythic. The original 20 are shown as they are: some are outside
 their rarity's range and wait for a decision.
 
-## In the game (57)
+## In the game (82)
 
 | Animal | Class | Row | Rarity | Found in | Power |
 |---|---|---|---|---|---|
@@ -78,36 +78,36 @@ their rarity's range and wait for a decision.
 | Qilin | Ranged | Back | Mythic | 9. Emerald Jungle | 0.78 |
 | Jackalope | Ranged | Back | Mythic | 3. Prairie Fields | 0.75 |
 | Unicorn | Ranged | Back | Mythic | 4. Whispering Woods | 0.78 |
+| Opossum | Tank | Front | Common (LC) | 1. Rescue Center | 0.48 |
+| Coyote Pack | Tank Destroyer | Middle | Common (LC) | 3. Prairie Fields | 0.45 |
+| Snapping Turtle | Tank | Front | Common (LC) | 5. Misty Marsh | 0.50 |
+| Honey Badger | Tank Destroyer | Middle | Common (LC) | 6. Sunbaked Savanna | 0.48 |
+| Spotted Hyenas | Tank Destroyer | Middle | Common (LC) | 6. Sunbaked Savanna | 0.47 |
+| Rattlesnake | Specialist (Stun) | Middle | Common (LC) | 7. Red Rock Canyon | 0.47 |
+| Moose | Tank | Front | Common (LC) | 8. Frozen Tundra | 0.48 |
+| Harbor Seal | Specialist (Splash) | Back | Common (LC) | 11. Coral Coast | 0.48 |
+| Platypus | Specialist (Slow) | Middle | Rare (NT) | 1. Rescue Center | 0.57 |
+| Eastern Box Turtle | Tank | Front | Rare (VU) | 2. City Park | 0.54 |
+| Gila Monster | Specialist (Slow) | Middle | Rare (NT) | 7. Red Rock Canyon | 0.53 |
+| Walrus | Specialist (Splash) | Back | Rare (VU) | 8. Frozen Tundra | 0.59 |
+| Jaguar | Tank Destroyer | Middle | Rare (NT) | 9. Emerald Jungle | 0.63 |
+| Snow Leopard | Tank Destroyer | Middle | Rare (VU) | 10. Cloudpeak Mountains | 0.57 |
+| Giant Panda | Tank | Front | Rare (VU) | 10. Cloudpeak Mountains | 0.56 |
+| Loggerhead Turtle | Tank | Front | Rare (VU) | 11. Coral Coast | 0.58 |
+| Black-footed Ferret | Specialist (Burrow) | Front (then underground) | Epic (EN) | 3. Prairie Fields | 0.65 |
+| Mountain Gorilla | Specialist (Stun) | Middle | Epic (EN) | 10. Cloudpeak Mountains | 0.69 |
+| Komodo Dragon | Tank Destroyer | Middle | Epic (EN) | 11. Coral Coast | 0.63 |
+| Red Wolf | Tank Destroyer | Middle | Legendary (CR) | 4. Whispering Woods | 0.76 |
+| Axolotl | Specialist (Slow) | Middle | Legendary (CR) | 5. Misty Marsh | 0.76 |
+| Sunda Pangolin | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 9. Emerald Jungle | 0.76 |
+| Saola | Tank | Front | Legendary (CR) | 10. Cloudpeak Mountains | 0.78 |
+| African Penguins | Specialist (Splash) | Back | Legendary (CR) | 11. Coral Coast | 0.76 |
+| Kakapo | Specialist (Stun) | Middle | Legendary (CR) | 12. Last Sanctuary | 0.76 |
 
-## Designed, not rendered yet (25)
+## Designed, not rendered yet (0)
 
 | Animal | Class | Row | Rarity | Found in | Batch | Power |
 |---|---|---|---|---|---|---|
-| Opossum | Tank | Front | Common (LC) | 1. Rescue Center | 2 | 0.48 |
-| Coyote Pack | Tank Destroyer | Middle | Common (LC) | 3. Prairie Fields | 2 | 0.45 |
-| Snapping Turtle | Tank | Front | Common (LC) | 5. Misty Marsh | 2 | 0.50 |
-| Honey Badger | Tank Destroyer | Middle | Common (LC) | 6. Sunbaked Savanna | 2 | 0.48 |
-| Spotted Hyenas | Tank Destroyer | Middle | Common (LC) | 6. Sunbaked Savanna | 2 | 0.47 |
-| Rattlesnake | Specialist (Stun) | Middle | Common (LC) | 7. Red Rock Canyon | 2 | 0.47 |
-| Moose | Tank | Front | Common (LC) | 8. Frozen Tundra | 2 | 0.48 |
-| Harbor Seal | Specialist (Splash) | Back | Common (LC) | 11. Coral Coast | 2 | 0.48 |
-| Platypus | Specialist (Slow) | Middle | Rare (NT) | 1. Rescue Center | 2 | 0.57 |
-| Eastern Box Turtle | Tank | Front | Rare (VU) | 2. City Park | 2 | 0.54 |
-| Gila Monster | Specialist (Slow) | Middle | Rare (NT) | 7. Red Rock Canyon | 2 | 0.53 |
-| Walrus | Specialist (Splash) | Back | Rare (VU) | 8. Frozen Tundra | 2 | 0.59 |
-| Jaguar | Tank Destroyer | Middle | Rare (NT) | 9. Emerald Jungle | 2 | 0.63 |
-| Snow Leopard | Tank Destroyer | Middle | Rare (VU) | 10. Cloudpeak Mountains | 2 | 0.57 |
-| Giant Panda | Tank | Front | Rare (VU) | 10. Cloudpeak Mountains | 2 | 0.56 |
-| Loggerhead Turtle | Tank | Front | Rare (VU) | 11. Coral Coast | 2 | 0.58 |
-| Black-footed Ferret | Specialist (Burrow) | Front (then underground) | Epic (EN) | 3. Prairie Fields | 2 | 0.65 |
-| Mountain Gorilla | Specialist (Stun) | Middle | Epic (EN) | 10. Cloudpeak Mountains | 2 | 0.69 |
-| Komodo Dragon | Tank Destroyer | Middle | Epic (EN) | 11. Coral Coast | 2 | 0.63 |
-| Red Wolf | Tank Destroyer | Middle | Legendary (CR) | 4. Whispering Woods | 2 | 0.76 |
-| Axolotl | Specialist (Slow) | Middle | Legendary (CR) | 5. Misty Marsh | 2 | 0.76 |
-| Sunda Pangolin | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 9. Emerald Jungle | 2 | 0.76 |
-| Saola | Tank | Front | Legendary (CR) | 10. Cloudpeak Mountains | 2 | 0.78 |
-| African Penguins | Specialist (Splash) | Back | Legendary (CR) | 11. Coral Coast | 2 | 0.76 |
-| Kakapo | Specialist (Stun) | Middle | Legendary (CR) | 12. Last Sanctuary | 2 | 0.76 |
 
 ## New real animals, not rendered yet (25)
 
@@ -163,8 +163,8 @@ their rarity's range and wait for a decision.
 
 | Class | In the game | On the way | All | Average power (all) |
 |---|---|---|---|---|
-| Tank | 6 | 16 | 22 | 0.64 |
-| Tank Destroyer | 7 | 19 | 26 | 0.61 |
+| Tank | 13 | 9 | 22 | 0.64 |
+| Tank Destroyer | 14 | 12 | 26 | 0.61 |
 | Ranged | 20 | 0 | 20 | 0.60 |
 | Air | 21 | 0 | 21 | 0.59 |
-| Specialist | 3 | 30 | 33 | 0.62 |
+| Specialist | 14 | 19 | 33 | 0.62 |

@@ -149,14 +149,14 @@ re-check them before launch.
 
 ## Animals
 
-The game has **57 animals**: the first 20 (8 Common, 5 Rare, 4 Epic and 3
-Legendary) and batch 1 of the roster expansion, all 37 Air and Ranged
-animals, including 9 Mythics. Each one is modeled, painted and animated
-(see [ART_DIRECTION.md](ART_DIRECTION.md)). Another 65 are on the way in
-`game/data/animals_later.json`, which the game doesn't load yet: batch 2
-(the other 25 designed earlier), batch 3 (25 more real animals) and batch 4
-(15 more Mythics). [ROSTER.md](ROSTER.md) lists every animal with its class,
-row, rarity, arena, batch and power.
+The game has **82 animals**: the first 20 (8 Common, 5 Rare, 4 Epic and 3
+Legendary), batch 1 of the roster expansion (all 37 Air and Ranged animals,
+including 9 Mythics) and batch 2 (the other 25 animals designed earlier).
+Each one is modeled, painted and animated (see
+[ART_DIRECTION.md](ART_DIRECTION.md)). Another 40 are on the way in
+`game/data/animals_later.json`, which the game doesn't load yet: batch 3 (25
+more real animals) and batch 4 (15 more Mythics). [ROSTER.md](ROSTER.md)
+lists every animal with its class, row, rarity, arena, batch and power.
 
 **Mythic** is the rarity above Legendary, for creatures from myth and
 legend: they start at level 11, have a rose-pink card with an animated frame
@@ -174,7 +174,7 @@ Each animal has:
 
 ### The roster
 
-The first 20 (all 57 are in [ROSTER.md](ROSTER.md)):
+The first 20 (all 82 are in [ROSTER.md](ROSTER.md)):
 
 | Animal | Rarity | Class | Unlocks in |
 |---|---|---|---|

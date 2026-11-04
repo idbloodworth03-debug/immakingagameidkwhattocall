@@ -1,13 +1,13 @@
 {
  "version": 2,
  "cell": [
-  72,
+  73,
   77
  ],
  "padding": 3,
- "columns": 14,
+ "columns": 13,
  "anchor": [
-  31.0,
+  32.0,
   48.7
  ],
  "pixels_per_tile": 56,

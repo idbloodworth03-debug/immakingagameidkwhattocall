@@ -79,7 +79,7 @@
 - [ ] Blinking: needs eye-closed frames from the Blender pipeline (about an hour of rendering for all 20 animals)
 - [ ] Render the tools' effects and the cages in the same style
 - [x] Roster expansion: 102 more animals and Mythics in four batches (docs/ROSTER.md)
-- [ ] Decide on the original 20 animals' stat changes (several are outside their rarity's power range)
+- [x] Rebalance the original 20 animals to their rarity's power range
 
 ## Phase 3: Online play
 

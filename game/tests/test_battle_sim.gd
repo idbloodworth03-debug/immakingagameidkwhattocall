@@ -240,8 +240,9 @@ func test_air_horn_damages_and_knocks_back() -> void:
 	var rat: BattleSim.Fighter = sim.spawn(1, "sewer_rats", 8 * T, 6 * T)[0]
 	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T + 800, 6 * T)[0]
 	var ally: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T - 800, 6 * T)[0]
+	rat.hp = 1  # nearly beaten: the blast finishes it off
 	_use(sim, "air_horn", 8 * T, 6 * T)
-	check(not rat.alive, "rats can't take the blast")
+	check(not rat.alive, "a nearly beaten rat can't take the blast")
 	check(bear.hp < bear.max_hp and bear.x > 8 * T + 800, "the bear is hurt and pushed back")
 	check_eq(ally.hp, ally.max_hp, "your own animals aren't hurt")
 

@@ -395,6 +395,11 @@ func _award_boss_reward(arena: int) -> Dictionary:
 	data.gold = get_gold() + given.gold
 	data.gems = get_gems() + given.gems
 	var cage: String = reward.get("cage", "")
+	# From mythic_cage_from_arena on, the first boss win gives the Moonlit
+	# Cage (one Mythic) instead.
+	var mythic_from := int(GameData.arena_index_by_id.get(String(reward.get("mythic_cage_from_arena", "")), -1))
+	if mythic_from >= 0 and arena >= mythic_from and String(reward.get("mythic_cage", "")) != "":
+		cage = String(reward.mythic_cage)
 	var slot: int = data.cage_slots.find(null)
 	if cage != "" and slot != -1:
 		data.cage_slots[slot] = {"cage_id": cage, "arena": arena, "unlock_at": 0.0}

@@ -51,6 +51,14 @@ static func guaranteed(cage: Dictionary, pools: Dictionary, rarity_order: Array)
 	return result
 
 
+## Percent chance (0-100) that the cage also holds one Mythic, on top of its
+## other animals (cages.json "mythic_chance"); 0 until a Mythic is unlocked.
+static func mythic_chance(cage: Dictionary, pools: Dictionary) -> float:
+	if pools.get("mythic", []).is_empty():
+		return 0.0
+	return clampf(float(cage.get("mythic_chance", 0.0)), 0.0, 100.0)
+
+
 ## Opens a cage. Returns { cage_id, gold, gems, cards: [{animal, rarity, count}] }
 ## with cards ordered from most common to rarest (best reveal last).
 static func roll(cage: Dictionary, arena_index: int, pools: Dictionary, rarity_order: Array, rng: RandomNumberGenerator) -> Dictionary:
@@ -64,6 +72,9 @@ static func roll(cage: Dictionary, arena_index: int, pools: Dictionary, rarity_o
 		var rarity := _pick_rarity(chances, rarity_order, rng)
 		if rarity != "":
 			counts[rarity] += 1
+	var mythic := mythic_chance(cage, pools)
+	if mythic > 0.0 and rng.randf() * 100.0 < mythic:
+		counts["mythic"] = int(counts.get("mythic", 0)) + 1
 
 	var cards := []
 	var max_stacks := int(cage.get("max_stacks_per_rarity", 3))

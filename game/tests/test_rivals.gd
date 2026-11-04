@@ -109,6 +109,15 @@ func test_beating_a_boss_promotes_and_rewards_once() -> void:
 	check(again.boss_reward.is_empty(), "but the reward is only the first time")
 
 
+func test_bosses_from_whispering_woods_give_a_moonlit_cage() -> void:
+	var reward: Dictionary = GameData.rival_rules.boss_reward
+	var from := int(GameData.arena_index_by_id[reward.mythic_cage_from_arena])
+	profile.data.trophies = int(GameData.arenas[from + 1].min_trophies) - 35
+	var result: Dictionary = profile.record_match("win", int(GameData.arenas[from + 1].min_trophies), true)
+	check(result.boss_beaten, "boss beaten")
+	check_eq(result.boss_reward.cage_id, String(reward.mythic_cage), "the Moonlit Cage instead of the Golden one")
+
+
 func test_losing_to_a_boss() -> void:
 	profile.data.trophies = 280
 	var result: Dictionary = profile.record_match("loss", 300, true)

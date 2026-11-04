@@ -4,7 +4,8 @@ extends Control
 ## glossy rim in the rarity's color, the animal's portrait standing in a
 ## spotlight of its habitat color, a name plate, its class badge, and the
 ## level with copies toward the next upgrade. Epic and Legendary
-## cards shine now and then. Tap it to call `on_tap`.
+## cards shine now and then; Mythic cards have an animated frame
+## (MythicFrame). Tap it to call `on_tap`.
 
 const SIZE_NORMAL := Vector2(158, 214)
 const SIZE_SMALL := Vector2(120, 160)
@@ -61,7 +62,7 @@ func refresh() -> void:
 	_copies = Profile.card_copies(animal_id) if _owned else 0
 	_upgradable = _owned and Profile.has_copies_for_upgrade(animal_id)
 	var rarity: String = animal.get("rarity", "common")
-	set_process(_owned and rarity in ["epic", "legendary"])
+	set_process(_owned and rarity in ["epic", "legendary", "mythic"])
 	queue_redraw()
 
 
@@ -84,6 +85,9 @@ func _draw() -> void:
 	var radius := int(w * 0.11)
 	var rarity_color := GameData.rarity_color(animal.get("rarity", "common"))
 	var dim := info == Info.COLLECTION and not _owned
+	var mythic: bool = animal.get("rarity", "") == "mythic" and not dim
+	if mythic:
+		rarity_color = MythicFrame.rim_color(rarity_color, _time)
 	var rim := rarity_color.darkened(0.35) if dim else rarity_color
 	var margin := w * 0.055
 
@@ -93,6 +97,8 @@ func _draw() -> void:
 		glow.shadow_color = Color(UIKit.YELLOW, 0.85)
 		glow.shadow_size = 12
 		draw_style_box(glow, rect.grow(2))
+	elif mythic:
+		MythicFrame.draw_glow(self, rect, radius, rarity_color, _time)
 	elif not dim and animal.get("rarity", "") in ["epic", "legendary"]:
 		var aura := UIKit.box(Color(rarity_color, 0.0), radius + 2)
 		aura.shadow_color = Color(rarity_color, 0.45)
@@ -108,6 +114,8 @@ func _draw() -> void:
 	gloss.corner_radius_bottom_left = 4
 	gloss.corner_radius_bottom_right = 4
 	draw_style_box(gloss, Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.35)))
+	if mythic:
+		MythicFrame.draw_spark(self, inner.grow(-1.5), _time)
 
 	# The art window with a spotlight in the habitat's color.
 	var art := Rect2(margin, margin, w - margin * 2, h * (0.66 if info != Info.NONE else 0.76) - margin)
@@ -164,6 +172,8 @@ func _draw() -> void:
 		_text(font, "NEW", tag, int(tag.size.y * 0.62), Color.WHITE)
 	if stamp != "":
 		_draw_stamp(font, rect)
+	if mythic:
+		MythicFrame.draw_sparkles(self, rect, _time)
 
 
 func _draw_animal(animal: Dictionary, art: Rect2, dim: bool) -> void:

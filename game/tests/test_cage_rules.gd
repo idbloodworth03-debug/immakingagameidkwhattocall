@@ -19,7 +19,9 @@ func test_card_count_and_gold() -> void:
 		var cage: Dictionary = GameData.cages[cage_id]
 		for arena in [0, 4, GameData.arenas.size() - 1]:
 			var rewards := CageRules.roll(cage, arena, GameData.cage_pools(arena), GameData.rarity_order, _rng(arena * 31 + 7))
-			check_eq(_total_cards(rewards), CageRules.card_count(cage, arena), "%s in arena %d card count" % [cage_id, arena])
+			# A Mythic, when a cage's mythic chance comes up, is on top of the count.
+			var bonus := 1 if rewards.cards.any(func(stack): return stack.rarity == "mythic") and float(cage.get("mythic_chance", 0)) > 0 else 0
+			check_eq(_total_cards(rewards), CageRules.card_count(cage, arena) + bonus, "%s in arena %d card count" % [cage_id, arena])
 			var gold := CageRules.gold_range(cage, arena)
 			check(rewards.gold >= gold.x and rewards.gold <= gold.y, "%s gold in range" % cage_id)
 
@@ -86,3 +88,32 @@ func test_skip_cost() -> void:
 	check_eq(CageRules.skip_cost_gems(0, cage), 0, "ready cage is free")
 	check_eq(CageRules.skip_cost_gems(60, cage), 1, "at least one gem")
 	check_eq(CageRules.skip_cost_gems(3 * 3600, cage), 18, "three hours")
+
+
+func test_mythic_chance_once_per_cage() -> void:
+	var top := GameData.arenas.size() - 1
+	var pools := GameData.cage_pools(top)
+	var cage: Dictionary = GameData.cages.crystal
+	check_eq(CageRules.mythic_chance(cage, pools), float(cage.mythic_chance), "the Crystal Cage's chance")
+	var with_mythic := 0
+	for seed_value in 1000:
+		var rewards := CageRules.roll(cage, top, pools, GameData.rarity_order, _rng(seed_value))
+		var mythics := 0
+		for stack in rewards.cards:
+			if stack.rarity == "mythic":
+				mythics += int(stack.count)
+		check(mythics <= 1, "never more than one Mythic")
+		with_mythic += mythics
+	check(with_mythic > 10 and with_mythic < 60, "about 3%% of Crystal Cages hold a Mythic (%d of 1000)" % with_mythic)
+	var no_mythics := pools.duplicate()
+	no_mythics.mythic = []
+	check_eq(CageRules.mythic_chance(cage, no_mythics), 0.0, "no chance before any Mythic is unlocked")
+	check_eq(CageRules.mythic_chance(GameData.cages.twig, pools), 0.0, "Twig Cages never have one")
+
+
+func test_moonlit_cage_holds_one_mythic() -> void:
+	var top := GameData.arenas.size() - 1
+	var rewards := CageRules.roll(GameData.cages.moonlit, top, GameData.cage_pools(top), GameData.rarity_order, _rng(5))
+	check_eq(_total_cards(rewards), 1, "one creature")
+	check_eq(rewards.cards[0].rarity, "mythic", "a Mythic")
+	check_eq(int(GameData.cages.moonlit.get("shop_gems", 0)), 0, "never sold")

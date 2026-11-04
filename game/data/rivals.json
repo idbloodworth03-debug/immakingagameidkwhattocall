@@ -1,5 +1,5 @@
 {
-  "_note": "Rival Rangers: the computer opponents in Draft Duel. Each arena has a few regulars and one boss (\"boss\": true), the final challenge before promotion: when a win could take you to the next arena, you face the boss, and beating the boss takes you up. In the top arena the boss appears once you have top_arena_boss_after trophies in it. Difficulty comes from the arena (0 in the first, 1 in the top), plus the rival's skill, plus boss_skill for a boss; after ease_after_losses losses in a row the next opponent is quietly easier (ease_amount less difficulty, and its cards ease_card_levels levels lower); the game never says so. A boss win always promotes you, and regular wins can't: the boss is the gate. style: a favorite class it picks more of (\"\" for none), and how much (0 to 1, 0.5 = ordinary) it likes adding stars over new animals, and likes tools. emotes: emote ids (emotes.json) said at the start, on a big hit, when winning a round and when losing one. look: the placeholder portrait (scripts/ui/ranger_portrait.gd): hair_style short, spiky, long, ponytail, bun, curly or bald; hat none, cap, beanie, bandana, safari, ranger or crown; eyes happy, sly, determined, sleepy or wide; mouth grin, smile, smirk, open or flat; extra none, glasses, freckles, mustache or scarf. The first time you beat a boss you get boss_reward (gold, gems and a cage if a slot is free).",
+  "_note": "Rival Rangers: the computer opponents in Draft Duel. Each arena has a few regulars and one boss (\"boss\": true), the final challenge before promotion: when a win could take you to the next arena, you face the boss, and beating the boss takes you up. In the top arena the boss appears once you have top_arena_boss_after trophies in it. Difficulty comes from the arena (0 in the first, 1 in the top), plus the rival's skill, plus boss_skill for a boss; after ease_after_losses losses in a row the next opponent is quietly easier (ease_amount less difficulty, and its cards ease_card_levels levels lower); the game never says so. A boss win always promotes you, and regular wins can't: the boss is the gate. style: a favorite class it picks more of (\"\" for none), and how much (0 to 1, 0.5 = ordinary) it likes adding stars over new animals, and likes tools. emotes: emote ids (emotes.json) said at the start, on a big hit, when winning a round and when losing one. look: the placeholder portrait (scripts/ui/ranger_portrait.gd): hair_style short, spiky, long, ponytail, bun, curly or bald; hat none, cap, beanie, bandana, safari, ranger or crown; eyes happy, sly, determined, sleepy or wide; mouth grin, smile, smirk, open or flat; extra none, glasses, freckles, mustache or scarf. The first time you beat a boss you get boss_reward (gold, gems and a cage if a slot is free): the Golden Cage, or from mythic_cage_from_arena on the Moonlit Cage with one Mythic.",
   "boss_within_trophies": 40,
   "top_arena_boss_after": 300,
   "boss_skill": 0.15,
@@ -9,7 +9,9 @@
   "boss_reward": {
     "gold": 1000,
     "gems": 100,
-    "cage": "golden"
+    "cage": "golden",
+    "mythic_cage": "moonlit",
+    "mythic_cage_from_arena": "whispering_woods"
   },
   "rivals": [
     {

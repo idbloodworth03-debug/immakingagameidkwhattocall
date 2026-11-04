@@ -99,7 +99,8 @@ start, their big hits, and rounds going their way or not.
   joins the regulars for rematches. The home screen shows "Boss next" when a
   boss is waiting.
 - **The first win against each boss** gives `boss_reward` (1,000 gold, 100 gems
-  and a Golden Cage if a slot is free), with a "BOSS DEFEATED!" banner,
+  and a Golden Cage if a slot is free; from Whispering Woods on, a Moonlit
+  Cage with one Mythic instead), with a "BOSS DEFEATED!" banner,
   fireworks and coins, and a gold box on the results.
 - **Difficulty:** the arena (0 in the first, 1 at the top) plus the rival's
   own `skill`, plus `boss_skill` for a boss. After `ease_after_losses` (3)
@@ -148,14 +149,21 @@ re-check them before launch.
 
 ## Animals
 
-The game starts with **20 animals**: 8 Common, 5 Rare, 4 Epic and 3
-Legendary. Each one is modeled, painted, furred and animated (see
-[ART_DIRECTION.md](ART_DIRECTION.md)), and the plan is to get these 20 right
-before adding more. Another 102 are on the way in
-`game/data/animals_later.json`, which the game doesn't load yet: 37 designed
-earlier, 41 more real animals and 24 mythical creatures (a new Mythic
-rarity). [ROSTER.md](ROSTER.md) lists them all with their class, row,
-rarity, arena and the batch they'll be rendered in.
+The game has **57 animals**: the first 20 (8 Common, 5 Rare, 4 Epic and 3
+Legendary) and batch 1 of the roster expansion, all 37 Air and Ranged
+animals, including 9 Mythics. Each one is modeled, painted and animated
+(see [ART_DIRECTION.md](ART_DIRECTION.md)). Another 65 are on the way in
+`game/data/animals_later.json`, which the game doesn't load yet: batch 2
+(the other 25 designed earlier), batch 3 (25 more real animals) and batch 4
+(15 more Mythics). [ROSTER.md](ROSTER.md) lists every animal with its class,
+row, rarity, arena, batch and power.
+
+**Mythic** is the rarity above Legendary, for creatures from myth and
+legend: they start at level 11, have a rose-pink card with an animated frame
+(a pulsing glow, a slowly shifting rainbow tint, a spark running round the
+rim and twinkling sparkles; `frame` in rarities.json), and a Ranger Journal
+on their card that tells the real animal behind the legend. They come from
+Moonlit Cages and as a rare extra in big cages (see Cages).
 
 Each animal has:
 
@@ -165,6 +173,8 @@ Each animal has:
 - A **power** number (2 to 8, the old shop cost) the computer opponent uses to judge it. The old ability names stay in the data for flavor; they don't do anything in a fight.
 
 ### The roster
+
+The first 20 (all 57 are in [ROSTER.md](ROSTER.md)):
 
 | Animal | Rarity | Class | Unlocks in |
 |---|---|---|---|
@@ -269,6 +279,14 @@ Crystal. Only **one cage unlocks at a time**. Gems finish the timer instantly
 | Crystal Cage | Wins, Shop | 24h | 120 / +20 | 20 Rare, 4 Epic | 500 gems |
 | Grand Enclosure | Shop | 24h | 300 / +40 | 50 Rare, 10 Epic | 1,500 gems |
 | Sanctuary Cage | Shop (from Arena 4) | 24h | exactly 1 | 1 Legendary | 500 gems |
+| Moonlit Cage | First win against each boss from Whispering Woods on | 24h | exactly 1 | 1 Mythic | never sold |
+
+**Mythics** come their own way: every Moonlit Cage holds one, and a Crystal
+Cage has a 3% chance of one Mythic on top of its other animals, a Grand
+Enclosure 6% and a Sanctuary Cage 15% (`mythic_chance` in cages.json, rolled
+once per cage, shown with the odds). Twig, Iron and Golden Cages never have
+one, and no cage holds a Mythic until you've reached the arena of at least
+one.
 
 How a cage fills:
 

@@ -36,6 +36,9 @@ static func details(cage_id: String, arena_index: int) -> VBoxContainer:
 			parts.append("%d %s" % [promised[rarity], GameData.rarity_name(rarity)])
 	if not parts.is_empty():
 		box.add_child(UIKit.paragraph("Guaranteed: " + ", ".join(parts), 21, UIKit.TEXT))
+	var mythic := CageRules.mythic_chance(cage, GameData.cage_pools(arena_index))
+	if mythic > 0.0:
+		box.add_child(UIKit.paragraph("%s%% chance of a Mythic creature too" % _percent(mythic), 21, GameData.rarity_color("mythic")))
 	box.add_child(UIKit.paragraph("Unlock time: " + UIKit.format_duration(float(cage.unlock_seconds)), 21))
 	var odds_button := UIKit.button("See odds", UIKit.GREY, 22, Vector2(200, 60))
 	odds_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
@@ -56,10 +59,20 @@ static func show_odds(cage_id: String, arena_index: int) -> void:
 	grid.add_theme_constant_override("h_separation", 40)
 	box.add_child(grid)
 	for rarity in GameData.rarity_order:
-		if not cage.weights.has(rarity):
-			continue  # this cage never has any (e.g. Mythics, which come their own way)
+		if float(cage.weights.get(rarity, 0.0)) <= 0.0:
+			continue  # this cage never rolls any (Mythics mostly come their own way)
 		grid.add_child(UIKit.label(GameData.rarity_name(rarity), 24, GameData.rarity_color(rarity)))
 		var chance := float(odds.get(rarity, 0.0))
 		grid.add_child(UIKit.label("%.2f%%" % chance if chance > 0.0 else "Locked", 24))
+	var mythic := CageRules.mythic_chance(cage, GameData.cage_pools(arena_index))
+	if mythic > 0.0:
+		grid.add_child(UIKit.label("+1 Mythic", 24, GameData.rarity_color("mythic")))
+		grid.add_child(UIKit.label("%s%%" % _percent(mythic), 24))
 	box.add_child(UIKit.paragraph("Guaranteed animals are added on top of these rolls. Rarities you haven't unlocked yet pass their chance to the next rarity down.", 19))
+	if float(cage.get("mythic_chance", 0.0)) > 0.0:
+		box.add_child(UIKit.paragraph("The Mythic chance is rolled once per cage, once you've unlocked a Mythic.", 19))
 	Modal.open(box, cage.name + " odds", 600)
+
+
+static func _percent(value: float) -> String:
+	return str(int(value)) if is_equal_approx(value, roundf(value)) else "%.1f" % value

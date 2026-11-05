@@ -18,7 +18,8 @@ Least Concern species, Legendaries are Critically Endangered.
 Everything runs offline on your computer, saved on the device:
 
 - **Menus:** five tabs laid out like other mobile card games (Shop, Animals, Battle, Clan, Events)
-- **Cards:** 122 animals in 5 rarities (Common to Mythic, 24 of them Mythics), each with a class and stats, plus 6 Ranger tools (see docs/ROSTER.md)
+- **Cards:** 35 animals in 5 rarities (Common to Mythic, 5 of them Mythics), each with a class and stats, plus 6 Ranger tools (see docs/ROSTER.md); 87 more are archived in `animals_archived.json`
+- **Deck:** you pick from your own deck of 8 animals (DECK on the home screen)
 - **Collection:** the animals and tools you've freed are your Draft Duel starters and shop, at their levels; level them up with copies and gold
 - **Trophies:** 12 arenas on a Trophy Road, and new animals unlock as you climb
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
@@ -191,7 +192,7 @@ files in `game/data/`:
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
 - **Draft Duel tuning** (wins needed, picks, options, tools, stars, Rally, how the field grows for big herds, how the computer weighs its picks): `draft_rules.json`
-- **Starting cards** for new players: `progression.json` (`starting_cards`)
+- **Starting cards** for new players (also their first deck): `progression.json` (`starting_cards`); deck size: `draft_rules.json` (`deck_size`)
 - **Classes** (counters, rows, Specialist traits, swarm size): `classes.json`; each animal's class and trait are in `animals.json`
 - **Habitats** (flavor: names, icons, colors): `habitats.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`

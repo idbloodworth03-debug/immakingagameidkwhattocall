@@ -59,10 +59,13 @@ func test_guarantees_are_kept() -> void:
 
 func test_guarantee_moves_down_when_rarity_locked() -> void:
 	# The Sanctuary Cage promises a Legendary; before any are unlocked the
-	# promise falls to the best rarity that is unlocked (Rare in arena 1).
-	var result := CageRules.guaranteed(GameData.cages.sanctuary, GameData.cage_pools(0), GameData.rarity_order)
-	check_eq(result.legendary, 0, "no legendary in arena 1")
-	check_eq(result.rare, 1, "falls back to rare")
+	# promise falls to the best rarity that is unlocked (only Commons in
+	# arena 1, a Rare from arena 2).
+	var first := CageRules.guaranteed(GameData.cages.sanctuary, GameData.cage_pools(0), GameData.rarity_order)
+	check_eq(first.legendary, 0, "no legendary in arena 1")
+	check_eq(first.common, 1, "falls back to common")
+	var second := CageRules.guaranteed(GameData.cages.sanctuary, GameData.cage_pools(1), GameData.rarity_order)
+	check_eq(second.rare, 1, "falls back to rare in arena 2")
 
 
 func test_same_seed_same_result() -> void:

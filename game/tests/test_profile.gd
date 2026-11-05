@@ -47,10 +47,12 @@ func test_draw_changes_nothing() -> void:
 
 
 func test_repair_adds_new_starter_cards() -> void:
+	profile.data.collection.erase("red_fox")
 	profile.data.collection.erase("net")
 	profile._repair()
-	check(profile.has_card("net"), "starter card restored")
-	check(profile.is_card_new("net"), "flagged as new")
+	for id in ["red_fox", "net"]:
+		check(profile.has_card(id), "starter card %s restored" % id)
+		check(profile.is_card_new(id), "flagged as new")
 
 
 func test_reaching_a_new_arena() -> void:
@@ -114,17 +116,56 @@ func test_card_levels_for_draft_duel() -> void:
 
 
 func test_small_saves_get_the_starting_cards() -> void:
-	profile.data.collection = {"cheetah": {"level": 3, "copies": 1, "new": false}, "air_horn": {"level": 1, "copies": 0, "new": false}}
+	profile.data.collection = {"lion": {"level": 3, "copies": 1, "new": false}, "air_horn": {"level": 1, "copies": 0, "new": false}}
 	profile._repair()
 	for id in GameData.progression.starting_cards:
 		check(profile.has_card(id), "topped up with %s" % id)
-	check_eq(int(profile.data.collection.cheetah.level), 3, "what they had stays")
+	check_eq(int(profile.data.collection.lion.level), 3, "what they had stays")
 	check(profile.found_count() >= int(GameData.draft_rules.offer_count), "enough to fill the options")
+	check_eq(profile.get_deck().size(), int(GameData.draft_rules.deck_size), "enough animals for a full deck")
+
+
+func test_archived_animals_are_kept_aside() -> void:
+	# An animal taken out of the game (in data/animals_archived.json).
+	profile.data.collection["walrus"] = {"level": 5, "copies": 2, "new": false}
+	profile._repair()
+	check(not profile.has_card("walrus"), "out of the collection")
+	check_eq(int(profile.data.archived_cards.walrus.level), 5, "but its level is kept")
+	# If it comes back into the game, the player has it again.
+	GameData.cards["walrus"] = {"id": "walrus", "kind": "animal", "rarity": "rare", "name": "Walrus"}
+	profile._repair()
+	GameData.cards.erase("walrus")
+	check(profile.data.collection.has("walrus"), "back in the collection")
+	check(not profile.data.archived_cards.has("walrus"), "and out of the archive")
+
+
+func test_the_first_deck_is_the_starting_animals() -> void:
+	var animals: Array = GameData.progression.starting_cards.filter(func(id): return not GameData.is_tool(id))
+	check_eq(profile.get_deck(), animals, "the starting 8")
+	check_eq(animals.size(), int(GameData.draft_rules.deck_size), "exactly a deck")
+
+
+func test_a_saved_deck_is_kept() -> void:
+	for id in ["lion", "tiger", "king_cobra"]:
+		profile.data.collection[id] = {"level": 1, "copies": 0, "new": false}
+	var deck: Array = profile.get_deck().slice(0, 5) + ["lion", "tiger", "king_cobra"]
+	profile.set_deck(deck)
+	check_eq(profile.get_deck(), deck, "saved")
+	profile.set_deck(deck + ["net", "lion", "black_rhino"])
+	check_eq(profile.get_deck(), deck, "tools, repeats, animals you don't have and a ninth are left out")
+	profile.data.collection.erase("tiger")
+	var after: Array = profile.get_deck()
+	check_eq(after.size(), int(GameData.draft_rules.deck_size), "a lost animal's place is filled")
+	check(not after.has("tiger"), "with one you have")
+
+
+func test_tools_come_with_any_deck() -> void:
+	check_eq(profile.owned_tools(), ["net"], "the Net")
 
 
 func test_big_saves_are_left_alone() -> void:
 	var owned := {}
-	for id in ["sewer_rats", "raccoon", "red_fox", "cheetah", "lion", "air_horn"]:
+	for id in ["electric_eel", "raccoon", "red_fox", "wild_boar", "lion", "tiger", "brown_bear", "hippopotamus", "air_horn"]:
 		owned[id] = {"level": 2, "copies": 0, "new": false}
 	profile.data.collection = owned.duplicate(true)
 	profile._repair()

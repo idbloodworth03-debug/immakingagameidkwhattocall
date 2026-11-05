@@ -301,6 +301,8 @@ func validate() -> Array:
 		if not cards.has(id):
 			problems.append("Starting card %s doesn't exist" % id)
 	var starter_animals := starters.filter(func(id): return cards.has(id) and not is_tool(id)).size()
+	if starter_animals < int(draft_rules.get("deck_size", 8)):
+		problems.append("There must be at least %d starting animals: a new player's first deck" % int(draft_rules.get("deck_size", 8)))
 	if starters.size() < int(draft_rules.get("offer_count", 5)):
 		problems.append("There must be at least %d starting cards to fill the Draft Duel options" % int(draft_rules.get("offer_count", 5)))
 	if starter_animals < int(draft_rules.get("picks_per_round", 3)):
@@ -314,7 +316,7 @@ func validate() -> Array:
 
 	for id in card_order:
 		var a: Dictionary = cards[id]
-		for field in ["name", "rarity", "cost", "count", "tags", "stats"]:
+		for field in ["name", "rarity", "cost", "tags", "stats"]:
 			if not a.has(field):
 				problems.append("%s: missing '%s'" % [id, field])
 		if not ["animal", "tool"].has(a.kind):

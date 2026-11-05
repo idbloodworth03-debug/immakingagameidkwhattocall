@@ -19,10 +19,11 @@ func test_starting_cards_fill_the_options() -> void:
 	var animals := cards.filter(func(id): return not GameData.is_tool(id))
 	check(cards.size() >= int(GameData.draft_rules.offer_count), "enough cards to fill the options")
 	check(animals.size() >= int(GameData.draft_rules.picks_per_round), "enough animals for round 1's picks")
+	check_eq(animals.size(), int(GameData.draft_rules.deck_size), "the starting animals are a whole deck")
 	var classes := {}
 	for id in animals:
 		classes[GameData.class_of(id)] = true
-	check_eq(classes.size(), animals.size(), "each starting animal is a different class")
+	check_eq(classes.size(), GameData.class_order.size(), "every class among the starting animals")
 
 
 func test_rarity_matches_conservation_status() -> void:
@@ -57,3 +58,18 @@ func test_ranged_animals_have_known_shots() -> void:
 			check(card.has("shot"), "%s (on the way) has a shot" % card.id)
 	check(not ShotLooks.look_for({"shot": "lightning"}).is_empty(), "looks are found by name")
 	check_eq(ShotLooks.look_for({}), GameData.shots[ShotLooks.DEFAULT], "no shot: the default")
+
+
+func test_archived_animals_stay_out_of_the_game() -> void:
+	var archived: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/animals_archived.json"))
+	var presets := FileAccess.get_file_as_string("res://export_presets.cfg")
+	var filter := ""
+	for line in presets.split("\n"):
+		if line.begins_with("exclude_filter="):
+			filter = line
+	check(filter.contains("data/animals_archived.json"), "the archive isn't in the web build")
+	for card in archived.animals:
+		check(not GameData.cards.has(card.id), "%s is archived, not in the game" % card.id)
+		check(filter.contains("art/units/%s/*" % card.id), "%s's art is left out of the web build" % card.id)
+	for id in GameData.card_order:
+		check(not filter.contains("art/units/%s/*" % id), "%s is in the game, so its art is in the build" % id)

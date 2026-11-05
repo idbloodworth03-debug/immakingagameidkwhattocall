@@ -66,7 +66,7 @@ func test_everyone_stays_on_the_field() -> void:
 	var sim := _sim(9)
 	for i in 3:
 		sim.spawn(0, "wild_boar", (3 + 5 * i) * T, 18 * T)
-		sim.spawn(1, "american_bison", (3 + 5 * i) * T, 2 * T)
+		sim.spawn(1, "hippopotamus", (3 + 5 * i) * T, 2 * T)
 	for i in 30 * sim.tps:
 		sim.step()
 		for f in sim.fighters:
@@ -101,7 +101,7 @@ func test_same_seed_same_fight() -> void:
 		var sim := _sim(77)
 		for id in ["wolf_pack", "red_fox", "gray_squirrel"]:
 			sim.spawn(0, id, 8 * T, 14 * T)
-		for id in ["brown_bear", "sewer_rats", "peregrine_falcon"]:
+		for id in ["brown_bear", "harbor_seal", "peregrine_falcon"]:
 			sim.spawn(1, id, 8 * T, 6 * T)
 		_run(sim, 30)
 		results.append(sim.checksum())
@@ -111,7 +111,7 @@ func test_same_seed_same_fight() -> void:
 func test_a_clone_plays_out_the_same() -> void:
 	var sim := _sim(5)
 	sim.spawn(0, "lion", 6 * T, 14 * T)
-	sim.spawn(0, "cheetah", 10 * T, 14 * T)
+	sim.spawn(0, "wild_boar", 10 * T, 14 * T)
 	sim.spawn(1, "tiger", 8 * T, 6 * T)
 	_run(sim, 2)
 	var copy := sim.clone()
@@ -122,7 +122,7 @@ func test_a_clone_plays_out_the_same() -> void:
 
 func test_clear_units_empties_the_field() -> void:
 	var sim := _sim()
-	sim.spawn(0, "sewer_rats", 8 * T, 15 * T)
+	sim.spawn(0, "wolf_pack", 8 * T, 15 * T)
 	sim.make_bait(1, 8 * T, 5 * T, 100, 100, 3 * T)
 	sim.clear_units()
 	check_eq(sim.fighters.size(), 0, "nothing left")
@@ -216,13 +216,12 @@ func test_burrowers_pop_up_behind_the_enemy() -> void:
 
 
 func test_splash_stun_and_slow() -> void:
-	borrow_later_animals()
 	var sim := _sim()
-	var walrus: BattleSim.Fighter = sim.spawn(0, "walrus", 8 * T, 12 * T)[0]
+	var seal: BattleSim.Fighter = sim.spawn(0, "harbor_seal", 8 * T, 12 * T)[0]
 	var target: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 10 * T)[0]
 	var beside: BattleSim.Fighter = sim.spawn(1, "wild_boar", 9 * T, 10 * T)[0]
 	var before := beside.hp
-	BattleAbilities.after_hit(sim, walrus, target, 100)
+	BattleAbilities.after_hit(sim, seal, target, 100)
 	check(beside.hp < before, "Splash hits the one beside it too")
 	var gorilla: BattleSim.Fighter = sim.spawn(0, "mountain_gorilla", 6 * T, 12 * T)[0]
 	for i in int(GameData.traits.stun.every):
@@ -235,7 +234,7 @@ func test_splash_stun_and_slow() -> void:
 
 func test_swarms_bring_at_most_two() -> void:
 	var sim := _sim()
-	check_eq(sim.spawn(0, "sewer_rats", 8 * T, 15 * T).size(), int(GameData.class_rules.swarm_max), "four rats on the card, two on the field")
+	check_eq(sim.spawn(0, "wolf_pack", 8 * T, 15 * T).size(), int(GameData.class_rules.swarm_max), "three wolves on the card, two on the field")
 
 
 # --- Ranger tools ----------------------------------------------------------
@@ -255,12 +254,12 @@ func test_net_stuns() -> void:
 
 func test_air_horn_damages_and_knocks_back() -> void:
 	var sim := _sim()
-	var rat: BattleSim.Fighter = sim.spawn(1, "sewer_rats", 8 * T, 6 * T)[0]
+	var rat: BattleSim.Fighter = sim.spawn(1, "gray_squirrel", 8 * T, 6 * T)[0]
 	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T + 800, 6 * T)[0]
 	var ally: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T - 800, 6 * T)[0]
 	rat.hp = 1  # nearly beaten: the blast finishes it off
 	_use(sim, "air_horn", 8 * T, 6 * T)
-	check(not rat.alive, "a nearly beaten rat can't take the blast")
+	check(not rat.alive, "a nearly beaten squirrel can't take the blast")
 	check(bear.hp < bear.max_hp and bear.x > 8 * T + 800, "the bear is hurt and pushed back")
 	check_eq(ally.hp, ally.max_hp, "your own animals aren't hurt")
 
@@ -284,10 +283,9 @@ func test_food_bait_lures_enemies() -> void:
 
 
 func test_tranq_dart_puts_the_closest_to_sleep() -> void:
-	borrow_later_animals()
 	var sim := _sim()
 	var near: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 6 * T)[0]
-	var far: BattleSim.Fighter = sim.spawn(1, "moose", 12 * T, 6 * T)[0]
+	var far: BattleSim.Fighter = sim.spawn(1, "black_rhino", 12 * T, 6 * T)[0]
 	_use(sim, "tranq_dart", 8 * T, 6 * T)
 	check(near.stun > 0, "closest is asleep")
 	check_eq(far.stun, 0, "only one target")

@@ -81,6 +81,8 @@ func _new_profile() -> Dictionary:
 		"tips_seen": [],
 		"bosses_beaten": [],
 		"collection": {},
+		"archived_cards": {},
+		"draft_deck": [],
 		"cage_slots": [],
 		"cage_cycle_index": 0,
 		"banner": _first_default(GameData.banners),
@@ -109,17 +111,30 @@ func _repair() -> void:
 			data[key] = fresh[key]
 	data.version = SAVE_VERSION
 
+	# Animals taken out of the game (data/animals_archived.json) are put
+	# aside with their levels, and come back if they return.
+	if not data.has("archived_cards"):
+		data.archived_cards = {}
 	for id in data.collection.keys():
 		if not GameData.cards.has(id):
+			data.archived_cards[id] = data.collection[id]
 			data.collection.erase(id)
-	# Too few cards to fill the Draft Duel options (or the 3 starting picks):
-	# top up with the starting cards.
+	for id in data.archived_cards.keys():
+		if GameData.cards.has(id):
+			data.collection[id] = data.archived_cards[id]
+			data.archived_cards.erase(id)
+	# Too few animals for a deck (or cards to fill the Draft Duel options):
+	# top up with all the starting cards, then the first arena's if that's
+	# still not enough.
 	if _too_few_cards():
 		for id in GameData.progression.get("starting_cards", []):
-			if not data.collection.has(id):
-				data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": true}
+			_give_starter(id)
+		for id in GameData.cards_in_arena(0):
+			if not _too_few_cards():
+				break
+			_give_starter(id)
 
-	# Classic battle's deck is gone.
+	# Classic battle's deck is gone (Draft Duel's is "draft_deck").
 	data.erase("deck")
 
 	var slot_count := int(GameData.progression.cage_slots)
@@ -137,12 +152,55 @@ func _repair() -> void:
 		data.icon = fresh.icon
 
 
+func _give_starter(id: String) -> void:
+	if not data.collection.has(id) and GameData.cards.has(id):
+		data.collection[id] = {"level": GameData.start_level(GameData.cards[id].rarity), "copies": 0, "new": true}
+
+
 func _too_few_cards() -> bool:
 	var animals := 0
 	for id in data.collection:
 		if not GameData.is_tool(id):
 			animals += 1
-	return data.collection.size() < int(GameData.draft_rules.offer_count) or animals < int(GameData.draft_rules.picks_per_round)
+	var rules := GameData.draft_rules
+	return data.collection.size() < int(rules.offer_count) or animals < maxi(int(rules.picks_per_round), int(rules.get("deck_size", 8)))
+
+
+# --- Deck ------------------------------------------------------------------
+
+## The player's Draft Duel deck: deck_size animals they own. The last deck
+## saved, with anything no longer owned dropped and gaps filled from the
+## starting cards, then the rest of the collection.
+func get_deck() -> Array:
+	var size := int(GameData.draft_rules.get("deck_size", 8))
+	var deck := []
+	for id in data.get("draft_deck", []):
+		if deck.size() < size and has_card(id) and not GameData.is_tool(id) and not deck.has(id):
+			deck.append(id)
+	var fill: Array = GameData.progression.get("starting_cards", []).duplicate()
+	fill.append_array(GameData.card_order)
+	for id in fill:
+		if deck.size() >= size:
+			break
+		if has_card(id) and not GameData.is_tool(id) and not deck.has(id):
+			deck.append(id)
+	return deck
+
+
+## Saves a deck (animal ids the player owns; extra ones are dropped).
+func set_deck(ids: Array) -> void:
+	var size := int(GameData.draft_rules.get("deck_size", 8))
+	var deck := []
+	for id in ids:
+		if deck.size() < size and has_card(id) and not GameData.is_tool(id) and not deck.has(id):
+			deck.append(id)
+	data.draft_deck = deck
+	_changed()
+
+
+## The tools the player owns (they come along with any deck).
+func owned_tools() -> Array:
+	return GameData.card_order.filter(func(id): return GameData.is_tool(id) and has_card(id))
 
 
 func _first_default(items: Array) -> String:

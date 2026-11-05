@@ -78,10 +78,12 @@ func _ready() -> void:
 	_rng.randomize()
 	# Your opponent is a Rival Ranger from your arena (or its boss, when a
 	# win would take you up), with their own way of playing (see Opponents).
-	# You both pick from the cards you own, at your levels.
+	# You pick from your deck and your tools; the rival brings a deck of its
+	# own that suits it, at about your card levels.
 	opponent = Opponents.next_for_player(_rng)
-	var pool := DraftMatch.pool_from_collection(Profile.has_card)
-	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(pool, Opponents.level_drop(opponent))], "pool": pool})
+	var mine: Array = Profile.get_deck() + Profile.owned_tools()
+	var theirs := _rival_pool(opponent, mine)
+	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs]})
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
 	_build()
 	Sound.play_music("battle")
@@ -96,13 +98,30 @@ func _ready() -> void:
 	add_child(intro)
 
 
+## The rival's cards: a deck that suits it (DraftBot.build_deck) from the
+## animals unlocked up to its arena, and as many tools as the player has,
+## from the tools unlocked there.
+func _rival_pool(rival: Dictionary, player_pool: Array) -> Array:
+	var arena := int(rival.get("arena_index", 0))
+	var unlocked: Array = GameData.card_order.filter(func(id): return int(GameData.cards[id].unlock_arena_index) <= arena)
+	var size := int(GameData.draft_rules.get("deck_size", 8))
+	var deck := DraftBot.build_deck(unlocked, rival.get("style", {}), _rng, float(rival.get("difficulty", 0.5)), size)
+	var tools: Array = unlocked.filter(func(id): return GameData.is_tool(id))
+	var want := maxi(1, player_pool.filter(func(id): return GameData.is_tool(id)).size())
+	while tools.size() > want:
+		tools.remove_at(_rng.randi_range(0, tools.size() - 1))
+	return deck + tools
+
+
 ## Levels for the opponent's cards: each rarity's starting level, plus as
-## many levels as the player's cards have on average, minus `drop`.
-static func _opponent_levels(pool: Array, drop := 0) -> Dictionary:
+## many levels as the player's cards (`reference`) have on average, minus
+## `drop`.
+static func _opponent_levels(pool: Array, drop := 0, reference: Array = []) -> Dictionary:
 	var above := 0.0
-	for id in pool:
+	var against: Array = reference if not reference.is_empty() else pool
+	for id in against:
 		above += Profile.card_level(id) - GameData.start_level(GameData.cards[id].rarity)
-	var offset := roundi(above / maxf(1.0, pool.size()))
+	var offset := roundi(above / maxf(1.0, against.size()))
 	var levels := {}
 	for id in pool:
 		levels[id] = clampi(GameData.start_level(GameData.cards[id].rarity) + offset - drop, 1, int(GameData.progression.card_max_level))

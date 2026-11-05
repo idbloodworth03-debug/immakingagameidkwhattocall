@@ -6,8 +6,8 @@ extends RefCounted
 ## Each round: Pick, then Fight, then a quick result.
 ##
 ##   Pick: each player makes 3 picks. In round 1, three starting animals
-##   from their collection. After that, from 5 options (animals and tools
-##   from their collection), each pick is one of:
+##   from their deck. After that, from 5 options (animals from their deck,
+##   and their tools), each pick is one of:
 ##     - an offered animal (one already in the herd gets a star instead),
 ##     - an offered tool (two at most; a third replaces one of them),
 ##     - a star for an animal already in the herd.
@@ -40,10 +40,11 @@ var herds := [[], []]
 ## Each team's tools (card ids), and which can still be used this fight.
 var tools := [[], []]
 var tools_ready := [[], []]
-## The cards each player's options come from (their collection).
+## The cards each player's options come from: their deck of animals and
+## their tools.
 var pools := [[], []]
 ## This round's options for each team: {"id": String, "taken": bool}. In
-## round 1, every animal in the player's collection.
+## round 1, every animal in the player's deck.
 var offers := [[], []]
 var picks_left := [0, 0]
 ## This round's picks, in order, for the screen: {"kind": "animal", "star"

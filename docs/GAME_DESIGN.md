@@ -16,11 +16,12 @@ and what it beats. First to 4 round wins takes the match.
 
 The theme is wildlife rescue: chests are **cages** you open to **free**
 animals, the player is a **Ranger**, and card rarity follows how endangered
-the animal is in real life. The animals you free are your draft pool.
+the animal is in real life. You pick from a deck of 8 of the animals you free.
 
 (Den Duel started as a real-time card battler with three dens per side and a
 river across the field. That mode, "Classic battle", and the dens, river and
-8-card deck were removed so Draft Duel is the whole game.)
+8-card deck were removed so Draft Duel is the whole game. Draft Duel has
+its own deck of 8 now.)
 
 ## Draft Duel
 
@@ -108,14 +109,24 @@ start, their big hits, and rounds going their way or not.
   difficulty and cards `ease_card_levels` lower. Nothing on screen says so.
 - Timings and sizes for the VS screen and emotes are in `feel.json` ("rivals").
 
-**Your collection matters.** Your picks come from the cards you own, and they
-fight at their levels. The computer opponent's cards are leveled like yours on
-average. New players start with 5 cards, one of each of four classes plus a
-tool: Brown Bear (Tank), Wild Boar (Tank Destroyer), Gray Squirrel (Ranged),
-Peregrine Falcon (Air) and the Net (`starting_cards` in
-`game/data/progression.json`). That fills the 5 options, and the first match
-already shows the whole counter loop. A save with fewer than 5 cards (or
-fewer than 3 animals) gets topped up with the starting cards.
+**Your deck of 8.** Before a match you choose a deck of 8 animals from the
+ones you own (the DECK button beside DRAFT DUEL; tap a card to add or take
+it out, DONE once all 8 slots are full). The game remembers your last deck.
+Round 1 offers exactly those 8, and you pick 3 to start. From round 2 the 5
+options come only from your deck's 8 and the tools you own. Every card
+fights at its level. The computer opponent builds its own deck of 8 from the
+animals unlocked up to its arena, leaning toward its favorite class
+(`deck_favorite`) with at least one of each class (`DraftBot.build_deck`),
+and its cards are leveled like yours on average.
+
+New players start with 8 animals across all five classes plus a tool, which
+is also their first deck: Brown Bear and Snapping Turtle (Tank), Wolf Pack
+and Wild Boar (Tank Destroyer), Gray Squirrel and Striped Skunk (Ranged),
+Peregrine Falcon (Air), Red Fox (Specialist) and the Net
+(`starting_cards` in `game/data/progression.json`). A save with too few
+animals for a deck gets all the starting cards, then the first arena's
+animals if it still needs more. Deck size is `deck_size` in
+`game/data/draft_rules.json`.
 
 **Tuning** is in `game/data/draft_rules.json` (wins needed, picks, options,
 tools, stars) and `game/data/classes.json` (counters, rows, traits, swarm
@@ -149,14 +160,15 @@ re-check them before launch.
 
 ## Animals
 
-The game has **122 animals**: the first 20 and the roster expansion's 102,
-added in four batches (37 Air and Ranged animals, the other 25 designed
-earlier, 25 more real animals, and the last 15 Mythics). That's 30 Common,
-31 Rare, 18 Epic, 19 Legendary and 24 Mythic. Each one is modeled, painted
-and animated (see [ART_DIRECTION.md](ART_DIRECTION.md)).
-[ROSTER.md](ROSTER.md) lists every animal with its class, row, rarity,
-arena, batch and power. New animals can wait in
-`game/data/animals_later.json` (empty now) until their art is ready.
+The game has **35 animals**: 13 Common, 6 Rare, 6 Epic, 5 Legendary and 5
+Mythic, 7 Tanks, 7 Tank Destroyers, 7 Ranged, 6 Air and 8 Specialists. The
+roster was cut from 122 so each animal stands out and decks are easy to
+build; the other 87 are archived in `game/data/animals_archived.json` with
+their art kept (left out of the web build). A save that owned an archived
+animal keeps its level aside (`archived_cards`), and gets it back if the
+animal returns. Each animal is modeled, painted and animated (see
+[ART_DIRECTION.md](ART_DIRECTION.md)). [ROSTER.md](ROSTER.md) lists every
+animal with its class, row, rarity, arena and power, and the archived ones.
 
 **Mythic** is the rarity above Legendary, for creatures from myth and
 legend: they start at level 11, have a rose-pink card with an animated frame
@@ -174,34 +186,45 @@ Each animal has:
 
 ### The roster
 
-The first 20 (all 122 are in [ROSTER.md](ROSTER.md)):
-
 | Animal | Rarity | Class | Unlocks in |
 |---|---|---|---|
-| Sewer Rats | Common | Specialist (Burrow) | 1. Rescue Center |
-| Raccoon | Common | Ranged | 1. Rescue Center |
-| Gray Squirrel | Common | Ranged | 1. Rescue Center |
-| Red Fox | Common | Specialist (Burrow) | 1. Rescue Center |
-| Peregrine Falcon | Common | Air | 1. Rescue Center |
+| Brown Bear | Common | Tank | 4. Whispering Woods |
+| Snapping Turtle | Common | Tank | 5. Misty Marsh |
+| Giant Panda | Rare | Tank | 10. Cloudpeak Mountains |
+| Hippopotamus | Rare | Tank | 5. Misty Marsh |
+| Asian Elephant | Epic | Tank | 9. Emerald Jungle |
+| Black Rhino | Legendary | Tank | 12. Last Sanctuary |
+| Yeti | Mythic | Tank | 8. Frozen Tundra |
+| Honey Badger | Common | Tank Destroyer | 6. Sunbaked Savanna |
 | Wild Boar | Common | Tank Destroyer | 2. City Park |
 | Wolf Pack | Common | Tank Destroyer | 4. Whispering Woods |
-| Brown Bear | Common | Tank | 4. Whispering Woods |
-| Cheetah | Rare | Tank Destroyer | 1. Rescue Center |
-| American Bison | Rare | Tank | 3. Prairie Fields |
-| Hippopotamus | Rare | Tank | 5. Misty Marsh |
 | Lion | Rare | Tank Destroyer | 6. Sunbaked Savanna |
-| Polar Bear | Rare | Tank | 11. Coral Coast |
-| African Wild Dogs | Epic | Tank Destroyer | 6. Sunbaked Savanna |
-| Tiger | Epic | Tank Destroyer | 9. Emerald Jungle |
-| Asian Elephant | Epic | Tank | 9. Emerald Jungle |
-| Red Panda | Epic | Specialist (Slow) | 10. Cloudpeak Mountains |
-| Black Rhino | Legendary | Tank | 12. Last Sanctuary |
+| Komodo Dragon | Epic | Tank Destroyer | 11. Coral Coast |
+| Tiger | Epic | Tank Destroyer | 8. Frozen Tundra |
+| Cerberus | Mythic | Tank Destroyer | 12. Last Sanctuary |
+| Gray Squirrel | Common | Ranged | 1. Rescue Center |
+| Raccoon | Common | Ranged | 1. Rescue Center |
+| Striped Skunk | Common | Ranged | 2. City Park |
+| King Cobra | Rare | Ranged | 9. Emerald Jungle |
+| Wild Bactrian Camel | Epic | Ranged | 7. Red Rock Canyon |
+| Sumatran Orangutan | Legendary | Ranged | 12. Last Sanctuary |
+| Unicorn | Mythic | Ranged | 4. Whispering Woods |
+| Barn Owl | Common | Air | 3. Prairie Fields |
+| Peregrine Falcon | Common | Air | 1. Rescue Center |
+| Harpy Eagle | Rare | Air | 3. Prairie Fields |
+| Hyacinth Macaw | Rare | Air | 9. Emerald Jungle |
 | California Condor | Legendary | Air | 7. Red Rock Canyon |
-| Amur Leopard | Legendary | Tank Destroyer | 8. Frozen Tundra |
+| Dragon | Mythic | Air | 10. Cloudpeak Mountains |
+| Electric Eel | Common | Specialist (Stun) | 5. Misty Marsh |
+| Harbor Seal | Common | Specialist (Splash) | 11. Coral Coast |
+| Red Fox | Common | Specialist (Burrow) | 1. Rescue Center |
+| Mountain Gorilla | Epic | Specialist (Stun) | 10. Cloudpeak Mountains |
+| Red Panda | Epic | Specialist (Slow) | 10. Cloudpeak Mountains |
+| Pygmy Three-toed Sloth | Legendary | Specialist (Slow) | 12. Last Sanctuary |
+| Sunda Pangolin | Legendary | Specialist (Burrow) | 9. Emerald Jungle |
+| Kraken | Mythic | Specialist (Splash) | 11. Coral Coast |
 
-Every arena unlocks at least one animal. Of these 20, 6 are Tanks, 7 Tank
-Destroyers, 2 Ranged, 2 Air and 3 Specialists (Burrow and Slow); the 37 still
-to come add more Ranged and Air animals and the Splash and Stun Specialists.
+Every arena unlocks at least one animal.
 
 ## Arenas and trophies
 
@@ -215,21 +238,21 @@ you can't drop back below it. The top two arenas don't, to keep some stakes.
 
 | # | Arena | Trophies | Floor | New animals |
 |---|---|---|---|---|
-| 1 | Rescue Center | 0 | yes | Pigeon Flock, Sewer Rats, Raccoon, Gray Squirrel, Opossum, Red Fox, Platypus (R), Cheetah (R) |
-| 2 | City Park | 300 | yes | Murder of Crows, Striped Skunk, Peregrine Falcon, Eastern Box Turtle (R) |
-| 3 | Prairie Fields | 600 | yes | Coyote Pack, Barn Owl, American Bison (R), Black-footed Ferret (E) |
-| 4 | Whispering Woods | 1,000 | yes | Wild Boar, Wolf Pack, Brown Bear, Red Wolf (L) |
-| 5 | Misty Marsh | 1,400 | yes | Bullfrog, Snapping Turtle, Hippopotamus (R), Whooping Crane (E), Axolotl (L) |
-| 6 | Sunbaked Savanna | 1,800 | yes | Honey Badger, Spotted Hyenas, Lion (R), African Wild Dogs (E), Black Rhino (L) |
-| 7 | Red Rock Canyon | 2,300 | yes | Rattlesnake, Gila Monster (R), California Condor (L) |
-| 8 | Frozen Tundra | 2,800 | yes | Moose, Polar Bear (R), Walrus (R), Amur Leopard (L) |
-| 9 | Emerald Jungle | 3,400 | yes | Jaguar (R), King Cobra (R), Tiger (E), Asian Elephant (E), Chimpanzee (E), Sunda Pangolin (L) |
-| 10 | Cloudpeak Mountains | 4,000 | yes | Mountain Goat, Snow Leopard (R), Giant Panda (R), Red Panda (E), Mountain Gorilla (E), Saola (L) |
-| 11 | Coral Coast | 4,600 | no | Harbor Seal, Loggerhead Turtle (R), Sea Otter (E), Komodo Dragon (E), African Penguins (L) |
-| 12 | Last Sanctuary | 5,300 | no | Kakapo (L), Philippine Eagle (L), Sumatran Orangutan (L) |
+| 1 | Rescue Center | 0 | yes | Gray Squirrel, Peregrine Falcon, Raccoon, Red Fox |
+| 2 | City Park | 300 | yes | Striped Skunk, Wild Boar |
+| 3 | Prairie Fields | 600 | yes | Barn Owl, Harpy Eagle (R) |
+| 4 | Whispering Woods | 1,000 | yes | Brown Bear, Wolf Pack, Unicorn (M) |
+| 5 | Misty Marsh | 1,400 | yes | Electric Eel, Snapping Turtle, Hippopotamus (R) |
+| 6 | Sunbaked Savanna | 1,800 | yes | Honey Badger, Lion (R) |
+| 7 | Red Rock Canyon | 2,300 | yes | Wild Bactrian Camel (E), California Condor (L) |
+| 8 | Frozen Tundra | 2,800 | yes | Tiger (E), Yeti (M) |
+| 9 | Emerald Jungle | 3,400 | yes | Hyacinth Macaw (R), King Cobra (R), Asian Elephant (E), Sunda Pangolin (L) |
+| 10 | Cloudpeak Mountains | 4,000 | yes | Giant Panda (R), Mountain Gorilla (E), Red Panda (E), Dragon (M) |
+| 11 | Coral Coast | 4,600 | no | Harbor Seal, Komodo Dragon (E), Kraken (M) |
+| 12 | Last Sanctuary | 5,300 | no | Black Rhino (L), Pygmy Three-toed Sloth (L), Sumatran Orangutan (L), Cerberus (M) |
 
-New players start with the 5 starting cards (see Draft Duel); the rest are
-found in cages.
+New players start with the 8 starting animals and the Net (see Draft Duel);
+the rest are found in cages.
 
 ### Ranking (with online play)
 

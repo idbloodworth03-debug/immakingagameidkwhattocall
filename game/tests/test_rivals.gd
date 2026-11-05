@@ -162,7 +162,7 @@ func test_a_favorite_class() -> void:
 
 func test_counters() -> void:
 	var m := _second_round()
-	m.herds_seen[0] = [{"id": "brown_bear", "stars": 1}, {"id": "polar_bear", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
+	m.herds_seen[0] = [{"id": "brown_bear", "stars": 1}, {"id": "giant_panda", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
 	var sharp := DraftBot.new(m, 1, 9, 1.0)
 	check(sharp._class_need("tank_destroyer") > sharp._class_need("tank"), "lots of Tanks over there: Tank Destroyers")
 	m.herds_seen[0] = [{"id": "peregrine_falcon", "stars": 1}, {"id": "california_condor", "stars": 1}]
@@ -172,7 +172,7 @@ func test_counters() -> void:
 func test_counters_go_by_what_it_has_seen() -> void:
 	var m := _second_round()
 	m.herds_seen[0] = [{"id": "gray_squirrel", "stars": 1}]
-	m.herds[0] = [{"id": "brown_bear", "stars": 1}, {"id": "polar_bear", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
+	m.herds[0] = [{"id": "brown_bear", "stars": 1}, {"id": "giant_panda", "stars": 1}, {"id": "hippopotamus", "stars": 1}]
 	var sharp := DraftBot.new(m, 1, 9, 1.0)
 	var before := sharp._class_need("tank_destroyer")
 	m.herds_seen[0] = m.herds[0].duplicate(true)
@@ -188,6 +188,24 @@ func test_personalities() -> void:
 	var tinkerer := DraftBot.new(m, 1, 1, 0.5, {"tools": 0.95})
 	var plain := DraftBot.new(m, 1, 1, 0.5)
 	check(tinkerer._offer_value("air_horn") > plain._offer_value("air_horn") + 1.0, "a tool lover wants another tool")
+
+
+func test_rival_decks_suit_the_rival() -> void:
+	var animals: Array = GameData.card_order.filter(func(id): return not GameData.is_tool(id))
+	var size := int(GameData.draft_rules.deck_size)
+	for favorite in GameData.class_order:
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 5
+		var deck := DraftBot.build_deck(animals, {"favorite": favorite}, rng, 0.5, size)
+		check_eq(deck.size(), size, "a full deck")
+		var classes := {}
+		for id in deck:
+			classes[GameData.class_of(id)] = int(classes.get(GameData.class_of(id), 0)) + 1
+			check(not GameData.is_tool(id), "animals only")
+		check_eq(classes.size(), GameData.class_order.size(), "every class")
+		check(int(classes[favorite]) >= int(GameData.draft_rules.bot.deck_favorite), "plenty of its favorite, %s" % favorite)
+	var few := DraftBot.build_deck(["brown_bear", "lion", "net"], {}, RandomNumberGenerator.new(), 0.5, size)
+	check_eq(few, ["brown_bear", "lion"], "a small collection gives a small deck")
 
 
 func test_rival_bots_play_whole_matches() -> void:

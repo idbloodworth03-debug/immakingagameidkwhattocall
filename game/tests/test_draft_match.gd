@@ -47,14 +47,37 @@ func test_round_one_is_three_starting_animals() -> void:
 	check_eq(m.herds[0].size(), 3, "three animals in the herd")
 	check(m.set_ready(0), "ready once all three are picked")
 	check_eq(m.phase, "pick", "still waiting for the other player")
-	for id in ["polar_bear", "cheetah", "raccoon"]:
+	for id in ["giant_panda", "wild_boar", "raccoon"]:
 		m.pick(1, _slot(m, 1, id))
 	m.set_ready(1)
 	check_eq(m.phase, "fight", "both ready: fight")
 
 
+func test_a_deck_is_what_you_pick_from() -> void:
+	var deck := ["brown_bear", "snapping_turtle", "wolf_pack", "wild_boar", "gray_squirrel", "striped_skunk", "peregrine_falcon", "red_fox"]
+	var theirs := ["giant_panda", "lion", "raccoon", "barn_owl", "harbor_seal", "hippopotamus", "tiger", "king_cobra", "air_horn"]
+	var m := DraftMatch.new(12, {"pools": [deck + ["net"], theirs]})
+	check_eq(m.offers[0].map(func(o): return o.id), deck, "round 1: your 8 to start with")
+	for id in ["brown_bear", "wild_boar", "gray_squirrel"]:
+		m.pick(0, _slot(m, 0, id))
+	for id in ["giant_panda", "lion", "raccoon"]:
+		m.pick(1, _slot(m, 1, id))
+	for round_number in 3:
+		m.set_ready(0)
+		m.set_ready(1)
+		_finish_fight(m)
+		if m.is_over():
+			break
+		m.next_round()
+		for o in m.offers[0]:
+			check(deck.has(o.id) or o.id == "net", "round %d offers %s, from your deck or tools" % [m.round_number, o.id])
+		for o in m.offers[1]:
+			check(theirs.has(o.id), "theirs from their deck: %s" % o.id)
+		m.picks_left = [0, 0]
+
+
 func test_later_rounds_offer_five_animals_and_tools() -> void:
-	var m := _after_starters(2, ["brown_bear", "lion", "gray_squirrel"], ["polar_bear", "cheetah", "raccoon"])
+	var m := _after_starters(2, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
 	var offers: Array = m.offers[0]
 	var tools := offers.filter(func(o): return GameData.is_tool(o.id)).size()
 	check_eq(offers.size(), int(GameData.draft_rules.offer_count), "five options")
@@ -75,7 +98,7 @@ func test_picking_an_owned_animal_adds_a_star() -> void:
 
 
 func test_stars_from_the_herd_and_the_cap() -> void:
-	var m := _after_starters(4, ["brown_bear", "lion", "gray_squirrel"], ["polar_bear", "cheetah", "raccoon"])
+	var m := _after_starters(4, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
 	check(m.star(0, 0), "a star for a herd animal")
 	check(m.star(0, 0), "and another")
 	check_eq(int(m.herds[0][0].stars), int(GameData.draft_rules.star_max), "up to the cap")
@@ -84,7 +107,7 @@ func test_stars_from_the_herd_and_the_cap() -> void:
 
 
 func test_undo_takes_a_pick_back() -> void:
-	var m := _after_starters(5, ["brown_bear", "lion", "gray_squirrel"], ["polar_bear", "cheetah", "raccoon"])
+	var m := _after_starters(5, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
 	m.star(0, 1)
 	check_eq(int(m.herds[0][1].stars), 2, "starred")
 	check(m.undo(0), "taken back")
@@ -107,7 +130,7 @@ func test_two_tools_at_most() -> void:
 func test_no_limit_on_the_herd() -> void:
 	var m := DraftMatch.new(7)
 	m.herds[0] = []
-	for id in ["brown_bear", "lion", "gray_squirrel", "polar_bear", "cheetah", "raccoon", "wolf_pack", "tiger", "hippopotamus", "black_rhino", "asian_elephant", "american_bison"]:
+	for id in ["brown_bear", "lion", "gray_squirrel", "giant_panda", "wild_boar", "raccoon", "wolf_pack", "tiger", "hippopotamus", "black_rhino", "asian_elephant", "snapping_turtle"]:
 		m.herds[0].append({"id": id, "stars": 1})
 	m._lay_out_herds()
 	check_eq(m.groups[0].size(), 12, "twelve animals on the field")
@@ -138,14 +161,14 @@ func _big_herd(count: int, ids: Array) -> Array:
 
 func test_small_herds_use_the_smallest_field() -> void:
 	var m := DraftMatch.new(31)
-	m.herds = [_big_herd(6, ["brown_bear", "lion", "gray_squirrel"]), _big_herd(6, ["polar_bear", "cheetah", "raccoon"])]
+	m.herds = [_big_herd(6, ["brown_bear", "lion", "gray_squirrel"]), _big_herd(6, ["giant_panda", "wild_boar", "raccoon"])]
 	m._lay_out_herds()
 	check_eq(m.field_scale, 1.0, "no need to grow")
 	check_eq(m.sim.width, BattleSim.WIDTH, "16 tiles wide")
 
 
 func test_big_herds_grow_the_field_up_to_a_limit() -> void:
-	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "sewer_rats", "wolf_pack", "hippopotamus", "red_panda", "raccoon", "cheetah"]
+	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "electric_eel", "wolf_pack", "hippopotamus", "red_panda", "raccoon", "wild_boar"]
 	var top := float(GameData.draft_rules.field.max_scale)
 	var last := 1.0
 	for count in [10, 20, 30, 45]:
@@ -160,7 +183,7 @@ func test_big_herds_grow_the_field_up_to_a_limit() -> void:
 
 
 func test_big_herds_line_up_without_overlapping() -> void:
-	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "sewer_rats", "hippopotamus", "red_panda", "raccoon", "cheetah", "tiger", "asian_elephant", "american_bison"]
+	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "electric_eel", "hippopotamus", "red_panda", "raccoon", "wild_boar", "tiger", "asian_elephant", "snapping_turtle"]
 	var m := DraftMatch.new(33)
 	m.herds = [_big_herd(24, ids), _big_herd(24, ids)]
 	m._lay_out_herds()
@@ -199,7 +222,7 @@ func test_rows_stay_in_order_in_big_herds() -> void:
 
 
 func test_tools_work_once_a_fight_and_stay() -> void:
-	var m := _after_starters(9, ["brown_bear", "lion", "gray_squirrel"], ["polar_bear", "cheetah", "raccoon"])
+	var m := _after_starters(9, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
 	m.tools[0] = ["net"]
 	m.picks_left = [0, 0]
 	m.set_ready(0)

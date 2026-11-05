@@ -32,6 +32,51 @@ func _init(draft_match: DraftMatch, bot_team: int, seed_value: int, bot_difficul
 	_tool_wait = _reaction()
 
 
+## A rival's deck: `size` animals from `available` (what's unlocked up to
+## its arena) that fit its personality: a few of its favorite class
+## (draft_rules.json bot "deck_favorite"), then at least one of every other
+## class, the rest its strongest picks. Tougher rivals (higher
+## `difficulty`) lean toward stronger cards; there's always some luck.
+static func build_deck(available: Array, bot_style: Dictionary, rng: RandomNumberGenerator, difficulty := 0.5, size := 8) -> Array:
+	var weights: Dictionary = GameData.draft_rules.get("bot", {})
+	var favorite := String(bot_style.get("favorite", ""))
+	var animals: Array = available.filter(func(id): return not GameData.is_tool(id))
+	var score := func(id: String) -> float:
+		return float(GameData.get_card(id).get("cost", 4)) * difficulty + rng.randf() * 3.0
+	var by_class := {}
+	for id in animals:
+		var cls := GameData.class_of(id)
+		if not by_class.has(cls):
+			by_class[cls] = []
+		by_class[cls].append({"id": id, "score": score.call(id)})
+	for cls in by_class:
+		by_class[cls].sort_custom(func(a, b): return a.score > b.score)
+	var deck := []
+	var take := func(cls: String, count: int) -> void:
+		for entry in by_class.get(cls, []):
+			if count <= 0 or deck.size() >= size:
+				return
+			if not deck.has(entry.id):
+				deck.append(entry.id)
+				count -= 1
+	if favorite != "":
+		take.call(favorite, int(weights.get("deck_favorite", 3)))
+	for cls in GameData.class_order:
+		take.call(cls, 1)
+	# The rest: the best of what's left, from any class.
+	var rest := []
+	for cls in by_class:
+		for entry in by_class[cls]:
+			if not deck.has(entry.id):
+				rest.append(entry)
+	rest.sort_custom(func(a, b): return a.score > b.score)
+	for entry in rest:
+		if deck.size() >= size:
+			break
+		deck.append(entry.id)
+	return deck
+
+
 ## A personality trait from `style`, from -0.5 to 0.5 (0 = ordinary).
 func _lean(trait_name: String) -> float:
 	return clampf(float(style.get(trait_name, 0.5)), 0.0, 1.0) - 0.5

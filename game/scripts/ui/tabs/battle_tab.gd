@@ -1,8 +1,9 @@
 extends Control
 ## Battle tab (the home screen): a window onto your arena, the Draft Duel
-## button, and the four cage slots.
+## and Deck buttons, and the four cage slots.
 
 const DRAFT_SCENE := "res://scenes/draft.tscn"
+const DECK_SCENE := "res://scenes/deck.tscn"
 
 var _arena_holder: PanelContainer
 var _slots_row: HBoxContainer
@@ -38,14 +39,24 @@ func _ready() -> void:
 	battle.icon = UIKit.icon(GameData.ui_icon("tab_battle"))
 	battle.add_theme_constant_override("icon_max_width", 58)
 	battle.add_theme_constant_override("h_separation", 14)
-	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	battle.pressed.connect(func() -> void: Transition.go(DRAFT_SCENE))
-	column.add_child(battle)
+	# Your deck of 8, to change any time.
+	var deck := UIKit.button("DECK", UIKit.BLUE, 36, Vector2(200, 118))
+	deck.icon = UIKit.icon(GameData.ui_icon("tab_animals"))
+	deck.add_theme_constant_override("icon_max_width", 44)
+	deck.add_theme_constant_override("h_separation", 8)
+	deck.pressed.connect(func() -> void: Transition.go(DECK_SCENE))
+	var buttons := UIKit.hbox(14)
+	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
+	buttons.add_child(battle)
+	buttons.add_child(deck)
+	column.add_child(buttons)
 	# A gentle pulse so the main button invites a tap.
+	battle.resized.connect(func() -> void: battle.pivot_offset = battle.size / 2.0)
 	var pulse := battle.create_tween().set_loops()
 	pulse.tween_property(battle, "scale", Vector2(1.03, 1.03), 0.9).set_trans(Tween.TRANS_SINE)
 	pulse.tween_property(battle, "scale", Vector2.ONE, 0.9).set_trans(Tween.TRANS_SINE)
-	column.add_child(UIKit.label("Pick 3 a round. First to 4 wins.", 20, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(UIKit.label("Pick 3 a round from your deck. First to 4 wins.", 20, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 
 	_slots_row = UIKit.hbox(10)
 	column.add_child(_slots_row)

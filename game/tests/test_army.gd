@@ -190,3 +190,111 @@ func test_same_armies_same_fight() -> void:
 		a.sim.step()
 		copy.step()
 	check_eq(copy.checksum(), a.sim.checksum(), "a copy plays on the same")
+
+
+# --- All-out war: nobody waits -------------------------------------------------
+
+## The feel report's idle check without the screen: of the time animals are
+## on the field while the other side still has animals, the share spent
+## standing about (not fighting, nor in the last half second, and moving less
+## than a quarter of what it could in half a second) with an enemy it could
+## hit. Plays the fight to its end.
+func _idle_share(m: DraftMatch) -> float:
+	var window := 10
+	var trail := {}
+	var fought := {}
+	var on_field := 0
+	var idle := 0
+	var steps := 0
+	while m.phase == "fight" and steps < 90 * m.sim.tps:
+		var sim := m.sim
+		var standing := [0, 0]
+		for f in sim.fighters:
+			if f.alive and f.is_unit():
+				standing[f.team] += 1
+		for f in sim.fighters:
+			if not f.alive or not f.is_unit():
+				continue
+			var path: Array = trail.get(f.uid, [])
+			path.append(Vector2i(f.x, f.y))
+			if path.size() > window + 1:
+				path.pop_front()
+			trail[f.uid] = path
+			if standing[0] == 0 or standing[1] == 0 or f.deploy_ticks > 0 or f.stun > 0 or f.memory.get("burrowing", false):
+				continue
+			on_field += 1
+			if f.target != null and f.target.alive and sim.in_range(f, f.target):
+				fought[f.uid] = sim.tick
+				continue
+			if path.size() <= window or sim.tick - int(fought.get(f.uid, -1000)) <= window:
+				continue
+			if Vector2(path[-1] - path[0]).length() * 4.0 >= float(f.speed * window):
+				continue
+			if sim.fighters.any(func(t): return t.is_unit() and sim.can_target(f, t)):
+				idle += 1
+		m.step()
+		steps += 1
+	return float(idle) / maxf(1.0, on_field)
+
+
+func test_nobody_stands_about_while_enemies_are_left() -> void:
+	var fights := [
+		[["brown_bear*2", "wild_boar*2", "gray_squirrel*2", "peregrine_falcon", "red_fox"], ["snapping_turtle*2", "lion", "striped_skunk*2", "barn_owl", "electric_eel"]],
+		[["asian_elephant*3", "wolf_pack*3", "king_cobra*2", "harbor_seal*2"], ["hippopotamus", "tiger*4", "raccoon*3", "mountain_gorilla"]],
+		[["giant_panda", "honey_badger*5", "sunda_pangolin*2"], ["black_rhino*4", "komodo_dragon", "hyacinth_macaw*2", "red_panda"]],
+	]
+	for i in fights.size():
+		var share := _idle_share(_armies(fights[i][0], fights[i][1], 3 + i))
+		check(share < 0.01, "fight %d: standing about %.1f%% of the time with an enemy to fight (should be close to none)" % [i + 1, share * 100.0])
+
+
+func test_the_whole_front_is_fought() -> void:
+	# Twelve boars against a wall of four bears: the boars spread out along
+	# the wall, one or more on every bear, not all on the middle ones.
+	var m := _armies(["wild_boar*6"], ["brown_bear*4"])
+	var army: BattleArmy = m.sim.army
+	var covered := false
+	for i in 30 * m.sim.tps:
+		m.step()
+		var bears: Array = m.sim.units(1)
+		if bears.size() < 4:
+			break
+		if army.at_war() and bears.all(func(b): return m.sim.units(0).any(func(f): return f.target == b and m.sim.in_range(f, b))):
+			covered = true
+			break
+	check(army.at_war(), "the war started")
+	check(covered, "while all four bears stand, every one has a boar on it")
+
+
+func test_fighters_walk_round_their_own_line() -> void:
+	# Boars stuck behind a wide wall of their own elephants, the enemy
+	# squirrels straight ahead: they walk round the end of the wall and
+	# every one of them gets into the fight.
+	var m := _armies(["asian_elephant*5", "wild_boar*3"], ["gray_squirrel*3", "brown_bear"])
+	var boars: Array = m.sim.units(0).filter(func(f): return f.card.id == "wild_boar")
+	var hit := {}
+	for i in 40 * m.sim.tps:
+		if m.phase != "fight":
+			break
+		m.step()
+		for b in boars:
+			if b.alive and b.memory.get("attacked", false):
+				hit[b.uid] = true
+	check_eq(hit.size(), boars.size(), "every boar landed a blow")
+
+
+func test_shots_go_over_teammates() -> void:
+	# Squirrels behind their own bears hit the enemy in front of the bears.
+	var m := _armies(["brown_bear*3", "gray_squirrel"], ["brown_bear"])
+	var squirrels: Array = m.sim.units(0).filter(func(f): return f.card.id == "gray_squirrel")
+	var enemy: BattleSim.Fighter = m.sim.units(1)[0]
+	var start := enemy.hp
+	var behind := true
+	for i in 8 * m.sim.tps:
+		m.step()
+		for s in squirrels:
+			if s.alive and m.sim.units(0).any(func(b): return b.card.id == "brown_bear" and b.y > s.y):
+				behind = false
+	check(squirrels.any(func(s): return s.memory.get("attacked", false)), "the squirrels shot")
+	check(behind, "from behind their own bears")
+	check(enemy.hp < start, "and hit the enemy past them")

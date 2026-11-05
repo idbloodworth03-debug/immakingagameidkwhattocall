@@ -73,6 +73,7 @@
 - [x] Unison for every army action; random variety only for idle fidgets and faces
 - [x] Tuned with bot-vs-bot reports (power, class against class, whole matches): every rarity on its target, Tank Destroyers beat Tanks, each class wins about half its fights
 - [x] Big army test (Profile > Developer tools): 40 against 40 runs smoothly on an iPhone
+- [x] All-out war after the clash: nobody stands about while there's an enemy to fight (idle time 8.5% → 0.1% in small fights, 9.7% → 0.2% in big ones, feel report); fighters spread along the whole enemy line and walk round anyone in the way; shots arc over teammates
 
 ## Phase 2: Look and feel (first pass done)
 

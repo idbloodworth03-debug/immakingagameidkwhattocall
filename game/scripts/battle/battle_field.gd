@@ -882,6 +882,9 @@ func _schedule_hit(e: Dictionary) -> Dictionary:
 			var tiles := toward.length() / 1000.0
 			var flight := clampf(tiles / maxf(0.1, Feel.num(c, "shot_tiles_per_second", 14.0)), Feel.num(c, "shot_min_seconds", 0.12), Feel.num(c, "shot_max_seconds", 0.32))
 			var arc := 1.0
+			if sim != null and sim.army != null:
+				# In an army fight, shots go over the teammates in between.
+				arc = Feel.num("army", "over_allies_arc", 1.4)
 			if e.has("volley"):
 				# A volley: higher, slower arcs, so the shots fly as a flock.
 				var a := "army"

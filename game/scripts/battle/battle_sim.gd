@@ -399,16 +399,28 @@ func move_toward_point(f: Fighter, goal: Vector2i, step_size: int) -> void:
 
 
 ## Burrowing animals travel underground, unseen, to just behind the enemy's
-## last row, and pop up there.
+## last row, and pop up there (or at once, when the rest of their herd is
+## gone).
 func _move_burrowed(f: Fighter) -> void:
+	# The last of its herd above ground (the rest have fallen): it comes up
+	# at once (nobody's left to keep the enemy busy while it digs).
+	var company: bool = teams[f.team].defeated == 0
+	for o in fighters:
+		if company:
+			break
+		if o.alive and o.team == f.team and o.is_unit() and not o.memory.get("burrowing", false):
+			company = true
+			break
 	var back: Fighter = null
 	for t in fighters:
 		if t.alive and t.team != f.team and t.is_unit() and not t.is_flying():
 			# The enemy furthest from the middle, on its own side.
 			if back == null or (t.y < back.y if t.team == 1 else t.y > back.y):
 				back = t
-	if back == null:
+	if back == null or not company:
 		f.memory.burrowing = false
+		if back != null:
+			events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
 		return
 	var behind := TILE if back.team == 1 else -TILE
 	var goal := Vector2i(back.x, clampi(back.y - behind, f.radius, height - f.radius))

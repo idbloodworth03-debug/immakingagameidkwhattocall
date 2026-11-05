@@ -140,9 +140,11 @@ carefully, and `OUT=file.txt` saves the results.
 
 To see how fights look (twitchy turning, flicker, pictures covering each
 other, sliding feet, hits shown before their strike, hit-stop, clutter,
-target hopping, slow endings), from bot-vs-bot fights through the real battle
-view: `small` is 4 animals a side, `big` 22, then how many fights
-(`HERD_A=lion,tiger HERD_B=...` for given herds):
+target hopping, slow endings, and IDLE: the share of time animals stand
+about while there's an enemy they could fight, which should be close to
+zero), from bot-vs-bot fights through the real battle view: `small` is 4
+cards a side, `big` 22, then how many fights (`HERD_A=lion,tiger HERD_B=...`
+for given herds; `IDLE_LOG=1` prints every idle moment):
 
 ```bash
 godot --headless --fixed-fps 60 --path game res://tests/feel_report.tscn -- small 8

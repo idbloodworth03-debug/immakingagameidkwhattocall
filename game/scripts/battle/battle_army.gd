@@ -21,11 +21,15 @@ extends RefCounted
 ##   Charge: a moment after the clash, Tank Destroyers leave their line for
 ##     the enemy Tanks, around the end of their own wall ("charge" event),
 ##     and go back to their places once no enemy Tanks are left.
-##   Battle: everyone fights what's in front of its own place (enemies off
-##     to the side count as further away), never straying more than its
-##     leash from its place.
-##   Collapse: when animals fall, the ranks close up and the ones behind
-##     step up; with nothing left to fight, the front marches on.
+##   All-out war: once the lines have clashed (or a front has been held up
+##     by a fight for a moment), nobody keeps its place or waits for a fight
+##     to come to it. Every animal goes for an enemy anywhere on the field:
+##     fighters take an open spot around one (the less crowded enemies
+##     first, so the whole front line is fought along, not just the middle)
+##     and walk around teammates and other enemies in the way, round the
+##     flanks if they must; shooters close in until they're in reach and
+##     shoot over everyone. (Before it, each animal only goes for what's in
+##     front of its own place, within its leash.)
 ##
 ## Like the rest of the fight it's whole numbers only, so it plays out the
 ## same way every time.
@@ -56,6 +60,15 @@ var repack_at := [-1, -1]
 ## feet keep step with it).
 var marched := [0, 0]
 var moved_now := [0, 0]
+## When the all-out war started (-1: not yet), and since when each team's
+## front has been held up by a fight (-1: it isn't).
+var war_tick := -1
+var hold_since := [-1, -1]
+## How many of each team's fighters are going for each enemy: {uid: count}.
+var crowd := [{}, {}]
+## Every animal on the field by square of a coarse grid (rebuilt each tick),
+## to find the ones in the way cheaply.
+var _grid := {}
 
 var pace := 0
 var catch_up_pct := 170
@@ -66,8 +79,17 @@ var charge_ticks := 16
 var charge_pct := 160
 var repack_ticks := 12
 var lane_pct := 120
-var idle_grace := 40
 var contact := 0
+var war_hold := 20
+var avoid_look := 1200
+var avoid_margin := 150
+var crowd_cost := 600
+var full_cost := 6000
+var spot_ticks := 3
+var switch_margin := 800
+## Reach (field units) from which an animal counts as a shooter: it needs no
+## spot of its own next to its target.
+var shooter_reach := 1500
 ## Every animal's bite, as a share of its card's (battle_rules.json
 ## "army" damage_pct).
 var bite_pct := 100
@@ -84,8 +106,16 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	charge_pct = int(a.get("charge_speed_pct", 160))
 	repack_ticks = maxi(1, roundi(float(a.get("repack_seconds", 0.6)) * tps))
 	lane_pct = int(a.get("lane_pct", 120))
-	idle_grace = roundi(float(a.get("idle_grace_seconds", 2.0)) * tps)
 	contact = roundi(float(a.get("contact_gap", 1.6)) * T)
+	var w: Dictionary = a.get("war", {})
+	war_hold = roundi(float(w.get("after_hold_seconds", 1.0)) * tps)
+	avoid_look = roundi(float(w.get("look_ahead", 1.2)) * T)
+	avoid_margin = roundi(float(w.get("pass_margin", 0.15)) * T)
+	crowd_cost = roundi(float(w.get("crowd_cost", 0.6)) * T)
+	full_cost = roundi(float(w.get("full_cost", 6.0)) * T)
+	spot_ticks = maxi(1, roundi(float(w.get("spot_seconds", 0.15)) * tps))
+	switch_margin = roundi(float(w.get("switch_margin", 0.8)) * T)
+	shooter_reach = roundi(float(w.get("shooter_reach", 1.5)) * T)
 	bite_pct = int(a.get("damage_pct", 100))
 
 
@@ -336,11 +366,12 @@ func layout(sim: BattleSim, team: int, snap := false) -> void:
 			f.prev_y = f.y
 
 
-## Where an animal's place is on the field right now.
-func place_of(f: BattleSim.Fighter) -> Vector2i:
+## Where an animal's place is on the field right now (`lagging`: as far back
+## as its rank has dropped while shooting).
+func place_of(f: BattleSim.Fighter, lagging := true) -> Vector2i:
 	var slot: Vector2i = f.memory.get("slot", Vector2i.ZERO)
 	var back := 1 if f.team == 0 else -1
-	var behind := slot.y + int(lag[f.team].get(f.memory.get("rank", ""), 0))
+	var behind := slot.y + (int(lag[f.team].get(f.memory.get("rank", ""), 0)) if lagging else 0)
 	return Vector2i(center[f.team] + slot.x * back, front[f.team] + behind * back)
 
 
@@ -351,9 +382,18 @@ func place_of(f: BattleSim.Fighter) -> Vector2i:
 ## the volley clock, the clash and the charge.
 func before_tick(sim: BattleSim) -> void:
 	var by_team := [[], []]
+	_grid = {}
+	crowd = [{}, {}]
 	for f: BattleSim.Fighter in sim.fighters:
 		if f.alive and f.is_unit() and f.memory.has("slot"):
 			by_team[f.team].append(f)
+		if f.alive and f.is_unit() and not f.memory.get("burrowing", false):
+			var key := _cell(f.x, f.y, f.is_flying())
+			if not _grid.has(key):
+				_grid[key] = []
+			_grid[key].append(f)
+			if f.target != null and f.target.alive and f.attack_range < shooter_reach:
+				crowd[f.team][f.target.uid] = int(crowd[f.team].get(f.target.uid, 0)) + 1
 	for team in 2:
 		if repack_at[team] >= 0 and sim.tick >= repack_at[team]:
 			repack_at[team] = -1
@@ -412,6 +452,16 @@ func before_tick(sim: BattleSim) -> void:
 					count += 1
 			if count > 0:
 				sim.events.append({"type": "volley", "team": team, "count": count, "x": x / count, "y": y / count})
+	# All-out war: from the clash, or once a front has been held up by a
+	# fight for a moment (whatever met it first).
+	if war_tick < 0:
+		for team in 2:
+			if not holding[team]:
+				hold_since[team] = -1
+			elif hold_since[team] < 0:
+				hold_since[team] = sim.tick
+			if clash_tick >= 0 or (hold_since[team] >= 0 and sim.tick >= hold_since[team] + war_hold):
+				war_tick = sim.tick
 	# The charge, a moment after the clash: Tank Destroyers go for the enemy
 	# Tanks (and back to their line once there are none).
 	for team in 2:
@@ -454,18 +504,14 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 	var place := place_of(f)
 	var charging := bool(f.memory.get("charging", false))
 	var free := bool(f.memory.get("free", false)) or charging
-	# With nothing in reach for a while after the clash, it may wander
-	# further from its place, a little more every moment (and keeps that
-	# room for the rest of the fight).
-	var leash := int(f.memory.leash) + int(f.memory.get("wander", 0))
-	_choose_target(sim, f, place, leash, free, charging)
+	var war := at_war()
+	var leash := int(f.memory.leash)
+	_choose_target(sim, f, place, leash, free or war, charging)
 	var t := f.target
-	if t != null or clash_tick < 0:
-		f.memory.idle = 0
-	else:
-		f.memory.idle = int(f.memory.get("idle", 0)) + 1
-		if int(f.memory.idle) > idle_grace:
-			f.memory.wander = int(f.memory.get("wander", 0)) + pace
+	if not war and f.cls == "ranged" and (t == null or not sim.in_range(f, t)):
+		# Its rank stopped to shoot, but nothing's in its reach yet: it
+		# keeps on with the army.
+		place = place_of(f, false)
 	if t != null and sim.in_range(f, t):
 		if f.cls == "ranged" and not free:
 			# Ranged fire together, on the volley clock; each shot carries
@@ -483,16 +529,49 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 	if t != null:
 		var goal := Vector2i(t.x, t.y)
 		var speed := sim.current_speed(f)
+		if (free or war) and f.attack_range < shooter_reach and t.is_unit():
+			# A fighter heads for an open spot next to its target; with none
+			# left, it picks an enemy with room around it.
+			var spot := _spot(sim, f, t)
+			if spot == NO_ROOM:
+				f.memory.full = t.uid
+				f.memory.full_until = sim.tick + spot_ticks * 4
+				var other := _find(sim, f, place, leash, true, charging)
+				_count(f, other)
+				f.target = other
+				if other == null:
+					return
+				t = other
+				goal = Vector2i(t.x, t.y)
+				if sim.in_range(f, t):
+					return
+			else:
+				goal = spot
 		if charging:
 			speed = speed * charge_pct / 100
 			goal = _around_own_wall(sim, f, goal)
-		elif not free:
+		elif not (free or war):
 			goal = _within(goal, place, leash)
-		sim.move_toward_point(f, goal, speed)
+		if free or war:
+			_go(sim, f, goal, speed)
+		else:
+			sim.move_toward_point(f, goal, speed)
 		return
+	if war:
+		# Nothing it can hit (only flyers left for a ground fighter): it
+		# stays in the fight all the same, under the nearest enemy.
+		var near := _nearest_any_enemy(sim, f)
+		if near != null and BattleSim.edge_distance(f, near) > T:
+			_go(sim, f, Vector2i(near.x, near.y), sim.current_speed(f))
+			return
 	# Nothing to fight: to its place, in step with the army.
 	var step := maxi(sim.current_speed(f), pace * catch_up_pct / 100)
 	sim.move_toward_point(f, place, step)
+
+
+## Whether the all-out war is on: everyone fights, nobody keeps its place.
+func at_war() -> bool:
+	return war_tick >= 0
 
 
 ## An animal fell: its army's ranks close up in a moment.
@@ -510,16 +589,54 @@ func fell(sim: BattleSim, f: BattleSim.Fighter) -> void:
 func _choose_target(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, free: bool, charging: bool) -> void:
 	var t := f.target
 	var turn := (sim.tick + f.uid) % sim.retarget_ticks == 0
+	var keep := false
 	if t != null and sim.can_target(f, t) and (free or _reachable(f, t, place, leash)):
 		if sim.in_range(f, t) or not turn:
 			if not (charging and t.cls != "tank"):
 				return
+		keep = not (charging and t.cls != "tank")
 	elif t == null and not turn:
 		# Nothing to fight: it looks around now and then (animals take
 		# turns), which keeps big armies cheap on phones. One whose target
 		# has just fallen looks at once.
 		return
-	f.target = _find(sim, f, place, leash, free, charging)
+	var found := _find(sim, f, place, leash, free, charging)
+	if keep and at_war() and found != null and found != t and t.is_unit() and found.kind != "bait":
+		# In the war, only for one clearly better (so nobody dithers).
+		if not sim.in_range(f, found) and _score(sim, f, found, place, free) + switch_margin >= _score(sim, f, t, place, free):
+			return
+	_count(f, found)
+	f.target = found
+
+
+## Keeps the count of who's going for whom up to date as `f` picks `t`
+## (call before setting f.target).
+func _count(f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	if f.attack_range >= shooter_reach:
+		return
+	var mine: Dictionary = crowd[f.team]
+	if f.target != null and mine.has(f.target.uid):
+		mine[f.target.uid] = maxi(0, int(mine[f.target.uid]) - 1)
+	if t != null:
+		mine[t.uid] = int(mine.get(t.uid, 0)) + 1
+
+
+## How far `t` counts as for `f`: its distance, plus (once free or at war,
+## for a fighter) how crowded it already is with `f`'s teammates, a lot more
+## once there's no room left around it; before the war, enemies off to the
+## side of its place count as further away.
+func _score(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, place: Vector2i, free: bool) -> int:
+	var score := BattleSim.edge_distance(f, t)
+	if not free:
+		return score + absi(t.x - place.x) * lane_pct / 100
+	if f.attack_range < shooter_reach:
+		var others := int(crowd[f.team].get(t.uid, 0)) - (1 if f.target == t else 0)
+		score += maxi(0, others) * crowd_cost
+		var ring := t.radius + f.radius + f.attack_range / 2
+		var room := maxi(1, 3141 * ring / (2000 * maxi(1, f.radius)))
+		if others >= room or (int(f.memory.get("full", -1)) == t.uid and sim.tick < int(f.memory.get("full_until", 0))):
+			score += full_cost
+	return score
 
 
 func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, free: bool, charging: bool) -> BattleSim.Fighter:
@@ -531,6 +648,8 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 	var liked: BattleSim.Fighter = null
 	var liked_score := 1 << 40
 	var reach := leash + f.attack_range + f.radius
+	var war := at_war() and not charging
+	var prefer_reach := roundi(float(prefer.get("tiles", 0)) * T)
 	for t: BattleSim.Fighter in sim.fighters:
 		if t.team == f.team or not t.alive:
 			continue
@@ -545,17 +664,30 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 			var r := reach + t.radius
 			if dx * dx + dy * dy > r * r:
 				continue
+		if free:
+			# Further away than the best so far (of its kind) even before any
+			# crowding: no need to look closer (squared distances: cheap).
+			var bound := best_score if best != null else -1
+			if wanted != "" and t.cls == wanted:
+				bound = liked_score if liked != null else -1
+			if bound >= 0:
+				var gap := bound + f.radius + t.radius
+				var ex := t.x - f.x
+				var ey := t.y - f.y
+				if ex * ex + ey * ey > gap * gap:
+					continue
 		if not sim.can_target(f, t):
 			continue
-		var score := BattleSim.edge_distance(f, t)
-		if not free:
-			score += absi(t.x - place.x) * lane_pct / 100
+		var score := _score(sim, f, t, place, free)
 		if score < best_score:
 			best = t
 			best_score = score
 		if wanted != "" and t.cls == wanted and score < liked_score:
-			liked = t
-			liked_score = score
+			# In the war, what its class goes after only within its
+			# class's reach (classes.json "prefer"), and only with room.
+			if not war or (BattleSim.edge_distance(f, t) <= prefer_reach and score - BattleSim.edge_distance(f, t) < full_cost):
+				liked = t
+				liked_score = score
 	return liked if liked != null else best
 
 
@@ -565,6 +697,21 @@ func _reachable(f: BattleSim.Fighter, t: BattleSim.Fighter, place: Vector2i, lea
 	var dy := t.y - place.y
 	var r := leash + f.attack_range + t.radius + f.radius
 	return dx * dx + dy * dy <= r * r
+
+
+## The nearest enemy animal, whether or not `f` can hit it.
+static func _nearest_any_enemy(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fighter:
+	var best: BattleSim.Fighter = null
+	var best_d := 1 << 60
+	for t: BattleSim.Fighter in sim.fighters:
+		if t.team != f.team and t.alive and t.is_unit() and not t.memory.get("burrowing", false):
+			var dx := t.x - f.x
+			var dy := t.y - f.y
+			var d := dx * dx + dy * dy
+			if d < best_d:
+				best = t
+				best_d = d
+	return best
 
 
 static func _nearest_enemy(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fighter:
@@ -582,6 +729,133 @@ static func _nearest_enemy(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fi
 
 
 # --- Moving ----------------------------------------------------------------
+
+const NO_ROOM := Vector2i(-1, -1)
+## Directions around a target to try for a spot, from straight at it out:
+## [cos, sin] in thousandths, every 30 degrees.
+const TURNS := [[1000, 0], [866, 500], [866, -500], [500, 866], [500, -866], [0, 1000], [0, -1000],
+	[-500, 866], [-500, -866], [-866, 500], [-866, -500], [-1000, 0]]
+
+
+## The grid square a point is in (flyers and walkers apart).
+static func _cell(x: int, y: int, flying: bool) -> int:
+	return ((x / BattleSim.SEPARATE_CELL) * 4096 + y / BattleSim.SEPARATE_CELL) * 2 + (1 if flying else 0)
+
+
+## The animals near a point, at one height (flyers or walkers).
+func _near(x: int, y: int, flying: bool) -> Array:
+	var found := []
+	var cx := x / BattleSim.SEPARATE_CELL
+	var cy := y / BattleSim.SEPARATE_CELL
+	for gx in range(cx - 1, cx + 2):
+		for gy in range(cy - 1, cy + 2):
+			var key := (gx * 4096 + gy) * 2 + (1 if flying else 0)
+			if _grid.has(key):
+				found.append_array(_grid[key])
+	return found
+
+
+## An open spot next to `t` where `f` can fight it: the nearest way round
+## from where `f` comes (a new one checked every spot_seconds), or NO_ROOM
+## if teammates and other enemies fill every side.
+func _spot(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> Vector2i:
+	if int(f.memory.get("spot_for", -1)) == t.uid and sim.tick < int(f.memory.get("spot_at", 0)) + spot_ticks:
+		var off: Vector2i = f.memory.spot
+		return Vector2i(clampi(t.x + off.x, f.radius, sim.width - f.radius), clampi(t.y + off.y, f.radius, sim.height - f.radius))
+	var ux := f.x - t.x
+	var uy := f.y - t.y
+	var d := BattleSim.isqrt(ux * ux + uy * uy)
+	if d == 0:
+		ux = 0
+		uy = 1000 if f.team == 0 else -1000
+	else:
+		ux = ux * 1000 / d
+		uy = uy * 1000 / d
+	var ring := t.radius + f.radius + f.attack_range / 2
+	var flying := f.is_flying()
+	# Only those close enough to the target to be in the way of a spot.
+	var near := []
+	for o: BattleSim.Fighter in _near(t.x, t.y, flying):
+		if o != f and o != t and o.alive:
+			var reach := ring + f.radius + o.radius
+			var ox := o.x - t.x
+			var oy := o.y - t.y
+			if ox * ox + oy * oy < reach * reach:
+				near.append(o)
+	var flip := 1 if f.uid % 2 == 0 else -1
+	for turn in TURNS:
+		var c: int = turn[0]
+		var s: int = turn[1] * flip
+		var rx := (ux * c - uy * s) / 1000
+		var ry := (ux * s + uy * c) / 1000
+		var sx := t.x + rx * ring / 1000
+		var sy := t.y + ry * ring / 1000
+		if sx < f.radius or sx > sim.width - f.radius or sy < f.radius or sy > sim.height - f.radius:
+			continue
+		var open := true
+		for o: BattleSim.Fighter in near:
+			var room := f.radius + o.radius - avoid_margin
+			var dx := o.x - sx
+			var dy := o.y - sy
+			if dx * dx + dy * dy < room * room:
+				open = false
+				break
+		if open:
+			f.memory.spot_for = t.uid
+			f.memory.spot_at = sim.tick
+			f.memory.spot = Vector2i(sx - t.x, sy - t.y)
+			return Vector2i(sx, sy)
+	f.memory.spot_for = -1
+	return NO_ROOM
+
+
+## Moves `f` toward `goal`, walking around anyone in the way (teammates,
+## and enemies it isn't after): past the first one in its path, on the
+## side it's less in the way, and on round the same side if the next one
+## is in the way too, so a line is walked round at its end.
+func _go(sim: BattleSim, f: BattleSim.Fighter, goal: Vector2i, speed: int) -> void:
+	var dx := goal.x - f.x
+	var dy := goal.y - f.y
+	var d := BattleSim.isqrt(dx * dx + dy * dy)
+	if d == 0 or speed <= 0:
+		return
+	var look := mini(d, avoid_look)
+	var mid_x := f.x + dx * look / (2 * d)
+	var mid_y := f.y + dy * look / (2 * d)
+	var block: BattleSim.Fighter = null
+	var block_along := 1 << 30
+	var block_side := 0
+	for o: BattleSim.Fighter in _near(mid_x, mid_y, f.is_flying()):
+		if o == f or o == f.target or not o.alive:
+			continue
+		var ox := o.x - f.x
+		var oy := o.y - f.y
+		var along := (ox * dx + oy * dy) / d
+		if along <= 0 or along > look + o.radius:
+			continue
+		var side := (oy * dx - ox * dy) / d
+		if absi(side) >= f.radius + o.radius:
+			continue
+		if along < block_along:
+			block = o
+			block_along = along
+			block_side = side
+	if block == null:
+		f.memory.detour = 0
+		sim.move_toward_point(f, goal, speed)
+		return
+	var turn := int(f.memory.get("detour", 0))
+	if turn == 0:
+		if block_side == 0:
+			turn = 1 if f.uid % 2 == 0 else -1
+		else:
+			turn = -1 if block_side > 0 else 1
+		f.memory.detour = turn
+	var clear := f.radius + block.radius + avoid_margin
+	var way := Vector2i(block.x - dy * turn * clear / d, block.y + dx * turn * clear / d)
+	way.x = clampi(way.x, f.radius, sim.width - f.radius)
+	way.y = clampi(way.y, f.radius, sim.height - f.radius)
+	sim.move_toward_point(f, way, speed)
 
 ## The nearest point to `goal` no more than `leash` from `place`.
 static func _within(goal: Vector2i, place: Vector2i, leash: int) -> Vector2i:

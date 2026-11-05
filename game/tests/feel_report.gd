@@ -10,6 +10,12 @@ extends Node
 ## HERD_A=id,id and HERD_B=id,id fight those herds instead of random ones
 ## ("id*2": two squads of it); OUT=file saves the report.
 ##
+## Idle check: of the time animals spend on the field while the other side
+## still has animals, the share spent standing about: not fighting (no
+## target in reach, nor in the last half second) and not getting anywhere
+## (moved less than a quarter of what it could in the last half second). Animals stunned, still arriving
+## or underground don't count. Should be close to zero: everyone fights.
+##
 ## Army checks (Draft Duel's formations): how far animals are from their
 ## places while their army marches, how straight each line is, whether the
 ## whole army's feet are in step, whether the Ranged fire together and their
@@ -29,6 +35,10 @@ var stats := {}
 var last := {}      # per view key: {"dir", "dir_at", "anim", "anim_at", "pos", "vel", "since_dir"}
 var targets := {}   # per fighter uid: last target uid
 var still := {}     # per fighter uid: [time, position] when last seen moving
+var trail := {}     # per fighter uid: its positions over the last IDLE_WINDOW ticks
+var fought := {}    # per fighter uid: the last tick it had a target in reach
+## How many ticks back the idle check looks to see if an animal got anywhere.
+const IDLE_WINDOW := 10
 var rng := RandomNumberGenerator.new()
 var weights: Array = []
 var pool: Array = []
@@ -90,6 +100,8 @@ func _next_fight() -> void:
 	last.clear()
 	targets.clear()
 	still.clear()
+	trail.clear()
+	fought.clear()
 
 
 func _reset_stats() -> void:
@@ -110,6 +122,8 @@ func _reset_stats() -> void:
 		"ranged_shots": 0, "volley_shots": 0, "volleys": 0, "volley_land_spread": 0.0,
 		"first_volley": 0.0, "clash": 0.0, "charge": 0.0, "with_volley": 0, "with_clash": 0, "with_charge": 0,
 		"volley_first": 0, "charge_after_clash": 0,
+		"war_ticks": 0, "idle_ticks": 0, "fighting_ticks": 0, "idle_no_target": 0,
+		"war_by_class": {}, "idle_by_class": {}, "idle_why": {},
 	}
 var _volley_lands := {}
 var _charged := false
@@ -176,6 +190,67 @@ func _before_step() -> void:
 				still[f.uid] = [now, Vector2(f.x, f.y)]
 	if alive <= 4:
 		stats.end_seconds += 1.0 / duel.sim.tps
+	_watch_idle()
+
+
+## The idle check, every tick: is each animal fighting, on its way
+## somewhere, or standing about while there are enemies left?
+func _watch_idle() -> void:
+	var sim := duel.sim
+	var standing := [0, 0]
+	for f in sim.fighters:
+		if f.alive and f.is_unit():
+			standing[f.team] += 1
+	for f in sim.fighters:
+		if not f.alive or not f.is_unit():
+			continue
+		var path: Array = trail.get(f.uid, [])
+		path.append(Vector2i(f.x, f.y))
+		if path.size() > IDLE_WINDOW + 1:
+			path.pop_front()
+		trail[f.uid] = path
+		if standing[0] == 0 or standing[1] == 0:
+			continue
+		if f.deploy_ticks > 0 or f.stun > 0 or f.memory.get("burrowing", false):
+			continue
+		stats.war_ticks += 1
+		stats.war_by_class[f.cls] = int(stats.war_by_class.get(f.cls, 0)) + 1
+		if f.target != null and f.target.alive and sim.in_range(f, f.target):
+			stats.fighting_ticks += 1
+			fought[f.uid] = sim.tick
+			continue
+		# Just done with a fight (its target fell, or moved off): it's on to
+		# the next, not standing about.
+		if path.size() <= IDLE_WINDOW or sim.tick - int(fought.get(f.uid, -1000)) <= IDLE_WINDOW:
+			continue
+		var moved: float = Vector2(path[-1] - path[0]).length()
+		if moved * 4.0 >= float(f.speed * IDLE_WINDOW):
+			continue
+		stats.idle_ticks += 1
+		stats.idle_by_class[f.cls] = int(stats.idle_by_class.get(f.cls, 0)) + 1
+		var can_hit := false
+		for t in sim.fighters:
+			if sim.can_target(f, t) and t.is_unit():
+				can_hit = true
+				break
+		var why := "nothing it can hit"
+		if can_hit:
+			if sim.army != null and sim.army.has_method("at_war") and not sim.army.at_war():
+				why = "before the war"
+			elif f.target == null:
+				why = "no target picked"
+			else:
+				why = "on its way, held up"
+		else:
+			stats.idle_no_target += 1
+		stats.idle_why[why] = int(stats.idle_why.get(why, 0)) + 1
+		if OS.get_environment("IDLE_LOG") != "":
+			var foes := []
+			if not can_hit:
+				for t in sim.fighters:
+					if t.alive and t.team != f.team:
+						foes.append("%s%s%s%s" % [t.card.get("id", t.kind), "(fly)" if t.is_flying() else "", "(under)" if t.memory.get("burrowing", false) else "", "(hidden)" if t.stealthed else ""])
+			print("idle %s %s t=%d team=%d (%d,%d) target=%s %s" % [why, f.card.id, sim.tick, f.team, f.x, f.y, (f.target.card.get("id", "bait") + " %d,%d" % [f.target.x, f.target.y]) if f.target != null else "-", ",".join(foes)])
 
 
 func _check_hits(events: Array) -> void:
@@ -407,6 +482,18 @@ func _finish_fight() -> void:
 	get_tree().quit()
 
 
+func _idle_by_class() -> String:
+	var whys := []
+	for why in stats.idle_why:
+		whys.append("%s %.0f%%" % [why, 100.0 * int(stats.idle_why[why]) / maxf(1, stats.idle_ticks)])
+	var parts := []
+	for cls in GameData.class_order:
+		var war := int(stats.war_by_class.get(cls, 0))
+		if war > 0:
+			parts.append("%s %.1f%%" % [GameData.class_info(cls).get("name", cls), 100.0 * int(stats.idle_by_class.get(cls, 0)) / war])
+	return "why: %s; by class: %s" % [", ".join(whys), ", ".join(parts)]
+
+
 func _report() -> void:
 	var uf := maxf(1.0, float(stats.unit_frames))
 	var secs := uf / 60.0  # animal-seconds watched
@@ -422,6 +509,7 @@ func _report() -> void:
 		"  hits                  %d; %.0f%% land on screen without a visible wind-up, %.2f s after the fight deals them on average; %.0f%% land on the same frame as a teammate's (%.0f%% dealt in step with a teammate of the same rhythm, max %d in one tick)" % [stats.hits, 100.0 * stats.impacts_unread / maxf(1, stats.impacts), stats.impact_late / maxf(1, stats.impacts), 100.0 * stats.impacts_together / maxf(1, stats.impacts), 100.0 * stats.lockstep_hits / maxf(1, stats.hits), stats.max_hits_tick],
 		"  target switches       %.2f per animal-second; %.0f%% leave a target that's still standing" % [stats.switches / secs, 100.0 * stats.switches_alive / maxf(1, stats.switches)],
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
+		"  IDLE                  %.1f%% of animal-time while enemies are alive spent standing about with an enemy it could fight (%.1f%% more with nothing it can hit: a ground fighter with only flyers left); %.0f%% fighting; %s" % [100.0 * (stats.idle_ticks - stats.idle_no_target) / maxf(1, stats.war_ticks), 100.0 * stats.idle_no_target / maxf(1, stats.war_ticks), 100.0 * stats.fighting_ticks / maxf(1, stats.war_ticks), _idle_by_class()],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
 	]
 	lines.append_array([

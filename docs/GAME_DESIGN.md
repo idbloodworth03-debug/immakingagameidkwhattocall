@@ -94,11 +94,15 @@ stronger than a squad's, with these stronger traits.
 5. **Charge:** a moment later the Tank Destroyers leave their line and go
    around the end of their own wall for the enemy Tanks (back to their line
    once there are none left).
-6. **Battle:** everyone fights what's in front of its own place and stays
-   near its line (a leash); an animal with nothing in reach for a while may
-   stray a little further.
-7. **Collapse:** when animals fall, the ranks close up and the ones behind
-   step up; with nothing left to fight, the front marches on.
+6. **All-out war:** from the clash on, nobody keeps its place or waits for
+   a fight to come to it. Every animal goes for an enemy anywhere on the
+   field. Fighters take an open spot around one, the less crowded enemies
+   first, so the whole enemy line is fought along, not just its middle;
+   they walk around teammates and other enemies in the way, round the end
+   of a line if they must. Shooters close in until they're in reach and
+   shoot over everyone (nothing blocks a shot). A burrower whose army is
+   gone comes up at once.
+7. **Collapse:** when animals fall, the ones behind step up into the gaps.
 
 You can blow the **War Horn** once (one tap: the whole army surges, biting
 harder, attacking faster and moving faster for a few seconds, with a horn

@@ -303,7 +303,7 @@
   },
 
   "army": {
-    "_note": "How armies look (Draft Duel). Everyone in a formation marches in step: one walk timing for the whole army, a step every march_stride_tiles of ground it covers, with a thump (stomp_volume_db) and a tiny shake (stomp_shake) on every step; small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Animals in an army are drawn at squad_scale of their size (so a formation reads as many animals in ranks); an elite Specialist elite_scale bigger; a Mythic hero its hero_scale (classes.json) bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
+    "_note": "How armies look (Draft Duel). Everyone in a formation marches in step: one walk timing for the whole army, a step every march_stride_tiles of ground it covers, with a thump (stomp_volume_db) and a tiny shake (stomp_shake) on every step; small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Animals in an army are drawn at squad_scale of their size (so a formation reads as many animals in ranks); an elite Specialist elite_scale bigger; a Mythic hero its hero_scale (classes.json) bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
     "march_stride_tiles": 0.6,
     "stomp_volume_db": -16.0,
     "stomp_shake": 0.03,
@@ -323,6 +323,7 @@
     "volley_min_seconds": 0.45,
     "volley_max_seconds": 0.85,
     "volley_arc": 1.8,
+    "over_allies_arc": 1.4,
     "clash_shake": 0.55,
     "clash_hitstop_seconds": 0.12,
     "war_horn_shake": 0.3,

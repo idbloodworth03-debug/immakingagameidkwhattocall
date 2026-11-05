@@ -36,14 +36,16 @@
   },
 
   "combat": {
-    "_note": "Combat juice. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could (0: armies strike in unison); a hit that comes within strike_grace_seconds of a strike lands on that strike. Health bars show once an animal is hurt and fade away (over health_bar_fade_seconds) when it hasn't been hit for health_bar_hide_after seconds. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
+    "_note": "Combat juice. A hit squashes the animal hit_squash and shoves it hit_knockback_pixels, adding up for hits close together but never past hit_squash_max and hit_knockback_max_pixels. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could (0: armies strike in unison); a hit that comes within strike_grace_seconds of a strike lands on that strike. Health bars show once an animal is hurt and fade away (over health_bar_fade_seconds) when it hasn't been hit for health_bar_hide_after seconds. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
     "windup_squash": 0.12,
     "windup_pull_pixels": 4.0,
     "strike_stretch": 0.16,
     "lunge_pixels": 12.0,
     "hit_flash_seconds": 0.11,
     "hit_squash": 0.2,
+    "hit_squash_max": 0.35,
     "hit_knockback_pixels": 7.0,
+    "hit_knockback_max_pixels": 14.0,
     "spring_stiffness": 320.0,
     "spring_damping": 16.0,
     "strong_hit_pct": 22,
@@ -318,6 +320,25 @@
     "grass_tufts": 46,
     "grass_sway": 1.0,
     "petals": 7
+  },
+
+  "styles": {
+    "_note": "How the animals' attack styles look (fx/style_look.gd on the animal, battle_field.gd for the moments; the rules are styles.json). The Brown Bear's swipe draws one wide arc across both targets for sweep_seconds. The Yeti glows frost the hit before its ground pound, which rings out in frost and shakes the field pound_shake. The turtle's shell is shell_width of its height across. A shot the Elephant takes for a teammate flashes a shield for shield_seconds. Colors for each. Profile > Developer tools > Attack styles starts each animal's little fight over every showcase_seconds, its enemies biting at showcase_enemy_bite_pct; Slow plays it at showcase_slow_speed.",
+    "showcase_seconds": 7.0,
+    "showcase_enemy_bite_pct": 25,
+    "showcase_slow_speed": 0.3,
+    "sweep_seconds": 0.3,
+    "pound_shake": 0.18,
+    "shield_seconds": 0.45,
+    "shell_width": 1.25,
+    "shell_dark": "#3d6b2c",
+    "shell_light": "#7fb04a",
+    "bamboo": "#8fd14f",
+    "bamboo_leaf": "#6fcf4a",
+    "frost": "#9fe6ff",
+    "shield": "#7fc8ff",
+    "hide": "#c9c3bd",
+    "charge_dust": "#c9b08a"
   },
 
   "army": {

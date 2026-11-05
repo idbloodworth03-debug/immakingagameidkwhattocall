@@ -192,6 +192,8 @@ var bar_trail := 1.0
 var trail_hold := 0.0
 
 var body: Body
+## Its attack style's poses and props (StyleLook), drawn over its body.
+var look: StyleLook
 
 
 ## Draws the sprite; positioned and scaled by the view for squash and hops.
@@ -307,6 +309,8 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.face.lid = UnitSprites.lid_color(v.id)
 	v.face.visible = false
 	v.body.add_child(v.face)
+	v.look = StyleLook.make(v)
+	v.add_child(v.look)
 	v.z_index = 1 if v.flying else 0
 	return v
 
@@ -566,9 +570,11 @@ func time_to_strike(now: float, toward: Vector2) -> float:
 func hurt(from_dir: Vector2, strong: bool) -> void:
 	flash = 1.0
 	var c := "combat"
-	squash += Feel.num(c, "hit_squash", 0.2) * (1.5 if strong else 1.0)
+	# Several hits at once (a pile-up, a slow frame) add up, but only so far:
+	# never squashed flat or shoved off its spot.
+	squash = minf(squash + Feel.num(c, "hit_squash", 0.2) * (1.5 if strong else 1.0), Feel.num(c, "hit_squash_max", 0.35))
 	var push_px := Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
-	knock += Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push_px
+	knock = (knock + Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push_px).limit_length(Feel.num(c, "hit_knockback_max_pixels", 14.0))
 	trail_hold = Feel.num(c, "health_bar_trail_delay", 0.4)
 	# A flinch: a quick tilt away from the blow and a little bounce, eyes wide.
 	_hurt_at = field.now()
@@ -1184,6 +1190,13 @@ func animate(dt: float, now: float) -> void:
 			sy *= shrink
 			opacity = 1.0 - Ease.in_cubic(d)
 	offset.y -= lift
+	# Its attack style's pose (in its shell, sitting for a snack, charging).
+	var style_pose := look.pose(f, now, dt)
+	sx *= float(style_pose.sx)
+	sy *= float(style_pose.sy)
+	offset.y -= float(style_pose.lift)
+	rot += float(style_pose.rot)
+	look.position = offset
 	if face.radius > 0.0 and (face.visible or now >= _blink_next or defeat >= 0.0 or stunned or slowed or celebrating
 			or now - _hurt_at < t.wide_seconds or now < _smug_until or (since >= 0.0 and since < windup)):
 		_update_face(t, anim, frame, now, since, windup, celebrating, stunned, slowed, k)
@@ -1223,7 +1236,7 @@ func animate(dt: float, now: float) -> void:
 		# No shader (the lighter option): flash and fade with a plain tint.
 		tint = tint.lerp(Color(2.0, 2.0, 2.0), flash * 0.6)
 		tint.a = opacity
-	body.self_modulate = tint
+	body.self_modulate = tint * style_pose.tint
 	body.redraw_if_changed()
 
 

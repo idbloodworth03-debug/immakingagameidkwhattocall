@@ -271,6 +271,32 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 		"text":
 			var grow := Ease.out_back(minf(1.0, t * 4.0), 2.5)
 			_draw_text(canvas, p + Vector2(0, -26 - 30 * Ease.out_cubic(t)), fx.text, int(22 * lerpf(0.5, 1.0, grow)), Color(color, 1.0 - Ease.in_cubic(t)), 4)
+		"sweep":
+			# One wide swipe: an arc from the first target round to the second.
+			var a: float = fx.get("a_ang", 0.0)
+			var b: float = fx.get("b_ang", 0.0)
+			var span := wrapf(b - a, -PI, PI)
+			var reach := Ease.out_cubic(clampf(t * 2.5, 0.0, 1.0))
+			var fade := 1.0 - Ease.in_cubic(t)
+			var from := a - span * 0.15
+			var to := from + (span * 1.3) * reach
+			canvas.draw_arc(p, r, minf(from, to), maxf(from, to), 18, Color(UIKit.INK, 0.45 * fade), 14.0)
+			canvas.draw_arc(p, r, minf(from, to), maxf(from, to), 18, Color(color, 0.95 * fade), 8.0)
+			canvas.draw_arc(p, r * 0.86, minf(from, to), maxf(from, to), 18, Color(color, 0.6 * fade), 4.0)
+		"shield":
+			# A curved shield flashing up on the side a shot came from.
+			var ang: float = fx.dir.angle()
+			var fade := 1.0 - Ease.in_cubic(t)
+			var grow := 0.85 + 0.15 * Ease.out_back(minf(1.0, t * 4.0))
+			var arc := PackedVector2Array()
+			for i in 13:
+				var u := ang - 1.1 + 2.2 * i / 12.0
+				arc.append(p + Vector2(cos(u), sin(u)) * r * grow)
+			for i in range(12, -1, -1):
+				var u := ang - 1.1 + 2.2 * i / 12.0
+				arc.append(p + Vector2(cos(u), sin(u)) * r * grow * 0.82)
+			canvas.draw_colored_polygon(arc, Color(color, 0.35 * fade))
+			canvas.draw_arc(p, r * grow, ang - 1.1, ang + 1.1, 14, Color(color.lightened(0.4), 0.95 * fade), 4.0)
 		"slash":
 			# Three claw marks raking across the target.
 			var d: Vector2 = fx.dir

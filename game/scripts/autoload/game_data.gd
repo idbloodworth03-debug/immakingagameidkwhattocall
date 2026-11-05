@@ -39,6 +39,7 @@ var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
 var shots: Dictionary = {}           # how Ranged animals' shots look (shots.json)
+var styles: Dictionary = {}          # each animal's attack style (styles.json)
 var testing: Dictionary = {}         # testing switches (testing.json)
 var habitats: Dictionary = {}        # habitat id -> name, icon, color (habitats.json; flavor)
 var habitat_order: Array = []        # habitat ids, in habitats.json order
@@ -96,6 +97,7 @@ func reload() -> void:
 	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
 	shots = _load("shots.json")
+	styles = _load("styles.json")
 	testing = _load("testing.json")
 	var habitat_data: Dictionary = _load("habitats.json")
 	habitats.clear()
@@ -208,14 +210,24 @@ func trait_of(card_id: String) -> String:
 	return String(cards.get(card_id, {}).get("trait", ""))
 
 
+## The one line about an animal's attack style its card shows when held
+## (styles.json), or "".
+func style_line(id: String) -> String:
+	return String(styles.get(id, {}).get("line", ""))
+
+
 func class_info(class_id: String) -> Dictionary:
 	return classes.get(class_id, {})
 
 
 ## The one short line about a card (shown when you hold it).
+## The one line a card shows when you hold it: a tool's effect, an animal's
+## attack style (styles.json), or else its trait's or class's line.
 func card_line(card_id: String) -> String:
 	if is_tool(card_id):
 		return String(cards[card_id].get("ability", {}).get("short", cards[card_id].get("ability", {}).get("text", "")))
+	if style_line(card_id) != "":
+		return style_line(card_id)
 	var trait_id := trait_of(card_id)
 	if trait_id != "":
 		return String(traits.get(trait_id, {}).get("line", ""))
@@ -351,6 +363,12 @@ func validate() -> Array:
 				problems.append("%s: unknown tag '%s' (add it to tags.json)" % [id, tag])
 		if a.has("shot") and not shots.has(String(a.shot)):
 			problems.append("%s: unknown shot '%s' (see shots.json)" % [id, a.shot])
+		if styles.has(id):
+			var style: Dictionary = styles[id]
+			if not BattleStyles.KINDS.has(String(style.get("kind", ""))):
+				problems.append("%s: unknown attack style '%s' (see styles.json)" % [id, style.get("kind", "")])
+			if String(style.get("line", "")).split(" ", false).size() > 8:
+				problems.append("%s: its style line must be 8 words or fewer" % id)
 
 	for cage_id in cage_order:
 		var cage: Dictionary = cages[cage_id]

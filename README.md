@@ -156,6 +156,11 @@ out each animation and reaction on demand: standing, a fidget, walking, both
 attacks, getting hit, a big hit, stunned, slowed, nearly beaten, celebrating
 and knocked out. **Next** goes through the rest of the roster three at a time.
 
+**Profile > Developer tools > Attack styles** shows each animal's own way of
+fighting on its own: the animal against a few enemies set up to bring its
+style out, its card's line on top, Prev/Next to go through them all, Again
+to start over and Slow for slow motion.
+
 **Profile > Developer tools > Big army test** checks that the biggest fights
 run smoothly on a phone: two armies of 40 (every class, elites, Mythic heroes,
 3-star squads) fight over and over on the real battle field. The top shows

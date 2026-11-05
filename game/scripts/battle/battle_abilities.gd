@@ -8,7 +8,8 @@ extends RefCounted
 ## - Stun: every few hits freezes the target for a moment.
 ## - Slow: hits make the target move and attack slower for a while.
 ##
-## Every other animal fights by its class alone (see BattleSim). BattleSim
+## Every animal also has its own attack style (BattleStyles, styles.json),
+## called from these same hooks. BattleSim
 ## calls these hooks at the right moments; an animal's trait is its
 ## "ability" here, and the numbers come from classes.json.
 
@@ -30,15 +31,16 @@ static func tiles(value: Variant) -> int:
 
 # --- Placing an animal -----------------------------------------------------
 
-static func on_spawn(_sim: BattleSim, f: BattleSim.Fighter, _first: bool) -> void:
+static func on_spawn(sim: BattleSim, f: BattleSim.Fighter, _first: bool) -> void:
 	if f.ability_id() == "burrow":
 		f.memory.burrowing = true
+	BattleStyles.on_spawn(sim, f)
 
 
 # --- Every tick ------------------------------------------------------------
 
-static func on_tick_effects(_sim: BattleSim, _f: BattleSim.Fighter) -> void:
-	pass
+static func on_tick_effects(sim: BattleSim, f: BattleSim.Fighter) -> void:
+	BattleStyles.on_tick(sim, f)
 
 
 static func on_tick(_sim: BattleSim, _f: BattleSim.Fighter) -> void:
@@ -72,6 +74,7 @@ static func counter_pct(from: String, to: String) -> int:
 
 
 static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, amount: int) -> void:
+	BattleStyles.after_hit(sim, f, t, amount)
 	match f.ability_id():
 		"splash":
 			var share := amount * int(f.param("pct", 60)) / 100
@@ -94,9 +97,10 @@ static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter
 
 # --- Taking damage ---------------------------------------------------------
 
-static func incoming_damage(_sim: BattleSim, t: BattleSim.Fighter, amount: int, _source: BattleSim.Fighter) -> int:
+static func incoming_damage(sim: BattleSim, t: BattleSim.Fighter, amount: int, source: BattleSim.Fighter) -> int:
 	if t.invulnerable > 0:
 		return 0
+	amount = BattleStyles.incoming(sim, t, amount, source)
 	if t.shield > 0:
 		var absorbed := mini(t.shield, amount)
 		t.shield -= absorbed
@@ -104,8 +108,8 @@ static func incoming_damage(_sim: BattleSim, t: BattleSim.Fighter, amount: int, 
 	return amount
 
 
-static func after_damaged(_sim: BattleSim, _t: BattleSim.Fighter) -> void:
-	pass
+static func after_damaged(sim: BattleSim, t: BattleSim.Fighter) -> void:
+	BattleStyles.after_damaged(sim, t)
 
 
 static func prevent_defeat(_sim: BattleSim, _t: BattleSim.Fighter) -> bool:

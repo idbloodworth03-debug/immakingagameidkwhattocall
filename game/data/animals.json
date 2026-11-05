@@ -211,8 +211,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 2220,
-   "damage": 271,
+   "hp": 1764,
+   "damage": 215,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -244,8 +244,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 2360,
-   "damage": 294,
+   "hp": 1868,
+   "damage": 233,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -344,8 +344,8 @@
    "herd"
   ],
   "stats": {
-   "hp": 3050,
-   "damage": 241,
+   "hp": 2810,
+   "damage": 222,
    "hit_speed": 1.8,
    "speed": "slow",
    "range": 1,
@@ -409,8 +409,8 @@
    "armored"
   ],
   "stats": {
-   "hp": 3860,
-   "damage": 502,
+   "hp": 3108,
+   "damage": 404,
    "hit_speed": 1.8,
    "speed": "medium",
    "range": 1,
@@ -695,8 +695,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 1650,
-   "damage": 257,
+   "hp": 1568,
+   "damage": 244,
    "hit_speed": 1.5,
    "speed": "slow",
    "range": 1,
@@ -910,8 +910,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 4260,
-   "damage": 369,
+   "hp": 3771,
+   "damage": 326,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,

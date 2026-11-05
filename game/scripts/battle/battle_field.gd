@@ -786,7 +786,8 @@ func add_events(events: Array) -> void:
 				chain = _schedule_hit(e)
 			"death":
 				_doom(e, float(chain.at) if not chain.is_empty() else _time)
-			"splash", "stun":
+			"splash", "stun", "cleave", "pound", "reflect":
+				# Shown when the hit they came with lands.
 				if not chain.is_empty() and float(chain.at) > _time:
 					chain.after.append(e)
 				else:
@@ -824,6 +825,8 @@ func _show(e: Dictionary) -> void:
 			var top := v.middle() - Vector2(0, 18) if v != null else to_screen(e.x, e.y)
 			fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
 			Sound.play("pop", -6.0, 0.2)
+		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end":
+			_show_style(e)
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
 			fx.burst("sparkle", at, 5, 50.0, 1.0, 7.0, [EFFECT_COLORS.tranq_dart, Color.WHITE], -70.0, 2.0)
@@ -864,6 +867,72 @@ func _show(e: Dictionary) -> void:
 			shake(Feel.num("army", "war_horn_shake", 0.3))
 
 
+## The moments of the animals' attack styles (BattleStyles): a swipe across
+## two, a ground pound, a blow bouncing back off a thick hide, a shell, a
+## snack, a charge.
+func _show_style(e: Dictionary) -> void:
+	var s := _scale()
+	var looks: Dictionary = GameData.feel.get("styles", {})
+	var v := view_for_uid(int(e.get("uid", -1)))
+	var at := v.middle() if v != null else to_screen(e.x, e.y)
+	match e.type:
+		"cleave":
+			var a := to_screen(e.ax, e.ay) + Vector2(0, -14)
+			var b := to_screen(e.bx, e.by) + Vector2(0, -14)
+			var sweep := fx.effect("sweep", at, maxf(at.distance_to(a), at.distance_to(b)) * 1.05, Color.WHITE, Feel.num("styles", "sweep_seconds", 0.3))
+			sweep.a_ang = (a - at).angle()
+			sweep.b_ang = (b - at).angle()
+			Sound.play("whoosh", -8.0, 0.1)
+		"pound":
+			var ground := to_screen(e.x, e.y)
+			var frost := Color(String(looks.get("frost", "#9fe6ff")))
+			fx.effect("flash", ground, e.radius * s * 0.55, Color(frost, 0.8), 0.25)
+			fx.effect("ring", ground, e.radius * s, frost, 0.55, "", true)
+			fx.effect("ring", ground, e.radius * s * 0.95, Color.WHITE, 0.45, "", true)
+			fx.effect("ring", ground, e.radius * s * 0.6, frost.lightened(0.3), 0.4, "", true)
+			fx.burst("sparkle", ground, 10, 260.0, 0.6, 8.0, [frost, Color.WHITE], 200.0, 2.0, 180.0)
+			fx.burst("puff", ground, 8, 200.0, 0.6, 10.0, [Color("#eef8ff"), frost.lightened(0.4)], -20.0, 2.5)
+			shake(Feel.num("styles", "pound_shake", 0.18))
+			Sound.play("boom", -6.0, 0.1)
+		"reflect":
+			var source := view_for_uid(int(e.to))
+			var to := source.middle() if source != null else to_screen(e.x, e.y)
+			var hide := Color(String(looks.get("hide", "#c9c3bd")))
+			# A ripple across its thick hide, and the bite flung back as a spray
+			# of sparks at the attacker.
+			fx.effect("ring", at, 900 * s, hide.lightened(0.2), 0.35)
+			fx.effect("ring", at, 600 * s, Color.WHITE, 0.25)
+			var dir := (to - at).normalized()
+			for i in 8:
+				fx.particle("spark", at, dir.rotated(randf_range(-0.5, 0.5)) * randf_range(320.0, 520.0), 0.32, 8.0, Color.WHITE if i % 2 == 0 else hide.lightened(0.3), 0.0, 3.0)
+			fx.effect("flash", to, 260 * s, Color(1, 1, 1, 0.7), 0.18)
+			if source != null:
+				source.hurt(dir, false)
+				fx.number(to + Vector2(0, -10), int(e.amount), "hurt_own" if source.team == 0 else "hurt_enemy", false, source.key)
+		"shell":
+			if e.on:
+				fx.burst("puff", at, 6, 140.0, 0.4, 8.0, [Color(String(looks.get("shell_light", "#7fb04a"))), Color("#d8e8c8")], -20.0, 2.5)
+				Sound.play("land", -4.0, 0.1)
+			else:
+				Sound.play("pop", -8.0, 0.2)
+		"snack":
+			if e.on:
+				fx.burst("leaf", at, 6, 120.0, 0.7, 8.0, [Color(String(looks.get("bamboo_leaf", "#6fcf4a"))), Color(String(looks.get("bamboo", "#8fd14f")))], 120.0, 2.0, 80.0)
+				Sound.play("heal", -6.0)
+		"heal":
+			if v != null and int(e.amount) > 0:
+				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key)
+				fx.burst_heal(at)
+		"rhino_charge":
+			var dust := Color(String(looks.get("charge_dust", "#c9b08a")))
+			fx.effect("dust", to_screen(e.x, e.y), 900 * s, dust, 0.5, "", true)
+			fx.burst("sparkle", at - Vector2(0, 12), 3, 90.0, 0.4, 8.0, [Color.WHITE, Color("#fff6b0")], 0.0, 3.0)
+			shake(0.1)
+			Sound.play("alert", -6.0)
+		"charge_end":
+			fx.effect("dust", to_screen(e.x, e.y), 700 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.45, "", true)
+
+
 ## A hit the fight just dealt: the attacker's strike plays (its wind-up
 ## first, if none is showing yet), a shot flies if it's thrown, and the hit
 ## lands when that strike or shot does. Until then the target's health bar
@@ -874,7 +943,8 @@ func _schedule_hit(e: Dictionary) -> Dictionary:
 	var hit := {"at": _time, "e": e, "target": target, "attacker": attacker, "after": [], "sim_at": _time, "read": false}
 	if attacker != null and attacker.defeat < 0.0 and not attacker.doomed:
 		var toward := Vector2(e.x - e.fx, e.y - e.fy)
-		var delay := attacker.time_to_strike(_time, toward)
+		# A charge knocks enemies aside as it runs into them: no wind-up.
+		var delay := 0.0 if e.get("charge", false) else attacker.time_to_strike(_time, toward)
 		var strike_at := _time + delay
 		hit.read = attacker.attacking(strike_at) and strike_at - attacker.attack_at >= attacker.windup_seconds() * 0.6
 		if bool(e.get("ranged", false)):
@@ -965,6 +1035,12 @@ func _land(hit: Dictionary) -> void:
 		if target.defeat < 0.0:
 			target.hurt(dir, strong)
 		at = target.middle()
+	if bool(e.get("guard", false)) and target != null:
+		# The Elephant took a shot for a teammate: a shield flashes up.
+		var shield := fx.effect("shield", target.middle(), UnitSprites.top(target.id) * target.body.k * 0.7,
+			Color(String(GameData.feel.get("styles", {}).get("shield", "#7fc8ff"))), Feel.num("styles", "shield_seconds", 0.45))
+		shield.dir = -dir
+		Sound.play("tower_hit", -8.0, 0.1)
 	if attacker != null and attacker.trait_name() == "splash":
 		# A belly flop lands with a splash ring on the ground.
 		fx.effect("ring", to_screen(e.x, e.y), 650 * s, EFFECT_COLORS.splash, 0.4, "", true)

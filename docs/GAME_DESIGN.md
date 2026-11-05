@@ -474,6 +474,33 @@ check (`crowd` in `feel.json`). From 24 animals on the field:
 - Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
 
+**Attack styles.** Every animal also fights in its own way, fitting the
+real animal, on top of its class's job (`game/data/styles.json`, rules in
+`scripts/battle/battle_styles.gd`; how they look in
+`scripts/fx/style_look.gd` and `battle_field.gd`). Each reads without
+words, and holding its card shows one line (8 words or fewer). Numbers are
+tuned with the power report so cards of a rarity land near the same win
+rate. Profile > Developer tools > Attack styles shows each one on its own
+in a little fight (with a Slow button).
+- Tanks:
+  - **Brown Bear**, "Big swipes hit two at once.": each swipe also catches
+    the next enemy in reach (35%), drawn as one wide white arc.
+  - **Snapping Turtle**, "Hides in its shell when hurt.": below 40% health it
+    hides for 2.5 s (taking 40% damage, not fighting), flat under a green
+    shell; then not again for 8 s.
+  - **Giant Panda**, "Sits down for a bamboo snack heal.": once a fight, at
+    half health, it sits for 2 s munching bamboo and heals 35%.
+  - **Hippopotamus**, "Thick hide bites back at attackers.": 15% of every
+    bite it takes goes back to the biter, with a ripple and a spray of sparks.
+  - **Asian Elephant**, "Shields the friends right behind it.": a shot at a
+    teammate just behind it hits the Elephant instead, a blue shield
+    flashing up.
+  - **Black Rhino**, "Charges through the enemy line first.": once an enemy
+    is within 5 tiles (or the war starts), it charges 5 tiles at 2.6 times
+    its speed in a cloud of dust, knocking everyone aside.
+  - **Yeti**, "Every third hit: icy ground pound.": it glows icy blue the hit
+    before; the pound hits and knocks back everyone around it.
+
 **On screen** there's only the score, the armies (a banner with its class
 icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no
 words float up over the field. After a fight the new score pops up big over

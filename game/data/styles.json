@@ -1,0 +1,10 @@
+{
+  "_note": "Every animal's own attack style (scripts/battle/battle_styles.gd; how it looks: battle_field.gd and fx/style_look.gd). line: what holding its card shows (8 words or fewer). kind: which style. The rest are its numbers: times in seconds, distances in tiles, pct in percent (of its bite, or of the damage it takes).",
+  "brown_bear": {"kind": "cleave", "line": "Big swipes hit two at once.", "pct": 35, "reach": 0.4},
+  "snapping_turtle": {"kind": "shell", "line": "Hides in its shell when hurt.", "below_pct": 40, "seconds": 2.5, "taken_pct": 40, "cooldown": 8.0},
+  "giant_panda": {"kind": "snack", "line": "Sits down for a bamboo snack heal.", "below_pct": 50, "seconds": 2.0, "heal_pct": 35},
+  "hippopotamus": {"kind": "reflect", "line": "Thick hide bites back at attackers.", "pct": 15},
+  "asian_elephant": {"kind": "guard", "line": "Shields the friends right behind it.", "reach": 1.6},
+  "black_rhino": {"kind": "rhino_charge", "line": "Charges through the enemy line first.", "trigger": 5.0, "tiles": 5.0, "speed_pct": 260, "damage_pct": 40, "knock": 1.0, "stun": 0.3},
+  "yeti": {"kind": "pound", "line": "Every third hit: icy ground pound.", "every": 3, "radius": 2.0, "pct": 30, "knock": 1.0}
+}

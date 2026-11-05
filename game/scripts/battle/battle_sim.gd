@@ -75,6 +75,13 @@ class Fighter:
 	var trait_id := ""
 	## Extra per-ability state, e.g. "hits", "burrowing".
 	var memory: Dictionary = {}
+	## Its own attack style (styles.json): the kind, and its numbers.
+	var style_kind := ""
+	var style: Dictionary = {}
+
+	## A number of its attack style (styles.json).
+	func sp(param_name: String, default: Variant = 0) -> Variant:
+		return style.get(param_name, default)
 
 	## What it does besides fighting by its class: a Specialist's trait.
 	func ability_id() -> String:
@@ -230,6 +237,10 @@ func _update(f: Fighter) -> void:
 		f.cooldown -= 100 + (f.rage_attack_pct if f.rage > 0 else 0)
 	BattleAbilities.on_tick(self, f)
 	if not f.alive or f.stun > 0:
+		return
+	# Its style may take this turn (a charge under way, hiding in its shell,
+	# a snack).
+	if BattleStyles.act(self, f):
 		return
 
 	if f.memory.get("burrowing", false):
@@ -487,6 +498,9 @@ func _push_apart(a: Fighter, b: Fighter) -> void:
 ## One blow (or shot) from `f` at `t`, carrying `pct` percent of its bite
 ## (a volley's shot carries the time since the last).
 func attack(f: Fighter, t: Fighter, pct := 100) -> void:
+	# A shot at an animal right behind a guardian hits the guardian instead.
+	var aimed := t
+	t = BattleStyles.redirect(self, f, t)
 	var amount := f.damage * pct / 100
 	if f.rage > 0:
 		amount = amount * (100 + f.rage_damage_pct) / 100
@@ -502,6 +516,8 @@ func attack(f: Fighter, t: Fighter, pct := 100) -> void:
 		"type": "hit", "from": f.uid, "from_kind": f.kind, "to": t.uid, "to_kind": t.kind,
 		"x": t.x, "y": t.y, "fx": f.x, "fy": f.y, "amount": amount, "ranged": f.attack_range > 1500,
 	}
+	if t != aimed:
+		hit.guard = true
 	events.append(hit)
 	var hp_before := t.hp
 	deal_damage(t, amount, f)
@@ -509,6 +525,25 @@ func attack(f: Fighter, t: Fighter, pct := 100) -> void:
 	hit.dealt = maxi(0, hp_before - maxi(t.hp, 0))
 	BattleAbilities.after_hit(self, f, t, amount)
 	f.memory.run = 0
+
+
+## An extra blow from `f` at `t` that isn't one of its own attacks (a
+## cleave's second target, a charge knocking an enemy aside...): shown on
+## screen like a hit, with no follow-ups of its own. `extra` goes into the
+## hit event (what kind of blow it is, for the screen).
+func strike(f: Fighter, t: Fighter, amount: int, extra: Dictionary = {}) -> void:
+	if not t.alive or amount <= 0:
+		return
+	var hit := {
+		"type": "hit", "from": f.uid, "from_kind": f.kind, "to": t.uid, "to_kind": t.kind,
+		"x": t.x, "y": t.y, "fx": f.x, "fy": f.y, "amount": amount, "ranged": false,
+	}
+	hit.merge(extra, true)
+	events.append(hit)
+	var hp_before := t.hp
+	deal_damage(t, amount, f)
+	hit.dealt = maxi(0, hp_before - maxi(t.hp, 0))
+	t.memory.last_combat = tick
 
 
 func deal_damage(t: Fighter, amount: int, source: Fighter) -> void:
@@ -655,6 +690,8 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 	# how far it reaches at least.
 	f.cls = String(card.get("class", ""))
 	f.trait_id = String(card.get("trait", ""))
+	f.style = GameData.styles.get(String(card.get("id", "")), {})
+	f.style_kind = String(f.style.get("kind", ""))
 	var info: Dictionary = GameData.class_info(f.cls)
 	f.flying = bool(info.get("flying", false))
 	f.targets = String(info.get("targets", stats.targets))
@@ -740,7 +777,7 @@ static func _copy_fields(from: Object, to: Object) -> Object:
 		if not prop.usage & PROPERTY_USAGE_SCRIPT_VARIABLE:
 			continue
 		var value: Variant = from.get(prop.name)
-		if (value is Dictionary or value is Array) and prop.name != "card":
+		if (value is Dictionary or value is Array) and prop.name != "card" and prop.name != "style":
 			value = value.duplicate(true)
 		to.set(prop.name, value)
 	return to

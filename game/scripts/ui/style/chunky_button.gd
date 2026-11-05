@@ -21,6 +21,11 @@ var min_width := 0.0:
 	set(value):
 		min_width = value
 		_fit()
+## The least height it gets (0: the usual button height).
+var min_height := 0.0:
+	set(value):
+		min_height = value
+		_fit()
 ## Pulse gently (the main action on a screen).
 var breathe := false:
 	set(value):
@@ -106,7 +111,7 @@ func _fit() -> void:
 	if content == null:
 		return
 	var box := get_theme_stylebox("normal")
-	var tall := UIStyle.num("button", "min_height", 88)
+	var tall := maxf(UIStyle.num("button", "min_height", 88), min_height)
 	var wide := content.get_combined_minimum_size().x + box.content_margin_left + box.content_margin_right
 	custom_minimum_size = Vector2(tall if square else maxf(wide, min_width), tall)
 

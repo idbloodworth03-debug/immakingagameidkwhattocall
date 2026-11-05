@@ -18,6 +18,13 @@ var upgrade_arrow := false:
 		if value != upgrade_arrow:
 			upgrade_arrow = value
 			queue_redraw()
+## A green tag in the top-right corner instead of the arrow, e.g. "+3": a
+## pick here adds another squad of an animal already in the army.
+var squad_tag := "":
+	set(value):
+		if value != squad_tag:
+			squad_tag = value
+			queue_redraw()
 ## Stars along the bottom (0 hides them). `star_preview` makes the last one
 ## pulse: what buying this would make it.
 var stars := 0
@@ -131,7 +138,18 @@ func _draw() -> void:
 				draw_texture_rect(box, Rect2(at - Vector2(side, side) / 2.0, Vector2(side, side)), false)
 		else:
 			UIStyle.draw_class_badge(self, at, corner * 0.72, GameData.class_of(card_id))
-	if upgrade_arrow:
+	if squad_tag != "":
+		var at := Vector2(w - corner * 1.1, corner * 0.85)
+		var tag := Rect2(at - Vector2(corner * 1.05, corner * 0.62), Vector2(corner * 2.1, corner * 1.24))
+		var pill := StyleBoxFlat.new()
+		pill.bg_color = UIStyle.color("primary")
+		pill.border_color = UIStyle.color("outline")
+		pill.set_border_width_all(3)
+		pill.set_corner_radius_all(int(corner))
+		pill.anti_aliasing = true
+		draw_style_box(pill, tag)
+		UIStyle.draw_text(self, squad_tag, tag.grow(-2.0), "small")
+	elif upgrade_arrow:
 		var at := Vector2(w - corner * 0.85, corner * 0.85)
 		var bob := 2.0 * sin(_time * 5.0)
 		UIStyle.draw_particle(self, "badge", at + Vector2(0, bob), corner * 0.72, UIStyle.color("primary"))

@@ -507,12 +507,16 @@ func _refresh_pick() -> void:
 		var item: Dictionary = duel.offers[0][slot]
 		var index := duel.herd_index(0, item.id)
 		var can := duel.can_pick(0, slot) == ""
-		card.upgrade_arrow = index >= 0 and can and not duel.is_first_round()
-		var stars := int(duel.herds[0][index].stars) + 1 if card.upgrade_arrow else 0
-		if stars != card.stars:
+		# An animal already in your army: picking it adds another squad
+		# ("+3" on a Ranged card), its stars stay as they are.
+		var owned := index >= 0 and can and not duel.is_first_round()
+		var tag := "+%d" % DraftMatch.squad_units(String(item.id)) if owned else ""
+		var stars := int(duel.herds[0][index].stars) if owned else 0
+		if stars != card.stars or tag != card.squad_tag:
 			card.stars = stars
-			card.star_preview = stars > 0
-			card.animate(stars > 0 or card.upgrade_arrow)
+			card.star_preview = false
+			card.squad_tag = tag
+			card.animate(owned)
 			card.queue_redraw()
 		var done := 1.0 if item.taken else 0.0
 		if card.done != done:
@@ -652,8 +656,10 @@ func _tap_herd(index: int) -> void:
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	var up := UIStyle.button("Upgrade", "gold" if can_up else "disabled", "star")
 	var more := UIStyle.button("+%d Squad" % DraftMatch.squad_units(id), "primary" if can_more else "disabled", "class_" + GameData.class_of(id))
+	var big := _size("choice_button", Vector2(236, 128))
 	for b: ChunkyButton in [up, more]:
-		b.custom_minimum_size = _size("choice_button", Vector2(236, 128))
+		b.min_width = big.x
+		b.min_height = big.y
 		row.add_child(b)
 	up.disabled = not can_up
 	more.disabled = not can_more

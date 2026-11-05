@@ -503,28 +503,43 @@ func fell(sim: BattleSim, f: BattleSim.Fighter) -> void:
 ## the class it goes after first.
 func _choose_target(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, free: bool, charging: bool) -> void:
 	var t := f.target
+	var turn := (sim.tick + f.uid) % sim.retarget_ticks == 0
 	if t != null and sim.can_target(f, t) and (free or _reachable(f, t, place, leash)):
-		if sim.in_range(f, t) or (sim.tick + f.uid) % sim.retarget_ticks != 0:
+		if sim.in_range(f, t) or not turn:
 			if not (charging and t.cls != "tank"):
 				return
+	elif t == null and not turn:
+		# Nothing to fight: it looks around now and then (animals take
+		# turns), which keeps big armies cheap on phones. One whose target
+		# has just fallen looks at once.
+		return
 	f.target = _find(sim, f, place, leash, free, charging)
 
 
 func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, free: bool, charging: bool) -> BattleSim.Fighter:
-	if not f.is_flying():
-		for t: BattleSim.Fighter in sim.fighters:
-			if t.kind == "bait" and t.alive and t.team != f.team and BattleSim.dist(f, t) <= t.lure_radius:
-				return t
+	var ground := not f.is_flying()
 	var prefer: Dictionary = GameData.class_rules.get("prefer", {}).get(f.cls, {})
 	var wanted := "tank" if charging else String(prefer.get("class", ""))
 	var best: BattleSim.Fighter = null
 	var best_score := 1 << 40
 	var liked: BattleSim.Fighter = null
 	var liked_score := 1 << 40
+	var reach := leash + f.attack_range + f.radius
 	for t: BattleSim.Fighter in sim.fighters:
-		if t.team == f.team or not t.is_unit() or not sim.can_target(f, t):
+		if t.team == f.team or not t.alive:
 			continue
-		if not free and not _reachable(f, t, place, leash):
+		if t.kind == "bait":
+			if ground and BattleSim.dist(f, t) <= t.lure_radius:
+				return t
+			continue
+		if not free:
+			# Too far from its place to reach (squared distances: cheap).
+			var dx := t.x - place.x
+			var dy := t.y - place.y
+			var r := reach + t.radius
+			if dx * dx + dy * dy > r * r:
+				continue
+		if not sim.can_target(f, t):
 			continue
 		var score := BattleSim.edge_distance(f, t)
 		if not free:
@@ -540,16 +555,21 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 
 ## Whether `f` can hit `t` without leaving its leash around `place`.
 func _reachable(f: BattleSim.Fighter, t: BattleSim.Fighter, place: Vector2i, leash: int) -> bool:
-	return BattleSim.dist_to_point(t, place.x, place.y) - t.radius - f.radius <= leash + f.attack_range
+	var dx := t.x - place.x
+	var dy := t.y - place.y
+	var r := leash + f.attack_range + t.radius + f.radius
+	return dx * dx + dy * dy <= r * r
 
 
 static func _nearest_enemy(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fighter:
 	var best: BattleSim.Fighter = null
-	var best_d := 1 << 40
+	var best_d := 1 << 60
 	for t: BattleSim.Fighter in sim.fighters:
-		if t.team != f.team and t.alive and t.is_unit() and sim.can_target(f, t):
-			var d := BattleSim.edge_distance(f, t)
-			if d < best_d:
+		if t.team != f.team and t.alive and t.is_unit():
+			var dx := t.x - f.x
+			var dy := t.y - f.y
+			var d := dx * dx + dy * dy
+			if d < best_d and sim.can_target(f, t):
 				best = t
 				best_d = d
 	return best

@@ -144,6 +144,12 @@ var _hop_in_at := -100.0
 var _walk_from := Vector2.ZERO
 var _walk_t := 1.0
 var _walk_seconds := 1.0
+## What it last read from the fight, once per fight tick (the fight changes
+## 20 times a second; the drawing every frame).
+var _read_tick := -1
+var _in_reach := false
+var _placed := false
+var _burrowing := false
 ## Who hit it last (for a smug look when it's knocked out).
 var last_attacker: UnitView
 var face: UnitFace
@@ -156,6 +162,9 @@ var _per_tile := 64.0
 var _walk_tiles := 1.0
 var _windup := 0.2
 var _frame_key := ""
+var _f_anim := ""
+var _f_n := -1
+var _f_dir := -1
 ## Tuning from feel.json, read once a frame for every animal (see _tuning()).
 static var _tuned: Tune
 static var _tuned_frame := -1
@@ -331,14 +340,24 @@ static func _apply_look(material: ShaderMaterial) -> void:
 ## Called every frame with the fighter this view shows. `at` is its
 ## position (blended between ticks); `dt` is 0 during hit-stop.
 func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
-	fighter = f
-	uid = f.uid
+	var sim := field.sim
+	if fighter != f or _read_tick != sim.tick:
+		fighter = f
+		uid = f.uid
+		_read_tick = sim.tick
+		var new_stars := int(f.memory.get("stars", 1))
+		if new_stars > stars:
+			upgrade = 1.0
+			field.fx.burst_upgrade(self)
+		stars = new_stars
+		_placed = in_formation()
+		_in_reach = f.target != null and f.target.alive and sim.in_range(f, f.target)
+		_burrowing = bool(f.memory.get("burrowing", false))
+		var run := int(f.memory.get("run", 0))
+		if run > _last_run:
+			_intent = float(_tuning().walk_hold_seconds)
+		_last_run = run
 	update_hp()
-	var new_stars := int(f.memory.get("stars", 1))
-	if new_stars > stars:
-		upgrade = 1.0
-		field.fx.burst_upgrade(self)
-	stars = new_stars
 	var t := _tuning()
 	var jump := at.distance_to(pos)
 	if jump > 900.0 and field.walk_in and army:
@@ -355,7 +374,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	# Walking on its own (the fight moved it toward something), not shoved
 	# by its neighbors.
 	# Burrowing: dive into the ground; popping up: boing.
-	var burrowing := bool(f.memory.get("burrowing", false))
+	var burrowing := _burrowing
 	if burrowing != _was_burrowing:
 		_was_burrowing = burrowing
 		if burrowing:
@@ -363,10 +382,6 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 			field.fx.burst("puff", position, 6, 110.0, 0.45, 8.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 110.0)
 		else:
 			_emerge_at = now
-	var run := int(f.memory.get("run", 0))
-	if run > _last_run:
-		_intent = float(t.walk_hold_seconds)
-	_last_run = run
 	_intent -= dt
 	if hop_t < 1.0:
 		shown = pos + spread
@@ -391,7 +406,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		var cycle := _walk_tiles * 1000.0 * float(t.walk_stride) * (float(t.swarm_scale) if swarm else 1.0)
 		var fps := clampf(speed / maxf(cycle, 1.0) * _walk_frames, float(t.walk_min_fps), float(t.walk_max_fps))
 		walk += fps / _walk_frames * dt
-		if in_formation() and field.marching(team):
+		if _placed and field.marching(team):
 			# Marching in formation: the whole army's feet in step.
 			walk = field.march_walk(team)
 	elif moving > 0.0:
@@ -401,10 +416,10 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 			squash_v += float(t.arrive_squash) * sqrt(float(t.spring_stiffness)) * 1.6
 	_march = move_toward(_march, 1.0 if moving > 0.0 else 0.0, dt * 2.5)
 	# Facing: where it's walking, else what it's fighting. A push never turns it.
-	var sim := field.sim
 	var has_target := f.target != null and f.target.alive
-	var keep_facing := in_formation() and not (has_target and sim.in_range(f, f.target))
-	if attacking(now) and now >= attack_at:
+	var keep_facing := _placed and not _in_reach
+	var busy := attacking(now)
+	if busy and now >= attack_at:
 		_turn(attack_dir, dt)
 	elif keep_facing and not (has_target and moving > 0.0):
 		# In formation: facing the enemy, even while stepping into place.
@@ -415,7 +430,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		_turn(Vector2(f.target.x - f.x, f.target.y - f.y), dt)
 	# Start the attack early enough that the strike lands on the hit (a
 	# little later for some, so a herd doesn't swing in step).
-	if has_target and f.deploy_ticks <= 0 and f.stun <= 0 and sim.in_range(f, f.target) and not attacking(now):
+	if _in_reach and has_target and f.deploy_ticks <= 0 and f.stun <= 0 and not busy:
 		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
 		var next: Array = _upcoming() if to_hit >= 0.0 and to_hit <= _longest_windup else []
 		var windup := _windup_of(String(next[0])) * float(next[1]) if not next.is_empty() else -1.0
@@ -650,6 +665,7 @@ func is_done() -> bool:
 ## The feel.json numbers every animal's animation uses, read once a frame
 ## into typed fields (a big fight reads them thousands of times a frame).
 class Tune:
+	var star_max := 3
 	var stun_windup_scale := 0.0
 	var slow_windup_scale := 0.0
 	var shadow_width := 0.0
@@ -816,6 +832,7 @@ static func refresh_tuning() -> void:
 		t.waddle_degrees = Feel.num("acting", "waddle_degrees", 5.0)
 		t.intro_hop_pixels = Feel.num("choreography", "intro_hop_pixels", 16.0)
 		t.breathe_amount = Feel.num("characters", "breathe_amount", 0.035)
+		t.star_max = int(GameData.draft_rules.get("star_max", 3))
 		t.breathe_speed = Feel.num("characters", "breathe_speed", 2.4)
 		t.defeat_hop_pixels = Feel.num("combat", "defeat_hop_pixels", 46.0)
 		t.defeat_seconds = Feel.num("combat", "defeat_seconds", 0.6)
@@ -928,9 +945,11 @@ func animate(dt: float, now: float) -> void:
 		if cycle > 0.85:
 			_shown_dir = (_dir8 + int((cycle - 0.85) / 0.45 * 8.0)) % 8
 	# Look the frame up only when it changes.
-	var frame_key := "%s%d/%d" % [anim, frame, _shown_dir]
-	if frame_key != _frame_key:
-		_frame_key = frame_key
+	if anim != _f_anim or frame != _f_n or _shown_dir != _f_dir:
+		_f_anim = anim
+		_f_n = frame
+		_f_dir = _shown_dir
+		_frame_key = "%s%d/%d" % [anim, frame, _shown_dir]
 		body.frame = UnitSprites.frame(id, anim, _shown_dir * 45.0, frame)
 
 	# Build this frame's offset, stretch and lean.
@@ -1166,7 +1185,7 @@ func animate(dt: float, now: float) -> void:
 	if f != null and f.stun > 0:
 		tint = Color(1.0, 1.0, 0.8)
 	# Three stars: a gentle golden glow, and a sparkle now and then.
-	var golden := stars >= int(GameData.draft_rules.get("star_max", 3)) and defeat < 0.0
+	var golden := stars >= t.star_max and defeat < 0.0
 	if golden and dt > 0.0:
 		_sparkle_in -= dt
 		if _sparkle_in <= 0.0:
@@ -1196,7 +1215,7 @@ func animate(dt: float, now: float) -> void:
 ## In reach of what it's fighting (no fidgeting then).
 func _in_a_scrap() -> bool:
 	var f := fighter
-	return f != null and f.target != null and f.target.alive and field.sim != null and field.sim.in_range(f, f.target)
+	return _in_reach and f != null and f.target != null and f.target.alive
 
 
 ## A foot coming down: a Tank's heavy step thumps with a puff of dust; a

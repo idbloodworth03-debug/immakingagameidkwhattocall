@@ -594,7 +594,7 @@ func _spread_views(dt: float) -> void:
 	for v: UnitView in _views.values():
 		if v.defeat >= 0.0 or v.doomed or v.fighter == null or v.fighter.memory.get("burrowing", false) or v.hop_t < 1.0:
 			continue
-		if v.army and (v.walking_in() or (v.in_formation() and not v._in_a_scrap())):
+		if v.army and (v.walking_in() or (v._placed and not v._in_reach)):
 			# In its place in the formation: lines stay clean, no nudging.
 			v.spread = v.spread.move_toward(Vector2.ZERO, settle)
 			continue

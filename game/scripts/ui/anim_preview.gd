@@ -135,7 +135,10 @@ func _reset() -> void:
 func _process(delta: float) -> void:
 	if sim == null:
 		return
-	# The fight's clock for stuns and slows (it isn't stepped).
+	# The fight's clock for stuns and slows (it isn't stepped). The field
+	# reads the animals' changes once a tick, so the tick moves on every
+	# frame here.
+	sim.tick += 1
 	_ticks += delta * sim.tps
 	while _ticks >= 1.0:
 		_ticks -= 1.0

@@ -149,6 +149,16 @@ out each animation and reaction on demand: standing, a fidget, walking, both
 attacks, getting hit, a big hit, stunned, slowed, nearly beaten, celebrating
 and knocked out. **Next** goes through the rest of the roster three at a time.
 
+**Profile > Developer tools > Big army test** checks that the biggest fights
+run smoothly on a phone: two armies of 40 (every class, elites, Mythic heroes,
+3-star squads) fight over and over on the real battle field. The top shows
+frames a second, the animals on the field and how long the game's own code
+took this frame; after each fight a line sums it up (frames a second on
+average, the slowest 1% of frames, how many frames missed 60 a second, the
+code's time a frame and the fight's time a step). On a computer,
+`ARMY_TEST_LOG=file` writes those lines to a file and quits after
+`ARMY_TEST_FIGHTS` fights.
+
 In Draft Duel, a small button over the field's top-left corner (debug builds,
 or `show_dev_tools` in `testing.json`) slows the game to 0.5x, 0.25x or 0.1x,
 or pauses it with **Step** to go a frame at a time.

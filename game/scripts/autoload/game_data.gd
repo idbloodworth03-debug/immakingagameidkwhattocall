@@ -303,8 +303,10 @@ func validate() -> Array:
 	var starter_animals := starters.filter(func(id): return cards.has(id) and not is_tool(id)).size()
 	if starter_animals < int(draft_rules.get("deck_size", 8)):
 		problems.append("There must be at least %d starting animals: a new player's first deck" % int(draft_rules.get("deck_size", 8)))
-	if starters.size() < int(draft_rules.get("offer_count", 5)):
-		problems.append("There must be at least %d starting cards to fill the Draft Duel options" % int(draft_rules.get("offer_count", 5)))
+	if starters.size() - starter_animals < int(draft_rules.get("offer_tools", 2)):
+		problems.append("There must be at least %d starting tools to fill the Draft Duel tool options" % int(draft_rules.get("offer_tools", 2)))
+	if starter_animals < int(draft_rules.get("offer_animals", 4)):
+		problems.append("There must be at least %d starting animals to fill the Draft Duel animal options" % int(draft_rules.get("offer_animals", 4)))
 	if starter_animals < int(draft_rules.get("picks_per_round", 3)):
 		problems.append("At least %d starting cards must be animals" % int(draft_rules.get("picks_per_round", 3)))
 	var starter_classes := {}

@@ -65,7 +65,8 @@
 
 - [x] Roster cut to 35 animals; the other 87 archived with their art kept (saves keep their levels)
 - [x] A deck of 8: chosen before every match (DRAFT DUEL opens it, filled with your last deck; START is one tap); round 1 offers your 8, later rounds only your deck's animals and your tools; rivals always bring 8 that suit them
-- [x] New players start with 8 animals across all five classes plus the Net, which is also their first deck
+- [x] New players start with 8 animals across all five classes plus the Net and the Air Horn; the animals are also their first deck
+- [x] From round 2 the options are 4 animals from your deck and 2 of your tools, in two trays (the computer gets the same)
 - [x] Squads: Tank 1, Tank Destroyer 2, Ranged 3, Air 2, elite Specialist 1, Mythic hero 1, read from classes.json by every spawn; tap an army animal for Upgrade (a star for every squad) or +Squad (another full squad); armies stop at 40 animals
 - [x] A version label (home screen corner, Profile) and a service worker that always loads the newest build
 - [x] Formations: Tank wall, Tank Destroyer line, Air over it, staggered Ranged ranks, Specialists on the flanks, heroes in the middle; squad banners; your army shown in formation while you pick, new squads marching in

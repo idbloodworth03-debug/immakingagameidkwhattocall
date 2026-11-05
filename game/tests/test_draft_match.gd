@@ -76,12 +76,12 @@ func test_a_deck_is_what_you_pick_from() -> void:
 		m.picks_left = [0, 0]
 
 
-func test_later_rounds_offer_five_animals_and_tools() -> void:
+func test_later_rounds_offer_four_animals_and_two_tools() -> void:
 	var m := _after_starters(2, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
 	var offers: Array = m.offers[0]
 	var tools := offers.filter(func(o): return GameData.is_tool(o.id)).size()
-	check_eq(offers.size(), int(GameData.draft_rules.offer_count), "five options")
-	check(tools >= int(GameData.draft_rules.offer_tools_min) and tools <= int(GameData.draft_rules.offer_tools_max), "a few tools among them (%d)" % tools)
+	check_eq(offers.size() - tools, int(GameData.draft_rules.offer_animals), "four animals")
+	check_eq(tools, int(GameData.draft_rules.offer_tools), "two tools")
 	var ids := offers.map(func(o): return o.id)
 	for id in ids:
 		check(ids.count(id) == 1, "%s offered once" % id)

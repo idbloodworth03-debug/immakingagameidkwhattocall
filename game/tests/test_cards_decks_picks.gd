@@ -149,6 +149,55 @@ func test_no_animal_outside_the_deck_ever_appears() -> void:
 				check(decks[team].has(entry.id), "team %d's army: %s from its deck" % [team, entry.id])
 
 
+## Whole matches between computer players: from round 2 on, every player is
+## offered exactly 4 different animals from their deck and 2 different tools,
+## makes 3 picks every round, and can still upgrade and add squads.
+func test_later_rounds_offer_four_animals_and_two_tools() -> void:
+	var animals := _animals()
+	var want_animals := int(GameData.draft_rules.offer_animals)
+	var want_tools := int(GameData.draft_rules.offer_tools)
+	var kinds := {}
+	for match_index in 6:
+		var decks := [animals.slice(match_index * 3, match_index * 3 + 8), animals.slice(match_index * 4 + 1, match_index * 4 + 9)]
+		var tools := [["net", "air_horn", "medkit"], ["net", "food_bait"]]
+		var m := DraftMatch.new(700 + match_index, {"pools": [decks[0] + tools[0], decks[1] + tools[1]]})
+		var bots := [DraftBot.new(m, 0, match_index * 5 + 1, 0.7), DraftBot.new(m, 1, match_index * 5 + 2, 0.4)]
+		var guard := 0
+		var checked_round := 0
+		while not m.is_over() and guard < 200000:
+			guard += 1
+			if m.phase == "pick" and checked_round != m.round_number:
+				checked_round = m.round_number
+				for team in 2:
+					if m.is_first_round():
+						continue
+					var offered: Array = m.offers[team].map(func(o): return String(o.id))
+					var offered_animals := offered.filter(func(id): return not GameData.is_tool(id))
+					var offered_tools := offered.filter(func(id): return GameData.is_tool(id))
+					check_eq(offered_animals.size(), want_animals, "round %d, team %d: 4 animals" % [m.round_number, team])
+					check_eq(offered_tools.size(), want_tools, "round %d, team %d: 2 tools" % [m.round_number, team])
+					check(offered_animals.all(func(id): return decks[team].has(id) and offered.count(id) == 1), "round %d, team %d: different animals from the deck" % [m.round_number, team])
+					check(offered_tools.all(func(id): return tools[team].has(id) and offered.count(id) == 1), "round %d, team %d: different tools of its own" % [m.round_number, team])
+					check(offered.slice(0, want_animals) == offered_animals, "animals first, then tools (two groups)")
+					check_eq(int(m.picks_left[team]), int(GameData.draft_rules.picks_per_round), "3 picks")
+			match m.phase:
+				"pick":
+					for b in bots:
+						b.pick_all()
+					for team in 2:
+						for made in m.picks_made[team]:
+							kinds[made.kind] = int(kinds.get(made.kind, 0)) + 1
+				"fight":
+					for b in bots:
+						b.update()
+					m.step()
+				"round_over":
+					m.next_round()
+		check(m.is_over(), "match %d finished" % match_index)
+	for kind in ["animal", "tool", "star", "squad"]:
+		check(int(kinds.get(kind, 0)) > 0, "picks include %s (%s)" % [kind, kinds])
+
+
 ## The computer always brings a deck of 8, even in the first arena where
 ## fewer than 8 animals are unlocked.
 func test_rival_decks_have_eight() -> void:

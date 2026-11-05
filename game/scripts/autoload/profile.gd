@@ -123,15 +123,21 @@ func _repair() -> void:
 		if GameData.cards.has(id):
 			data.collection[id] = data.archived_cards[id]
 			data.archived_cards.erase(id)
-	# Too few animals for a deck (or cards to fill the Draft Duel options):
-	# top up with all the starting cards, then the first arena's if that's
-	# still not enough.
-	if _too_few_cards():
+	# Too few animals for a deck (or to fill the Draft Duel options): top up
+	# with all the starting cards, then the first arena's if that's still not
+	# enough. Too few tools for the tool options: just the starting tools
+	# (then the first arena's) that are missing.
+	if _too_few_animals():
 		for id in GameData.progression.get("starting_cards", []):
 			_give_starter(id)
 		for id in GameData.cards_in_arena(0):
 			if not _too_few_cards():
 				break
+			_give_starter(id)
+	for id in GameData.progression.get("starting_cards", []) + GameData.cards_in_arena(0):
+		if not _too_few_tools():
+			break
+		if GameData.is_tool(id):
 			_give_starter(id)
 
 	# Classic battle's deck is gone (Draft Duel's is "draft_deck").
@@ -158,12 +164,19 @@ func _give_starter(id: String) -> void:
 
 
 func _too_few_cards() -> bool:
-	var animals := 0
-	for id in data.collection:
-		if not GameData.is_tool(id):
-			animals += 1
+	return _too_few_animals() or _too_few_tools()
+
+
+## Fewer animals than a deck (or the animal options).
+func _too_few_animals() -> bool:
 	var rules := GameData.draft_rules
-	return data.collection.size() < int(rules.offer_count) or animals < maxi(int(rules.picks_per_round), int(rules.get("deck_size", 8)))
+	var need := maxi(maxi(int(rules.picks_per_round), int(rules.get("deck_size", 8))), int(rules.offer_animals))
+	return data.collection.keys().filter(func(id): return not GameData.is_tool(id)).size() < need
+
+
+## Fewer tools than the tool options.
+func _too_few_tools() -> bool:
+	return data.collection.keys().filter(func(id): return GameData.is_tool(id)).size() < int(GameData.draft_rules.offer_tools)
 
 
 # --- Deck ------------------------------------------------------------------

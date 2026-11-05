@@ -9,9 +9,10 @@
     "striped_skunk",
     "peregrine_falcon",
     "red_fox",
-    "net"
+    "net",
+    "air_horn"
   ],
-  "_starting_cards_note": "What every new player owns, and their first deck: 8 animals across all five classes (enough for a deck, draft_rules.json deck_size) and a tool. A save with fewer animals than a deck is topped up with these.",
+  "_starting_cards_note": "What every new player owns, and their first deck: 8 animals across all five classes (enough for a deck, draft_rules.json deck_size) and two tools (enough for the tool options, offer_tools). A save with fewer animals than a deck, or fewer tools than that, is topped up with these.",
   "starting_gold": 500,
   "starting_gems": 100,
   "cage_slots": 4,

@@ -17,7 +17,8 @@ func test_every_rarity_cages_drop_has_animals() -> void:
 func test_starting_cards_fill_the_options() -> void:
 	var cards: Array = GameData.progression.starting_cards
 	var animals := cards.filter(func(id): return not GameData.is_tool(id))
-	check(cards.size() >= int(GameData.draft_rules.offer_count), "enough cards to fill the options")
+	check(cards.size() - animals.size() >= int(GameData.draft_rules.offer_tools), "enough tools to fill the tool options")
+	check(animals.size() >= int(GameData.draft_rules.offer_animals), "enough animals to fill the animal options")
 	check(animals.size() >= int(GameData.draft_rules.picks_per_round), "enough animals for round 1's picks")
 	check_eq(animals.size(), int(GameData.draft_rules.deck_size), "the starting animals are a whole deck")
 	var classes := {}

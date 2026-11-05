@@ -6,8 +6,8 @@ extends RefCounted
 ## Each round: Pick, then Fight, then a quick result.
 ##
 ##   Pick: each player makes 3 picks. In round 1, three starting animals
-##   from their deck. After that, from 5 options (animals from their deck,
-##   and their tools), each pick is one of:
+##   from their deck. After that, from 4 animals from their deck and 2 of
+##   their tools, each pick is one of:
 ##     - an offered animal: a new squad of it joins the army (another squad
 ##       if the army has it already),
 ##     - an offered tool (two at most; a third replaces one of them),
@@ -101,28 +101,37 @@ func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}
 
 ## The cards a player draws from: the animals and tools they own, topped up
 ## with the starting cards (then the first arena's) if that's too few to fill
-## the options.
+## the options (offer_animals animals, and enough for round 1's picks;
+## offer_tools tools).
 static func pool_from_collection(owned: Callable, draft_rules: Dictionary = {}) -> Array:
 	var r: Dictionary = draft_rules if not draft_rules.is_empty() else GameData.draft_rules
 	var cards := []
-	var animals := 0
 	for id in GameData.card_order:
 		if owned.call(id):
 			cards.append(id)
-			if not GameData.is_tool(id):
-				animals += 1
-	# Too few to fill the options: the starting cards, then the first arena's.
+	return with_enough(cards, r)
+
+
+## `cards` topped up with the starting cards (then the first arena's) until
+## there are enough animals and tools to fill the options.
+static func with_enough(cards: Array, draft_rules: Dictionary = {}) -> Array:
+	var r: Dictionary = draft_rules if not draft_rules.is_empty() else GameData.draft_rules
+	var out := cards.duplicate()
+	var animals := out.filter(func(id): return not GameData.is_tool(id)).size()
+	var tools := out.size() - animals
+	var want_animals := maxi(int(r.offer_animals), int(r.picks_per_round))
 	var extra: Array = GameData.progression.get("starting_cards", []).duplicate()
 	extra.append_array(GameData.cards_in_arena(0))
 	for id in extra:
-		if cards.size() >= int(r.offer_count) and animals >= int(r.picks_per_round):
-			break
-		if cards.has(id):
+		if out.has(id):
 			continue
-		cards.append(id)
-		if not GameData.is_tool(id):
+		if GameData.is_tool(id) and tools < int(r.offer_tools):
+			out.append(id)
+			tools += 1
+		elif not GameData.is_tool(id) and animals < want_animals:
+			out.append(id)
 			animals += 1
-	return cards
+	return out
 
 
 # --- Info ------------------------------------------------------------------
@@ -385,27 +394,20 @@ func _picked(team: int, made: Dictionary) -> void:
 	events.append(event)
 
 
-## This round's options: five cards from the deck and tools, a mix of
-## animals and tools (between offer_tools_min and offer_tools_max tools
-## when there are any), rarer ones less often.
+## This round's options: offer_animals different animals from the deck,
+## then offer_tools different tools (rarer ones less often). The screen
+## shows them as two groups.
 func _roll_offers(team: int) -> Array:
 	var dice: RandomNumberGenerator = _dice[team]
 	var animals: Array = pools[team].filter(func(id): return not GameData.is_tool(id))
 	var tool_ids: Array = pools[team].filter(func(id): return GameData.is_tool(id))
-	var count := int(rules.offer_count)
-	var want_tools := mini(tool_ids.size(), dice.randi_range(int(rules.offer_tools_min), int(rules.offer_tools_max)))
-	# With few animals to offer, fill up with tools instead.
-	want_tools = clampi(maxi(want_tools, count - animals.size()), 0, tool_ids.size())
 	var chosen := []
-	for i in want_tools:
-		chosen.append(_weighted_pick(tool_ids, chosen, dice))
-	while chosen.size() < count:
-		var id := _weighted_pick(animals, chosen, dice)
-		if id == "":
-			break
-		chosen.append(id)
-	# Animals first, then tools.
-	chosen.sort_custom(func(a, b): return int(GameData.is_tool(a)) < int(GameData.is_tool(b)))
+	for i in mini(int(rules.offer_animals), animals.size()):
+		chosen.append(_weighted_pick(animals, chosen, dice))
+	var picked_tools := []
+	for i in mini(int(rules.offer_tools), tool_ids.size()):
+		picked_tools.append(_weighted_pick(tool_ids, picked_tools, dice))
+	chosen.append_array(picked_tools)
 	return chosen.map(func(id): return {"id": id, "taken": false})
 
 

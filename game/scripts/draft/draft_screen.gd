@@ -84,7 +84,7 @@ func _ready() -> void:
 	# You pick from your deck and your tools; the rival brings a deck of its
 	# own that suits it, at about your card levels.
 	opponent = Opponents.next_for_player(_rng)
-	var mine: Array = Profile.get_deck() + Profile.owned_tools()
+	var mine: Array = DraftMatch.with_enough(Profile.get_deck() + Profile.owned_tools())
 	var theirs := _rival_pool(opponent, mine)
 	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs]})
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
@@ -108,7 +108,7 @@ func _rival_pool(rival: Dictionary, player_pool: Array) -> Array:
 	var size := int(GameData.draft_rules.get("deck_size", 8))
 	var deck := DraftBot.rival_deck(arena, rival.get("style", {}), _rng, float(rival.get("difficulty", 0.5)), size)
 	var tools: Array = GameData.card_order.filter(func(id): return GameData.is_tool(id) and int(GameData.cards[id].unlock_arena_index) <= arena)
-	var want := maxi(1, player_pool.filter(func(id): return GameData.is_tool(id)).size())
+	var want := maxi(int(GameData.draft_rules.offer_tools), player_pool.filter(func(id): return GameData.is_tool(id)).size())
 	while tools.size() > want:
 		tools.remove_at(_rng.randi_range(0, tools.size() - 1))
 	return deck + tools
@@ -437,8 +437,9 @@ func _pick_signature() -> String:
 		duel.offers[0].map(func(o): return o.taken), duel.ready, _flying.keys()])
 
 
-## The options as big cards: the whole collection in round 1 (a grid that
-## scrolls), five cards after that (three over two).
+## The options as big cards: the whole deck in round 1 (a grid), after
+## that two groups, each on its own tray: the animals in a row, and the
+## tools in a row under them.
 func _build_options() -> void:
 	for child in _options_holder.get_children():
 		_options_holder.remove_child(child)
@@ -451,7 +452,8 @@ func _build_options() -> void:
 		var card := _size("start_card", Vector2(156, 176))
 		_options_holder.custom_minimum_size.y = ceilf(duel.offers[0].size() / 4.0) * (card.y + gap)
 	else:
-		_options_holder.custom_minimum_size.y = 2.0 * _size("option_card", Vector2(208, 236)).y + gap
+		var pad := Feel.num("pick", "tray_padding", 8.0)
+		_options_holder.custom_minimum_size.y = 2.0 * (_size("offer_card", Vector2(156, 184)).y + 2.0 * pad) + gap
 	if duel.is_first_round():
 		var scroll := ScrollContainer.new()
 		scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -472,19 +474,23 @@ func _build_options() -> void:
 	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	rows.alignment = BoxContainer.ALIGNMENT_CENTER
 	_options_holder.add_child(rows)
-	var per_row := [3, 2]
-	var slot := 0
-	for count in per_row:
-		var row := UIStyle.hbox("s")
+	# The offers come animals first, then tools (DraftMatch._roll_offers),
+	# so the cards are made in slot order.
+	var pick: Dictionary = GameData.feel.get("pick", {})
+	for tools in [false, true]:
+		var slots: Array = range(duel.offers[0].size()).filter(func(s): return GameData.is_tool(duel.offers[0][s].id) == tools)
+		if slots.is_empty():
+			continue
+		var tray := UIKit.panel(Color(String(pick.get("tool_tray" if tools else "animal_tray", "#00000040"))), int(Feel.num("pick", "tray_padding", 8.0)), 18)
+		tray.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		var row := UIStyle.hbox("xs")
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		rows.add_child(row)
-		for i in count:
-			if slot >= duel.offers[0].size():
-				break
-			var card := _option_card(slot, _size("option_card", Vector2(208, 236)))
+		tray.add_child(row)
+		rows.add_child(tray)
+		for slot in slots:
+			var card := _option_card(slot, _size("offer_card", Vector2(156, 184)))
 			row.add_child(card)
 			_pop_after(card, step * slot)
-			slot += 1
 
 
 func _option_card(slot: int, card_size: Vector2) -> GameCard:

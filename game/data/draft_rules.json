@@ -1,13 +1,12 @@
 {
-  "_note": "Draft Duel: best of 7 (the first to win wins_needed rounds wins; at most max_rounds, then most wins, or a draw). Before a match each player has a deck of deck_size animals from their collection. Each round, both players make picks_per_round picks: in round 1, starting animals from their deck; after that, from offer_count options (animals from their deck and the tools they own, at most offer_tools_max tools and at least offer_tools_min when there are any; rarer cards come up less, by rarity_weights). A pick takes an offered animal (one already in the army adds another squad of it), takes an offered tool (at most tools_max; a third replaces one), or upgrades an animal in the army (a star for all its squads). Stars go up to star_max; each star after the first adds star_bonus_pct to health and bite. An army holds at most army_max_units animals. Tools can be used once in every fight. Times are in seconds, distances in tiles; the fighting itself is tuned in battle_rules.json and classes.json.",
+  "_note": "Draft Duel: best of 7 (the first to win wins_needed rounds wins; at most max_rounds, then most wins, or a draw). Before a match each player has a deck of deck_size animals from their collection. Each round, both players make picks_per_round picks: in round 1, starting animals from their deck; after that, from offer_animals animals from their deck and offer_tools of the tools they own, shown as two groups (rarer cards come up less, by rarity_weights). A pick takes an offered animal (one already in the army adds another squad of it), takes an offered tool (at most tools_max; a third replaces one), or upgrades an animal in the army (a star for all its squads). Stars go up to star_max; each star after the first adds star_bonus_pct to health and bite. An army holds at most army_max_units animals. Tools can be used once in every fight. Times are in seconds, distances in tiles; the fighting itself is tuned in battle_rules.json and classes.json.",
   "wins_needed": 4,
   "max_rounds": 7,
   "picks_per_round": 3,
   "deck_size": 8,
   "army_max_units": 40,
-  "offer_count": 5,
-  "offer_tools_max": 2,
-  "offer_tools_min": 1,
+  "offer_animals": 4,
+  "offer_tools": 2,
   "rarity_weights": {
     "common": 55,
     "rare": 27,

@@ -121,7 +121,7 @@ func test_small_saves_get_the_starting_cards() -> void:
 	for id in GameData.progression.starting_cards:
 		check(profile.has_card(id), "topped up with %s" % id)
 	check_eq(int(profile.data.collection.lion.level), 3, "what they had stays")
-	check(profile.found_count() >= int(GameData.draft_rules.offer_count), "enough to fill the options")
+	check(profile.owned_tools().size() >= int(GameData.draft_rules.offer_tools), "enough tools to fill the tool options")
 	check_eq(profile.get_deck().size(), int(GameData.draft_rules.deck_size), "enough animals for a full deck")
 
 
@@ -160,16 +160,26 @@ func test_a_saved_deck_is_kept() -> void:
 
 
 func test_tools_come_with_any_deck() -> void:
-	check_eq(profile.owned_tools(), ["net"], "the Net")
+	check_eq(profile.owned_tools(), ["net", "air_horn"], "the Net and the Air Horn")
 
 
 func test_big_saves_are_left_alone() -> void:
+	var owned := {}
+	for id in ["electric_eel", "raccoon", "red_fox", "wild_boar", "lion", "tiger", "brown_bear", "hippopotamus", "air_horn", "medkit"]:
+		owned[id] = {"level": 2, "copies": 0, "new": false}
+	profile.data.collection = owned.duplicate(true)
+	profile._repair()
+	check_eq(profile.data.collection.keys().size(), owned.size(), "nothing added")
+
+
+func test_a_save_with_one_tool_gets_a_second() -> void:
 	var owned := {}
 	for id in ["electric_eel", "raccoon", "red_fox", "wild_boar", "lion", "tiger", "brown_bear", "hippopotamus", "air_horn"]:
 		owned[id] = {"level": 2, "copies": 0, "new": false}
 	profile.data.collection = owned.duplicate(true)
 	profile._repair()
-	check_eq(profile.data.collection.keys().size(), owned.size(), "nothing added")
+	check_eq(profile.data.collection.keys().size(), owned.size() + 1, "one card added")
+	check(profile.has_card("net"), "the Net, a starting tool")
 
 
 func test_repair_drops_the_old_deck() -> void:

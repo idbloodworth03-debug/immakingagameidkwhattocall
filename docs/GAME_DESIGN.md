@@ -35,8 +35,9 @@ score is always big at the top: "2 - 1", with 4 pips each.
 
 **Pick 3.** Every round you make exactly 3 picks:
 - **Round 1:** 3 starting animals from your deck of 8.
-- **After that:** 5 options from your deck's animals and your tools (rarer
-  ones come up less often). Each pick is one of:
+- **After that:** 4 animals from your deck and 2 of your tools, shown as
+  two groups, each on its own tray (rarer ones come up less often). Each
+  pick is one of:
   - an offered animal: a **squad** of it joins your army (another squad if
     it's there already),
   - an offered tool (2 at most; a third replaces one you choose),
@@ -155,21 +156,23 @@ start, their big hits, and rounds going their way or not.
 slots filled with your last deck, your collection below (tap a card to add
 or take it out). START (once all 8 slots are full) saves it and begins the
 match, so it's one tap if nothing changes.
-Round 1 offers exactly those 8, and you pick 3 to start. From round 2 the 5
-options come only from your deck's 8 and the tools you own. Every card
+Round 1 offers exactly those 8, and you pick 3 to start. From round 2 the
+options are 4 animals from your deck's 8 and 2 of the tools you own (the
+computer gets the same). Every card
 fights at its level. The computer opponent builds its own deck of 8 from the
 animals unlocked up to its arena (topped up to 8 from the starting cards in
 the first arenas), leaning toward its favorite class
 (`deck_favorite`) with at least one of each class (`DraftBot.build_deck`),
 and its cards are leveled like yours on average.
 
-New players start with 8 animals across all five classes plus a tool, which
-is also their first deck: Brown Bear and Snapping Turtle (Tank), Wolf Pack
-and Wild Boar (Tank Destroyer), Gray Squirrel and Striped Skunk (Ranged),
-Peregrine Falcon (Air), Red Fox (Specialist) and the Net
-(`starting_cards` in `game/data/progression.json`). A save with too few
-animals for a deck gets all the starting cards, then the first arena's
-animals if it still needs more. Deck size is `deck_size` in
+New players start with 8 animals across all five classes plus two tools;
+the animals are also their first deck: Brown Bear and Snapping Turtle
+(Tank), Wolf Pack and Wild Boar (Tank Destroyer), Gray Squirrel and Striped
+Skunk (Ranged), Peregrine Falcon (Air), Red Fox (Specialist), and the Net
+and the Air Horn (`starting_cards` in `game/data/progression.json`). A save
+with too few animals for a deck gets all the starting cards, then the first
+arena's animals if it still needs more; one with fewer than 2 tools gets the
+starting tools it's missing. Deck size is `deck_size` in
 `game/data/draft_rules.json`.
 
 **Tuning** is in `game/data/draft_rules.json` (wins needed, picks, deck

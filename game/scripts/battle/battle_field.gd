@@ -786,7 +786,7 @@ func add_events(events: Array) -> void:
 				chain = _schedule_hit(e)
 			"death":
 				_doom(e, float(chain.at) if not chain.is_empty() else _time)
-			"splash", "stun", "cleave", "pound", "reflect":
+			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple":
 				# Shown when the hit they came with lands.
 				if not chain.is_empty() and float(chain.at) > _time:
 					chain.after.append(e)
@@ -825,7 +825,8 @@ func _show(e: Dictionary) -> void:
 			var top := v.middle() - Vector2(0, 18) if v != null else to_screen(e.x, e.y)
 			fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
 			Sound.play("pop", -6.0, 0.2)
-		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end":
+		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end", \
+				"slam", "pack_bite", "roar", "venom", "triple", "pounce":
 			_show_style(e)
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
@@ -931,6 +932,52 @@ func _show_style(e: Dictionary) -> void:
 			Sound.play("alert", -6.0)
 		"charge_end":
 			fx.effect("dust", to_screen(e.x, e.y), 700 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.45, "", true)
+		"slam":
+			# A huge first hit: the Boar's head-on slam, the Tiger's pounce.
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			if String(e.kind) == "stalk":
+				var claws := fx.effect("slash", hit_at, 900 * s, Color(String(looks.get("pounce", "#ff9a2e"))), 0.4)
+				claws.dir = (hit_at - at).normalized()
+			else:
+				fx.effect("dust", to_screen(e.x, e.y), 1100 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.55, "", true)
+			fx.effect("flash", hit_at, 380 * s, Color(1, 1, 1, 0.8), 0.18)
+			fx.burst("spark", hit_at, 10, 360.0, 0.3, 8.0, [Color("#fff6b0"), Color.WHITE], 0.0, 5.0)
+			shake(Feel.num("styles", "slam_shake", 0.14))
+			Sound.play("boom", -8.0, 0.1)
+		"pack_bite":
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			var gold := Color(String(looks.get("pack", "#ffd84a")))
+			var jaws := fx.effect("chomp", hit_at, 560 * s, gold, 0.3)
+			jaws.dir = (hit_at - at).normalized()
+			fx.burst("spark", hit_at, 5, 220.0, 0.25, 6.0, [gold, Color.WHITE], 0.0, 5.0)
+		"roar":
+			var gold := Color(String(looks.get("roar", "#ffc93c")))
+			fx.effect("ring", to_screen(e.x, e.y), e.radius * s, gold, 0.6, "", true)
+			fx.effect("ring", at, e.radius * s * 0.5, gold.lightened(0.4), 0.45)
+			fx.burst("sparkle", at, 8, 220.0, 0.6, 8.0, [gold, Color.WHITE], -40.0, 2.5)
+			Sound.play("alert", -6.0)
+		"venom":
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			var green := Color(String(looks.get("venom", "#7ee04a")))
+			fx.burst("puff", hit_at, 6, 120.0, 0.5, 7.0, [green, green.lightened(0.4)], 30.0, 2.5)
+			Sound.play("pop", -10.0, 0.2)
+		"triple":
+			# Three heads: three snaps of fire, one after another.
+			var fire := Color(String(looks.get("fire", "#ff6a2a")))
+			var bitten: Array = e.get("bitten", [])
+			for i in bitten.size():
+				var victim := view_for_uid(int(bitten[i]))
+				if victim == null:
+					continue
+				var jaws := fx.effect("chomp", victim.middle() + Vector2((i - 1) * 6.0, (i - 1) * 4.0), 480 * s, fire, 0.3)
+				jaws.dir = (victim.middle() - at).normalized()
+				jaws.age = -i * Feel.num("styles", "bite_stagger_seconds", 0.07)
+		"pounce":
+			fx.burst("puff", to_screen(e.x, e.y), 5, 140.0, 0.4, 7.0, [Color(String(looks.get("pounce", "#ff9a2e"))), Color("#ffe0b0")], -20.0, 3.0)
+			Sound.play("whoosh", -6.0, 0.1)
 
 
 ## A hit the fight just dealt: the attacker's strike plays (its wind-up
@@ -945,6 +992,8 @@ func _schedule_hit(e: Dictionary) -> Dictionary:
 		var toward := Vector2(e.x - e.fx, e.y - e.fy)
 		# A charge knocks enemies aside as it runs into them: no wind-up.
 		var delay := 0.0 if e.get("charge", false) else attacker.time_to_strike(_time, toward)
+		# Cerberus's other heads bite a moment after the first.
+		delay += float(e.get("head", 0)) * Feel.num("styles", "bite_stagger_seconds", 0.07)
 		var strike_at := _time + delay
 		hit.read = attacker.attacking(strike_at) and strike_at - attacker.attack_at >= attacker.windup_seconds() * 0.6
 		if bool(e.get("ranged", false)):

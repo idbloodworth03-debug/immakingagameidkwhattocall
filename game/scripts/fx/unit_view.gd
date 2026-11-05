@@ -573,7 +573,8 @@ func hurt(from_dir: Vector2, strong: bool) -> void:
 	# Several hits at once (a pile-up, a slow frame) add up, but only so far:
 	# never squashed flat or shoved off its spot.
 	squash = minf(squash + Feel.num(c, "hit_squash", 0.2) * (1.5 if strong else 1.0), Feel.num(c, "hit_squash_max", 0.35))
-	var push_px := Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
+	# A fearless animal (Honey Badger) doesn't budge.
+	var push_px := 0.0 if look != null and look.kind == "fearless" else Feel.num(c, "hit_knockback_pixels", 7.0) * (1.6 if strong else 1.0)
 	knock = (knock + Vector2(from_dir.x, from_dir.y * 0.6).normalized() * push_px).limit_length(Feel.num(c, "hit_knockback_max_pixels", 14.0))
 	trail_hold = Feel.num(c, "health_bar_trail_delay", 0.4)
 	# A flinch: a quick tilt away from the blow and a little bounce, eyes wide.

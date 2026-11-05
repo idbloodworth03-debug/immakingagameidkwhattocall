@@ -23,6 +23,13 @@ const STAGES := {
 	"guard": {"units": [[0, "self", 8, 11], [0, "gray_squirrel", 8, 12.4], [1, "gray_squirrel", 7, 6.5], [1, "gray_squirrel", 9, 6.5]], "aim": 1},
 	"rhino_charge": {"units": [[0, "self", 8, 16], [1, "raccoon", 6.4, 10.5], [1, "raccoon", 7.5, 10.5], [1, "raccoon", 8.6, 10.5], [1, "raccoon", 9.7, 10.5]]},
 	"pound": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.6, 10.0], [1, "wild_boar", 9.4, 10.0], [1, "wolf_pack", 6.6, 13.0], [1, "wolf_pack", 9.4, 13.0]]},
+	"rush": {"units": [[0, "self", 8, 15], [1, "raccoon", 6.5, 11], [1, "brown_bear", 8.6, 9]]},
+	"pack": {"units": [[0, "self", 7.2, 12], [0, "self", 8.8, 12], [1, "brown_bear", 8, 9.6]]},
+	"roar": {"units": [[0, "self", 8, 12], [0, "wild_boar", 6.6, 12.4], [0, "wolf_pack", 9.4, 12.4], [1, "brown_bear", 6.8, 9.8], [1, "snapping_turtle", 9.2, 9.8]]},
+	"fearless": {"units": [[0, "self", 8, 12.5], [1, "gray_squirrel", 7.2, 11], [1, "asian_elephant", 9.6, 9]]},
+	"stalk": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 9.5]]},
+	"venom": {"units": [[0, "self", 8, 12.5], [1, "brown_bear", 6.6, 10], [1, "snapping_turtle", 8, 9.6], [1, "giant_panda", 9.4, 10]]},
+	"triple": {"units": [[0, "self", 8, 12], [1, "wild_boar", 6.9, 10.4], [1, "honey_badger", 8, 10], [1, "wolf_pack", 9.1, 10.4]]},
 }
 
 var field: BattleField
@@ -61,6 +68,10 @@ func _ready() -> void:
 	top.add_child(_title)
 	column.add_child(top)
 	_line = UIStyle.label("", "large", UIStyle.color("gold"), HORIZONTAL_ALIGNMENT_CENTER)
+	# A long line wraps instead of pushing the screen wider.
+	_line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_line.custom_minimum_size.x = 1.0
+	_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(_line)
 	field = BattleField.new()
 	field.size_flags_vertical = Control.SIZE_EXPAND_FILL

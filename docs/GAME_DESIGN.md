@@ -500,6 +500,26 @@ in a little fight (with a Slow button).
     its speed in a cloud of dust, knocking everyone aside.
   - **Yeti**, "Every third hit: icy ground pound.": it glows icy blue the hit
     before; the pound hits and knocks back everyone around it.
+- Tank Destroyers:
+  - **Wild Boar**, "Charges a Tank. Huge first hit.": outside an army it goes
+    for the nearest Tank; it sprints at a Tank head down in a trail of dust,
+    and its first hit on each Tank does double, with a slam.
+  - **Wolf Pack**, "Pack bites harder on the same target.": 30% more while
+    the other wolf bites the same enemy (a golden double chomp).
+  - **Lion**, "Pride leader: nearby Tank Destroyers hit faster.": every 5 s
+    in a fight it roars (a golden ring): its Tank Destroyers within 3 tiles
+    attack 25% faster for 3 s, glowing gold.
+  - **Honey Badger**, "Fearless: always picks the biggest enemy.": it goes
+    for the biggest enemy within 4 tiles (if there's room round it), red
+    steam puffing off it, and nothing knocks it back.
+  - **Tiger**, "Circles the flank, pounces from the side.": crouched low, it
+    circles 2 tiles out to its prey's side, then pounces (an orange claw
+    slash); its first strike on each enemy does 1.8 times.
+  - **Komodo Dragon**, "Venom bite keeps hurting; moves to the next.": its
+    bite poisons for 4 s (the victim goes green); then it's off to an enemy
+    not poisoned yet.
+  - **Cerberus**, "Three heads, three bites every attack.": three quick fiery
+    bites (42% each), spread over the enemies in reach.
 
 **On screen** there's only the score, the armies (a banner with its class
 icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no

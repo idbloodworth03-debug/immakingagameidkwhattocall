@@ -12,6 +12,13 @@ extends Node2D
 ##     kicked up behind.
 ##   pound (Yeti): the hit before a ground pound, it glows icy blue with
 ##     frost rising off it (the tell).
+##   rush (Wild Boar): head down, sprinting at a Tank, dust behind.
+##   stalk (Tiger): low and crouched as it circles, an orange streak behind;
+##     stretched out as it pounces.
+##   fearless (Honey Badger): angry red steam puffing off it in a fight.
+##   triple (Cerberus): flames flickering off its heads in a fight.
+## And on any animal: a golden glow while a Lion's roar has it roused, a
+## sickly green with drips while it's poisoned.
 ## Sizes and colors: feel.json "styles".
 
 var view: UnitView
@@ -64,6 +71,32 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					# Dust kicked up behind it as it thunders along.
 					var behind := -view.move_dir * 0.45
 					_puffs(dt, "puff", _color("charge_dust", "#c9b08a"), Vector2(behind.x, behind.y * 0.6 - 0.05), -view.move_dir * 120.0 + Vector2(0, -30), 0.04, 14.0)
+			"rush":
+				if view.field != null and view.field.sim != null and BattleStyles.speed_bonus(view.field.sim, f) > 0 and view.moving > 0.05:
+					state = "rush"
+					p.sx = 1.06
+					p.sy = 0.88
+					var behind := -view.move_dir * 0.4
+					_puffs(dt, "puff", _color("charge_dust", "#c9b08a"), Vector2(behind.x, behind.y * 0.6 - 0.05), -view.move_dir * 90.0, 0.06, 10.0)
+			"stalk":
+				var t := f.target
+				if t != null and t.alive and not f.memory.get("pounced", []).has(t.uid) and view.moving > 0.05:
+					if int(f.memory.get("stalk_phase", 0)) == 0:
+						state = "crouch"
+						p.sx = 1.08
+						p.sy = 0.84
+					else:
+						state = "leap"
+						p.sx = 0.92
+						p.sy = 1.1
+						p.lift = 6.0
+					_puffs(dt, "spark", _color("pounce", "#ff9a2e"), Vector2(-view.move_dir.x * 0.3, -0.25), -view.move_dir * 160.0, 0.05, 8.0)
+			"fearless":
+				if _fighting(f):
+					_puffs(dt, "puff", _color("rage", "#ff5a3c"), Vector2(0.0, -0.9), Vector2(0, -70), 0.5, 8.0)
+			"triple":
+				if _fighting(f):
+					_puffs(dt, "glow", _color("fire", "#ff6a2a"), Vector2(0.0, -0.85), Vector2(0, -60), 0.4, 4.5)
 			"pound":
 				var every := maxi(1, int(f.sp("every", 3)))
 				if int(f.memory.get("pounds", 0)) % every == every - 1:
@@ -71,6 +104,15 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					var glow := 0.5 + 0.5 * sin(now * 8.0)
 					p.tint = Color(1.0, 1.0, 1.0).lerp(_color("frost", "#9fe6ff"), 0.35 + 0.2 * glow)
 					_puffs(dt, "sparkle", _color("frost", "#9fe6ff"), Vector2(0.0, -0.3), Vector2(0, -60), 0.12)
+	if f != null and view.defeat < 0.0 and view.field != null and view.field.sim != null:
+		# Roused by a Lion's roar: a golden glow and sparkles.
+		if int(f.memory.get("roared", -1)) > view.field.sim.tick:
+			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("roar", "#ffc93c"), 0.35)
+			_status_puffs(dt, "sparkle", _color("roar", "#ffc93c"), 0.3)
+		# Poisoned: green, dripping.
+		if f.poison > 0:
+			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("venom", "#7ee04a"), 0.45)
+			_status_puffs(dt, "glow", _color("venom", "#7ee04a"), 0.25)
 	if state != _state or state in ["snack", "shell"]:
 		_state = state
 		queue_redraw()
@@ -87,6 +129,26 @@ func _puffs(dt: float, particle: String, color: Color, spot: Vector2, vel: Vecto
 	var h := _height()
 	var at := view.position + position + Vector2(spot.x * h + randf_range(-0.15, 0.15) * h, spot.y * h)
 	view.field.fx.particle(particle, at, vel + Vector2(randf_range(-20, 20), randf_range(-10, 10)), 0.6, size, color, 60.0 if particle == "leaf" else -20.0, 2.0, randf_range(-4, 4))
+
+
+var _status_in := 0.0
+
+
+## A particle now and then somewhere on the animal (a status: roused,
+## poisoned), drifting down.
+func _status_puffs(dt: float, particle: String, color: Color, every: float) -> void:
+	_status_in -= dt
+	if _status_in > 0.0:
+		return
+	_status_in = every
+	var h := _height()
+	var at := view.position + position + Vector2(randf_range(-0.3, 0.3) * h, -randf_range(0.2, 0.8) * h)
+	view.field.fx.particle(particle, at, Vector2(0, 40), 0.5, 6.0, color, 80.0, 2.0)
+
+
+## In reach of what it's fighting.
+func _fighting(f: BattleSim.Fighter) -> bool:
+	return f.target != null and f.target.alive and view.field != null and view.field.sim != null and view.field.sim.in_range(f, f.target)
 
 
 ## The animal's drawn height in pixels.

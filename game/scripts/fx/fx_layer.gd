@@ -250,6 +250,8 @@ func _draw_projectile(pr: Dictionary) -> void:
 
 
 static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
+	if float(fx.age) < 0.0:
+		return  # not started yet (a staggered effect)
 	var p: Vector2 = fx.at
 	var t: float = fx.age / fx.life
 	var color: Color = fx.color

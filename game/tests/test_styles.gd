@@ -179,3 +179,131 @@ func test_yeti_pounds_every_third_hit() -> void:
 	sim.attack(yeti, target)
 	check(near.hp < near_hp, "the third: everyone around is hit")
 	check(Vector2(near.x, near.y).distance_to(Vector2(yeti.x, yeti.y)) > where.distance_to(Vector2(yeti.x, yeti.y)) + 500, "and knocked back")
+
+
+# --- Tank Destroyers --------------------------------------------------------------
+
+func test_wild_boar_charges_a_tank_with_a_huge_first_hit() -> void:
+	var sim := _sim()
+	var boar := _one(sim, 0, "wild_boar", 8, 14)
+	var squirrel := _one(sim, 1, "gray_squirrel", 8, 12)
+	var bear := _one(sim, 1, "brown_bear", 8, 8)
+	squirrel.stun = 9999
+	bear.stun = 9999
+	_run(sim, 0.1)
+	check(boar.target == bear, "it goes for the Tank, not the nearer squirrel")
+	check(BattleStyles.speed_bonus(sim, boar) > 0, "sprinting at it")
+	var hp := bear.hp
+	sim.attack(boar, bear)
+	var first := hp - bear.hp
+	hp = bear.hp
+	sim.attack(boar, bear)
+	var second := hp - bear.hp
+	check(first >= second * (int(GameData.styles.wild_boar.first_pct) - 10) / 100, "the first hit is huge (%d, then %d)" % [first, second])
+	check_eq(BattleStyles.speed_bonus(sim, boar), 0, "no sprint once it's hit that Tank")
+
+
+func test_wolf_pack_bites_harder_together() -> void:
+	var sim := _sim()
+	var a := _one(sim, 0, "wolf_pack", 7.6, 10)
+	var b := _one(sim, 0, "wolf_pack", 8.4, 10)
+	var bear := _one(sim, 1, "brown_bear", 8, 9)
+	bear.stun = 9999
+	var hp := bear.hp
+	sim.attack(a, bear)
+	var alone := hp - bear.hp
+	b.target = bear
+	hp = bear.hp
+	sim.attack(a, bear)
+	var together := hp - bear.hp
+	check(absi(together - alone * (100 + int(GameData.styles.wolf_pack.pct)) / 100) <= 40, "40%% more with its packmate on the same one (%d, then %d)" % [alone, together])
+
+
+func test_lion_roars_its_tank_destroyers_on() -> void:
+	var sim := _sim()
+	var lion := _one(sim, 0, "lion", 8, 11)
+	var boar := _one(sim, 0, "wild_boar", 9, 11)
+	var far_boar := _one(sim, 0, "wild_boar", 2, 18)
+	var bear := _one(sim, 1, "brown_bear", 8, 9.6)
+	sim.step()
+	check(int(boar.memory.get("roared", -1)) > sim.tick, "a Tank Destroyer beside it is roused")
+	check(BattleStyles.haste_pct(sim, boar) == int(GameData.styles.lion.haste_pct), "and attacks faster")
+	check_eq(BattleStyles.haste_pct(sim, far_boar), 0, "not one far away")
+	check(BattleStyles.haste_pct(sim, lion) > 0, "the Lion too")
+	_run(sim, float(GameData.styles.lion.seconds) + 0.1)
+	check_eq(BattleStyles.haste_pct(sim, boar), 0, "for a few seconds")
+
+
+func test_honey_badger_goes_for_the_biggest_and_stands_firm() -> void:
+	var sim := _sim()
+	var badger := _one(sim, 0, "honey_badger", 8, 12)
+	var small := _one(sim, 1, "gray_squirrel", 8, 11)
+	var big := _one(sim, 1, "asian_elephant", 10, 9.5)
+	small.stun = 9999
+	big.stun = 9999
+	sim.step()
+	check(badger.target == big, "the Elephant, not the squirrel right in front of it")
+	var where := Vector2i(badger.x, badger.y)
+	sim.knock_back(badger, badger.x, badger.y - T, T)
+	check_eq(Vector2i(badger.x, badger.y), where, "nothing knocks it back")
+
+
+func test_tiger_circles_and_pounces_from_the_side() -> void:
+	var sim := _sim()
+	var tiger := _one(sim, 0, "tiger", 8, 15)
+	var bear := _one(sim, 1, "brown_bear", 8, 9)
+	bear.stun = 9999
+	var widest := 0
+	var hp := bear.hp
+	var first := 0
+	for i in 6 * sim.tps:
+		sim.step()
+		widest = maxi(widest, absi(tiger.x - bear.x))
+		if bear.hp < hp:
+			first = hp - bear.hp
+			break
+	check(widest >= T, "it swings out to the side (%.1f tiles)" % (widest / float(T)))
+	check(absi(tiger.y - bear.y) < absi(tiger.x - bear.x) + T / 2, "and strikes from the side")
+	hp = bear.hp
+	sim.attack(tiger, bear)
+	var second := hp - bear.hp
+	check(first >= second * (int(GameData.styles.tiger.first_pct) - 10) / 100, "a big first strike (%d, then %d)" % [first, second])
+
+
+func test_komodo_poisons_then_moves_on() -> void:
+	var sim := _sim()
+	var komodo := _one(sim, 0, "komodo_dragon", 8, 11)
+	var a := _one(sim, 1, "brown_bear", 7.6, 10)
+	var b := _one(sim, 1, "brown_bear", 9.4, 10)
+	a.stun = 9999
+	b.stun = 9999
+	komodo.target = a
+	sim.attack(komodo, a)
+	check(a.poison > 0, "its bite poisons")
+	var hp := a.hp
+	_run(sim, 1.0)
+	check(a.hp < hp, "and keeps hurting")
+	check(komodo.target == b, "it's off to the one not poisoned yet")
+
+
+func test_cerberus_bites_three_times() -> void:
+	var sim := _sim()
+	var cerberus := _one(sim, 0, "cerberus", 8, 11)
+	var foes := [_one(sim, 1, "brown_bear", 7.2, 10.1), _one(sim, 1, "brown_bear", 8.0, 9.7), _one(sim, 1, "brown_bear", 8.8, 10.1)]
+	for f in foes:
+		f.stun = 9999
+	var before := foes.map(func(f): return f.hp)
+	sim.attack(cerberus, foes[1])
+	var bitten := 0
+	for i in foes.size():
+		if foes[i].hp < before[i]:
+			bitten += 1
+	check_eq(bitten, 3, "three heads, three enemies bitten")
+	var sim2 := _sim()
+	var alone := _one(sim2, 0, "cerberus", 8, 11)
+	var one := _one(sim2, 1, "brown_bear", 8, 9.7)
+	one.stun = 9999
+	var events_before := sim2.events.size()
+	sim2.attack(alone, one)
+	var hits := sim2.events.slice(events_before).filter(func(e): return e.type == "hit" and int(e.to) == one.uid).size()
+	check_eq(hits, 3, "alone, all three bites on the one")

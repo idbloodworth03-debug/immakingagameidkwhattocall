@@ -28,9 +28,31 @@ extends RefCounted
 ##   pound (Yeti): every `every` hits, an icy ground pound: enemies on the
 ##     ground within `radius` tiles take `pct` of its bite and are knocked
 ##     back `knock` tiles.
+##
+## Tank Destroyers:
+##   rush (Wild Boar): goes for the nearest enemy Tank within `reach` tiles,
+##     sprinting at it `speed_pct` faster; its first hit on each Tank does
+##     `first_pct` of its bite.
+##   pack (Wolf Pack): `pct` more bite while another wolf of its pack is
+##     biting the same enemy.
+##   roar (Lion): with an enemy within `trigger` tiles, it roars every
+##     `every` seconds: its Tank Destroyers within `radius` tiles (itself
+##     too) attack `haste_pct` faster for `seconds`.
+##   fearless (Honey Badger): goes for the biggest enemy (most health)
+##     within `reach` tiles, and can't be knocked back.
+##   stalk (Tiger): circles out `flank` tiles to its prey's side at
+##     `speed_pct` of its speed, then pounces from within `pounce` tiles at
+##     `pounce_pct`; its first hit on each enemy does `first_pct`.
+##   venom (Komodo Dragon): its bite poisons for `seconds` (`dps_pct` of its
+##     bite every second), then it goes for the nearest enemy within `reach`
+##     tiles that isn't poisoned yet.
+##   triple (Cerberus): every attack is three bites of `pct` each, spread
+##     over the enemies within its reach plus `reach` tiles (the one it's
+##     after again if there aren't three).
 
 const T := BattleSim.TILE
-const KINDS := ["cleave", "shell", "snack", "reflect", "guard", "rhino_charge", "pound"]
+const KINDS := ["cleave", "shell", "snack", "reflect", "guard", "rhino_charge", "pound",
+	"rush", "pack", "roar", "fearless", "stalk", "venom", "triple"]
 ## Reach (field units) from which a blow counts as a shot.
 const SHOT_REACH := 1500
 
@@ -57,6 +79,13 @@ static func on_spawn(_sim: BattleSim, _f: BattleSim.Fighter) -> void:
 ## Every tick, for every animal (even stunned): its style's timers.
 static func on_tick(sim: BattleSim, f: BattleSim.Fighter) -> void:
 	match f.style_kind:
+		"roar":
+			if f.stun <= 0 and f.deploy_ticks <= 0 and sim.tick >= int(f.memory.get("roar_at", 0)):
+				var trigger := tiles(f.sp("trigger", 3.0))
+				for e: BattleSim.Fighter in sim.fighters:
+					if e.team != f.team and e.alive and e.is_unit() and BattleSim.edge_distance(f, e) <= trigger:
+						_roar(sim, f)
+						break
 		"shell":
 			var left := int(f.memory.get("shell", 0))
 			if left > 0:
@@ -91,7 +120,97 @@ static func act(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 			return int(f.memory.get("snack", 0)) > 0
 		"rhino_charge":
 			return _rhino_charge(sim, f)
+		"stalk":
+			return _stalk(sim, f)
 	return false
+
+
+## How much faster than usual `f` attacks this tick (percent).
+static func haste_pct(sim: BattleSim, f: BattleSim.Fighter) -> int:
+	if int(f.memory.get("roared", -1)) > sim.tick:
+		return int(f.memory.get("roar_pct", 0))
+	return 0
+
+
+## How much faster than usual `f` moves (percent).
+static func speed_bonus(sim: BattleSim, f: BattleSim.Fighter) -> int:
+	if f.style_kind == "rush":
+		var t := f.target
+		if t != null and t.alive and t.cls == "tank" and not f.memory.get("slammed", []).has(t.uid) and not sim.in_range(f, t):
+			return int(f.sp("speed_pct", 60))
+	return 0
+
+
+## `f`'s blow at `t` (`amount` so far) as its style has it.
+static func attack_amount(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, amount: int) -> int:
+	if not t.is_unit():
+		return amount
+	match f.style_kind:
+		"rush":
+			if t.cls == "tank" and not f.memory.get("slammed", []).has(t.uid):
+				f.memory.slam = true
+				return amount * int(f.sp("first_pct", 250)) / 100
+		"stalk":
+			if not f.memory.get("pounced", []).has(t.uid):
+				f.memory.slam = true
+				return amount * int(f.sp("first_pct", 250)) / 100
+		"pack":
+			for o: BattleSim.Fighter in sim.fighters:
+				if o != f and o.alive and o.team == f.team and o.style_kind == "pack" and o.target == t and sim.in_range(o, t):
+					f.memory.pack_tick = sim.tick
+					return amount * (100 + int(f.sp("pct", 40))) / 100
+		"triple":
+			return amount * int(f.sp("pct", 45)) / 100
+	return amount
+
+
+## Whether nothing can knock `t` back.
+static func steady(t: BattleSim.Fighter) -> bool:
+	return t.style_kind == "fearless"
+
+
+## The enemy `f`'s style wants to go for, or null (then it chooses as its
+## class does).
+static func prefer_target(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fighter:
+	match f.style_kind:
+		"rush":
+			# The nearest Tank in reach it hasn't hit yet (in an army, its
+			# class already goes for Tanks, spreading out along them).
+			if f.memory.has("slot"):
+				return null
+			var reach := tiles(f.sp("reach", 8.0))
+			var slammed: Array = f.memory.get("slammed", [])
+			return _nearest(sim, f, reach, func(e): return e.cls == "tank" and not slammed.has(e.uid))
+		"fearless":
+			# The biggest one around.
+			var reach := tiles(f.sp("reach", 4.0))
+			var best: BattleSim.Fighter = null
+			for e: BattleSim.Fighter in sim.fighters:
+				if e.team == f.team or not e.alive or not e.is_unit() or not sim.can_target(f, e):
+					continue
+				if BattleSim.edge_distance(f, e) > reach:
+					continue
+				if best == null or e.max_hp > best.max_hp or (e.max_hp == best.max_hp and e.uid < best.uid):
+					best = e
+			return best
+		"venom":
+			return _nearest(sim, f, tiles(f.sp("reach", 5.0)), func(e): return e.poison <= 0)
+	return null
+
+
+## The nearest enemy `f` can hit within `reach` (edge to edge) that `ok`
+## says yes to, or null.
+static func _nearest(sim: BattleSim, f: BattleSim.Fighter, reach: int, ok: Callable) -> BattleSim.Fighter:
+	var best: BattleSim.Fighter = null
+	var best_d := 1 << 40
+	for e: BattleSim.Fighter in sim.fighters:
+		if e.team == f.team or not e.alive or not e.is_unit() or not sim.can_target(f, e):
+			continue
+		var d := BattleSim.edge_distance(f, e)
+		if d <= reach and d < best_d and ok.call(e):
+			best = e
+			best_d = d
+	return best
 
 
 ## After `f` lands a blow of `amount` on `t`.
@@ -99,6 +218,22 @@ static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter
 	if not t.is_unit():
 		return
 	match f.style_kind:
+		"rush", "stalk":
+			if f.memory.get("slam", false):
+				f.memory.slam = false
+				var key := "slammed" if f.style_kind == "rush" else "pounced"
+				var done: Array = f.memory.get(key, [])
+				done.append(t.uid)
+				f.memory[key] = done
+				f.memory.stalk_phase = 0
+				sim.events.append({"type": "slam", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y, "kind": f.style_kind})
+		"pack":
+			if int(f.memory.get("pack_tick", -1)) == sim.tick:
+				sim.events.append({"type": "pack_bite", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
+		"venom":
+			_venom(sim, f, t)
+		"triple":
+			_triple(sim, f, t)
 		"cleave":
 			_cleave(sim, f, t)
 		"pound":
@@ -163,6 +298,93 @@ static func redirect(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter)
 			best = g
 			best_gap = gap
 	return best if best != null else t
+
+
+# --- Tank Destroyers -------------------------------------------------------------
+
+## The Lion roars: its Tank Destroyers around it (itself too) attack faster
+## for a while.
+static func _roar(sim: BattleSim, f: BattleSim.Fighter) -> void:
+	f.memory.roar_at = sim.tick + ticks(sim, f.sp("every", 5.0))
+	var radius := tiles(f.sp("radius", 3.0))
+	var until := sim.tick + ticks(sim, f.sp("seconds", 3.0))
+	var pct := int(f.sp("haste_pct", 30))
+	var roused := []
+	for a: BattleSim.Fighter in sim.units(f.team):
+		if a.cls == "tank_destroyer" and BattleSim.dist(f, a) <= radius + a.radius:
+			a.memory.roared = until
+			a.memory.roar_pct = pct
+			roused.append(a.uid)
+	sim.events.append({"type": "roar", "uid": f.uid, "x": f.x, "y": f.y, "radius": radius, "roused": roused})
+
+
+## The Komodo's bite poisons; then it's off to someone not poisoned yet.
+static func _venom(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	if not t.alive:
+		return
+	t.poison = maxi(t.poison, ticks(sim, f.sp("seconds", 4.0)))
+	t.poison_dps = maxi(t.poison_dps, f.damage * int(f.sp("dps_pct", 35)) / 100)
+	sim.events.append({"type": "venom", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
+	var next := prefer_target(sim, f)
+	if next != null and next != t:
+		f.target = next
+
+
+## Cerberus's other two heads bite too: the nearest other enemies in reach,
+## or the same one again.
+static func _triple(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	var reach := f.attack_range + tiles(f.sp("reach", 0.6))
+	var others := []
+	for e: BattleSim.Fighter in sim.fighters:
+		if e != t and e.team != f.team and e.alive and e.is_unit() and sim.can_target(f, e) and BattleSim.edge_distance(f, e) <= reach:
+			others.append(e)
+	others.sort_custom(func(a, b): return BattleSim.edge_distance(f, a) < BattleSim.edge_distance(f, b) or (BattleSim.edge_distance(f, a) == BattleSim.edge_distance(f, b) and a.uid < b.uid))
+	var bitten := [t.uid]
+	for head in [1, 2]:
+		var victim: BattleSim.Fighter = others[head - 1] if others.size() >= head else t
+		if not victim.alive:
+			continue
+		bitten.append(victim.uid)
+		sim.strike(f, victim, bite(sim, f, victim, f.sp("pct", 45)), {"head": head})
+	sim.events.append({"type": "triple", "uid": f.uid, "bitten": bitten, "x": t.x, "y": t.y})
+
+
+## The Tiger, after prey it hasn't struck yet: out to its side first, then a
+## pounce. Its turn while it's on its way; once in reach it fights as usual.
+static func _stalk(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var t := f.target
+	if t == null or not t.alive or not t.is_unit() or f.memory.get("pounced", []).has(t.uid) or sim.in_range(f, t):
+		return false
+	if sim.army != null and f.memory.has("slot") and not sim.army.at_war():
+		return false
+	if int(f.memory.get("stalk_uid", -1)) != t.uid:
+		f.memory.stalk_uid = t.uid
+		f.memory.stalk_phase = 0
+		f.memory.stalk_side = 1 if (f.x > t.x or (f.x == t.x and f.uid % 2 == 0)) else -1
+	var speed := sim.current_speed(f)
+	if int(f.memory.stalk_phase) == 0:
+		# Its prey's side: across from the line between them, out `flank`.
+		var dx := t.x - f.x
+		var dy := t.y - f.y
+		var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+		var side := int(f.memory.stalk_side)
+		var out := tiles(f.sp("flank", 2.0)) + t.radius
+		var spot := Vector2i(t.x - dy * side * out / d, t.y + dx * side * out / d)
+		spot.x = clampi(spot.x, f.radius, sim.width - f.radius)
+		spot.y = clampi(spot.y, f.radius, sim.height - f.radius)
+		var near_spot := BattleSim.dist_to_point(f, spot.x, spot.y) <= T / 2
+		if near_spot or BattleSim.edge_distance(f, t) <= tiles(f.sp("pounce", 1.8)) and absi(dy) * 2 < absi(dx) + 1:
+			f.memory.stalk_phase = 1
+			sim.events.append({"type": "pounce", "uid": f.uid, "x": f.x, "y": f.y})
+		else:
+			var step := speed * int(f.sp("speed_pct", 130)) / 100
+			if sim.army != null:
+				sim.army._go(sim, f, spot, step)
+			else:
+				sim.move_toward_point(f, spot, step)
+			return true
+	sim.move_toward_point(f, Vector2i(t.x, t.y), speed * int(f.sp("pounce_pct", 220)) / 100)
+	return true
 
 
 # --- Tanks -----------------------------------------------------------------------

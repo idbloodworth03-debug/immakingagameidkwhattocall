@@ -5,6 +5,13 @@
   "giant_panda": {"kind": "snack", "line": "Sits down for a bamboo snack heal.", "below_pct": 50, "seconds": 2.0, "heal_pct": 35},
   "hippopotamus": {"kind": "reflect", "line": "Thick hide bites back at attackers.", "pct": 15},
   "asian_elephant": {"kind": "guard", "line": "Shields the friends right behind it.", "reach": 1.6},
-  "black_rhino": {"kind": "rhino_charge", "line": "Charges through the enemy line first.", "trigger": 5.0, "tiles": 5.0, "speed_pct": 260, "damage_pct": 40, "knock": 1.0, "stun": 0.3},
-  "yeti": {"kind": "pound", "line": "Every third hit: icy ground pound.", "every": 3, "radius": 2.0, "pct": 30, "knock": 1.0}
+  "black_rhino": {"kind": "rhino_charge", "line": "Charges through the enemy line first.", "trigger": 5.0, "tiles": 5.0, "speed_pct": 260, "damage_pct": 55, "knock": 1.0, "stun": 0.4},
+  "yeti": {"kind": "pound", "line": "Every third hit: icy ground pound.", "every": 3, "radius": 2.0, "pct": 30, "knock": 1.0},
+  "wild_boar": {"kind": "rush", "line": "Charges a Tank. Huge first hit.", "reach": 8.0, "speed_pct": 60, "first_pct": 200},
+  "wolf_pack": {"kind": "pack", "line": "Pack bites harder on the same target.", "pct": 30},
+  "lion": {"kind": "roar", "line": "Pride leader: nearby Tank Destroyers hit faster.", "trigger": 3.0, "every": 5.0, "seconds": 3.0, "radius": 3.0, "haste_pct": 25},
+  "honey_badger": {"kind": "fearless", "line": "Fearless: always picks the biggest enemy.", "reach": 4.0},
+  "tiger": {"kind": "stalk", "line": "Circles the flank, pounces from the side.", "flank": 2.0, "speed_pct": 130, "pounce": 1.8, "pounce_pct": 220, "first_pct": 180},
+  "komodo_dragon": {"kind": "venom", "line": "Venom bite keeps hurting; moves to the next.", "seconds": 4.0, "dps_pct": 40, "reach": 5.0},
+  "cerberus": {"kind": "triple", "line": "Three heads, three bites every attack.", "pct": 42, "reach": 0.6}
 }

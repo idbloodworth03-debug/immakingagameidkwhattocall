@@ -47,8 +47,8 @@ static func on_tick(_sim: BattleSim, _f: BattleSim.Fighter) -> void:
 	pass
 
 
-static func speed_bonus_pct(_sim: BattleSim, _f: BattleSim.Fighter) -> int:
-	return 0
+static func speed_bonus_pct(sim: BattleSim, f: BattleSim.Fighter) -> int:
+	return BattleStyles.speed_bonus(sim, f)
 
 
 static func on_moved(_sim: BattleSim, _f: BattleSim.Fighter) -> void:

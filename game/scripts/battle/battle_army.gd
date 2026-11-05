@@ -688,6 +688,10 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 			if not war or (BattleSim.edge_distance(f, t) <= prefer_reach and score - BattleSim.edge_distance(f, t) < full_cost):
 				liked = t
 				liked_score = score
+	# Its style may have its own idea (the biggest enemy, a Tank to charge...).
+	var picked := BattleStyles.prefer_target(sim, f)
+	if picked != null and (free or _reachable(f, picked, place, leash)) and _score(sim, f, picked, place, free) - BattleSim.edge_distance(f, picked) < full_cost:
+		return picked
 	return liked if liked != null else best
 
 

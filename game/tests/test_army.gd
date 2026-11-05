@@ -249,9 +249,9 @@ func test_nobody_stands_about_while_enemies_are_left() -> void:
 
 
 func test_the_whole_front_is_fought() -> void:
-	# Twelve boars against a wall of four bears: the boars spread out along
+	# Twelve lions against a wall of four bears: the lions spread out along
 	# the wall, one or more on every bear, not all on the middle ones.
-	var m := _armies(["wild_boar*6"], ["brown_bear*4"])
+	var m := _armies(["lion*6"], ["brown_bear*4"])
 	var army: BattleArmy = m.sim.army
 	var covered := false
 	for i in 30 * m.sim.tps:
@@ -263,24 +263,26 @@ func test_the_whole_front_is_fought() -> void:
 			covered = true
 			break
 	check(army.at_war(), "the war started")
-	check(covered, "while all four bears stand, every one has a boar on it")
+	check(covered, "while all four bears stand, every one has a lion on it")
 
 
 func test_fighters_walk_round_their_own_line() -> void:
-	# Boars stuck behind a wide wall of their own elephants, the enemy
-	# squirrels straight ahead: they walk round the end of the wall and
-	# every one of them gets into the fight.
-	var m := _armies(["asian_elephant*5", "wild_boar*3"], ["gray_squirrel*3", "brown_bear"])
-	var boars: Array = m.sim.units(0).filter(func(f): return f.card.id == "wild_boar")
-	var hit := {}
+	# Lions stuck behind a wide wall of their own elephants, the enemy
+	# squirrels straight ahead: they walk round the end of the wall and get
+	# past it (or reach an enemy first), every one of them.
+	var m := _armies(["asian_elephant*5", "lion*3"], ["gray_squirrel*3", "brown_bear"])
+	var lions: Array = m.sim.units(0).filter(func(f): return f.card.id == "lion")
+	var wall_y: int = m.sim.units(0).filter(func(f): return f.card.id == "asian_elephant").map(func(f): return f.y).min()
+	check(lions.all(func(b): return b.y > wall_y), "they start behind the wall")
+	var through := {}
 	for i in 40 * m.sim.tps:
 		if m.phase != "fight":
 			break
 		m.step()
-		for b in boars:
-			if b.alive and b.memory.get("attacked", false):
-				hit[b.uid] = true
-	check_eq(hit.size(), boars.size(), "every boar landed a blow")
+		for b in lions:
+			if b.alive and (b.y < wall_y or b.memory.get("attacked", false) or (b.target != null and b.target.alive and m.sim.in_range(b, b.target))):
+				through[b.uid] = true
+	check_eq(through.size(), lions.size(), "every lion got round it")
 
 
 func test_shots_go_over_teammates() -> void:

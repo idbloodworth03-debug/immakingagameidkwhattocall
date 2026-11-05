@@ -234,7 +234,7 @@ func _update(f: Fighter) -> void:
 	if f.stun > 0:
 		return
 	if f.cooldown > 0:
-		f.cooldown -= 100 + (f.rage_attack_pct if f.rage > 0 else 0)
+		f.cooldown -= 100 + (f.rage_attack_pct if f.rage > 0 else 0) + BattleStyles.haste_pct(self, f)
 	BattleAbilities.on_tick(self, f)
 	if not f.alive or f.stun > 0:
 		return
@@ -357,6 +357,10 @@ func _find_target(f: Fighter) -> Fighter:
 		for t in fighters:
 			if t.kind == "bait" and t.alive and t.team != f.team and dist(f, t) <= t.lure_radius:
 				return t
+	# Its style may have its own idea (the biggest enemy, a Tank to charge...).
+	var picked := BattleStyles.prefer_target(self, f)
+	if picked != null:
+		return picked
 	var prefer: Dictionary = GameData.class_rules.get("prefer", {}).get(f.cls, {})
 	var reach := roundi(float(prefer.get("tiles", 0)) * TILE)
 	var wanted := String(prefer.get("class", ""))
@@ -504,6 +508,8 @@ func attack(f: Fighter, t: Fighter, pct := 100) -> void:
 	var amount := f.damage * pct / 100
 	if f.rage > 0:
 		amount = amount * (100 + f.rage_damage_pct) / 100
+	# Its style's say in this blow (a huge first hit, a pack bite...).
+	amount = BattleStyles.attack_amount(self, f, t, amount)
 	amount = BattleAbilities.outgoing_damage(self, f, t, amount)
 	# Some luck in every hit, if the rules ask for it.
 	var variance := int(rules.get("damage_variance_pct", 0))
@@ -596,7 +602,7 @@ func slow_down(t: Fighter, pct: int, ticks: int, ignore_fearless := false) -> vo
 
 
 func knock_back(t: Fighter, from_x: int, from_y: int, distance: int) -> void:
-	if not t.alive or not t.is_unit():
+	if not t.alive or not t.is_unit() or BattleStyles.steady(t):
 		return
 	var dx := t.x - from_x
 	var dy := t.y - from_y

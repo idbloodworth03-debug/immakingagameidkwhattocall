@@ -15,8 +15,8 @@
   ],
   "shot": "trash",
   "stats": {
-   "hp": 433,
-   "damage": 91,
+   "hp": 450,
+   "damage": 95,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -144,8 +144,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 827,
-   "damage": 175,
+   "hp": 786,
+   "damage": 166,
    "hit_speed": 1.5,
    "speed": "fast",
    "range": 1,
@@ -278,8 +278,8 @@
    "big_cat"
   ],
   "stats": {
-   "hp": 980,
-   "damage": 216,
+   "hp": 1049,
+   "damage": 231,
    "hit_speed": 1.2,
    "speed": "fast",
    "range": 1,
@@ -345,8 +345,8 @@
    "herd"
   ],
   "stats": {
-   "hp": 2810,
-   "damage": 222,
+   "hp": 3035,
+   "damage": 240,
    "hit_speed": 1.8,
    "speed": "slow",
    "range": 1,
@@ -377,8 +377,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 1694,
-   "damage": 351,
+   "hp": 1643,
+   "damage": 340,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -410,8 +410,8 @@
    "armored"
   ],
   "stats": {
-   "hp": 3558,
-   "damage": 462,
+   "hp": 3771,
+   "damage": 490,
    "hit_speed": 1.8,
    "speed": "medium",
    "range": 1,
@@ -478,8 +478,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 475,
-   "damage": 94,
+   "hp": 519,
+   "damage": 103,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -551,8 +551,8 @@
    "primate"
   ],
   "stats": {
-   "hp": 1141,
-   "damage": 125,
+   "hp": 1164,
+   "damage": 128,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -577,8 +577,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 680,
-   "damage": 216,
+   "hp": 707,
+   "damage": 225,
    "hit_speed": 1.4,
    "speed": "fast",
    "range": 1,
@@ -648,8 +648,8 @@
    "flying"
   ],
   "stats": {
-   "hp": 1401,
-   "damage": 248,
+   "hp": 1359,
+   "damage": 241,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,
@@ -696,8 +696,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 1568,
-   "damage": 244,
+   "hp": 1490,
+   "damage": 232,
    "hit_speed": 1.5,
    "speed": "slow",
    "range": 1,
@@ -718,8 +718,8 @@
    "savanna"
   ],
   "stats": {
-   "hp": 902,
-   "damage": 207,
+   "hp": 974,
+   "damage": 224,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -742,8 +742,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 1135,
-   "damage": 189,
+   "hp": 1101,
+   "damage": 183,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -765,8 +765,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 2130,
-   "damage": 216,
+   "hp": 2258,
+   "damage": 229,
    "hit_speed": 1.4,
    "speed": "slow",
    "range": 1,
@@ -790,8 +790,8 @@
    "primate"
   ],
   "stats": {
-   "hp": 2167,
-   "damage": 249,
+   "hp": 2102,
+   "damage": 242,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -814,8 +814,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1494,
-   "damage": 196,
+   "hp": 1614,
+   "damage": 212,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,
@@ -839,8 +839,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 4685,
-   "damage": 469,
+   "hp": 4872,
+   "damage": 488,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -889,8 +889,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 3302,
-   "damage": 330,
+   "hp": 3170,
+   "damage": 317,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -911,8 +911,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 3771,
-   "damage": 326,
+   "hp": 3658,
+   "damage": 316,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,

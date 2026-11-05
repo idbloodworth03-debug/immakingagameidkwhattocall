@@ -520,13 +520,13 @@ in a little fight (with a Slow button).
     not poisoned yet.
   - **Cerberus**, "Three heads, three bites every attack.": three quick fiery
     bites (42% each), spread over the enemies in reach.
-- Ranged (every Ranged animal is a little tougher than before, 34% of its
-  card's health and 31% of its bite each, so they hold up now that
+- Ranged (every Ranged animal is a little tougher than before, 35% of its
+  card's health and 32% of its bite each, so they hold up now that
   everyone fights everywhere):
   - **Gray Squirrel**, "Rapid fire: lots of little pinecones.": every shot
     is three little pinecones, a moment apart (the same damage between them).
   - **Striped Skunk**, "Stink spray hits a whole group.": a short spray (4.5
-    tiles) that fans out and hits everyone in a 60-degree cone for 90%; the
+    tiles) that fans out and hits everyone in a 60-degree cone for 105%; the
     sprayed give off stink lines.
   - **Raccoon**, "Lobs trash over the line at the back.": it lobs tin cans in
     high arcs at the enemy furthest back in its reach.
@@ -580,7 +580,7 @@ in a little fight (with a Slow button).
     bowling them aside.
   - **Kraken** (Splash), "Tentacles slam and drag enemies together.": every
     attack, purple tentacles slam its target and two more enemies within
-    2.5 tiles (everyone near a slam takes 45%), then drag them all in toward
+    2.5 tiles (everyone near a slam takes 35%), then drag them all in toward
     it.
   - **Electric Eel** (Stun), "Lightning chains through four, stunning
     them.": every 2nd hit, lightning jumps from its target through up to

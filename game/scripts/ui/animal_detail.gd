@@ -89,8 +89,8 @@ func _build() -> void:
 		_add_stat(grid, "Speed", SPEED_NAMES.get(stats.speed, stats.speed))
 		_add_stat(grid, "Range", "Melee" if float(stats.range) <= 1.0 else "%s tiles" % str(stats.range))
 		_add_stat(grid, "Targets", TARGET_NAMES.get(stats.targets, stats.targets))
-		if int(animal.count) > 1:
-			_add_stat(grid, "Count", "x%d" % int(animal.count))
+		# How many animals one card brings into a fight (its class's squad).
+		_add_stat(grid, "Squad", "x%d" % DraftMatch.squad_units(String(animal.id)))
 
 	# What it does, in a line: its class (and trait), or the tool's effect.
 	var what := UIKit.well(16)

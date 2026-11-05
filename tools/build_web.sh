@@ -32,8 +32,21 @@ fi
 
 python3 "$ROOT/tools/check_release.py" >/dev/null || echo "!! Testing switches are on (endless gold, gems and Acorns...): fine for testing, not for a real release. See tools/check_release.py."
 
+# Which build this is, shown small in a corner of the main menu and the
+# profile: the build number (BUILD_NUMBER: the GitHub Actions run) and the
+# commit.
+BUILD_NUMBER="${BUILD_NUMBER:-local}"
+COMMIT="$(git -C "$ROOT" rev-parse --short=7 HEAD 2>/dev/null || echo unknown)"
+printf '{"build": "%s", "commit": "%s"}\n' "$BUILD_NUMBER" "$COMMIT" > "$ROOT/game/build.json"
+echo "== Build $BUILD_NUMBER, commit $COMMIT"
+
 echo "== Exporting the web build to $OUT"
 rm -rf "${OUT:?}"/*
 "$GODOT" --headless --path "$ROOT/game" --export-release "Web" "$OUT/index.html" >/dev/null 2>&1
 test -f "$OUT/index.wasm" && test -f "$OUT/index.pck"
+
+# Godot's service worker serves every file from its cache first, which kept
+# phones on old builds. Ours asks the network first (see the file).
+test -f "$OUT/index.service.worker.js"
+sed "s/___BUILD___/$BUILD_NUMBER-$COMMIT/" "$ROOT/tools/web/service_worker.js" > "$OUT/index.service.worker.js"
 echo "== Done: $(du -sh "$OUT" | cut -f1)"

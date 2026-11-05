@@ -1,8 +1,7 @@
 extends Control
 ## Battle tab (the home screen): a window onto your arena, the Draft Duel
-## and Deck buttons, and the four cage slots.
+## button (it opens your deck first) and the four cage slots.
 
-const DRAFT_SCENE := "res://scenes/draft.tscn"
 const DECK_SCENE := "res://scenes/deck.tscn"
 
 var _arena_holder: PanelContainer
@@ -39,18 +38,10 @@ func _ready() -> void:
 	battle.icon = UIKit.icon(GameData.ui_icon("tab_battle"))
 	battle.add_theme_constant_override("icon_max_width", 58)
 	battle.add_theme_constant_override("h_separation", 14)
-	battle.pressed.connect(func() -> void: Transition.go(DRAFT_SCENE))
-	# Your deck of 8, to change any time.
-	var deck := UIKit.button("DECK", UIKit.BLUE, 36, Vector2(200, 118))
-	deck.icon = UIKit.icon(GameData.ui_icon("tab_animals"))
-	deck.add_theme_constant_override("icon_max_width", 44)
-	deck.add_theme_constant_override("h_separation", 8)
-	deck.pressed.connect(func() -> void: Transition.go(DECK_SCENE))
-	var buttons := UIKit.hbox(14)
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	buttons.add_child(battle)
-	buttons.add_child(deck)
-	column.add_child(buttons)
+	# Every match starts with your deck of 8 (filled with your last one).
+	battle.pressed.connect(func() -> void: Transition.go(DECK_SCENE))
+	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(battle)
 	# A gentle pulse so the main button invites a tap.
 	battle.resized.connect(func() -> void: battle.pivot_offset = battle.size / 2.0)
 	var pulse := battle.create_tween().set_loops()

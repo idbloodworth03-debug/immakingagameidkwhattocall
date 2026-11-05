@@ -112,8 +112,10 @@ func _reset() -> void:
 	partners.clear()
 	for i in ids.size():
 		var x := roundi((1.6 + i * 2.9) * T)
-		var a: BattleSim.Fighter = sim.spawn(0, String(ids[i]), x, 4 * T)[0]
-		var p: BattleSim.Fighter = sim.spawn(1, PARTNER, x + roundi(1.1 * T), roundi(7.6 * T))[0]
+		# One animal of each (this screen acts out animations; a fight
+		# brings a whole squad of each card).
+		var a: BattleSim.Fighter = sim.spawn_units(0, String(ids[i]), 1, x, 4 * T)[0]
+		var p: BattleSim.Fighter = sim.spawn_units(1, PARTNER, 1, x + roundi(1.1 * T), roundi(7.6 * T))[0]
 		for f: BattleSim.Fighter in [a, p]:
 			f.deploy_ticks = 0
 			f.cooldown = 0

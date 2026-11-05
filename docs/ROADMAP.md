@@ -64,9 +64,10 @@
 ## Phase 1d: Armies (done; the standard way Draft Duel plays)
 
 - [x] Roster cut to 35 animals; the other 87 archived with their art kept (saves keep their levels)
-- [x] A deck of 8: chosen before a match (DECK on the home screen, last deck remembered); round 1 offers your 8, later rounds only your deck's animals and your tools; rivals bring decks that suit them
+- [x] A deck of 8: chosen before every match (DRAFT DUEL opens it, filled with your last deck; START is one tap); round 1 offers your 8, later rounds only your deck's animals and your tools; rivals always bring 8 that suit them
 - [x] New players start with 8 animals across all five classes plus the Net, which is also their first deck
-- [x] Squads: Tank 1, Tank Destroyer 2, Ranged 3, Air 2, elite Specialist 1, Mythic hero 1; picking an animal you have adds a squad, an upgrade stars every squad, armies stop at 40 animals
+- [x] Squads: Tank 1, Tank Destroyer 2, Ranged 3, Air 2, elite Specialist 1, Mythic hero 1, read from classes.json by every spawn; tap an army animal for Upgrade (a star for every squad) or +Squad (another full squad); armies stop at 40 animals
+- [x] A version label (home screen corner, Profile) and a service worker that always loads the newest build
 - [x] Formations: Tank wall, Tank Destroyer line, Air over it, staggered Ranged ranks, Specialists on the flanks, heroes in the middle; squad banners; your army shown in formation while you pick, new squads marching in
 - [x] Battle phases: lineup and FIGHT!, the march in step, Ranged volleys, the clash, the Tank Destroyer charge, lines that hold and close up; the War Horn rouses the whole army; a camera that frames the battle line
 - [x] Unison for every army action; random variety only for idle fidgets and faces

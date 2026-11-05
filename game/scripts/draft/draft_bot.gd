@@ -77,6 +77,25 @@ static func build_deck(available: Array, bot_style: Dictionary, rng: RandomNumbe
 	return deck
 
 
+## A rival's deck of `size`: from the animals unlocked up to its arena
+## (topped up from the starting cards, then the earliest arenas' animals,
+## where too few are unlocked yet), leaning to its favorite class
+## (build_deck).
+static func rival_deck(arena_index: int, bot_style: Dictionary, rng: RandomNumberGenerator, difficulty := 0.5, size := 8) -> Array:
+	var unlocked: Array = GameData.card_order.filter(func(id): return not GameData.is_tool(id) and int(GameData.cards[id].unlock_arena_index) <= arena_index)
+	if unlocked.size() < size:
+		var more: Array = GameData.progression.get("starting_cards", []).duplicate()
+		var by_arena: Array = GameData.card_order.duplicate()
+		by_arena.sort_custom(func(a, b): return int(GameData.cards[a].unlock_arena_index) < int(GameData.cards[b].unlock_arena_index))
+		more.append_array(by_arena)
+		for id in more:
+			if unlocked.size() >= size:
+				break
+			if not GameData.is_tool(id) and not unlocked.has(id):
+				unlocked.append(id)
+	return build_deck(unlocked, bot_style, rng, difficulty, size)
+
+
 ## A personality trait from `style`, from -0.5 to 0.5 (0 = ordinary).
 func _lean(trait_name: String) -> float:
 	return clampf(float(style.get(trait_name, 0.5)), 0.0, 1.0) - 0.5
@@ -102,13 +121,18 @@ func pick() -> void:
 			best_score = score
 			var replace := _weakest_tool() if duel.needs_tool_swap(team, slot) else -1
 			best_action = duel.pick.bind(team, slot, replace)
+	# Or, for an animal in its army: an upgrade or another squad.
 	for index in duel.herds[team].size():
-		if duel.can_star(team, index) != "":
-			continue
-		var score := _star_value(index)
-		if score > best_score:
-			best_score = score
-			best_action = duel.star.bind(team, index)
+		if duel.can_star(team, index) == "":
+			var score := _star_value(index)
+			if score > best_score:
+				best_score = score
+				best_action = duel.star.bind(team, index)
+		if duel.can_reinforce(team, index) == "":
+			var score := _reinforce_value(String(duel.herds[team][index].id))
+			if score > best_score:
+				best_score = score
+				best_action = duel.reinforce.bind(team, index)
 	if best_action.is_valid():
 		best_action.call()
 	else:
@@ -139,8 +163,7 @@ func _offer_value(id: String) -> float:
 	var index := duel.herd_index(team, id)
 	var cls := GameData.class_of(id)
 	if index >= 0:
-		# Another squad of one it already has.
-		return float(weights.get("squad", 4.6)) + _power(id) + _class_need(cls) + _lean("stars") * -2.0 + noise
+		return _reinforce_value(id)
 	var value := float(weights.get("new_animal", 5.0)) + _power(id) + _class_need(cls) + noise
 	if not _class_counts(team).has(cls):
 		value += float(weights.get("new_class", 1.5))
@@ -152,6 +175,15 @@ func _offer_value(id: String) -> float:
 			if GameData.class_of(entry.id) == cls:
 				value -= 2.0 * (0.4 + difficulty)
 	return value
+
+
+## How much another squad of an animal in its army is worth: like a new
+## animal of its class, without the bonus for a class it hasn't got; less
+## for those who like stars.
+func _reinforce_value(id: String) -> float:
+	var weights: Dictionary = GameData.draft_rules.get("bot", {})
+	var noise := rng.randf() * lerpf(3.0, 0.8, difficulty)
+	return float(weights.get("squad", 4.6)) + _power(id) + _class_need(GameData.class_of(id)) + _lean("stars") * -2.0 + noise
 
 
 ## A card's power, centered on an ordinary card, as a small nudge.
@@ -274,7 +306,7 @@ func _aim(tool_id: String) -> Dictionary:
 			return {"x": biggest.x, "y": biggest.y} if biggest != null and biggest.max_hp >= 1000 else {}
 		"bait":
 			var near := enemies.filter(func(f): return duel.sim.on_own_half(team, f.y))
-			var lure := _best_cluster(near, radius, func(f): return float(f.card.cost) / int(f.card.get("count", 1)))
+			var lure := _best_cluster(near, radius, func(f): return float(f.card.cost) / int(f.memory.get("squad_units", 1)))
 			if float(lure.get("value", 0)) < 4.0:
 				return {}
 			# Drop it just ahead of them, toward our herd: they stop to eat
@@ -282,7 +314,7 @@ func _aim(tool_id: String) -> Dictionary:
 			var ahead := -2 * T if team == 1 else 2 * T
 			return {"x": lure.x, "y": clampi(lure.y + ahead, 0, duel.sim.height)}
 		_:
-			var hit := _best_cluster(enemies, radius, func(f): return float(f.card.cost) / int(f.card.get("count", 1)))
+			var hit := _best_cluster(enemies, radius, func(f): return float(f.card.cost) / int(f.memory.get("squad_units", 1)))
 			return hit if float(hit.get("value", 0)) >= lerpf(5.0, 3.5, difficulty) else {}
 
 

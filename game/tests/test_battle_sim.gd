@@ -43,17 +43,20 @@ func test_nothing_to_fight_means_standing_still() -> void:
 func test_animals_find_the_nearest_enemy_and_fight() -> void:
 	var sim := _sim()
 	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
-	var near: BattleSim.Fighter = _ready_now(sim.spawn(1, "gray_squirrel", 3 * T, 6 * T))[0]
-	var far: BattleSim.Fighter = _ready_now(sim.spawn(1, "raccoon", 15 * T, 1 * T))[0]
+	var near: Array = _ready_now(sim.spawn(1, "gray_squirrel", 3 * T, 6 * T))
+	_ready_now(sim.spawn(1, "raccoon", 15 * T, 1 * T))
+	# The bear is made tough enough to see it through.
+	bear.max_hp *= 20
+	bear.hp = bear.max_hp
 	_run(sim, 0.2)
-	check(bear.target == near, "the bear goes for the closer squirrel")
+	check(bear.target != null and bear.target.card.id == "gray_squirrel", "the bear goes for the closer squirrels")
 	var guard := 0
-	while near.alive and bear.alive and guard < 30 * sim.tps:
+	while near.any(func(f): return f.alive) and bear.alive and guard < 60 * sim.tps:
 		sim.step()
 		guard += 1
-	check(not near.alive, "and beats it")
+	check(not near.any(func(f): return f.alive), "and beats them")
 	sim.step()
-	check(bear.target == far, "then goes after the raccoon")
+	check(bear.target != null and bear.target.card.id == "raccoon", "then goes after the raccoons")
 
 
 func test_ground_animals_cant_reach_flyers() -> void:
@@ -196,19 +199,21 @@ func test_ranged_go_for_air() -> void:
 func test_animals_stick_to_their_target() -> void:
 	var sim := _sim()
 	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
-	var raccoon: BattleSim.Fighter = _ready_now(sim.spawn(1, "raccoon", 8 * T, 7 * T))[0]
-	# The enemies hold still, so only the bear's choice changes.
-	sim.stun(raccoon, 200)
+	# The enemies hold still (a whole squad each), so only the bear's choice
+	# changes.
+	for f in _ready_now(sim.spawn(1, "raccoon", 8 * T, 7 * T)):
+		sim.stun(f, 200)
 	_run(sim, 0.1)
-	check(bear.target == raccoon, "the bear heads for the raccoon")
-	var squirrel: BattleSim.Fighter = _ready_now(sim.spawn(1, "gray_squirrel", 11 * T, 8 * T))[0]
-	sim.stun(squirrel, 200)
+	check(bear.target != null and bear.target.card.id == "raccoon", "the bear heads for the raccoons")
+	var first := bear.target
+	for f in _ready_now(sim.spawn(1, "gray_squirrel", 11 * T, 8 * T)):
+		sim.stun(f, 200)
 	_run(sim, 0.5)
-	check(bear.target == raccoon, "it doesn't switch for one only a little closer")
-	var boar: BattleSim.Fighter = _ready_now(sim.spawn(1, "wild_boar", 8 * T, 11 * T))[0]
-	sim.stun(boar, 200)
+	check(bear.target == first, "it doesn't switch for one only a little closer")
+	for f in _ready_now(sim.spawn(1, "wild_boar", 8 * T, 11 * T)):
+		sim.stun(f, 200)
 	_run(sim, 0.5)
-	check(bear.target == boar, "it does for one much closer")
+	check(bear.target != null and bear.target.card.id == "wild_boar", "it does for one much closer")
 
 
 func test_burrowers_pop_up_behind_the_enemy() -> void:
@@ -246,9 +251,11 @@ func test_splash_stun_and_slow() -> void:
 	check(beside.slow > 0 and beside.slow_pct == int(GameData.traits.slow.pct), "Slow slows")
 
 
-func test_swarms_bring_at_most_two() -> void:
+func test_a_card_brings_its_squad() -> void:
 	var sim := _sim()
-	check_eq(sim.spawn(0, "wolf_pack", 8 * T, 15 * T).size(), int(GameData.class_rules.swarm_max), "three wolves on the card, two on the field")
+	check_eq(sim.spawn(0, "wolf_pack", 8 * T, 15 * T).size(), 2, "a Tank Destroyer card: two")
+	check_eq(sim.spawn(0, "gray_squirrel", 4 * T, 15 * T).size(), 3, "a Ranged card: three")
+	check_eq(sim.spawn(1, "brown_bear", 8 * T, 5 * T).size(), 1, "a Tank card: one")
 
 
 # --- Ranger tools ----------------------------------------------------------
@@ -289,11 +296,15 @@ func test_medkit_heals_allies() -> void:
 
 func test_food_bait_lures_enemies() -> void:
 	var sim := _sim()
-	var boar: BattleSim.Fighter = _ready_now(sim.spawn(1, "wild_boar", 4 * T, 8 * T))[0]
+	var boars: Array = _ready_now(sim.spawn(1, "wild_boar", 4 * T, 8 * T))
 	_ready_now(sim.spawn(0, "red_fox", 12 * T, 16 * T))
 	_use(sim, "food_bait", 5 * T, 10 * T)
-	_run(sim, 1.0)
-	check(boar.target != null and boar.target.kind == "bait", "the boar goes for the snack")
+	# (A squad can finish the snack quickly: watch for it the whole time.)
+	var lured := false
+	for i in sim.tps:
+		sim.step()
+		lured = lured or boars.any(func(b): return b.alive and b.target != null and b.target.kind == "bait")
+	check(lured, "the boars go for the snack")
 
 
 func test_tranq_dart_puts_the_closest_to_sleep() -> void:

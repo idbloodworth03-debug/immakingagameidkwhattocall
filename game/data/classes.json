@@ -1,5 +1,5 @@
 {
-  "_note": "Animal classes (every animal has one, in animals.json \"class\") and the Specialists' traits (\"trait\"). Rows: where a class starts, in tiles back from the middle line (Air hovers over its row). counters: extra damage (percent) one class does to another; less for a negative number (Tanks are armored: everyone but Tank Destroyers does 30% less to them). A class's targets and range override the animal's own (Ranged reach at least `range` tiles; Air flies). line: the one short line shown when you hold a card.",
+  "_note": "Animal classes (every animal has one, in animals.json \"class\") and the Specialists' traits (\"trait\"). Where each class stands in an army: \"formation\"; how many animals a card brings: \"squads\". counters: extra damage (percent) one class does to another; less for a negative number (Tanks are armored: everyone but Tank Destroyers does 30% less to them). A class's targets and range override the animal's own (Ranged reach at least `range` tiles; Air flies). line: the one short line shown when you hold a card.",
   "classes": [
     {"id": "tank", "name": "Tank", "icon": "class_tank", "color": "#4f8ef0", "row": "front", "targets": "ground",
      "line": "Tough. Holds the front line."},
@@ -35,16 +35,6 @@
     "tank_destroyer": {"class": "tank", "tiles": 7.0},
     "ranged": {"class": "air", "tiles": 7.0}
   },
-  "rows": {
-    "_note": "Where each class lines up, in tiles back from the middle line: front, middle, air (Air's own line, just behind the middle row) and back. Animals in a line stand at least `spacing` tiles apart; a band too full for one line gets more lines `depth` tiles apart, and the bands behind it move back to make room.",
-    "front": 2.2,
-    "middle": 4.4,
-    "air": 5.5,
-    "back": 6.6,
-    "spacing": 1.7,
-    "depth": 1.1
-  },
-  "swarm_max": 2,
   "squads": {
     "_note": "How many animals one card brings into a fight (a squad), and how strong each one is, by class: `units` animals, each with hp_pct and damage_pct of the card's health and bite (so a squad of 3 at 36% is a little more than one animal at 100%). radius: how much room each takes (tiles). spacing: how far apart neighbours stand in a line (tiles, centre to centre). line_max: how many fit in one line before a second line forms behind. leash: how far (tiles) an animal may leave its place in the formation to fight. Specialists are single elite animals, stronger each, standing on the flanks. A Mythic (any class) is one big hero carrying share_pct of a whole squad of its class (all of its squad's health and bite in one animal), drawn hero_scale times as big.",
     "tank": {"units": 1, "hp_pct": 150, "damage_pct": 130, "radius": 0.6, "spacing": 1.45, "line_max": 7, "leash": 1.0},

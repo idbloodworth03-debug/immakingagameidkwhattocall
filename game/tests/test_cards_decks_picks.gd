@@ -1,0 +1,270 @@
+extends TestCase
+## The three rules that make Draft Duel an army game, checked the way a
+## match plays them:
+##   Squads: one card puts a whole squad on the field: Tank 1, Tank
+##     Destroyer 2, Ranged 3, Air 2, Specialist 1, Mythic 1. Written out
+##     here on purpose (not read from classes.json), so a wrong data file
+##     fails too.
+##   Deck of 8: round 1 offers exactly your 8; later offers come only from
+##     your 8 and your tools, for you and for the computer.
+##   Upgrade or Reinforce: from round 2, an animal in your army can get a
+##     star (more stars, same animals) or another full squad (more animals).
+
+const SQUAD := {"tank": 1, "tank_destroyer": 2, "ranged": 3, "air": 2, "specialist": 1}
+const MYTHIC := 1
+
+
+func _expected(id: String) -> int:
+	if String(GameData.cards[id].rarity) == "mythic":
+		return MYTHIC
+	return int(SQUAD[GameData.class_of(id)])
+
+
+func _animals() -> Array:
+	return GameData.card_order.filter(func(id): return not GameData.is_tool(id))
+
+
+func _on_field(m: DraftMatch, team: int, id: String) -> int:
+	return m.sim.units(team).filter(func(f): return f.card.id == id).size()
+
+
+func _slot(m: DraftMatch, team: int, id: String) -> int:
+	for i in m.offers[team].size():
+		if m.offers[team][i].id == id:
+			return i
+	return -1
+
+
+func _finish_fight(m: DraftMatch) -> void:
+	var guard := 0
+	while m.phase == "fight" and guard < 100000:
+		m.step()
+		guard += 1
+
+
+# --- Squads ------------------------------------------------------------------
+
+## Every animal in the game, for the player and for the computer: one card,
+## and the field has exactly its squad.
+func test_every_card_brings_its_whole_squad() -> void:
+	for id in _animals():
+		var m := DraftMatch.new(3)
+		m.herds = [[{"id": id, "stars": 1, "squads": 1}], [{"id": id, "stars": 1, "squads": 1}]]
+		m._lay_out_herds()
+		for team in 2:
+			check_eq(_on_field(m, team, id), _expected(id), "%s (%s) for %s" % [id, GameData.class_of(id), ["you", "the computer"][team]])
+		# Each one is its own animal, with its own health.
+		var squad: Array = m.sim.units(0)
+		var uids := {}
+		for f in squad:
+			uids[f.uid] = true
+			check(f.hp > 0 and f.hp == f.max_hp, "%s: each animal has its own full health" % id)
+		check_eq(uids.size(), squad.size(), "%s: separate animals" % id)
+		# The plain fight (no army) brings the same squad.
+		var sim := BattleSim.new([{}, {}], 1)
+		check_eq(sim.spawn(0, id, 8000, 15000).size(), _expected(id), "%s spawned on its own" % id)
+
+
+## One card of each class, picked the way a player picks them: 1, 2, 3, 2,
+## 1 and 1 animals on the field.
+func test_one_card_of_each_class_through_the_picks() -> void:
+	var deck := ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "red_fox", "yeti", "lion", "barn_owl"]
+	var m := DraftMatch.new(21, {"pools": [deck + ["net"], deck + ["net"]]})
+	for id in ["brown_bear", "wild_boar", "gray_squirrel"]:
+		check(m.pick(0, _slot(m, 0, id)), "round 1: %s" % id)
+	for id in ["lion", "barn_owl", "red_fox"]:
+		m.pick(1, _slot(m, 1, id))
+	m.set_ready(0)
+	m.set_ready(1)
+	check_eq(m.phase, "fight", "fighting")
+	check_eq(_on_field(m, 0, "brown_bear"), 1, "a Tank card: 1")
+	check_eq(_on_field(m, 0, "wild_boar"), 2, "a Tank Destroyer card: 2")
+	check_eq(_on_field(m, 0, "gray_squirrel"), 3, "a Ranged card: 3")
+	_finish_fight(m)
+	m.next_round()
+	# Round 2: the other three classes on offer.
+	m.offers[0] = [{"id": "peregrine_falcon", "taken": false}, {"id": "red_fox", "taken": false}, {"id": "yeti", "taken": false}]
+	for id in ["peregrine_falcon", "red_fox", "yeti"]:
+		check(m.pick(0, _slot(m, 0, id)), "round 2: %s" % id)
+	m.picks_left[1] = 0
+	m.set_ready(0)
+	m.set_ready(1)
+	check_eq(m.phase, "fight", "fighting again")
+	check_eq(_on_field(m, 0, "peregrine_falcon"), 2, "an Air card: 2")
+	check_eq(_on_field(m, 0, "red_fox"), 1, "a Specialist card: 1")
+	check_eq(_on_field(m, 0, "yeti"), 1, "a Mythic card: 1")
+	check_eq(_on_field(m, 0, "gray_squirrel"), 3, "the Ranged card from round 1 still 3")
+
+
+# --- Deck of 8 ---------------------------------------------------------------
+
+## Whole matches between computer players, each with its own deck of 8:
+## nothing outside a deck is ever offered or put on the field.
+func test_no_animal_outside_the_deck_ever_appears() -> void:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 77
+	var animals := _animals()
+	for match_index in 6:
+		var decks := [[], []]
+		for team in 2:
+			var shuffled := animals.duplicate()
+			for i in shuffled.size():
+				var j := rng.randi_range(i, shuffled.size() - 1)
+				var swap: Variant = shuffled[i]
+				shuffled[i] = shuffled[j]
+				shuffled[j] = swap
+			decks[team] = shuffled.slice(0, 8)
+		var tools := [["net", "air_horn"], ["medkit"]]
+		var m := DraftMatch.new(500 + match_index, {"pools": [decks[0] + tools[0], decks[1] + tools[1]]})
+		var bots := [DraftBot.new(m, 0, match_index * 3 + 1, 0.7), DraftBot.new(m, 1, match_index * 3 + 2, 0.4)]
+		var guard := 0
+		var checked_round := 0
+		while not m.is_over() and guard < 200000:
+			guard += 1
+			if m.phase == "pick" and checked_round != m.round_number:
+				checked_round = m.round_number
+				for team in 2:
+					var offered: Array = m.offers[team].map(func(o): return String(o.id))
+					if m.is_first_round():
+						check_eq(offered, decks[team], "round 1 offers exactly team %d's 8" % team)
+					for id in offered:
+						check(decks[team].has(id) or tools[team].has(id), "round %d: %s offered to team %d is in its deck or tools" % [m.round_number, id, team])
+			match m.phase:
+				"pick":
+					for b in bots:
+						b.pick_all()
+				"fight":
+					if m.fight_tick == 0:
+						for team in 2:
+							for f in m.sim.units(team):
+								check(decks[team].has(f.card.id), "%s on the field for team %d is in its deck" % [f.card.id, team])
+					for b in bots:
+						b.update()
+					m.step()
+				"round_over":
+					m.next_round()
+		check(m.is_over(), "match %d finished" % match_index)
+		for team in 2:
+			for entry in m.herds[team]:
+				check(decks[team].has(entry.id), "team %d's army: %s from its deck" % [team, entry.id])
+
+
+## The computer always brings a deck of 8, even in the first arena where
+## fewer than 8 animals are unlocked.
+func test_rival_decks_have_eight() -> void:
+	for arena in GameData.arenas.size():
+		var rng := RandomNumberGenerator.new()
+		rng.seed = arena
+		var deck := DraftBot.rival_deck(arena, {"favorite": "air"}, rng, 0.5, 8)
+		check_eq(deck.size(), 8, "arena %d: 8 animals" % (arena + 1))
+		var unique := {}
+		for id in deck:
+			unique[id] = true
+			check(not GameData.is_tool(id), "arena %d: animals only" % (arena + 1))
+		check_eq(unique.size(), 8, "arena %d: all different" % (arena + 1))
+
+
+## Your deck is kept and filled in next time (one tap to start).
+func test_the_last_deck_is_kept() -> void:
+	var profile: Node = load("res://scripts/autoload/profile.gd").new()
+	profile.autosave = false
+	profile.testing_switches = false
+	profile.reset()
+	for id in ["lion", "tiger", "king_cobra"]:
+		profile.data.collection[id] = {"level": 1, "copies": 0, "new": false}
+	var deck: Array = (profile.get_deck() as Array).slice(0, 5) + ["lion", "tiger", "king_cobra"]
+	profile.set_deck(deck)
+	check_eq(profile.get_deck(), deck, "the same 8 next time")
+	profile.free()
+
+
+# --- Upgrade or Reinforce ----------------------------------------------------
+
+func _second_round(seed_value: int) -> DraftMatch:
+	var deck := ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "red_fox", "lion", "barn_owl", "raccoon"]
+	var m := DraftMatch.new(seed_value, {"pools": [deck + ["net"], deck + ["net"]]})
+	for id in ["brown_bear", "wild_boar", "gray_squirrel"]:
+		m.pick(0, _slot(m, 0, id))
+	for id in ["lion", "barn_owl", "raccoon"]:
+		m.pick(1, _slot(m, 1, id))
+	m.set_ready(0)
+	m.set_ready(1)
+	_finish_fight(m)
+	m.next_round()
+	return m
+
+
+## Reinforce a Ranged animal: 6 of it on the field in the next fight.
+func test_reinforce_adds_a_full_squad() -> void:
+	var m := _second_round(31)
+	var index := m.herd_index(0, "gray_squirrel")
+	check_eq(m.can_reinforce(0, index), "", "a pick can add a squad")
+	check(m.reinforce(0, index), "reinforced")
+	check_eq(int(m.herds[0][index].squads), 2, "two squads")
+	check_eq(int(m.herds[0][index].stars), 1, "no star")
+	check_eq(m.picks_left[0], int(GameData.draft_rules.picks_per_round) - 1, "it used one pick")
+	check_eq(m.picks_made[0][-1].kind, "squad", "the pick slot shows it")
+	m.picks_left = [0, 0]
+	m.set_ready(0)
+	m.set_ready(1)
+	check_eq(m.phase, "fight", "fighting")
+	check_eq(_on_field(m, 0, "gray_squirrel"), 6, "6 Gray Squirrels on the field")
+
+
+## Upgrade one: its stars go up and its animals don't.
+func test_upgrade_adds_a_star_not_animals() -> void:
+	var m := _second_round(32)
+	var index := m.herd_index(0, "gray_squirrel")
+	check(m.star(0, index), "upgraded")
+	check_eq(int(m.herds[0][index].stars), 2, "a star")
+	check_eq(int(m.herds[0][index].squads), 1, "still one squad")
+	m.picks_left = [0, 0]
+	m.set_ready(0)
+	m.set_ready(1)
+	var squirrels: Array = m.sim.units(0).filter(func(f): return f.card.id == "gray_squirrel")
+	check_eq(squirrels.size(), 3, "still 3 Gray Squirrels")
+	for f in squirrels:
+		check_eq(int(f.memory.stars), 2, "each with the star")
+
+
+## The rules around it: not in round 1, undo takes it back, and a full army
+## can't take another squad (it can still upgrade).
+func test_reinforce_rules() -> void:
+	var deck := ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "red_fox", "lion", "barn_owl", "raccoon"]
+	var first := DraftMatch.new(33, {"pools": [deck, deck]})
+	first.pick(0, _slot(first, 0, "gray_squirrel"))
+	check(first.can_reinforce(0, 0) != "", "not in round 1 (starters only)")
+	var m := _second_round(34)
+	var index := m.herd_index(0, "gray_squirrel")
+	m.reinforce(0, index)
+	check(m.undo(0), "taken back")
+	check_eq(int(m.herds[0][index].squads), 1, "one squad again")
+	m.herds[0][index].squads = 13
+	check_eq(m.can_reinforce(0, index), "Army full", "no room for 3 more")
+	check_eq(m.can_star(0, index), "", "an upgrade still fits")
+
+
+## The computer chooses between the two as well.
+func test_the_computer_upgrades_and_reinforces() -> void:
+	var kinds := {}
+	for match_index in 4:
+		var m := DraftMatch.new(900 + match_index)
+		var bots := [DraftBot.new(m, 0, match_index + 1, 0.6), DraftBot.new(m, 1, match_index + 7, 0.6)]
+		var guard := 0
+		while not m.is_over() and guard < 200000:
+			guard += 1
+			match m.phase:
+				"pick":
+					for b in bots:
+						b.pick_all()
+				"fight":
+					for b in bots:
+						b.update()
+					m.step()
+				"round_over":
+					m.next_round()
+			for e in m.take_events():
+				if e.type == "pick":
+					kinds[e.kind] = int(kinds.get(e.kind, 0)) + 1
+	check(int(kinds.get("star", 0)) > 0, "it upgrades (%d)" % int(kinds.get("star", 0)))
+	check(int(kinds.get("squad", 0)) > 0, "it reinforces (%d)" % int(kinds.get("squad", 0)))

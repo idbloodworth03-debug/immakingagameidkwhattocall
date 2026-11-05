@@ -227,7 +227,7 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.id = f.card.id
 	v.team = f.team
 	v.flying = f.is_flying()
-	v.swarm = int(f.card.get("count", 1)) > 1
+	v.swarm = false
 	v.facing = 0.0 if f.team == 0 else 180.0
 	v.pos = Vector2(f.x, f.y)
 	v.shown = v.pos

@@ -11,7 +11,8 @@ extends RefCounted
 ##     - an offered animal: a new squad of it joins the army (another squad
 ##       if the army has it already),
 ##     - an offered tool (two at most; a third replaces one of them),
-##     - an upgrade: a star for every squad of an animal in the army.
+##     - an upgrade: a star for every squad of an animal in the army,
+##     - a reinforcement: another full squad of an animal in the army.
 ##   Picks can be taken back until the player is ready. There's no money;
 ##   the army grows every round, up to army_max_units animals.
 ##
@@ -299,6 +300,33 @@ func star(team: int, index: int) -> bool:
 	return true
 
 
+## Why `team` can't add another squad of herd animal `index` ("" if it
+## can).
+func can_reinforce(team: int, index: int) -> String:
+	if phase != "pick" or ready[team]:
+		return "Not now"
+	if is_first_round():
+		return "Pick your starters first"
+	if picks_left[team] <= 0:
+		return "No picks left"
+	if index < 0 or index >= herds[team].size():
+		return "Pick an animal"
+	if army_full(team, String(herds[team][index].id)):
+		return "Army full"
+	return ""
+
+
+## Uses a pick to add another full squad of herd animal `index`
+## (Reinforce): it joins the army's formation in the next fight.
+func reinforce(team: int, index: int) -> bool:
+	if can_reinforce(team, index) != "":
+		return false
+	_save_undo(team)
+	herds[team][index].squads = int(herds[team][index].get("squads", 1)) + 1
+	_picked(team, {"kind": "squad", "id": herds[team][index].id, "index": index, "slot": -1})
+	return true
+
+
 ## Takes back the last pick this round.
 func undo(team: int) -> bool:
 	if phase != "pick" or ready[team] or _undo[team].is_empty():
@@ -322,7 +350,7 @@ func has_any_pick(team: int) -> bool:
 		if can_pick(team, slot) == "":
 			return true
 	for index in herds[team].size():
-		if can_star(team, index) == "":
+		if can_star(team, index) == "" or can_reinforce(team, index) == "":
 			return true
 	return false
 

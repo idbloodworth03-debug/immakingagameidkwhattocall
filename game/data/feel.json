@@ -260,10 +260,11 @@
   },
 
   "pick": {
-    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: option_card for the five options, start_card for round 1's collection grid, herd_card for your herd row; army_height: how tall your army in formation is drawn while picking at least (it takes the room the options leave; framed with army_margin_tiles around it, at least army_min_tiles across, zoomed in up to army_max_zoom); slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Hold a card hold_seconds to see its details. After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
+    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: option_card for the five options, start_card for round 1's collection grid, herd_card for your army row; choice_button for the Upgrade and +Squad buttons you get by tapping an animal in your army; army_height: how tall your army in formation is drawn while picking at least (it takes the room the options leave; framed with army_margin_tiles around it, at least army_min_tiles across, zoomed in up to army_max_zoom); slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Hold a card hold_seconds to see its details. After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
     "option_card": [184, 218],
     "start_card": [156, 176],
     "herd_card": [92, 106],
+    "choice_button": [236, 128],
     "slot_size": 108,
     "undo_badge": 38,
     "hold_seconds": 0.35,

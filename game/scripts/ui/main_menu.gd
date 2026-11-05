@@ -51,6 +51,15 @@ func _ready() -> void:
 
 	column.add_child(_build_nav())
 
+	# Which build this is, small in the corner above the tab bar (to check
+	# the phone has the newest).
+	var version := BuildInfo.label()
+	version.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_RIGHT)
+	version.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	version.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	version.position -= Vector2(10, 4)
+	page_host.add_child(version)
+
 	var popup_layer := Control.new()
 	popup_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	popup_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE

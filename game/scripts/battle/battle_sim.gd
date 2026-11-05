@@ -581,23 +581,24 @@ func allies_near(team: int, px: int, py: int, radius: int) -> Array:
 
 # --- Creating fighters -----------------------------------------------------
 
-## Puts an animal card's animals on the field (a swarm brings at most
-## classes.json "swarm_max" of them).
+## Puts one card's squad on the field around (x, y): as many animals as
+## its class brings (classes.json "squads": Tank 1, Tank Destroyer 2,
+## Ranged 3, Air 2, Specialist 1, Mythic 1), each with its share of the
+## card's health and bite. (Draft Duel's armies go through BattleArmy,
+## which does the same and gives each a place in the formation.)
 func spawn(team: int, card_id: String, x: int, y: int) -> Array:
-	var card := GameData.get_card(card_id)
-	var count := group_size(card)
-	var group := _next_group
-	_next_group += 1
-	var made := []
-	for i in count:
+	var squad := BattleArmy.squad_of(card_id)
+	var count := int(squad.units)
+	var made := spawn_units(team, card_id, count, x, y)
+	var bite := int(rules.get("army", {}).get("damage_pct", 100))
+	for i in made.size():
+		var f: Fighter = made[i]
 		var offset := formation(i, count)
-		var f := _make_unit(team, card, level_of(team, card_id), x + offset.x, y + offset.y)
-		f.memory.group = group
-		f.memory.group_size = count
-		fighters.append(f)
-		made.append(f)
-	for f in made:
-		BattleAbilities.on_spawn(self, f, f == made[0])
+		f.x = clampi(x + offset.x, f.radius, width - f.radius)
+		f.y = clampi(y + offset.y, f.radius, height - f.radius)
+		f.prev_x = f.x
+		f.prev_y = f.y
+		BattleArmy.apply_share(f, squad, bite)
 	return made
 
 
@@ -733,19 +734,16 @@ static func _copy_fields(from: Object, to: Object) -> Object:
 	return to
 
 
-## How many animals a card brings: one, or a few for a swarm.
+## How many animals a card brings: its class's squad (classes.json
+## "squads").
 static func group_size(card: Dictionary) -> int:
-	return clampi(int(card.get("count", 1)), 1, maxi(1, int(GameData.class_rules.get("swarm_max", 2))))
+	return int(BattleArmy.squad_of(String(card.get("id", ""))).units)
 
 
-## How big an animal is on the field: swarm members are small, the
-## toughest animals are big.
+## How much room an animal takes on the field: its class's squad's
+## (classes.json "squads" radius).
 static func unit_radius(card: Dictionary) -> int:
-	if group_size(card) > 1:
-		return 320
-	if float(card.stats.hp) >= 1500:
-		return 700
-	return 450
+	return int(BattleArmy.squad_of(String(card.get("id", ""))).radius)
 
 
 ## Where each animal of a group stands, relative to its spot.

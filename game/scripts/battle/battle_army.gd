@@ -137,6 +137,16 @@ static func squad_of(card_id: String) -> Dictionary:
 	}
 
 
+## Gives one animal of a squad its share of the card's health and bite
+## (and its army's bite_pct on top), and its squad's room on the field.
+static func apply_share(f: BattleSim.Fighter, squad: Dictionary, bite: int) -> void:
+	f.max_hp = maxi(1, f.max_hp * int(squad.hp_pct) / 100)
+	f.hp = f.max_hp
+	f.damage = maxi(1, f.damage * int(squad.damage_pct) * bite / 10000)
+	f.radius = int(squad.radius)
+	f.memory.squad_units = int(squad.units)
+
+
 ## Puts one squad of `card_id` on the field for `team` (all at `x`, `y`
 ## until layout() gives them places). Each animal gets its share of the
 ## card's health and bite, its room and leash, and a number for its place
@@ -146,11 +156,7 @@ func spawn_squad(sim: BattleSim, team: int, card_id: String, order: int) -> Arra
 	var made := sim.spawn_units(team, card_id, int(squad.units), 0, 0)
 	for i in made.size():
 		var f: BattleSim.Fighter = made[i]
-		f.max_hp = maxi(1, f.max_hp * int(squad.hp_pct) / 100)
-		f.hp = f.max_hp
-		f.damage = maxi(1, f.damage * int(squad.damage_pct) * bite_pct / 10000)
-		f.radius = int(squad.radius)
-		f.memory.squad_units = int(squad.units)
+		apply_share(f, squad, bite_pct)
 		f.memory.rank = squad.rank
 		f.memory.flank = squad.flank
 		f.memory.hero = squad.hero

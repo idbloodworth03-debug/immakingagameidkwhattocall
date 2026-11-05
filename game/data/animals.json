@@ -8,7 +8,6 @@
   "habitat": "city",
   "class": "ranged",
   "cost": 3,
-  "count": 1,
   "tags": [
    "mammal",
    "urban",
@@ -40,7 +39,6 @@
   "habitat": "forest",
   "class": "ranged",
   "cost": 3,
-  "count": 1,
   "tags": [
    "mammal",
    "rodent",
@@ -75,7 +73,6 @@
   "class": "specialist",
   "trait": "burrow",
   "cost": 3,
-  "count": 1,
   "tags": [
    "mammal",
    "canine",
@@ -109,7 +106,6 @@
   "habitat": "mountains",
   "class": "air",
   "cost": 3,
-  "count": 1,
   "tags": [
    "bird",
    "flying",
@@ -142,7 +138,6 @@
   "habitat": "forest",
   "class": "tank_destroyer",
   "cost": 4,
-  "count": 1,
   "tags": [
    "mammal",
    "forest"
@@ -174,7 +169,6 @@
   "habitat": "arctic",
   "class": "tank_destroyer",
   "cost": 5,
-  "count": 3,
   "tags": [
    "mammal",
    "canine",
@@ -211,7 +205,6 @@
   "habitat": "forest",
   "class": "tank",
   "cost": 6,
-  "count": 1,
   "tags": [
    "mammal",
    "forest",
@@ -244,7 +237,6 @@
   "habitat": "wetlands",
   "class": "tank",
   "cost": 6,
-  "count": 1,
   "tags": [
    "mammal",
    "wetland",
@@ -278,7 +270,6 @@
   "habitat": "savanna",
   "class": "tank_destroyer",
   "cost": 5,
-  "count": 1,
   "tags": [
    "mammal",
    "savanna",
@@ -313,7 +304,6 @@
   "habitat": "rainforest",
   "class": "tank_destroyer",
   "cost": 6,
-  "count": 1,
   "tags": [
    "mammal",
    "jungle",
@@ -348,7 +338,6 @@
   "habitat": "rainforest",
   "class": "tank",
   "cost": 8,
-  "count": 1,
   "tags": [
    "mammal",
    "jungle",
@@ -381,7 +370,6 @@
   "class": "specialist",
   "trait": "slow",
   "cost": 3,
-  "count": 1,
   "tags": [
    "mammal",
    "mountain",
@@ -415,7 +403,6 @@
   "habitat": "savanna",
   "class": "tank",
   "cost": 7,
-  "count": 1,
   "tags": [
    "mammal",
    "savanna",
@@ -449,7 +436,6 @@
   "habitat": "mountains",
   "class": "air",
   "cost": 5,
-  "count": 1,
   "tags": [
    "bird",
    "flying",
@@ -484,7 +470,6 @@
   "habitat": "city",
   "class": "ranged",
   "cost": 2,
-  "count": 1,
   "tags": [
    "mammal",
    "urban",
@@ -510,7 +495,6 @@
   "habitat": "plains",
   "class": "air",
   "cost": 4,
-  "count": 1,
   "tags": [
    "bird",
    "flying",
@@ -536,7 +520,6 @@
   "habitat": "rainforest",
   "class": "ranged",
   "cost": 4,
-  "count": 1,
   "tags": [
    "reptile",
    "jungle",
@@ -561,7 +544,6 @@
   "habitat": "rainforest",
   "class": "ranged",
   "cost": 6,
-  "count": 1,
   "tags": [
    "mammal",
    "jungle",
@@ -587,7 +569,6 @@
   "habitat": "rainforest",
   "class": "air",
   "cost": 5,
-  "count": 1,
   "tags": [
    "bird",
    "flying",
@@ -613,7 +594,6 @@
   "habitat": "rainforest",
   "class": "air",
   "cost": 3,
-  "count": 1,
   "tags": [
    "bird",
    "flying",
@@ -638,7 +618,6 @@
   "habitat": "plains",
   "class": "ranged",
   "cost": 6,
-  "count": 1,
   "tags": [
    "mammal",
    "herd",
@@ -662,7 +641,6 @@
   "habitat": "mountains",
   "class": "air",
   "cost": 8,
-  "count": 1,
   "tags": [
    "mythic",
    "reptile",
@@ -686,7 +664,6 @@
   "habitat": "forest",
   "class": "ranged",
   "cost": 6,
-  "count": 1,
   "tags": [
    "mythic",
    "herd"
@@ -711,7 +688,6 @@
   "habitat": "wetlands",
   "class": "tank",
   "cost": 4,
-  "count": 1,
   "tags": [
    "reptile",
    "wetland",
@@ -736,7 +712,6 @@
   "habitat": "savanna",
   "class": "tank_destroyer",
   "cost": 3,
-  "count": 1,
   "tags": [
    "mammal",
    "savanna"
@@ -760,7 +735,6 @@
   "class": "specialist",
   "trait": "splash",
   "cost": 3,
-  "count": 1,
   "tags": [
    "mammal",
    "marine",
@@ -784,7 +758,6 @@
   "habitat": "mountains",
   "class": "tank",
   "cost": 5,
-  "count": 1,
   "tags": [
    "mammal",
    "mountain",
@@ -809,7 +782,6 @@
   "class": "specialist",
   "trait": "stun",
   "cost": 7,
-  "count": 1,
   "tags": [
    "mammal",
    "mountain",
@@ -834,7 +806,6 @@
   "habitat": "ocean",
   "class": "tank_destroyer",
   "cost": 5,
-  "count": 1,
   "tags": [
    "reptile",
    "island",
@@ -860,7 +831,6 @@
   "class": "specialist",
   "trait": "burrow",
   "cost": 4,
-  "count": 1,
   "tags": [
    "mammal",
    "jungle",
@@ -887,7 +857,6 @@
   "class": "specialist",
   "trait": "stun",
   "cost": 3,
-  "count": 1,
   "tags": [
    "fish",
    "aquatic",
@@ -913,7 +882,6 @@
   "class": "specialist",
   "trait": "slow",
   "cost": 4,
-  "count": 1,
   "tags": [
    "mammal",
    "island",
@@ -936,7 +904,6 @@
   "habitat": "mountains",
   "class": "tank",
   "cost": 7,
-  "count": 1,
   "tags": [
    "mythic",
    "primate",
@@ -961,7 +928,6 @@
   "habitat": "plains",
   "class": "tank_destroyer",
   "cost": 7,
-  "count": 1,
   "tags": [
    "mythic",
    "canine",
@@ -986,7 +952,6 @@
   "class": "specialist",
   "trait": "splash",
   "cost": 8,
-  "count": 1,
   "tags": [
    "mythic",
    "marine"

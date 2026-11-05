@@ -40,11 +40,14 @@ score is always big at the top: "2 - 1", with 4 pips each.
   - an offered animal: a **squad** of it joins your army (another squad if
     it's there already),
   - an offered tool (2 at most; a third replaces one you choose),
-  - an **upgrade**: a star for every squad of an animal in your army (tap
-    it in your army, or its card in the row below).
+  - tap an animal in your army (or its card in the row below) for two big
+    buttons: **Upgrade** (a star for every squad of it) or **+Squad**
+    (another full squad of it: "+3 Squad" for a Ranged animal, "+1 Squad" for
+    a Tank). The computer chooses between them too.
 - Stars go up to 3; each star after the first adds 60% health and bite.
 - The army grows every round, up to 40 animals (`army_max_units`); after
-  that an offered animal says "Army full" (tools and upgrades still work).
+  that +Squad and offered animals say "Army full" (tools and upgrades still
+  work).
 - While you pick, your army stands in formation under the options; new
   squads march into their places.
 - Tap your latest pick to take it back. **Fight!** lights up once all 3
@@ -144,13 +147,15 @@ start, their big hits, and rounds going their way or not.
   difficulty and cards `ease_card_levels` lower. Nothing on screen says so.
 - Timings and sizes for the VS screen and emotes are in `feel.json` ("rivals").
 
-**Your deck of 8.** Before a match you choose a deck of 8 animals from the
-ones you own (the DECK button beside DRAFT DUEL; tap a card to add or take
-it out, DONE once all 8 slots are full). The game remembers your last deck.
+**Your deck of 8.** DRAFT DUEL opens your deck before every match: 8 big
+slots filled with your last deck, your collection below (tap a card to add
+or take it out). START (once all 8 slots are full) saves it and begins the
+match, so it's one tap if nothing changes.
 Round 1 offers exactly those 8, and you pick 3 to start. From round 2 the 5
 options come only from your deck's 8 and the tools you own. Every card
 fights at its level. The computer opponent builds its own deck of 8 from the
-animals unlocked up to its arena, leaning toward its favorite class
+animals unlocked up to its arena (topped up to 8 from the starting cards in
+the first arenas), leaning toward its favorite class
 (`deck_favorite`) with at least one of each class (`DraftBot.build_deck`),
 and its cards are leveled like yours on average.
 

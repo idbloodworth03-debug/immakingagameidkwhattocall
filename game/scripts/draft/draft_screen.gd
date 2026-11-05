@@ -101,15 +101,13 @@ func _ready() -> void:
 	add_child(intro)
 
 
-## The rival's cards: a deck that suits it (DraftBot.build_deck) from the
-## animals unlocked up to its arena, and as many tools as the player has,
-## from the tools unlocked there.
+## The rival's cards: a deck of 8 that suits it (DraftBot.rival_deck) and
+## as many tools as the player has, from the tools unlocked in its arena.
 func _rival_pool(rival: Dictionary, player_pool: Array) -> Array:
 	var arena := int(rival.get("arena_index", 0))
-	var unlocked: Array = GameData.card_order.filter(func(id): return int(GameData.cards[id].unlock_arena_index) <= arena)
 	var size := int(GameData.draft_rules.get("deck_size", 8))
-	var deck := DraftBot.build_deck(unlocked, rival.get("style", {}), _rng, float(rival.get("difficulty", 0.5)), size)
-	var tools: Array = unlocked.filter(func(id): return GameData.is_tool(id))
+	var deck := DraftBot.rival_deck(arena, rival.get("style", {}), _rng, float(rival.get("difficulty", 0.5)), size)
+	var tools: Array = GameData.card_order.filter(func(id): return GameData.is_tool(id) and int(GameData.cards[id].unlock_arena_index) <= arena)
 	var want := maxi(1, player_pool.filter(func(id): return GameData.is_tool(id)).size())
 	while tools.size() > want:
 		tools.remove_at(_rng.randi_range(0, tools.size() - 1))
@@ -573,8 +571,8 @@ func _refresh_slots() -> void:
 			undo.queue_free()
 
 
-## Your herd in a scrolling row (an arrow on each one a pick can add a star
-## to), then your tools.
+## Your army in a scrolling row (an arrow on each one a pick can upgrade or
+## add a squad of), then your tools.
 func _refresh_herd_row() -> void:
 	var herd: Array = duel.herds[0]
 	var card_size := _size("herd_card", Vector2(104, 120))
@@ -606,7 +604,7 @@ func _refresh_herd_row() -> void:
 	for i in herd.size():
 		var card: GameCard = _herd_row.get_child(i)
 		var stars := int(herd[i].stars)
-		var arrow := duel.can_star(0, i) == ""
+		var arrow: bool = duel.can_star(0, i) == "" or duel.can_reinforce(0, i) == ""
 		if card.stars != stars or card.upgrade_arrow != arrow:
 			card.stars = stars
 			card.upgrade_arrow = arrow
@@ -637,13 +635,41 @@ func _pick(slot: int, replace: int) -> void:
 	_fly_to_slot(id, from, into)
 
 
+## Tapping an animal in your army: two big buttons, Upgrade (a star for
+## every squad of it) and +Squad (another full squad of it: "+3 Squad" for
+## Ranged), each one of your 3 picks. Nothing else.
 func _tap_herd(index: int) -> void:
 	if index >= duel.herds[0].size():
 		return
 	var card: GameCard = _herd_row.get_child(index)
-	if duel.can_star(0, index) != "":
+	var can_up: bool = duel.can_star(0, index) == ""
+	var can_more: bool = duel.can_reinforce(0, index) == ""
+	if not can_up and not can_more:
 		_nope(card)
 		return
+	var id: String = duel.herds[0][index].id
+	var row := UIStyle.hbox("m")
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	var up := UIStyle.button("Upgrade", "gold" if can_up else "disabled", "star")
+	var more := UIStyle.button("+%d Squad" % DraftMatch.squad_units(id), "primary" if can_more else "disabled", "class_" + GameData.class_of(id))
+	for b: ChunkyButton in [up, more]:
+		b.custom_minimum_size = _size("choice_button", Vector2(236, 128))
+		row.add_child(b)
+	up.disabled = not can_up
+	more.disabled = not can_more
+	var layer := _overlay(row, true)
+	layer.name = "ArmyChoice"
+	up.pressed.connect(func() -> void:
+		layer.queue_free()
+		_upgrade(index))
+	more.pressed.connect(func() -> void:
+		layer.queue_free()
+		_reinforce(index))
+
+
+## Upgrade: a star for every squad of herd animal `index` (one pick).
+func _upgrade(index: int) -> void:
+	var card: GameCard = _herd_row.get_child(index)
 	var from := card.get_global_rect()
 	var into: int = duel.picks_made[0].size()
 	if duel.star(0, index):
@@ -654,8 +680,21 @@ func _tap_herd(index: int) -> void:
 		_fly_to_slot(String(duel.herds[0][index].id), from, into)
 
 
-## A tap on your army: the animal nearest it gets upgraded (like tapping its
-## card in the row below).
+## Reinforce: another full squad of herd animal `index` (one pick); it
+## marches into the formation.
+func _reinforce(index: int) -> void:
+	var card: GameCard = _herd_row.get_child(index)
+	var from := card.get_global_rect()
+	var into: int = duel.picks_made[0].size()
+	if duel.reinforce(0, index):
+		card.flash = 1.0
+		card.create_tween().tween_property(card, "flash", 0.0, 0.5)
+		Sound.play("coin", -4.0)
+		_fly_to_slot(String(duel.herds[0][index].id), from, into)
+
+
+## A tap on your army: the animal nearest it offers Upgrade or +Squad (like
+## tapping its card in the row below).
 func _on_army_tapped(at: Vector2i) -> void:
 	var best := -1
 	var best_d := 1 << 40
@@ -820,7 +859,7 @@ func _first_match_tip() -> void:
 		return
 	seen.append(key)
 	Profile.save()
-	var text := "Tap 3 animals" if key == "pick" else "Tap your animals to add a star"
+	var text := "Tap 3 animals" if key == "pick" else "Tap your animals: Upgrade or +Squad"
 	var anchor: Control = _options_holder if key == "pick" else _herd_scroll
 	_hide_tip()
 	var tip := UIStyle.chip(UIStyle.label(text, "body"), UIStyle.color("primary"))

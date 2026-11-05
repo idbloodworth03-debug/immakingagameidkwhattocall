@@ -100,6 +100,10 @@ func _build() -> void:
 	credits.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	credits.pressed.connect(_show_credits)
 	settings_row.add_child(credits)
+	# Which build this is (to check the phone has the newest).
+	var version := BuildInfo.label()
+	version.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	add_child(version)
 
 	# Testing switch (data/testing.json) shows them in release builds too.
 	if OS.is_debug_build() or GameData.testing.get("show_dev_tools", false):

@@ -25,3 +25,6 @@ __pycache__/
 
 # Work files while tools/creatures renders an animal
 game/art/units/*/_*
+
+# Written by tools/build_web.sh: which build this is (shown in the game)
+/game/build.json

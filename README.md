@@ -19,7 +19,7 @@ Everything runs offline on your computer, saved on the device:
 
 - **Menus:** five tabs laid out like other mobile card games (Shop, Animals, Battle, Clan, Events)
 - **Cards:** 35 animals in 5 rarities (Common to Mythic, 5 of them Mythics), each with a class and stats, plus 6 Ranger tools (see docs/ROSTER.md); 87 more are archived in `animals_archived.json`
-- **Deck:** you pick from your own deck of 8 animals (DECK on the home screen)
+- **Deck:** you pick from your own deck of 8 animals, set before every match (DRAFT DUEL opens it, filled with your last deck)
 - **Collection:** the animals and tools you've freed are your Draft Duel starters and shop, at their levels; level them up with copies and gold
 - **Trophies:** 12 arenas on a Trophy Road, and new animals unlock as you climb
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
@@ -93,8 +93,13 @@ updates. Saves belong to the website they were made on, so the new site
 starts a fresh profile. Delete the old home-screen icon and add the new site.
 
 **On the iPhone:** open the site in **Safari**, tap **Share**, then
-**Add to Home Screen**. To get an update, close the app completely (swipe it
-away) and open it again.
+**Add to Home Screen**. New versions load by themselves: the game's offline
+helper (`tools/web/service_worker.js`) always asks for the newest files
+first, and a page that's open reloads once when a new version takes over.
+The version shows small in the corner of the home screen and at the bottom
+of your Profile, e.g. **v1.5.183 · 3a165b7** (the build number and commit).
+**Once only**, to move off an older build from before this: open the app,
+wait about 10 seconds, close it completely (swipe it away) and open it again.
 
 Good to know:
 - **Saves:** progress is saved in the browser on that device. The home-screen app and a Safari tab keep separate saves.

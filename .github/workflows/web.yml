@@ -43,6 +43,10 @@ jobs:
           unzip -q /tmp/godot.zip -d ~/godot
 
       - name: Test and build
+        env:
+          # Shown in the game's corner with the commit, to check a phone has
+          # the newest build.
+          BUILD_NUMBER: ${{ github.run_number }}
         run: GODOT=~/godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64 tools/build_web.sh build/web
 
       - name: Keep the build as a download

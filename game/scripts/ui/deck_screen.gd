@@ -1,10 +1,12 @@
 extends Control
-## Your Draft Duel deck: the 8 animals your picks come from (and your tools
-## come along). Eight big slots at the top fill up as you tap animals from
-## your collection below; tap a card in the deck to take it out. DONE saves
-## it once all 8 are filled. The deck is kept for every match after.
+## Before every Draft Duel match: your deck, the 8 animals your picks come
+## from (your tools come along). Eight big slots at the top, filled with
+## your last deck, so START is one tap if nothing changes; tap an animal
+## from your collection below to add it, a card in the deck to take it out.
+## START saves the deck and begins the match once all 8 slots are full.
 
 const MENU_SCENE := "res://scenes/main.tscn"
+const MATCH_SCENE := "res://scenes/draft.tscn"
 
 var _deck: Array = []
 var _size := 8
@@ -57,7 +59,10 @@ func _ready() -> void:
 	_collection = _grid()
 	center.add_child(_collection)
 
-	_done = UIKit.button("DONE", UIKit.YELLOW, 40, Vector2(360, 96))
+	_done = UIKit.button("START", UIKit.YELLOW, 44, Vector2(400, 104))
+	_done.icon = UIKit.icon(GameData.ui_icon("tab_battle"))
+	_done.add_theme_constant_override("icon_max_width", 52)
+	_done.add_theme_constant_override("h_separation", 12)
 	_done.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_done.pressed.connect(_save)
 	column.add_child(_done)
@@ -141,7 +146,7 @@ func _save() -> void:
 		return
 	Profile.set_deck(_deck)
 	Sound.play("upgrade", -4.0)
-	Transition.go(MENU_SCENE)
+	Transition.go(MATCH_SCENE)
 
 
 ## An empty deck slot: a dashed card outline with a plus.

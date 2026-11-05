@@ -165,6 +165,16 @@ func test_tank_destroyers_hit_tanks_hard() -> void:
 	check_eq(BattleAbilities.outgoing_damage(sim, lion, boar, 100), 100, "none to another Tank Destroyer")
 
 
+func test_tanks_are_armored_against_all_but_tank_destroyers() -> void:
+	var sim := _sim()
+	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 5 * T)[0]
+	for id in ["gray_squirrel", "peregrine_falcon", "red_fox", "snapping_turtle"]:
+		var f: BattleSim.Fighter = sim.spawn(0, id, 8 * T, 15 * T)[0]
+		check(BattleAbilities.outgoing_damage(sim, f, bear, 100) < 100, "%s does less to a Tank" % id)
+	var lion: BattleSim.Fighter = sim.spawn(0, "lion", 8 * T, 15 * T)[0]
+	check(BattleAbilities.outgoing_damage(sim, lion, bear, 100) > 100, "a Tank Destroyer cuts right through")
+
+
 func test_tank_destroyers_go_for_tanks() -> void:
 	var sim := _sim()
 	var lion: BattleSim.Fighter = _ready_now(sim.spawn(0, "lion", 8 * T, 13 * T))[0]

@@ -63,8 +63,8 @@ by class (`formation`):
 
 | Class | Place | What it does |
 |---|---|---|
-| Tank | The wall in front, shoulder to shoulder (a second line if it's long) | Tough. Holds the front line |
-| Tank Destroyer | The line behind the wall | +150% damage to Tanks; charges them after the clash |
+| Tank | The wall in front, shoulder to shoulder (a second line if it's long) | Tough: armored, everyone but Tank Destroyers does 30% less to it. Holds the front line |
+| Tank Destroyer | The line behind the wall | +200% damage to Tanks (and no armor in the way); charges them after the clash |
 | Ranged | The back ranks, every other line shifted half a place | Reaches at least 7 tiles; +50% damage to Air; fires in volleys |
 | Air | Hovering over the Tank Destroyers | Flies: only Ranged and Air can hit it |
 | Specialist | On the flanks (Burrowers the wall's, the rest the Tank Destroyers') | One trait: Burrow, Splash, Stun or Slow |
@@ -74,9 +74,10 @@ Air beats Tank Destroyers (they can't hit back), and Specialists disrupt.
 
 Specialist traits: **Burrow** (lines up on the wall's flank, digs in as the
 march starts, travels underground and pops up behind the enemy's last row),
-**Splash** (every hit also hits the group around the target for 60%),
-**Stun** (every third hit freezes the target for 1 second), **Slow** (hits
-slow the target 40% for 2 seconds).
+**Splash** (every hit also hits the group around the target for 75%),
+**Stun** (every second hit freezes the target for 1 second), **Slow** (hits
+slow the target 50% for 2.5 seconds). Specialists are elites: one animal,
+stronger than a squad's, with these stronger traits.
 
 **Fight** (`scripts/battle/battle_army.gd`, numbers in `battle_rules.json`
 "army"). The armies fight on their own, as armies:
@@ -160,15 +161,30 @@ animals for a deck gets all the starting cards, then the first arena's
 animals if it still needs more. Deck size is `deck_size` in
 `game/data/draft_rules.json`.
 
-**Tuning** is in `game/data/draft_rules.json` (wins needed, picks, options,
-tools, stars, army size) and `game/data/classes.json` (counters, squads, formation, traits, swarm
-size). `tests/draft_report.tscn` plays bot-vs-bot matches and prints match
-length, fight length, herd sizes, what the bots pick and how each class does.
-A run of 240 matches: about 5 rounds a match, fights about 21 seconds, 88%
-end in a wipe-out, about 14 animals on the field per fight (32 at most). The
-bots' picks: 61% new animals, 27% stars, 12% tools. Each class turns up in a
-herd in 1,650 to 2,450 fights and wins 46% to 54% of them; with the same
-herds on both sides each side wins half the time.
+**Tuning** is in `game/data/draft_rules.json` (wins needed, picks, deck
+and army size, options, tools, stars), `game/data/classes.json` (counters,
+squads, formation, traits) and `game/data/battle_rules.json` "army" (the
+march, volleys, clash, charge, and `damage_pct`: how hard every army animal
+bites, which sets how long fights take). Three bot-vs-bot reports:
+
+- `tests/draft_report.tscn`: whole matches. A run of 100: about 5 rounds a
+  match, fights about 26 seconds (the first 3.6 the march), 98% end in a
+  wipe-out, about 16 animals on the field per fight (46 at most). Each
+  class wins 49% to 52% of the fights its armies are in.
+- `tests/class_report.tscn`: armies of one class against another (4 cards
+  each). Tank Destroyers beat Tanks 70%; Tanks beat Ranged; Ranged beat
+  Tank Destroyers and Air; Air beats every army that has no Ranged or Air
+  (nothing else can reach it). Ranged average 31% across the classes, so
+  they're no army-winner alone.
+- `tests/power_report.tscn`: each animal's power (see ROSTER.md). Every
+  rarity lands within about 0.03 of its target, Specialists a little above
+  their rarity and Mythics above Legendaries.
+
+To tune the classes the squad shares were set first (Tanks 150% health and
+130% bite with armor against everyone but Tank Destroyers, which do +200% to
+them; Tank Destroyers 2 x 66%; Ranged 3 x 28% / 27%; Air 2 x 55%; elite
+Specialists 140% / 135% with stronger traits; a Mythic hero a whole squad of
+its class in one animal), then each animal's own health and bite.
 
 **Removed:** the shop, Acorns (costs, rerolls, interest, win streak and loss
 bonuses), hearts, manual placement, habitat synergies, per-animal abilities

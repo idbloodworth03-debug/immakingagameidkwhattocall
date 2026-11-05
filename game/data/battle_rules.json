@@ -13,7 +13,7 @@
   },
   "damage_variance_pct": 25,
   "army": {
-    "_note": "Armies in Draft Duel (scripts/battle/battle_army.gd). Each army's front line starts start_gap tiles from the middle and marches at march_pace (tiles per minute) with everyone in step; an animal out of its place catches up at catch_up_pct of the pace (or its own speed if faster). The front holds while its first rank has an enemy within engage tiles, and never comes closer than contact_gap tiles to the enemy's front line (the lines meet, they don't pass through each other). Ranged ranks stop to shoot while an enemy is in reach and fire together every volley_seconds (each shot carries the damage of the time between volleys), the first volley first_volley_seconds after one comes into reach. clash: the moment the front lines meet. charge_after_seconds after the clash, Tank Destroyers charge the enemy Tanks (charge_speed_pct of their speed, no leash) and go back to their line once none are left. When animals fall, the ranks close up every repack_seconds. An animal with nothing in reach for idle_grace_seconds after the clash may stray a little further from its place every moment. lane_pct: how much an enemy off to the side of an animal's place counts as further away (keeps lines fighting straight across).",
+    "_note": "Armies in Draft Duel (scripts/battle/battle_army.gd). Each army's front line starts start_gap tiles from the middle and marches at march_pace (tiles per minute) with everyone in step; an animal out of its place catches up at catch_up_pct of the pace (or its own speed if faster). The front holds while its first rank has an enemy within engage tiles, and never comes closer than contact_gap tiles to the enemy's front line (the lines meet, they don't pass through each other). Ranged ranks stop to shoot while an enemy is in reach and fire together every volley_seconds (each shot carries the damage of the time between volleys), the first volley first_volley_seconds after one comes into reach. clash: the moment the front lines meet. charge_after_seconds after the clash, Tank Destroyers charge the enemy Tanks (charge_speed_pct of their speed, no leash) and go back to their line once none are left. When animals fall, the ranks close up every repack_seconds. An animal with nothing in reach for idle_grace_seconds after the clash may stray a little further from its place every moment. lane_pct: how much an enemy off to the side of an animal's place counts as further away (keeps lines fighting straight across). damage_pct: every army animal's bite, as a share of its card's (with its squad's share on top): sets how long fights take.",
     "start_gap": 4.0,
     "march_pace": 45,
     "catch_up_pct": 170,
@@ -26,6 +26,7 @@
     "lane_pct": 120,
     "edge": 0.8,
     "contact_gap": 1.6,
-    "idle_grace_seconds": 2.0
+    "idle_grace_seconds": 2.0,
+    "damage_pct": 200
   }
 }

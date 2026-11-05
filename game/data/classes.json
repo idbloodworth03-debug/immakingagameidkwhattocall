@@ -1,5 +1,5 @@
 {
-  "_note": "Animal classes (every animal has one, in animals.json \"class\") and the Specialists' traits (\"trait\"). Rows: where a class starts, in tiles back from the middle line (Air hovers over its row). counters: extra damage (percent) one class does to another. A class's targets and range override the animal's own (Ranged reach at least `range` tiles; Air flies). line: the one short line shown when you hold a card.",
+  "_note": "Animal classes (every animal has one, in animals.json \"class\") and the Specialists' traits (\"trait\"). Rows: where a class starts, in tiles back from the middle line (Air hovers over its row). counters: extra damage (percent) one class does to another; less for a negative number (Tanks are armored: everyone but Tank Destroyers does 30% less to them). A class's targets and range override the animal's own (Ranged reach at least `range` tiles; Air flies). line: the one short line shown when you hold a card.",
   "classes": [
     {"id": "tank", "name": "Tank", "icon": "class_tank", "color": "#4f8ef0", "row": "front", "targets": "ground",
      "line": "Tough. Holds the front line."},
@@ -15,16 +15,20 @@
   "traits": [
     {"id": "burrow", "name": "Burrow", "icon": "trait_burrow", "row": "front",
      "line": "Digs under and pops up behind the enemy."},
-    {"id": "splash", "name": "Splash", "icon": "trait_splash", "row": "back", "radius": 1.6, "pct": 60,
+    {"id": "splash", "name": "Splash", "icon": "trait_splash", "row": "back", "radius": 1.8, "pct": 75,
      "line": "Every hit splashes a group."},
-    {"id": "stun", "name": "Stun", "icon": "trait_stun", "row": "middle", "every": 3, "seconds": 1.0,
-     "line": "Every third hit freezes the target."},
-    {"id": "slow", "name": "Slow", "icon": "trait_slow", "row": "middle", "pct": 40, "seconds": 2.0,
+    {"id": "stun", "name": "Stun", "icon": "trait_stun", "row": "middle", "every": 2, "seconds": 1.0,
+     "line": "Every second hit freezes the target."},
+    {"id": "slow", "name": "Slow", "icon": "trait_slow", "row": "middle", "pct": 50, "seconds": 2.5,
      "line": "Hits slow enemies down."}
   ],
   "counters": [
-    {"from": "tank_destroyer", "to": "tank", "pct": 150},
-    {"from": "ranged", "to": "air", "pct": 50}
+    {"from": "tank_destroyer", "to": "tank", "pct": 200},
+    {"from": "ranged", "to": "air", "pct": 50},
+    {"from": "tank", "to": "tank", "pct": -30},
+    {"from": "ranged", "to": "tank", "pct": -30},
+    {"from": "air", "to": "tank", "pct": -30},
+    {"from": "specialist", "to": "tank", "pct": -30}
   ],
   "prefer": {
     "_note": "Who goes after what first, if it's within this many tiles: Tank Destroyers look for Tanks, Ranged for Air.",
@@ -42,13 +46,13 @@
   },
   "swarm_max": 2,
   "squads": {
-    "_note": "How many animals one card brings into a fight (a squad), and how strong each one is, by class: `units` animals, each with hp_pct and damage_pct of the card's health and bite (so a squad of 3 at 36% is a little more than one animal at 100%). radius: how much room each takes (tiles). spacing: how far apart neighbours stand in a line (tiles, centre to centre). line_max: how many fit in one line before a second line forms behind. leash: how far (tiles) an animal may leave its place in the formation to fight. Specialists are single elite animals, stronger each, standing on the flanks. A Mythic (any class) is one big hero: its own numbers, drawn hero_scale times as big as its class's squads.",
-    "tank": {"units": 1, "hp_pct": 100, "damage_pct": 100, "radius": 0.6, "spacing": 1.45, "line_max": 7, "leash": 1.0},
-    "tank_destroyer": {"units": 2, "hp_pct": 56, "damage_pct": 58, "radius": 0.42, "spacing": 1.1, "line_max": 10, "leash": 1.4},
-    "ranged": {"units": 3, "hp_pct": 36, "damage_pct": 36, "radius": 0.34, "spacing": 0.88, "line_max": 12, "leash": 0.4},
+    "_note": "How many animals one card brings into a fight (a squad), and how strong each one is, by class: `units` animals, each with hp_pct and damage_pct of the card's health and bite (so a squad of 3 at 36% is a little more than one animal at 100%). radius: how much room each takes (tiles). spacing: how far apart neighbours stand in a line (tiles, centre to centre). line_max: how many fit in one line before a second line forms behind. leash: how far (tiles) an animal may leave its place in the formation to fight. Specialists are single elite animals, stronger each, standing on the flanks. A Mythic (any class) is one big hero carrying share_pct of a whole squad of its class (all of its squad's health and bite in one animal), drawn hero_scale times as big.",
+    "tank": {"units": 1, "hp_pct": 150, "damage_pct": 130, "radius": 0.6, "spacing": 1.45, "line_max": 7, "leash": 1.0},
+    "tank_destroyer": {"units": 2, "hp_pct": 66, "damage_pct": 66, "radius": 0.42, "spacing": 1.1, "line_max": 10, "leash": 1.4},
+    "ranged": {"units": 3, "hp_pct": 28, "damage_pct": 27, "radius": 0.34, "spacing": 0.88, "line_max": 12, "leash": 0.4},
     "air": {"units": 2, "hp_pct": 55, "damage_pct": 55, "radius": 0.4, "spacing": 1.35, "line_max": 8, "leash": 2.4},
-    "specialist": {"units": 1, "hp_pct": 135, "damage_pct": 130, "radius": 0.5, "spacing": 1.2, "line_max": 4, "leash": 1.6, "elite": true},
-    "mythic": {"units": 1, "hp_pct": 105, "damage_pct": 105, "radius": 0.78, "spacing": 1.8, "leash": 1.6, "hero_scale": 1.3}
+    "specialist": {"units": 1, "hp_pct": 140, "damage_pct": 135, "radius": 0.5, "spacing": 1.2, "line_max": 4, "leash": 1.6, "elite": true},
+    "mythic": {"units": 1, "share_pct": 100, "radius": 0.78, "spacing": 1.8, "leash": 1.6, "hero_scale": 1.3}
   },
   "formation": {
     "_note": "How an army lines up (tiles). Ranks from the front: the Tank wall, the Tank Destroyer line, then the Ranged ranks; Air hovers over the Tank Destroyer line (`over`: a rank drawn over another, `over_offset` tiles behind it, taking no room of its own). Specialists stand on the flanks of the rank their trait belongs to (rank_of_row: Burrowers on the wall's, the rest on the Tank Destroyers', where they can reach a fight), flank_gap further out. rank_gap: extra room between ranks; line_gap: between two lines of the same rank. Every other line of a `stagger` rank is shifted half a place so all can shoot.",

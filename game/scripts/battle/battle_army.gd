@@ -68,6 +68,9 @@ var repack_ticks := 12
 var lane_pct := 120
 var idle_grace := 40
 var contact := 0
+## Every animal's bite, as a share of its card's (battle_rules.json
+## "army" damage_pct).
+var bite_pct := 100
 
 
 func _init(rules: Dictionary = {}, tps := 20) -> void:
@@ -83,6 +86,7 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	lane_pct = int(a.get("lane_pct", 120))
 	idle_grace = roundi(float(a.get("idle_grace_seconds", 2.0)) * tps)
 	contact = roundi(float(a.get("contact_gap", 1.6)) * T)
+	bite_pct = int(a.get("damage_pct", 100))
 
 
 func copy() -> BattleArmy:
@@ -107,7 +111,15 @@ static func squad_of(card_id: String) -> Dictionary:
 	var def: Dictionary = squads.get(cls, {}).duplicate()
 	var hero := String(card.get("rarity", "")) == "mythic"
 	if hero:
-		def.merge(squads.get("mythic", {}), true)
+		# One big hero with (a share of) a whole squad's health and bite.
+		var whole := maxi(1, int(def.get("units", 1)))
+		var mythic: Dictionary = squads.get("mythic", {})
+		var share := int(mythic.get("share_pct", 100))
+		var hp_pct := int(def.get("hp_pct", 100)) * whole * share / 100
+		var damage_pct := int(def.get("damage_pct", 100)) * whole * share / 100
+		def.merge(mythic, true)
+		def.hp_pct = hp_pct
+		def.damage_pct = damage_pct
 	var rank := String(form.get("rank_of_class", {}).get(cls, ""))
 	var flank := rank == ""
 	if flank:
@@ -136,7 +148,7 @@ func spawn_squad(sim: BattleSim, team: int, card_id: String, order: int) -> Arra
 		var f: BattleSim.Fighter = made[i]
 		f.max_hp = maxi(1, f.max_hp * int(squad.hp_pct) / 100)
 		f.hp = f.max_hp
-		f.damage = maxi(1, f.damage * int(squad.damage_pct) / 100)
+		f.damage = maxi(1, f.damage * int(squad.damage_pct) * bite_pct / 10000)
 		f.radius = int(squad.radius)
 		f.memory.squad_units = int(squad.units)
 		f.memory.rank = squad.rank

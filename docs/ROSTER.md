@@ -11,12 +11,15 @@ bring an animal back; saves keep its card level, and its art is still in
 `game/art/units/`, left out of the web build by `game/export_presets.cfg`).
 
 **Power** comes from bot fights (`game/tests/power_report.tscn` with
-`POOL=all WEIGHTS=draft`): the animal joins a random herd of four and fights
-the same herd with a random animal in its place instead, 240 times, every
-card at its starting level. 0.50 is an average offered card. The targets are
-about 0.46 for Common, 0.54 for Rare, 0.64 for Epic, 0.75 for Legendary and
-0.75-0.80 for Mythic. These numbers are from before the army rework (squads
-and formations) and the cut, and will be measured again when it's tuned.
+`WEIGHTS=draft`): the animal joins a random army of four cards and fights
+the same army with a random card in its place instead, every card at its
+starting level, one squad each (see Squads in GAME_DESIGN.md). Cards come
+up as often as Draft Duel offers each rarity, so 0.50 is an average offered
+card. Measured with the armies (80 to 200 fights each; about plus or minus
+0.05). The targets are 0.46 for Common, 0.54 for Rare, 0.64 for Epic, 0.75
+for Legendary and 0.80 for Mythic, with Specialists (elites) a little
+above their rarity. The averages: Common 0.48, Rare 0.54, Epic 0.64,
+Legendary 0.73, Mythic 0.79.
 
 **Starting cards** (a new player's collection and first deck): Brown Bear,
 Snapping Turtle, Wolf Pack, Wild Boar, Gray Squirrel, Striped Skunk,
@@ -24,43 +27,43 @@ Peregrine Falcon, Red Fox and the Net.
 
 ## In the game (35)
 
-| Animal | Class | Row | Rarity | Found in | Power |
+| Animal | Class | In the army | Rarity | Found in | Power |
 |---|---|---|---|---|---|
-| Brown Bear | Tank | Front | Common (LC) | 4. Whispering Woods | 0.48 |
-| Snapping Turtle | Tank | Front | Common (LC) | 5. Misty Marsh | 0.45 |
-| Giant Panda | Tank | Front | Rare (VU) | 10. Cloudpeak Mountains | 0.47 |
-| Hippopotamus | Tank | Front | Rare (VU) | 5. Misty Marsh | 0.57 |
-| Asian Elephant | Tank | Front | Epic (EN) | 9. Emerald Jungle | 0.63 |
-| Black Rhino | Tank | Front | Legendary (CR) | 12. Last Sanctuary | 0.75 |
-| Yeti | Tank | Front | Mythic | 8. Frozen Tundra | 0.80 |
-| Honey Badger | Tank Destroyer | Middle | Common (LC) | 6. Sunbaked Savanna | 0.44 |
-| Wild Boar | Tank Destroyer | Middle | Common (LC) | 2. City Park | 0.44 |
-| Wolf Pack | Tank Destroyer | Middle | Common (LC) | 4. Whispering Woods | 0.42 |
-| Lion | Tank Destroyer | Middle | Rare (VU) | 6. Sunbaked Savanna | 0.53 |
-| Komodo Dragon | Tank Destroyer | Middle | Epic (EN) | 11. Coral Coast | 0.61 |
-| Tiger | Tank Destroyer | Middle | Epic (EN) | 8. Frozen Tundra | 0.64 |
-| Cerberus | Tank Destroyer | Middle | Mythic | 12. Last Sanctuary | 0.78 |
-| Gray Squirrel | Ranged | Back | Common (LC) | 1. Rescue Center | 0.46 |
-| Raccoon | Ranged | Back | Common (LC) | 1. Rescue Center | 0.43 |
-| Striped Skunk | Ranged | Back | Common (LC) | 2. City Park | 0.38 |
-| King Cobra | Ranged | Back | Rare (VU) | 9. Emerald Jungle | 0.54 |
-| Wild Bactrian Camel | Ranged | Back | Epic (EN) | 7. Red Rock Canyon | 0.70 |
-| Sumatran Orangutan | Ranged | Back | Legendary (CR) | 12. Last Sanctuary | 0.75 |
-| Unicorn | Ranged | Back | Mythic | 4. Whispering Woods | 0.75 |
-| Barn Owl | Air | Over the middle (own line) | Common (LC) | 3. Prairie Fields | 0.40 |
-| Peregrine Falcon | Air | Over the middle (own line) | Common (LC) | 1. Rescue Center | 0.45 |
-| Harpy Eagle | Air | Over the middle (own line) | Rare (VU) | 3. Prairie Fields | 0.53 |
-| Hyacinth Macaw | Air | Over the middle (own line) | Rare (VU) | 9. Emerald Jungle | 0.55 |
-| California Condor | Air | Over the middle (own line) | Legendary (CR) | 7. Red Rock Canyon | 0.75 |
-| Dragon | Air | Over the middle (own line) | Mythic | 10. Cloudpeak Mountains | 0.77 |
-| Electric Eel | Specialist (Stun) | Middle | Common (LC) | 5. Misty Marsh | 0.42 |
-| Harbor Seal | Specialist (Splash) | Back | Common (LC) | 11. Coral Coast | 0.46 |
-| Red Fox | Specialist (Burrow) | Front (then underground) | Common (LC) | 1. Rescue Center | 0.45 |
-| Mountain Gorilla | Specialist (Stun) | Middle | Epic (EN) | 10. Cloudpeak Mountains | 0.68 |
-| Red Panda | Specialist (Slow) | Middle | Epic (EN) | 10. Cloudpeak Mountains | 0.70 |
-| Pygmy Three-toed Sloth | Specialist (Slow) | Middle | Legendary (CR) | 12. Last Sanctuary | 0.74 |
-| Sunda Pangolin | Specialist (Burrow) | Front (then underground) | Legendary (CR) | 9. Emerald Jungle | 0.74 |
-| Kraken | Specialist (Splash) | Back | Mythic | 11. Coral Coast | 0.78 |
+| Brown Bear | Tank | The wall | Common (LC) | 4. Whispering Woods | 0.45 |
+| Snapping Turtle | Tank | The wall | Common (LC) | 5. Misty Marsh | 0.43 |
+| Giant Panda | Tank | The wall | Rare (VU) | 10. Cloudpeak Mountains | 0.53 |
+| Hippopotamus | Tank | The wall | Rare (VU) | 5. Misty Marsh | 0.55 |
+| Asian Elephant | Tank | The wall | Epic (EN) | 9. Emerald Jungle | 0.61 |
+| Black Rhino | Tank | The wall | Legendary (CR) | 12. Last Sanctuary | 0.68 |
+| Yeti | Tank | The wall | Mythic | 8. Frozen Tundra | 0.78 |
+| Honey Badger | Tank Destroyer | Behind the wall | Common (LC) | 6. Sunbaked Savanna | 0.45 |
+| Wild Boar | Tank Destroyer | Behind the wall | Common (LC) | 2. City Park | 0.45 |
+| Wolf Pack | Tank Destroyer | Behind the wall | Common (LC) | 4. Whispering Woods | 0.51 |
+| Lion | Tank Destroyer | Behind the wall | Rare (VU) | 6. Sunbaked Savanna | 0.57 |
+| Komodo Dragon | Tank Destroyer | Behind the wall | Epic (EN) | 11. Coral Coast | 0.61 |
+| Tiger | Tank Destroyer | Behind the wall | Epic (EN) | 8. Frozen Tundra | 0.62 |
+| Cerberus | Tank Destroyer | Behind the wall | Mythic | 12. Last Sanctuary | 0.81 |
+| Gray Squirrel | Ranged | The back ranks | Common (LC) | 1. Rescue Center | 0.47 |
+| Raccoon | Ranged | The back ranks | Common (LC) | 1. Rescue Center | 0.49 |
+| Striped Skunk | Ranged | The back ranks | Common (LC) | 2. City Park | 0.44 |
+| King Cobra | Ranged | The back ranks | Rare (VU) | 9. Emerald Jungle | 0.54 |
+| Wild Bactrian Camel | Ranged | The back ranks | Epic (EN) | 7. Red Rock Canyon | 0.66 |
+| Sumatran Orangutan | Ranged | The back ranks | Legendary (CR) | 12. Last Sanctuary | 0.70 |
+| Unicorn | Ranged | The back ranks | Mythic | 4. Whispering Woods | 0.78 |
+| Barn Owl | Air | Over the Tank Destroyers | Common (LC) | 3. Prairie Fields | 0.49 |
+| Peregrine Falcon | Air | Over the Tank Destroyers | Common (LC) | 1. Rescue Center | 0.45 |
+| Harpy Eagle | Air | Over the Tank Destroyers | Rare (VU) | 3. Prairie Fields | 0.55 |
+| Hyacinth Macaw | Air | Over the Tank Destroyers | Rare (VU) | 9. Emerald Jungle | 0.49 |
+| California Condor | Air | Over the Tank Destroyers | Legendary (CR) | 7. Red Rock Canyon | 0.80 |
+| Dragon | Air | Over the Tank Destroyers | Mythic | 10. Cloudpeak Mountains | 0.75 |
+| Electric Eel | Specialist (Stun) | On the Tank Destroyers' flank | Common (LC) | 5. Misty Marsh | 0.50 |
+| Harbor Seal | Specialist (Splash) | On the Tank Destroyers' flank | Common (LC) | 11. Coral Coast | 0.51 |
+| Red Fox | Specialist (Burrow) | On the wall's flank (then underground) | Common (LC) | 1. Rescue Center | 0.57 |
+| Mountain Gorilla | Specialist (Stun) | On the Tank Destroyers' flank | Epic (EN) | 10. Cloudpeak Mountains | 0.70 |
+| Red Panda | Specialist (Slow) | On the Tank Destroyers' flank | Epic (EN) | 10. Cloudpeak Mountains | 0.62 |
+| Pygmy Three-toed Sloth | Specialist (Slow) | On the Tank Destroyers' flank | Legendary (CR) | 12. Last Sanctuary | 0.72 |
+| Sunda Pangolin | Specialist (Burrow) | On the wall's flank (then underground) | Legendary (CR) | 9. Emerald Jungle | 0.75 |
+| Kraken | Specialist (Splash) | On the Tank Destroyers' flank | Mythic | 11. Coral Coast | 0.84 |
 
 13 Common, 6 Rare, 6 Epic, 5 Legendary and 5 Mythic. Every arena unlocks at least one animal; the Tiger moved to Frozen Tundra and the Harpy Eagle to Prairie Fields to fill gaps left by the cut.
 

@@ -26,6 +26,12 @@ var stamp := ""
 var stamp_color := UIKit.GREEN
 ## Draft Duel stars (2 or 3 show over the name; 0 or 1 show nothing).
 var stars := 0
+## A green checkmark badge on the card (it's in your deck), the card itself
+## left fully bright.
+var checked := false:
+	set(value):
+		checked = value
+		queue_redraw()
 
 var _owned := false
 var _level := 1
@@ -45,6 +51,8 @@ static func create(id: String, small_card := false) -> AnimalCard:
 	card.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	card.animal_id = id
 	card.small = small_card
+	# Hold it anywhere for its info (HoldInfo).
+	card.add_to_group("hold_info")
 	card.custom_minimum_size = SIZE_SMALL if small_card else SIZE_NORMAL
 	card.refresh()
 	return card
@@ -88,7 +96,8 @@ func _draw() -> void:
 	var mythic: bool = animal.get("rarity", "") == "mythic" and not dim
 	if mythic:
 		rarity_color = MythicFrame.rim_color(rarity_color, _time)
-	var rim := rarity_color.darkened(0.35) if dim else rarity_color
+	# Not found yet: a solid gray rim (not a darkened, washed-out one).
+	var rim := UIStyle.color("disabled") if dim else rarity_color
 	var margin := w * 0.055
 
 	# Glow when picked, a softer one for rare cards, and a drop shadow.
@@ -121,7 +130,7 @@ func _draw() -> void:
 	var art := Rect2(margin, margin, w - margin * 2, h * (0.66 if info != Info.NONE else 0.76) - margin)
 	var habitat := UIKit.habitat_color(animal)
 	if dim:
-		habitat = habitat.darkened(0.55).lerp(Color(0.15, 0.17, 0.24), 0.5)
+		habitat = Color(0.2, 0.23, 0.31)
 	var art_radius := int(radius * 0.75)
 	draw_style_box(UIKit.box(habitat.darkened(0.3), art_radius), art)
 	var spot_side := art.size.x
@@ -136,7 +145,7 @@ func _draw() -> void:
 	var frame := UIKit.box(Color(0, 0, 0, 0), art_radius)
 	frame.draw_center = false
 	frame.set_border_width_all(2)
-	frame.border_color = Color(UIKit.INK, 0.45)
+	frame.border_color = UIKit.INK
 	draw_style_box(frame, art)
 	if not dim:
 		_draw_sheen(art)
@@ -145,7 +154,7 @@ func _draw() -> void:
 	var font := get_theme_default_font()
 	var plate_h := h * (0.12 if small else 0.11)
 	var plate := Rect2(art.position.x, art.end.y - plate_h * 0.55, art.size.x, plate_h)
-	var plate_style := UIKit.box(Color(UIKit.INK, 0.78), int(plate_h * 0.35))
+	var plate_style := UIKit.box(UIKit.DEEP, int(plate_h * 0.35))
 	draw_style_box(plate_style, plate)
 	_text(font, String(animal.get("name", "?")), plate, int(h * (0.075 if small else 0.072)), Color.WHITE)
 
@@ -172,6 +181,8 @@ func _draw() -> void:
 		_text(font, "NEW", tag, int(tag.size.y * 0.62), Color.WHITE)
 	if stamp != "":
 		_draw_stamp(font, rect)
+	if checked:
+		_draw_check(Vector2(w * 0.5, h * 0.03), w * 0.15)
 	if mythic:
 		MythicFrame.draw_sparkles(self, rect, _time)
 
@@ -190,16 +201,27 @@ func _draw_animal(animal: Dictionary, art: Rect2, dim: bool) -> void:
 			var side := minf(art.size.x, art.size.y) * 0.7
 			var at := art.get_center() - Vector2(side, side) / 2.0
 			var flip := GameData.card_icon_flipped(animal_id)
-			var tint := Color(1, 1, 1, 0.35) if dim else Color.WHITE
+			# Not found yet: a solid dark silhouette.
+			var tint := Color(0.22, 0.24, 0.32) if dim else Color.WHITE
 			draw_set_transform(at + Vector2(side if flip else 0.0, 0), 0.0, Vector2(-1 if flip else 1, 1))
-			draw_texture_rect(icon, Rect2(Vector2(0, side * 0.04), Vector2(side, side)), false, Color(0, 0, 0, 0.3 * tint.a))
+			draw_texture_rect(icon, Rect2(Vector2(0, side * 0.04), Vector2(side, side)), false, Color(0, 0, 0, 0.3))
 			draw_texture_rect(icon, Rect2(Vector2.ZERO, Vector2(side, side)), false, tint)
 			draw_set_transform(Vector2.ZERO)
 	if dim:
 		var lock := UIKit.icon(GameData.ui_icon("locked"))
 		if lock != null and not _reachable:
 			var side := art.size.x * 0.34
-			draw_texture_rect(lock, Rect2(art.get_center() - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.85))
+			draw_texture_rect(lock, Rect2(art.get_center() - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color.WHITE)
+
+
+## A round green checkmark badge centered on `at`.
+func _draw_check(at: Vector2, r: float) -> void:
+	draw_circle(at + Vector2(0, 3), r + 3, Color(UIKit.INK, 0.4))
+	draw_circle(at, r + 3, UIKit.INK)
+	draw_circle(at, r, UIStyle.color("primary"))
+	var check := UIKit.icon(GameData.ui_icon("check"))
+	if check != null:
+		draw_texture_rect(check, Rect2(at - Vector2(r, r) * 0.72, Vector2(r, r) * 1.44), false)
 
 
 ## A word stamped at an angle across the card.
@@ -208,7 +230,7 @@ func _draw_stamp(font: Font, rect: Rect2) -> void:
 	var width := font.get_string_size(stamp, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	draw_set_transform(rect.get_center(), -0.35)
 	var band := Rect2(Vector2(-width / 2.0 - 10, -font_size * 0.75), Vector2(width + 20, font_size * 1.4))
-	var style := UIKit.box(Color(stamp_color.darkened(0.2), 0.92), 8)
+	var style := UIKit.box(stamp_color.darkened(0.2), 8)
 	style.set_border_width_all(3)
 	style.border_color = Color.WHITE
 	draw_style_box(style, band)
@@ -247,7 +269,7 @@ func _draw_info(font: Font, area: Rect2, rarity_color: Color) -> void:
 		_text(font, label, area, int(h * 0.66), UIKit.YELLOW if label == "MAX" else Color.WHITE)
 		return
 	var bar := Rect2(area.position.x + badge_r, area.position.y + h * 0.16, area.size.x - badge_r, h * 0.68)
-	var track := UIKit.box(Color(UIKit.INK, 0.65), int(bar.size.y / 2))
+	var track := UIKit.box(UIKit.DEEP, int(bar.size.y / 2))
 	draw_style_box(track, bar)
 	var ratio := clampf(float(_copies) / maxf(1.0, float(_needed)), 0.0, 1.0)
 	if ratio > 0.0:

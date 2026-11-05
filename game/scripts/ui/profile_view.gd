@@ -142,9 +142,10 @@ func _picker(items: Array, selected: String, make_swatch: Callable, equip: Calla
 
 func _banner_swatch(item: Dictionary, unlocked: bool) -> Control:
 	var swatch := Panel.new()
-	var style := UIKit.box(Color(item.colors[0]) if unlocked else Color(item.colors[0]).darkened(0.6), 10)
+	# Locked: solid gray (not a darkened version of its colors).
+	var style := UIKit.box(Color(item.colors[0]) if unlocked else UIStyle.color("disabled"), 10)
 	style.set_border_width_all(4)
-	style.border_color = Color(item.colors[1]) if unlocked else Color(item.colors[1]).darkened(0.6)
+	style.border_color = Color(item.colors[1]) if unlocked else UIStyle.color("disabled").darkened(0.35)
 	swatch.add_theme_stylebox_override("panel", style)
 	swatch.custom_minimum_size = Vector2(0, 54)
 	swatch.mouse_filter = Control.MOUSE_FILTER_IGNORE

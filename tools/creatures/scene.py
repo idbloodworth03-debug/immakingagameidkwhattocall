@@ -3,7 +3,9 @@ up the camera and lights for rendering.
 
 Coordinates match sdf.py: the animal faces +Y with +Z up.
 """
+import json
 import math
+import os
 
 import bpy
 import numpy as np
@@ -23,6 +25,9 @@ def hex_color(h):
     return srgb_to_linear([int(h[i:i + 2], 16) / 255.0 for i in (0, 2, 4)])
 
 
+LOOK = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "look.json")))
+
+
 def reset():
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene = bpy.context.scene
@@ -34,14 +39,16 @@ def reset():
     scene.render.film_transparent = True
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
-    scene.view_settings.view_transform = "AgX"
-    scene.view_settings.look = "AgX - Medium High Contrast"
+    # Standard keeps the cartoon colors as painted (look.json).
+    scene.view_settings.view_transform = LOOK["view_transform"]
+    scene.view_settings.look = LOOK["view_look"]
     world = bpy.data.worlds.new("World")
     scene.world = world
     world.use_nodes = True
     bg = world.node_tree.nodes["Background"]
-    bg.inputs[0].default_value = (0.55, 0.62, 0.72, 1.0)
-    bg.inputs[1].default_value = 0.55
+    # A neutral sky light: a bluish one grays warm colors in the shade.
+    bg.inputs[0].default_value = tuple(LOOK["lights"].get("world_color", [0.6, 0.6, 0.6])) + (1.0,)
+    bg.inputs[1].default_value = LOOK["lights"]["world"]
     return scene
 
 
@@ -70,6 +77,31 @@ def build(creature, with_fur=False, fur_quality=1.0):
     for i, extra in enumerate(creature.extras):
         _extra(creature, extra, arm, i)
     return arm, body, mesh
+
+
+def even_colors(colors, faces):
+    """Evens out painted vertex colors over the mesh (look.json
+    color_smoothing): a few rounds of moving each vertex's color toward its
+    neighbors' average. Marching cubes leaves long thin triangles, and a color
+    border (a white bib, a dark ear tip) painted vertex by vertex comes out
+    streaky along them; evened out, it is a clean, even edge."""
+    rounds = int(LOOK.get("color_smoothing", 0))
+    if rounds <= 0 or len(faces) == 0:
+        return np.asarray(colors)
+    from scipy import sparse
+    colors = np.asarray(colors, float)
+    n = len(colors)
+    f = np.asarray(faces)
+    rows = np.concatenate([f[:, 0], f[:, 1], f[:, 2], f[:, 1], f[:, 2], f[:, 0]])
+    cols = np.concatenate([f[:, 1], f[:, 2], f[:, 0], f[:, 0], f[:, 1], f[:, 2]])
+    adj = sparse.csr_matrix((np.ones(len(rows)), (rows, cols)), shape=(n, n))
+    adj.data[:] = 1.0
+    degree = np.asarray(adj.sum(axis=1)).ravel()
+    degree[degree == 0] = 1.0
+    k = float(LOOK.get("color_smoothing_strength", 0.5))
+    for _ in range(rounds):
+        colors = colors * (1 - k) + (adj @ colors) / degree[:, None] * k
+    return colors
 
 
 def _set_colors(me, colors):
@@ -116,7 +148,7 @@ def _part(creature, part, arm, index, with_fur=False, fur_quality=1.0):
         poly.use_smooth = True
     obj = bpy.data.objects.new(me.name, me)
     bpy.context.scene.collection.objects.link(obj)
-    _set_colors(me, creature.paint(mesh, creature))
+    _set_colors(me, even_colors(creature.paint(mesh, creature), mesh.faces))
     obj.data.materials.append(bpy.data.materials.get(creature.name + "_fur") or _fur_material(creature))
     if with_fur and part.get("fur"):
         import fur
@@ -161,7 +193,7 @@ def _body(creature, mesh, arm):
     body = bpy.data.objects.new(creature.name + "_body", me)
     bpy.context.scene.collection.objects.link(body)
 
-    _set_colors(me, _face_paint(creature, mesh, creature.paint(mesh, creature)))
+    _set_colors(me, _face_paint(creature, mesh, even_colors(creature.paint(mesh, creature), mesh.faces)))
     # Extra per-vertex numbers the material can use (fur length, shine).
     for key, values in getattr(creature, "vertex_data", lambda m, c: {})(mesh, creature).items():
         a = me.attributes.new(key, "FLOAT", "POINT")
@@ -436,9 +468,12 @@ def lights(strength=1.0):
         obj.rotation_euler = [math.radians(a) for a in rot]
         bpy.context.scene.collection.objects.link(obj)
         return obj
-    sun("key", (22, 0, 0), 3.4, (1.0, 0.95, 0.86), 14)
-    sun("rim", (-60, 0, 180), 2.2, (0.85, 0.9, 1.0), 4)
-    sun("side", (60, 0, 75), 0.6, (1.0, 0.92, 0.85), 10)
+    lights = LOOK["lights"]
+    # A soft key (not a harsh white glare), a warm fill so shadows keep
+    # their color, and a gentle rim (look.json).
+    sun("key", (22, 0, 0), lights["key"]["energy"], tuple(lights["key"]["color"]), 14)
+    sun("rim", (-60, 0, 180), lights["rim"]["energy"], tuple(lights["rim"]["color"]), 4)
+    sun("side", (60, 0, 75), lights["fill"]["energy"], tuple(lights["fill"]["color"]), 10)
 
 
 def shadow_catcher(size=4.0):
@@ -455,7 +490,7 @@ def shadow_catcher(size=4.0):
     return plane
 
 
-def outline(thickness, color=(0.07, 0.045, 0.035)):
+def outline(thickness, color=None):
     """Dark cartoon outlines (Freestyle) around the animal and wherever one
     part of it passes in front of another, `thickness` pixels wide."""
     sc = bpy.context.scene
@@ -478,7 +513,7 @@ def outline(thickness, color=(0.07, 0.045, 0.035)):
         lineset.collection_negation = "EXCLUSIVE"
     style = lineset.linestyle or bpy.data.linestyles.new("outline")
     lineset.linestyle = style
-    style.color = color
+    style.color = tuple(color if color is not None else LOOK["outline"]["color"])
     style.thickness = thickness
     style.thickness_position = "INSIDE"
     style.alpha = 1.0

@@ -1,0 +1,78 @@
+{
+  "_note": "How the animals are rendered (scene.py, cartoon.py, sprites.py). view_transform and view_look: Blender's color management (Standard keeps cartoon colors as painted; the look adds contrast). lights: sun strengths and colors (key from the front-top, a soft warm fill so shadows aren't gray, a gentle rim). skin: the cartoon skin's material (low sheen and subsurface so colors stay solid, not hazy). color_smoothing: rounds of evening out the painted vertex colors so color borders (a fox's bib, ear tips) come out as clean, even edges instead of streaks along the mesh's triangles (color_smoothing_strength: how much each round moves toward the neighbors). outline: the dark cartoon line (pixels at sprite_pixels_per_tile; scaled with the resolution) and its color. sprite_pixels_per_tile: render resolution of the battle sprites (pixels per field tile); sprite_samples / portrait_samples: Cycles samples per pixel (with denoising). portrait_size: the card picture's size in pixels. max_sheet: the largest sprite-sheet page (pixels on a side); a bigger sheet is split into pages. padding: transparent pixels round every frame (so smooth filtering and smaller mip levels don't bleed into a neighbor). import: how Godot stores the art (set_import.py): \"lossless\" (exactly as rendered), \"lossy\" (one WebP pass) or \"basis\" (GPU-compressed Basis Universal UASTC). Sprite sheets are lossless: Basis was tried (a quarter of the memory at twice the resolution) but left faint 4x4 block ghosts in the soft shadows and edges, and about twice the download; lossy WebP blurs colors at the dark outline. Sheets have no mipmaps (they are drawn near their real size; mipmaps would add a third more memory). Portraits and arenas keep mipmaps (they are shown much smaller than they are). uastc_level and rdo_quality_loss: Basis settings, if used.",
+  "view_transform": "Standard",
+  "view_look": "Medium High Contrast",
+  "lights": {
+    "key": {
+      "energy": 2.7,
+      "color": [
+        1.0,
+        0.96,
+        0.9
+      ]
+    },
+    "fill": {
+      "energy": 0.9,
+      "color": [
+        1.0,
+        0.93,
+        0.84
+      ]
+    },
+    "rim": {
+      "energy": 1.1,
+      "color": [
+        0.92,
+        0.95,
+        1.0
+      ]
+    },
+    "world": 0.5,
+    "world_color": [
+      0.62,
+      0.6,
+      0.58
+    ]
+  },
+  "skin": {
+    "roughness": 0.5,
+    "sheen": 0.02,
+    "specular": 0.18,
+    "subsurface": 0.0
+  },
+  "color_smoothing": 6,
+  "color_smoothing_strength": 0.5,
+  "outline": {
+    "sprite_pixels": 2.1,
+    "portrait_pixels": 3.8,
+    "color": [
+      0.035,
+      0.022,
+      0.018
+    ],
+    "_note": "sprite_pixels is at 56 pixels a tile (scaled with sprite_pixels_per_tile); portrait_pixels at a 512-pixel portrait."
+  },
+  "sprite_pixels_per_tile": 84,
+  "sprite_samples": 32,
+  "portrait_samples": 96,
+  "portrait_size": 512,
+  "max_sheet": 4096,
+  "padding": 6,
+  "import": {
+    "sheets": {
+      "mode": "lossless",
+      "mipmaps": false
+    },
+    "portraits": {
+      "mode": "lossy",
+      "quality": 0.92,
+      "mipmaps": true
+    },
+    "arenas": {
+      "mode": "lossless",
+      "mipmaps": true
+    },
+    "uastc_level": 2,
+    "rdo_quality_loss": 0.0
+  }
+}

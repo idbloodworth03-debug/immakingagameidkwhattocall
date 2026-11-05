@@ -301,6 +301,8 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 		material.shader = SHADER
 		_apply_look(material)
 		material.set_shader_parameter("gold_color", Color(1.0, 0.82, 0.25))
+		# Edge widths are set for 56 pixels a tile; a sharper sheet has more.
+		material.set_shader_parameter("texel_scale", v._per_tile / 56.0)
 		v._material = material
 		v.body.material = material
 	v.add_child(v.body)
@@ -334,8 +336,8 @@ static func _apply_look(material: ShaderMaterial) -> void:
 	material.set_shader_parameter("rim", Feel.num(c, "shader_rim", 0.6))
 	material.set_shader_parameter("rim_color", Feel.color(c, "shader_rim_color", Color("#b9e2ff")))
 	material.set_shader_parameter("edge_width", Feel.num(c, "shader_edge_width", 2.0))
-	material.set_shader_parameter("outline_darkness", Feel.num(c, "shader_outline_darkness", 0.42))
-	material.set_shader_parameter("outline_thicken", Feel.num(c, "shader_outline_thicken", 1.0))
+	material.set_shader_parameter("line_tint", Feel.num(c, "shader_line_tint", 0.0))
+	material.set_shader_parameter("line_darkness", Feel.num(c, "shader_line_darkness", 0.2))
 	material.set_shader_parameter("gradient", Feel.num(c, "shader_gradient", 0.12))
 
 
@@ -1400,31 +1402,31 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 	var shadow_w := radius * t.shadow_width * (1.0 - air * 0.5)
 	GroundArt.draw(canvas, GroundArt.Cell.SHADOW, at, shadow_w * 1.1, 0.42, Color(0.05, 0.1, 0.05, t.shadow_alpha * 1.3 * (1.0 - air) * fade))
 	# Team ring, flattened to sit on the ground.
-	var team_color := BattleField.OWN_COLOR if team == 0 else BattleField.ENEMY_COLOR
+	var team_color := BattleField.team_color(team)
 	var ring := radius * 1.45
 	var ring_alpha := t.team_ring_alpha * fade
 	if f != null and f.stealthed and f.revealed <= 0:
 		ring_alpha *= 0.4 if team == 0 else 0.1
 	GroundArt.draw(canvas, GroundArt.Cell.DISC, at, ring, 0.42, Color(team_color, 0.16 * ring_alpha))
 	GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring, 0.42, Color(team_color.darkened(0.45), ring_alpha))
-	GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring, 0.42, Color(team_color.lightened(0.15), ring_alpha))
+	GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring, 0.42, Color(team_color, ring_alpha))
 	if f != null:
 		# Status rings around its feet.
 		if f.shield > 0:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 4, 0.42, Color("#7fd6ff"))
 		if f.rage > 0:
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 7, 0.42, Color("#ff9f43", 0.85))
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 7, 0.42, Color("#ff9f43", fade))
 		if f.slow > 0:
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, 0.42, Color("#9fd8ff", 0.8))
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, 0.42, Color("#9fd8ff", fade))
 		if f.invulnerable > 0:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, 0.42, Color.WHITE)
 		if army and (f.memory.get("hero", false) or f.memory.get("elite", false)):
 			# An elite Specialist or a Mythic hero: a gold ring, set apart.
-			var gold := Color("#ffd24a", 0.9 * fade)
+			var gold := Color("#ffd24a", fade)
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 5, 0.42, gold)
 			GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring + 9, 0.42, Color(gold, 0.5 * fade))
 		if cls != "" and not army:
 			# Its class, as a small badge just under its feet (an army's
 			# squads carry banners instead).
 			var badge := t.class_badge_radius
-			badges.append([cls, at + Vector2(0, ring * 0.42 + badge * 0.9), badge, minf(fade, 0.95)])
+			badges.append([cls, at + Vector2(0, ring * 0.42 + badge * 0.9), badge, fade])

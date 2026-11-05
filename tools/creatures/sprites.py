@@ -2,9 +2,12 @@
 
     python sprites.py red_fox [--out game/art/units] [--samples 32]
 
-Writes <out>/<id>/sheet.webp (every frame of every animation and direction)
+Writes <out>/<id>/sheet.webp (every frame of every animation and direction;
+a big animal's frames go on more pages: sheet_1.webp, sheet_2.webp, ...)
 and sheet.json (where each frame is, the anchor point under the animal, and
-animation timing), plus portrait.webp for the card.
+animation timing), plus portrait.webp for the card. All lossless: the game
+compresses them once, on import. Resolution, samples, outline and lighting:
+look.json.
 
 The camera looks down at 50 degrees like the game's view. Five directions
 are rendered (facing up, up-right, right, down-right, down); the game
@@ -31,9 +34,11 @@ import cartoon
 import scene as S
 
 ELEVATION = 50.0
-PIXELS_PER_TILE = 56
+PIXELS_PER_TILE = int(S.LOOK["sprite_pixels_per_tile"])
 DIRECTIONS = [0, 45, 90, 135, 180]      # degrees clockwise from "facing up the screen"
-PADDING = 3                             # empty pixels around each frame in the sheet
+PADDING = int(S.LOOK["padding"])        # empty pixels around each frame in the sheet
+# The outline is set for 56 pixels a tile (the old resolution) and scaled.
+OUTLINE = float(S.LOOK["outline"]["sprite_pixels"]) * PIXELS_PER_TILE / 56.0
 
 
 def clean_alpha(im, floor=14):
@@ -44,7 +49,7 @@ def clean_alpha(im, floor=14):
     return im
 
 
-MAX_SHEET = 4096                        # pixels on a side, the most phones take
+MAX_SHEET = int(S.LOOK["max_sheet"])    # pixels on a side of one page
 
 
 def pack(crops, timing, hit, anchors, pixels_per_tile=PIXELS_PER_TILE):
@@ -54,8 +59,10 @@ def pack(crops, timing, hit, anchors, pixels_per_tile=PIXELS_PER_TILE):
     frame bigger); `anchors` maps anim to the anchor point in its frames;
     `timing` maps anim to (frames, fps, loops); `hit` maps each attack to
     the share of it where the blow lands. Frames are shelf-packed, tallest
-    first, into the narrowest near-square sheet; each animation records its
-    frame size, anchor and where each frame of each direction is."""
+    first, into the narrowest near-square sheet, or, if that would be over
+    MAX_SHEET on a side, onto MAX_SHEET-wide pages; each animation records
+    its frame size, anchor and where each frame of each direction is
+    ([x, y], or [x, y, page] on a paged sheet). Returns (pages, meta)."""
     items = []
     for (anim, d), images in crops.items():
         for f, im in enumerate(images):
@@ -64,29 +71,38 @@ def pack(crops, timing, hit, anchors, pixels_per_tile=PIXELS_PER_TILE):
     area = sum(h * w for h, w, *_ in items)
     widest = max(w for h, w, *_ in items)
 
-    def shelves(width):
-        spots, x, y, shelf = {}, 0, 0, 0
+    def shelves(width, max_height=None):
+        spots, x, y, shelf, page, heights = {}, 0, 0, 0, 0, []
         for h, w, anim, d, f, im in items:
             if x + w > width:
                 x, y, shelf = 0, y + shelf, 0
-            spots[(anim, d, f)] = (x + PADDING, y + PADDING)
+            if max_height is not None and y + h > max_height:
+                heights.append(y)
+                page, x, y, shelf = page + 1, 0, 0, 0
+            spots[(anim, d, f)] = (x + PADDING, y + PADDING, page)
             x += w
             shelf = max(shelf, h)
-        return spots, y + shelf
+        heights.append(y + shelf)
+        return spots, heights
 
     best = None
     for k in np.linspace(0.9, 1.4, 11):
         width = max(widest, int(math.ceil(math.sqrt(area) * k)))
-        spots, height = shelves(width)
-        side = max(width, height)
+        spots, heights = shelves(width)
+        side = max(width, heights[0])
         if best is None or side < best[0]:
-            best = (side, width, height, spots)
-    side, width, height, spots = best
-    if side > MAX_SHEET:
-        raise SystemExit(f"the sheet would be {width}x{height}, over {MAX_SHEET} on a side")
-    sheet = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+            best = (side, width, heights, spots)
+    side, width, heights, spots = best
+    paged = side > MAX_SHEET
+    if paged:
+        width = MAX_SHEET
+        spots, heights = shelves(width, MAX_SHEET)
+    # Sides a multiple of 4, for GPU texture compression.
+    width = (width + 3) // 4 * 4
+    pages = [Image.new("RGBA", (width, (h + 3) // 4 * 4), (0, 0, 0, 0)) for h in heights]
     meta = {
         "version": 3,
+        "pages": len(pages),
         "padding": PADDING,
         "pixels_per_tile": pixels_per_tile,
         "directions": DIRECTIONS,
@@ -101,11 +117,22 @@ def pack(crops, timing, hit, anchors, pixels_per_tile=PIXELS_PER_TILE):
         if anim in hit:
             info["hit"] = hit[anim]
         for d in DIRECTIONS:
-            info["at"][str(d)] = [list(spots[(anim, d, f)]) for f in range(len(crops[(anim, d)]))]
+            info["at"][str(d)] = [list(spots[(anim, d, f)]) if paged else list(spots[(anim, d, f)][:2])
+                                  for f in range(len(crops[(anim, d)]))]
             for f, im in enumerate(crops[(anim, d)]):
-                sheet.paste(Image.fromarray(im), spots[(anim, d, f)])
+                x, y, page = spots[(anim, d, f)]
+                pages[page].paste(Image.fromarray(im), (x, y))
         meta["animations"][anim] = info
-    return sheet, meta
+    return pages, meta
+
+
+def page_name(index):
+    return "sheet.webp" if index == 0 else f"sheet_{index}.webp"
+
+
+def load_pages(out_dir, meta):
+    return [np.asarray(Image.open(os.path.join(out_dir, page_name(i))).convert("RGBA"))
+            for i in range(int(meta.get("pages", 1)))]
 
 
 def sprite_top(frames, anchor):
@@ -135,7 +162,7 @@ def _old_frames(out_dir, side, anchor, anims):
     missing = [a for a in anims if a not in meta["animations"]]
     if missing:
         raise SystemExit(f"{out_dir}: the old sheet has no {', '.join(missing)}; render those too")
-    sheet = np.asarray(Image.open(os.path.join(out_dir, "sheet.webp")).convert("RGBA"))
+    sheets = load_pages(out_dir, meta)
     if meta.get("pixels_per_tile") != PIXELS_PER_TILE:
         raise SystemExit(f"{out_dir}: the old sheet is at another scale; render every animation")
     frames = {}
@@ -158,14 +185,17 @@ def _old_frames(out_dir, side, anchor, anims):
         for d in DIRECTIONS:
             images = []
             for f in range(info["frames"]):
+                page = 0
                 if meta.get("version") == 3:
-                    x, y = info["at"][str(d)][f]
+                    spot = info["at"][str(d)][f]
+                    x, y = spot[0], spot[1]
+                    page = spot[2] if len(spot) > 2 else 0
                 else:
                     pad, cols = meta["padding"], meta["columns"]
                     i = int(info["start"][str(d)]) + f
                     x, y = (i % cols) * (cw + pad * 2) + pad, (i // cols) * (ch + pad * 2) + pad
                 full = np.zeros((side, side, 4), np.uint8)
-                full[oy:oy + ch, ox:ox + cw] = sheet[y:y + ch, x:x + cw]
+                full[oy:oy + ch, ox:ox + cw] = sheets[page][y:y + ch, x:x + cw]
                 images.append(full)
             frames[(anim, d)] = images
     return frames
@@ -184,7 +214,7 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
     S.lights()
     S.shadow_catcher(20)
     if getattr(creature, "style", "") == "cartoon":
-        S.outline(1.4)
+        S.outline(OUTLINE)
 
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     # tiles_long is the animal's biggest size: nose to tail, or a bird's wingspan.
@@ -254,7 +284,7 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
         hit["attack2"] = motion.HIT_AT.get(creature.motion["attack2"], 0.45)
     if "special" in animations:
         hit["special"] = motion.HIT_AT["special"]
-    sheet, meta = pack(crops, timing, hit, anchors)
+    pages, meta = pack(crops, timing, hit, anchors)
     _add_eyes(meta, eyes, frames, eye_objects, anchor, ppm)
     meta["walk_cycle_tiles"] = round(creature.motion.get("cycle_tiles", creature.tiles_long * 0.75), 3)
     meta["top"] = sprite_top(frames, anchor)
@@ -265,10 +295,21 @@ def render_sprites(creature, out_dir, samples, with_fur=True, anims=None):
         meta["attack2_style"] = creature.motion["attack2"]
 
     os.makedirs(out_dir, exist_ok=True)
-    sheet.save(os.path.join(out_dir, "sheet.webp"), "WEBP", quality=90, method=6)
+    # Lossless: the game compresses the sheets once, on import.
+    for i, page in enumerate(pages):
+        page.save(os.path.join(out_dir, page_name(i)), "WEBP", lossless=True, quality=100, method=4)
+    # Pages left over from an older, bigger sheet.
+    i = len(pages)
+    while os.path.exists(os.path.join(out_dir, page_name(i))):
+        os.remove(os.path.join(out_dir, page_name(i)))
+        for extra in (".import",):
+            if os.path.exists(os.path.join(out_dir, page_name(i) + extra)):
+                os.remove(os.path.join(out_dir, page_name(i) + extra))
+        i += 1
     with open(os.path.join(out_dir, "sheet.json"), "w") as fh:
         json.dump(meta, fh, indent=1)
-    print(f"sheet {sheet.size[0]}x{sheet.size[1]}: " + ", ".join(f"{a} {i['cell'][0]}x{i['cell'][1]}" for a, i in meta["animations"].items()))
+    print(f"sheet: {len(pages)} page(s) " + ", ".join(f"{p.size[0]}x{p.size[1]}" for p in pages) + "; "
+          + ", ".join(f"{a} {i['cell'][0]}x{i['cell'][1]}" for a, i in meta["animations"].items()))
 
 
 def _eye_spots(sc, cam, side, eye_objects):
@@ -365,16 +406,17 @@ def _fit_camera(cam, points, fill=0.88):
         cam.location = tuple(np.array(cam.location) + shift)
 
 
-def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
+def render_portrait(creature, out_dir, samples, size=None, with_fur=True):
     """The whole animal from a three-quarter front view, for its card."""
+    size = size or int(S.LOOK["portrait_size"])
     sc = S.reset()
-    sc.cycles.samples = max(samples * 3, 64)
+    sc.cycles.samples = int(S.LOOK["portrait_samples"])
     arm, body, mesh = S.build(creature, with_fur=with_fur)
     motion.apply(arm, motion.idle(creature, 0.0))
     S.lights(1.1)
     S.shadow_catcher(8)
     if getattr(creature, "style", "") == "cartoon":
-        S.outline(3.0)
+        S.outline(float(S.LOOK["outline"]["portrait_pixels"]) * size / 512.0)
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     center = (lo + hi) / 2 + np.array(arm["rest_offset"])
     radius = float(np.linalg.norm(hi - lo)) / 2
@@ -389,7 +431,7 @@ def render_portrait(creature, out_dir, samples, size=512, with_fur=True):
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)
     im = Image.fromarray(clean_alpha(np.asarray(Image.open(path).convert("RGBA"))))
-    im.save(os.path.join(out_dir, "portrait.webp"), "WEBP", quality=92, method=6)
+    im.save(os.path.join(out_dir, "portrait.webp"), "WEBP", lossless=True, quality=100, method=4)
     os.remove(path)
 
 
@@ -397,7 +439,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("species")
     parser.add_argument("--out", default=os.path.join(HERE, "..", "..", "game", "art", "units"))
-    parser.add_argument("--samples", type=int, default=20)
+    parser.add_argument("--samples", type=int, default=int(S.LOOK["sprite_samples"]))
     parser.add_argument("--only", choices=["sprites", "portrait"])
     parser.add_argument("--bare", action="store_true", help="no fur strands (much faster, for testing)")
     parser.add_argument("--style", choices=["cartoon", "real"], default="cartoon",

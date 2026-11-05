@@ -290,8 +290,6 @@ func _stamp(id: String, team: int) -> void:
 		Sound.play("hit", -6.0))
 	land.tween_property(card, "scale", Vector2.ONE * 0.92, 0.06)
 	land.tween_property(card, "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	# Only the card goes dark, not the X on it.
-	land.parallel().tween_property(card, "self_modulate", Color(0.5, 0.5, 0.55), 0.25)
 	_shake(_num("stamp_shake", 10.0))
 	var slot: _Slot = _slots[team][phase.bans[team].size() - 1]
 	slot.fill(id)
@@ -340,7 +338,6 @@ class _Slot:
 		_card = AnimalCard.create(id, true)
 		_card.info = AnimalCard.Info.NONE
 		_card.scale = Vector2.ONE * (custom_minimum_size.x / AnimalCard.SIZE_SMALL.x)
-		_card.self_modulate = Color(0.6, 0.6, 0.65)
 		add_child(_card)
 		var x := BanX.new()
 		x.size = AnimalCard.SIZE_SMALL
@@ -352,8 +349,8 @@ class _Slot:
 		if _card != null:
 			return
 		var rect := Rect2(Vector2(3, 3), size - Vector2(6, 6))
-		draw_style_box(UIKit.box(Color(tint, 0.18), 10), rect)
-		draw_rect(rect, Color(tint, 0.85), false, 3.0)
+		draw_style_box(UIKit.box(tint.darkened(0.55), 10), rect)
+		draw_rect(rect, tint, false, 3.0)
 
 
 ## The rival thinking: three dots bouncing one after another.

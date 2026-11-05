@@ -15,10 +15,10 @@ dest_files=["res://.godot/imported/sheet.webp-c88b336a9f27e2aa44ec92e2ee24d62d.c
 
 [params]
 
-compress/mode=1
+compress/mode=0
 compress/high_quality=false
 compress/lossy_quality=0.85
-compress/uastc_level=0
+compress/uastc_level=2
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0

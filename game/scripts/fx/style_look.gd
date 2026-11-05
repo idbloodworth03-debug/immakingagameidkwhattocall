@@ -85,7 +85,7 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					state = "shell"
 					p.sx = 1.14
 					p.sy = 0.5
-					p.tint = Color(0.78, 0.84, 0.78)
+					p.tint = Color(0.9, 1.0, 0.9)
 			"snack":
 				if int(f.memory.get("snack", 0)) > 0:
 					state = "snack"

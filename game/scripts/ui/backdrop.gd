@@ -1,13 +1,13 @@
 class_name Backdrop
 extends Control
-## The background behind the menus: a deep blue gradient, a faint pattern of
-## paw prints and darker edges, so screens feel finished rather than flat.
+## The background behind the menus: a deep blue gradient and a faint pattern
+## of paw prints, so screens feel finished rather than flat (no darkened
+## edges: colors stay bold out to the corners).
 
 ## How visible the paw prints are.
 var pattern_alpha := 0.05
 
 static var _gradient: GradientTexture2D
-static var _vignette: GradientTexture2D
 
 
 func _init() -> void:
@@ -38,7 +38,6 @@ func _draw() -> void:
 			y += step * 0.8
 			row += 1
 		draw_set_transform(Vector2.ZERO)
-	draw_texture_rect(_vignette_texture(), rect, false, Color.WHITE)
 
 
 func _gradient_texture() -> GradientTexture2D:
@@ -52,19 +51,3 @@ func _gradient_texture() -> GradientTexture2D:
 		_gradient.width = 8
 		_gradient.height = 256
 	return _gradient
-
-
-func _vignette_texture() -> GradientTexture2D:
-	if _vignette == null:
-		var gradient := Gradient.new()
-		gradient.set_color(0, Color(UIKit.INK, 0.0))
-		gradient.set_color(1, Color(UIKit.INK, 0.45))
-		gradient.add_point(0.6, Color(UIKit.INK, 0.0))
-		_vignette = GradientTexture2D.new()
-		_vignette.gradient = gradient
-		_vignette.fill = GradientTexture2D.FILL_RADIAL
-		_vignette.fill_from = Vector2(0.5, 0.42)
-		_vignette.fill_to = Vector2(1.15, 1.05)
-		_vignette.width = 128
-		_vignette.height = 128
-	return _vignette

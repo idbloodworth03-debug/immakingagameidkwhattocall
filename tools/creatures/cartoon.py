@@ -16,6 +16,7 @@ import importlib
 
 import numpy as np
 
+import scene as S
 from anatomy import Extra
 from sdf import surface_point
 
@@ -172,8 +173,10 @@ def _cartoonify(c):
 
     # Smooth skin instead of hair, in brighter colors, painted as the real
     # animal would be.
-    c.fur = dict(c.fur, strands=False, variation=0.0, bump=0.0, roughness=0.55, sheen=0.15, specular=0.2,
-                 subsurface=0.08)
+    # Solid colors: little sheen and no subsurface haze (look.json "skin").
+    skin = S.LOOK["skin"]
+    c.fur = dict(c.fur, strands=False, variation=0.0, bump=0.0, roughness=skin["roughness"], sheen=skin["sheen"],
+                 specular=skin["specular"], subsurface=skin["subsurface"])
     paint = original.paint
 
     def painted(mesh, creature):

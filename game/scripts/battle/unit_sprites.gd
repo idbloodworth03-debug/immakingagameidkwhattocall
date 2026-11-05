@@ -4,15 +4,60 @@ extends RefCounted
 ##
 ## Each animal has art/units/<id>/sheet.webp, holding every frame of its
 ## idle, walk, attack and death animations from five directions (and, for
-## animals rendered with them, a fidget, a victory and a second attack), and
-## sheet.json saying where each frame is and where the eyes are in it.
-## Left-facing frames are the right-facing ones mirrored.
-## art/units/<id>/portrait.webp is its card art.
+## animals rendered with them, a fidget, a victory and a second attack; a big
+## animal's frames go on more pages, sheet_1.webp...), and sheet.json saying
+## where each frame is and where the eyes are in it. Left-facing frames are
+## the right-facing ones mirrored. art/units/<id>/portrait.webp is its card
+## art.
+##
+## The sheets' pictures are big, so only the ones in use are kept: a match
+## frees every animal's that isn't in it (keep_only: both decks, without the
+## bans), and an animal's sheet loads when it's first drawn (so a match only
+## ever holds the animals that actually came up, at most its own).
 
 const ROOT := "res://art/units/"
 
-static var _sheets := {}      # id -> Dictionary (the json, plus "texture"), or {} if none
+static var _sheets := {}      # id -> Dictionary (the json), or {} if none
+static var _textures := {}    # id -> Array of Texture2D (one per page), while in use
 static var _portraits := {}   # id -> Texture2D or null
+
+
+## Lets go of every animal's sheet pictures (and card portrait) except
+## these animals'; theirs load when first drawn.
+static func keep_only(ids: Array) -> void:
+	for id in _textures.keys():
+		if not ids.has(id):
+			_textures.erase(id)
+	for id in _portraits.keys():
+		if not ids.has(id):
+			_portraits.erase(id)
+
+
+## The animals whose sheet pictures are in memory now.
+static func loaded_ids() -> Array:
+	return _textures.keys()
+
+
+## How much graphics memory the loaded sheets take (4 bytes a pixel).
+static func loaded_bytes() -> int:
+	var total := 0
+	for pages: Array in _textures.values():
+		for page: Texture2D in pages:
+			if page != null:
+				total += page.get_width() * page.get_height() * 4
+	return total
+
+
+## The sheet's pictures (one per page), loaded when first needed.
+static func _pages(id: String) -> Array:
+	if not _textures.has(id):
+		var pages := []
+		var count := int(_sheet(id).get("pages", 1))
+		for i in count:
+			var path := ROOT + id + ("/sheet.webp" if i == 0 else "/sheet_%d.webp" % i)
+			pages.append(load(path) if ResourceLoader.exists(path) else null)
+		_textures[id] = pages
+	return _textures[id]
 
 
 static func has(id: String) -> bool:
@@ -127,7 +172,8 @@ static func frame(id: String, anim: String, facing: float, frame_index: int) -> 
 		# every frame says where it is.
 		var at: Array = info.at[str(angle)][f]
 		var size: Vector2 = info.cell_size
-		return {"texture": sheet.texture, "region": Rect2(float(at[0]), float(at[1]), size.x, size.y), "flip": flip, "anchor": info.anchor_point}
+		var page := int(at[2]) if at.size() > 2 else 0
+		return {"texture": _pages(id)[page], "region": Rect2(float(at[0]), float(at[1]), size.x, size.y), "flip": flip, "anchor": info.anchor_point}
 	var cell: Vector2 = sheet.cell_size
 	var pad := float(sheet.padding)
 	var col := f
@@ -140,7 +186,7 @@ static func frame(id: String, anim: String, facing: float, frame_index: int) -> 
 	else:
 		row = int(info.rows[str(angle)])
 	var region := Rect2(col * (cell.x + pad * 2) + pad, row * (cell.y + pad * 2) + pad, cell.x, cell.y)
-	return {"texture": sheet.texture, "region": region, "flip": flip, "anchor": sheet.anchor_point}
+	return {"texture": _pages(id)[0], "region": region, "flip": flip, "anchor": sheet.anchor_point}
 
 
 static func _sheet(id: String) -> Dictionary:
@@ -153,7 +199,6 @@ static func _sheet(id: String) -> Dictionary:
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(json_path))
 		if parsed is Dictionary:
 			sheet = parsed
-			sheet["texture"] = load(texture_path)
 			if sheet.has("cell"):
 				sheet["cell_size"] = Vector2(float(sheet.cell[0]), float(sheet.cell[1]))
 				sheet["anchor_point"] = Vector2(float(sheet.anchor[0]), float(sheet.anchor[1]))

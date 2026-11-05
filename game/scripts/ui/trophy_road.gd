@@ -18,10 +18,11 @@ func _build() -> void:
 	for i in range(GameData.arenas.size() - 1, -1, -1):
 		var arena: Dictionary = GameData.arenas[i]
 		var reached := i <= Profile.highest_arena()
-		var color := Color(arena.color) if reached else Color(arena.color).darkened(0.6)
-		var row := UIKit.panel(color.darkened(0.4), 12, 20)
+		# Reached arenas in their own bold color; the ones ahead in solid gray.
+		var color := Color(arena.color) if reached else UIStyle.color("disabled")
+		var row := UIKit.panel(color.darkened(0.15), 12, 20)
 		if i == current:
-			var style := UIKit.raised(color.darkened(0.35), 20, 12)
+			var style := UIKit.raised(color.darkened(0.1), 20, 12)
 			style.set_border_width_all(5)
 			style.border_color = UIKit.YELLOW
 			row.add_theme_stylebox_override("panel", style)
@@ -48,7 +49,7 @@ func _build() -> void:
 		column.add_child(flow)
 		for id in GameData.cards_in_arena(i):
 			var animal := GameData.get_card(id)
-			var chip := UIKit.panel(Color(UIKit.INK, 0.45), 6, 12)
+			var chip := UIKit.panel(UIKit.DEEP, 6, 12)
 			chip.add_child(UIKit.label(animal.name, 18, GameData.rarity_color(animal.rarity)))
 			flow.add_child(chip)
 
@@ -69,7 +70,6 @@ func _thumbnail(arena: Dictionary, reached: bool) -> Control:
 		preview.arena_id = arena.id
 		window.add_child(preview)
 	if not reached:
-		window.modulate = Color(0.35, 0.37, 0.45)
 		var lock := UIKit.icon_rect(GameData.ui_icon("locked"), Color.WHITE, 44)
 		lock.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		lock.size_flags_vertical = Control.SIZE_SHRINK_CENTER

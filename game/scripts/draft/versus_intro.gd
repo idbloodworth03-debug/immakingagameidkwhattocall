@@ -48,7 +48,7 @@ func _ready() -> void:
 	_vs.add_theme_constant_override("shadow_offset_y", 8)
 	_vs.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_vs)
-	_hint = UIKit.label("Tap to start", 24, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_CENTER)
+	_hint = UIKit.label("Tap to start", 24, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	_hint.add_theme_constant_override("outline_size", 6)
 	_hint.add_theme_color_override("font_outline_color", UIKit.INK)
 	_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -63,7 +63,7 @@ func _build_rival() -> Control:
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var arena := GameData.get_arena(int(rival.get("arena_index", 0)))
-	box.add_child(_outlined(String(arena.name).to_upper(), 22, Color(1, 1, 1, 0.9)))
+	box.add_child(_outlined(String(arena.name).to_upper(), 22, Color.WHITE))
 	if rival.get("boss", false):
 		var ribbon_style := UIKit.raised(UIKit.GOLD, 12, 6)
 		ribbon_style.content_margin_left = 22
@@ -123,7 +123,7 @@ func _build_player() -> Control:
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(art)
 	box.add_child(_outlined(Profile.get_player_name(), 40, Color.WHITE))
-	box.add_child(_outlined("Ranger Lv %d  ·  %d trophies" % [int(Profile.ranger_info().level), Profile.get_trophies()], 20, Color(1, 1, 1, 0.85)))
+	box.add_child(_outlined("Ranger Lv %d  ·  %d trophies" % [int(Profile.ranger_info().level), Profile.get_trophies()], 20, Color.WHITE))
 	return box
 
 
@@ -230,9 +230,9 @@ func _draw() -> void:
 	var split_right := h * 0.56
 	var top := PackedVector2Array([Vector2(0, 0), Vector2(w, 0), Vector2(w, split_right), Vector2(0, split_left)])
 	var bottom := PackedVector2Array([Vector2(0, split_left), Vector2(w, split_right), Vector2(w, h), Vector2(0, h)])
-	var a0 := Color(_top_colors[0]).darkened(0.25)
+	var a0 := Color(_top_colors[0]).darkened(0.1)
 	var a1 := Color(_top_colors[1]).darkened(0.05)
-	var b0 := Color(_bottom_colors[0]).darkened(0.25)
+	var b0 := Color(_bottom_colors[0]).darkened(0.1)
 	var b1 := Color(_bottom_colors[1]).darkened(0.05)
 	draw_polygon(top, PackedColorArray([a1, a1, a0, a0]))
 	draw_polygon(bottom, PackedColorArray([b0, b0, b1, b1]))

@@ -192,16 +192,16 @@ func _draw_bars() -> void:
 			var top: Vector2 = view.position + view.head() + Vector2(0, -12.0)
 			var width := w * (0.8 if view.swarm else 1.0)
 			var rect := Rect2(top - Vector2(width / 2.0, h / 2.0), Vector2(width, h))
-			var team_color := BattleField.OWN_COLOR if view.team == 0 else BattleField.ENEMY_COLOR
+			var team_color := BattleField.team_color(view.team)
 			var radius := int(h / 2.0)
-			draw_style_box(_box(Color(UIKit.INK, 0.9 * a), radius + 2), rect.grow(2.0))
+			draw_style_box(_box(Color(UIKit.INK, a), radius + 2), rect.grow(2.0))
 			draw_style_box(_box(Color(0.12, 0.14, 0.2, a), radius), rect)
 			var trail := Rect2(rect.position, Vector2(width * clampf(view.bar_trail, 0.0, 1.0), h))
 			if trail.size.x > 1.0:
 				draw_style_box(_box(Color("#fff1c2", a), radius), trail)
 			var fill := Rect2(rect.position, Vector2(width * clampf(view.bar_shown, 0.0, 1.0), h))
 			if fill.size.x > 1.0:
-				draw_style_box(_box(Color(team_color.lightened(0.15), a), radius), fill)
+				draw_style_box(_box(Color(team_color, a), radius), fill)
 				var gloss := Rect2(fill.position + Vector2(1, 1), Vector2(maxf(fill.size.x - 2, 0.0), h * 0.38))
 				draw_style_box(_box(Color(1, 1, 1, 0.35 * a), radius), gloss)
 			if view.stars > 1 and view.shows_stars():
@@ -271,7 +271,7 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 		"area":
 			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.6))
 			canvas.draw_circle(Vector2.ZERO, r, Color(color, 0.14))
-			canvas.draw_arc(Vector2.ZERO, r, 0, TAU, 40, Color(color, 0.55), 4.0)
+			canvas.draw_arc(Vector2.ZERO, r, 0, TAU, 40, color, 4.0)
 			canvas.draw_set_transform(Vector2.ZERO)
 		"flash":
 			canvas.draw_circle(p, r * (1.0 - t), Color(color, 0.8 * (1.0 - t)))
@@ -289,7 +289,7 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			var to := from + (span * 1.3) * reach
 			canvas.draw_arc(p, r, minf(from, to), maxf(from, to), 18, Color(UIKit.INK, 0.45 * fade), 14.0)
 			canvas.draw_arc(p, r, minf(from, to), maxf(from, to), 18, Color(color, 0.95 * fade), 8.0)
-			canvas.draw_arc(p, r * 0.86, minf(from, to), maxf(from, to), 18, Color(color, 0.6 * fade), 4.0)
+			canvas.draw_arc(p, r * 0.86, minf(from, to), maxf(from, to), 18, Color(color, 0.95 * fade), 4.0)
 		"cone":
 			# A spray fanning out toward its target.
 			var ang: float = fx.dir.angle()
@@ -299,8 +299,8 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			for i in 9:
 				var u := ang - half + 2.0 * half * i / 8.0
 				fan.append(p + Vector2(cos(u), sin(u) * 0.75) * reach)
-			canvas.draw_colored_polygon(fan, Color(color, 0.4 * (1.0 - t)))
-			canvas.draw_polyline(fan + PackedVector2Array([p]), Color(color.lightened(0.3), 0.7 * (1.0 - t)), 3.0)
+			canvas.draw_colored_polygon(fan, Color(color, 0.6 * (1.0 - t)))
+			canvas.draw_polyline(fan + PackedVector2Array([p]), Color(color.lightened(0.3), 1.0 - t), 3.0)
 		"rainbow":
 			# A rainbow beam right through the line.
 			var end: Vector2 = fx.get("end", p)
@@ -311,8 +311,8 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			var width := r * (1.0 - 0.5 * t)
 			for i in bands.size():
 				var off := across * (i - 2.5) * width / bands.size()
-				canvas.draw_line(p + off, end + off, Color(bands[i], 0.85 * fade), maxf(2.0, width / bands.size() + 1.0))
-			canvas.draw_line(p, end, Color(1, 1, 1, 0.6 * fade), maxf(1.5, width * 0.15))
+				canvas.draw_line(p + off, end + off, Color(bands[i], fade), maxf(2.0, width / bands.size() + 1.0))
+			canvas.draw_line(p, end, Color(1, 1, 1, 0.9 * fade), maxf(1.5, width * 0.15))
 		"fire_line":
 			# A line of fire burning along the ground (the Dragon's run): it
 			# sweeps out along the line, flickers, and dies down at the end.
@@ -340,7 +340,7 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 					var hh := high * (1.0 if layer == 0 else 0.6)
 					var shape := PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w * 0.55, -hh * 0.55), at + Vector2(0, -hh),
 						at + Vector2(w * 0.55, -hh * 0.55), at + Vector2(w, 0), at + Vector2(0, w * 0.45)])
-					canvas.draw_colored_polygon(shape, Color(color if layer == 0 else flame, 0.9 * fade))
+					canvas.draw_colored_polygon(shape, Color(color if layer == 0 else flame, fade))
 		"tentacle":
 			# A tentacle reaching from `at` to `end`: it rises in an arc, slams
 			# down, then pulls back.
@@ -376,7 +376,7 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 					bolt.append(a.lerp(b, j / 6.0) + across * rng.randf_range(-1.0, 1.0) * r * 0.35)
 				bolt.append(b)
 				canvas.draw_polyline(bolt, Color(color, 0.35 * fade), r * 0.9)
-				canvas.draw_polyline(bolt, Color(color, 0.9 * fade), r * 0.35)
+				canvas.draw_polyline(bolt, Color(color, fade), r * 0.35)
 				canvas.draw_polyline(bolt, Color(1, 1, 1, fade), maxf(2.0, r * 0.14))
 		"slow_zone":
 			# A Sloth's slow-motion zone on the ground round it: a soft disc with
@@ -388,8 +388,8 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			for i in 24:
 				var a0 := turn + TAU * i / 24.0
 				canvas.draw_arc(Vector2.ZERO, r, a0, a0 + TAU / 48.0, 4, Color(color.lightened(0.3), 0.95), 7.0)
-			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 3.0 - PI / 2) * r * 0.55, Color(color, 0.5), 4.0)
-			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 0.25 - PI / 2) * r * 0.35, Color(color, 0.5), 5.0)
+			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 3.0 - PI / 2) * r * 0.55, Color(color, 0.85), 4.0)
+			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 0.25 - PI / 2) * r * 0.35, Color(color, 0.85), 5.0)
 			canvas.draw_set_transform(Vector2.ZERO)
 		"wisp":
 			# A glowing wisp flying from `at` to `end`, a little trail behind.
@@ -399,7 +399,7 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 				var at := p.lerp(end, u * u) + Vector2(0, -sin(u * PI) * r * 1.5)
 				var size := r * (0.5 - i * 0.08)
 				canvas.draw_circle(at, size * 1.8, Color(color, 0.18 * (1.0 - i * 0.18)))
-				canvas.draw_circle(at, size, Color(color.lightened(0.3), 0.8 * (1.0 - i * 0.18)))
+				canvas.draw_circle(at, size, Color(color.lightened(0.3), 1.0 - i * 0.18))
 			var head := p.lerp(end, t * t) + Vector2(0, -sin(t * PI) * r * 1.5)
 			canvas.draw_circle(head, r * 0.18, Color.WHITE)
 		"shield":
@@ -477,7 +477,7 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			var texture := UIKit.icon(fx.text)
 			if texture != null:
 				var side: float = r * (0.6 + 0.4 * Ease.out_back(minf(1.0, t * 3.0)))
-				canvas.draw_texture_rect(texture, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 0.9 * (1.0 - Ease.in_cubic(t))))
+				canvas.draw_texture_rect(texture, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 1.0 - Ease.in_cubic(t)))
 
 
 static func _draw_text(canvas: CanvasItem, center: Vector2, text: String, font_size: int, color: Color, outline := 4) -> void:

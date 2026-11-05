@@ -2,22 +2,22 @@
   "_note": "How the game LOOKS and FEELS: animation, hit effects, particles, UI motion and backgrounds. Nothing here changes the rules or balance. Times are in seconds, sizes in screen pixels unless they say tiles. Set a strength to 0 to switch an effect off.",
 
   "characters": {
-    "_note": "The animals. class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a warm highlight on the edge facing the light (top-left), a cool rim light on the far edge, outlines recolored to a dark shade of the animal's own color, and a little extra color punch.",
+    "_note": "The animals. class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a soft warm highlight on the edge facing the light (top-left), a soft cool rim light on the far edge (both edge_width texels wide at 56 pixels a tile, following the smooth edge so they stay smooth at any zoom), a little extra color punch, and gentle volume (gradient). The outline is the render's own single deep line; shader_line_tint above 0 tints it toward a dark shade (line_darkness) of the body color.",
     "class_badge_radius": 9.0,
     "shader_enabled": true,
     "sprite_scale": 1.6,
     "swarm_scale": 0.8,
-    "shader_vibrance": 0.45,
-    "shader_contrast": 0.14,
-    "shader_brightness": 0.07,
-    "shader_highlight": 0.6,
+    "shader_vibrance": 0.25,
+    "shader_contrast": 0.08,
+    "shader_brightness": 0.02,
+    "shader_highlight": 0.25,
     "shader_highlight_color": "#fff3d1",
-    "shader_rim": 0.7,
+    "shader_rim": 0.25,
     "shader_rim_color": "#b9e2ff",
     "shader_edge_width": 2.0,
-    "shader_outline_darkness": 0.4,
-    "shader_outline_thicken": 1.4,
-    "shader_gradient": 0.2,
+    "shader_line_tint": 0.0,
+    "shader_line_darkness": 0.2,
+    "shader_gradient": 0.12,
     "breathe_amount": 0.035,
     "breathe_speed": 2.4,
     "bob_pixels": 1.5,
@@ -31,7 +31,7 @@
     "upgrade_pop": 0.3,
     "shadow_alpha": 0.34,
     "shadow_width": 1.25,
-    "team_ring_alpha": 0.9,
+    "team_ring_alpha": 1.0,
     "team_ring_width": 3.0
   },
 
@@ -262,23 +262,22 @@
   },
 
   "pick": {
-    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: offer_card for the options after round 1 (four animals in one tray, animal_tray, and two tools in another below it, tool_tray, each tray tray_padding pixels round its cards), start_card for round 1's collection grid, herd_card for your army row; choice_button for the Upgrade and +Squad buttons you get by tapping an animal in your army; army_height: how tall your army in formation is drawn while picking at least (it takes the room the options leave; framed with army_margin_tiles around it, at least army_min_tiles across, zoomed in up to army_max_zoom); slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Hold a card hold_seconds to see its details. After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
+    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: offer_card for the options after round 1 (four animals in one tray, animal_tray, and two tools in another below it, tool_tray, each tray tray_padding pixels round its cards), start_card for round 1's collection grid, herd_card for your army row; choice_button for the Upgrade and +Squad buttons you get by tapping an animal in your army; army_height: how tall your army in formation is drawn while picking at least (it takes the room the options leave; framed with army_margin_tiles around it, at least army_min_tiles across, zoomed in up to army_max_zoom); slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Holding a card shows its info (see info). After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
     "offer_card": [156, 184],
-    "animal_tray": "#2c6a3299",
-    "tool_tray": "#5a2f8a99",
+    "animal_tray": "#3a8a3f",
+    "tool_tray": "#7442a8",
     "tray_padding": 8,
     "start_card": [156, 176],
     "herd_card": [92, 106],
     "choice_button": [236, 128],
     "slot_size": 108,
     "undo_badge": 38,
-    "hold_seconds": 0.35,
     "result_seconds": 1.8,
     "bot_pick_seconds": [0.4, 0.8],
     "army_height": 200.0,
     "army_margin_tiles": 0.8,
     "army_max_zoom": 10.0,
-    "army_min_tiles": 9.0
+    "army_min_tiles": 11.0
   },
 
   "bans": {
@@ -296,12 +295,6 @@
     "rival_color": "#e0523b"
   },
 
-  "grade": {
-    "_note": "A warm afternoon grade over the whole game, darker toward the edges (a gentle vignette). Colors are in ui_style.json (grade_center, grade_edge); strength 0 turns it off without removing it.",
-    "enabled": true,
-    "strength": 1.0,
-    "vignette_start": 0.55
-  },
 
   "transition": {
     "_note": "Changing screens: a leafy circle closes (cover_seconds) with a swirl of leaves, then opens on the next screen (reveal_seconds).",
@@ -311,8 +304,8 @@
   },
 
   "background": {
-    "_note": "The arena behind the fight: a little calmer than the animals so they pop, with gentle motion.",
-    "arena_saturation": 0.82,
+    "_note": "The arena behind the fight, in its full painted colors (arena_saturation 1 = as painted; the animals stand out by their dark outlines and bold colors), with gentle motion.",
+    "arena_saturation": 1.0,
     "arena_brightness": 1.02,
     "cloud_shadows": 3,
     "cloud_alpha": 0.09,
@@ -395,7 +388,7 @@
     "banner_width_pixels": 22.0,
     "banner_height_pixels": 17.0,
     "banner_pole_pixels": 22.0,
-    "banner_alpha": 0.92,
+    "banner_alpha": 1.0,
     "volley_tiles_per_second": 9.0,
     "volley_min_seconds": 0.45,
     "volley_max_seconds": 0.85,
@@ -407,5 +400,15 @@
     "walk_in_tiles": 5.0,
     "walk_in_tiles_per_second": 2.6,
     "walk_in_steps_per_second": 1.8
+  },
+  "info": {
+    "_note": "Holding a card anywhere (picking, offers, army row, deck, bans, collection), or an animal on the battlefield, shows its info popup near the finger (scripts/autoload/hold_info.gd, scripts/ui/info_pop.gd) for as long as it's held; the fight never pauses. hold_seconds: how long a hold takes; move_pixels: moving further than this is a drag (scrolling), not a hold. size: the popup's [width, height] in game pixels; gap: how far it sits from the finger. pop_seconds: its quick pop. The four bars compare the animal with the strongest in the game (at its level): Health and Damage are its whole squad's (on a square-root scale, so everyday animals don't look empty beside a Mythic hero); Speed: speed_bars for each speed; Range: its reach in tiles over range_full_tiles.",
+    "hold_seconds": 0.35,
+    "move_pixels": 24.0,
+    "size": [460, 276],
+    "gap": 48.0,
+    "pop_seconds": 0.14,
+    "speed_bars": {"slow": 0.3, "medium": 0.55, "fast": 0.8, "very_fast": 1.0},
+    "range_full_tiles": 10.0
   }
 }

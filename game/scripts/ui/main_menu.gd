@@ -102,7 +102,7 @@ func select_tab(index: int) -> void:
 			cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
 		cell.size_flags_stretch_ratio = 1.45 if selected else 1.0
 		tab.icon.custom_minimum_size = Vector2(56, 56) if selected else Vector2(46, 46)
-		tab.icon.modulate = Color.WHITE if selected else Color(UIKit.TEXT_DIM, 0.75)
+		tab.icon.modulate = Color.WHITE if selected else UIKit.TEXT_DIM
 		tab.label.visible = selected
 		if selected:
 			# The chosen tab pops up a little.
@@ -115,9 +115,9 @@ func select_tab(index: int) -> void:
 ## and shows its name.
 func _build_nav() -> Control:
 	var bar := PanelContainer.new()
-	var bar_style := UIKit.box(Color(UIKit.INK, 0.7), 0, 8)
+	var bar_style := UIKit.box(UIKit.DEEP, 0, 8)
 	bar_style.border_width_top = 2
-	bar_style.border_color = Color(1, 1, 1, 0.12)
+	bar_style.border_color = UIKit.PANEL
 	bar_style.shadow_color = Color(UIKit.INK, 0.4)
 	bar_style.shadow_size = 10
 	bar.add_theme_stylebox_override("panel", bar_style)

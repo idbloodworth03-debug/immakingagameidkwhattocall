@@ -37,7 +37,8 @@ var selected := false:
 		if value != selected:
 			selected = value
 			queue_redraw()
-## 0..1: bought, sold out...: dimmed, with a check mark.
+## 0..1: picked, bought, sold out...: a big check mark (the card stays
+## fully bright).
 var done := 0.0:
 	set(value):
 		done = value
@@ -58,6 +59,8 @@ var _slot := SkinBox.make("inset")
 static func make(id: String, card_size: Vector2) -> GameCard:
 	var card := GameCard.new()
 	card.card_id = id
+	# Hold it anywhere for its info (HoldInfo).
+	card.add_to_group("hold_info")
 	card.custom_minimum_size = card_size
 	card.size = card_size
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
@@ -90,7 +93,7 @@ func _draw() -> void:
 		var paw := UIKit.icon(GameData.ui_icon("paw"))
 		if paw != null:
 			var side := minf(w, h) * 0.4
-			draw_texture_rect(paw, Rect2(rect.get_center() - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, 0.16))
+			draw_texture_rect(paw, Rect2(rect.get_center() - Vector2(side, side) / 2.0, Vector2(side, side)), false, UIStyle.color("panel_inset").lightened(0.22))
 		return
 	var card := GameData.get_card(card_id)
 	var is_tool := GameData.is_tool(card_id)
@@ -162,11 +165,7 @@ func _draw() -> void:
 		_glow.tint = Color(1, 1, 0.85, flash * 0.9)
 		draw_style_box(_glow, rect.grow(6.0))
 	if done > 0.0:
-		var dim := StyleBoxFlat.new()
-		dim.bg_color = Color(UIStyle.color("outline"), 0.5 * done)
-		dim.set_corner_radius_all(int(UIStyle.radius("card")))
-		dim.anti_aliasing = true
-		draw_style_box(dim, rect)
+		# Picked: the card stays fully bright, with a big checkmark.
 		var c := rect.get_center()
 		var cr := minf(w, h) * 0.2 * (0.6 + 0.4 * done)
 		draw_circle(c + Vector2(0, 3), cr + 3, Color(UIStyle.color("outline"), 0.4 * done))

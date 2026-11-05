@@ -127,7 +127,7 @@ func _place_content() -> void:
 	content.offset_right = -border
 	content.offset_top = border + sink
 	content.offset_bottom = -border - lip + sink
-	content.modulate = Color(1, 1, 1, 0.8) if disabled or kind == "disabled" else Color.WHITE
+	content.modulate = Color.WHITE
 
 
 ## Changes the text (and the price, if it has one).

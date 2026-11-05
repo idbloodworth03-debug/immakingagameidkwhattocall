@@ -75,7 +75,7 @@ func _build() -> void:
 	var level_row := UIKit.hbox(6)
 	level_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(level_row)
-	var level_style := UIKit.box(Color(UIKit.INK, 0.45), 10, 2)
+	var level_style := UIKit.box(UIKit.DEEP, 10, 2)
 	level_style.content_margin_left = 8
 	level_style.content_margin_right = 8
 	var level_chip := PanelContainer.new()

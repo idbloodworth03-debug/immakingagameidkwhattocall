@@ -16,7 +16,12 @@ const PANEL_LIGHT := Color("#3a74cc")
 ## The deep navy used for outlines and shadows instead of plain black.
 const INK := Color("#0a1938")
 const TEXT := Color("#ffffff")
-const TEXT_DIM := Color("#bcd3f4")
+## Secondary text: a solid, warm cream that reads clearly on the blues (not
+## a pale, see-through-looking blue).
+const TEXT_DIM := Color("#fff0d2")
+## A solid deep navy for tracks, pills, fields and bars (instead of
+## see-through dark ink over the background).
+const DEEP := Color("#0e2654")
 const GOLD := Color("#ffd23f")
 const GEMS := Color("#4be38b")
 const ENERGY := Color("#d44fe0")
@@ -61,13 +66,15 @@ static func build_theme() -> Theme:
 	# Chunky outlined text with a drop shadow, like most mobile card games.
 	for type in ["Label", "Button", "LineEdit"]:
 		theme.set_color("font_color", type, TEXT)
-		theme.set_color("font_outline_color", type, Color(INK, 0.92))
+		theme.set_color("font_outline_color", type, INK)
 		theme.set_constant("outline_size", type, 7)
 		theme.set_color("font_shadow_color", type, Color(INK, 0.5))
 		theme.set_constant("shadow_offset_x", type, 0)
 		theme.set_constant("shadow_offset_y", type, 3)
 		theme.set_constant("shadow_outline_size", type, 7)
-	theme.set_color("font_disabled_color", "Button", Color(1, 1, 1, 0.65))
+	# Disabled: a solid gray button with clear light text (it lights up in
+	# its color when it can be pressed).
+	theme.set_color("font_disabled_color", "Button", Color("#eef2f8"))
 	theme.set_color("font_hover_color", "Button", TEXT)
 	theme.set_color("font_pressed_color", "Button", TEXT)
 	theme.set_color("font_focus_color", "Button", TEXT)
@@ -82,26 +89,26 @@ static func build_theme() -> Theme:
 	theme.set_stylebox("panel", "PanelContainer", raised(PANEL, 18, 14))
 	theme.set_stylebox("panel", "Panel", raised(PANEL, 18))
 
-	var field := box(Color(INK, 0.55), 14, 12)
+	var field := box(DEEP, 14, 12)
 	field.set_border_width_all(3)
 	field.border_color = PANEL_LIGHT
 	theme.set_stylebox("normal", "LineEdit", field)
 	theme.set_stylebox("focus", "LineEdit", field)
 
-	var track := box(Color(INK, 0.6), 10)
+	var track := box(DEEP, 10)
 	track.set_border_width_all(2)
-	track.border_color = Color(INK, 0.85)
+	track.border_color = INK
 	theme.set_stylebox("background", "ProgressBar", track)
 	theme.set_stylebox("fill", "ProgressBar", bar_fill(BLUE, 10))
 
 	# Thin, rounded scroll bars.
-	var grabber := box(Color(1, 1, 1, 0.3), 6)
+	var grabber := box(PANEL_LIGHT, 6)
 	grabber.content_margin_left = 6
 	grabber.content_margin_right = 6
 	theme.set_stylebox("grabber", "VScrollBar", grabber)
 	theme.set_stylebox("grabber_highlight", "VScrollBar", grabber)
-	theme.set_stylebox("grabber_pressed", "VScrollBar", box(Color(1, 1, 1, 0.45), 6))
-	theme.set_stylebox("scroll", "VScrollBar", box(Color(INK, 0.25), 6))
+	theme.set_stylebox("grabber_pressed", "VScrollBar", box(PANEL_LIGHT.lightened(0.2), 6))
+	theme.set_stylebox("scroll", "VScrollBar", box(DEEP, 6))
 	return theme
 
 
@@ -133,7 +140,7 @@ static func raised(color: Color, radius := 18, padding := 14) -> StyleBoxFlat:
 static func inset(color := PANEL_DARK, radius := 14, padding := 12) -> StyleBoxFlat:
 	var style := box(color.darkened(0.18), radius, padding)
 	style.set_border_width_all(2)
-	style.border_color = Color(INK, 0.4)
+	style.border_color = INK
 	return style
 
 
@@ -362,7 +369,7 @@ static var _fade: GradientTexture2D
 static func _fade_texture() -> GradientTexture2D:
 	if _fade == null:
 		var gradient := Gradient.new()
-		gradient.set_color(0, Color(1, 1, 1, 0.35))
+		gradient.set_color(0, Color(1, 1, 1, 0.8))
 		gradient.set_color(1, Color(1, 1, 1, 0.0))
 		_fade = GradientTexture2D.new()
 		_fade.gradient = gradient
@@ -376,11 +383,11 @@ static func _fade_texture() -> GradientTexture2D:
 ## GameData.ui_icon).
 static func pill(icon_name: String, icon_color: Color, amount_text: String) -> PanelContainer:
 	var p := PanelContainer.new()
-	var style := box(Color(INK, 0.55), 24, 6)
+	var style := box(DEEP, 24, 6)
 	style.content_margin_left = 8
 	style.content_margin_right = 18
 	style.set_border_width_all(2)
-	style.border_color = Color(1, 1, 1, 0.12)
+	style.border_color = PANEL_LIGHT
 	p.add_theme_stylebox_override("panel", style)
 	var row := hbox(8)
 	p.add_child(row)
@@ -399,9 +406,9 @@ static func progress(ratio: float, text: String, fill := BLUE, height := 30) -> 
 	bar.value = clampf(ratio, 0.0, 1.0)
 	bar.custom_minimum_size = Vector2(0, height)
 	bar.add_theme_stylebox_override("fill", bar_fill(fill, int(height / 3.0)))
-	var track := box(Color(INK, 0.6), int(height / 3.0))
+	var track := box(DEEP, int(height / 3.0))
 	track.set_border_width_all(2)
-	track.border_color = Color(INK, 0.85)
+	track.border_color = INK
 	bar.add_theme_stylebox_override("background", track)
 	var l := label(text, int(height * 0.7), TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -426,6 +433,9 @@ static func on_tap(control: Control, callback: Callable) -> void:
 			elif press.down:
 				press.down = false
 				release_bounce(control)
+				# The release that ends a hold for info isn't a tap.
+				if HoldInfo.just_held():
+					return
 				if event.global_position.distance_to(press.position) < 24.0:
 					Sound.play("select")
 					UIFx.tap(event.global_position)
@@ -550,7 +560,7 @@ static func format_duration(seconds: float) -> String:
 ## A toast for "can't do that" moments, with an error sound.
 static func error_toast(text: String) -> void:
 	Sound.play("error")
-	toast(text, RED.darkened(0.35))
+	toast(text, RED)
 
 
 ## A short message that drops in at the top of the screen, then fades.

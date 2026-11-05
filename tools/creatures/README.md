@@ -36,9 +36,19 @@ mane grows with its face).
    or already rendered, a looping victory. The death pose is kept for
    previews (`python strip.py <id> death`) but isn't in the sheets: the
    game's knockouts are a cartoon poof.
-5. **Render** (`sprites.py`): Cycles with Freestyle outlines, an
-   orthographic camera at the game's 50-degree angle, five directions (the
-   game mirrors the other three). It also writes where the eyes are in
+5. **Render** (`sprites.py`): Cycles with Freestyle outlines (one deep,
+   crisp line; the game's shader no longer adds a second), an orthographic
+   camera at the game's 50-degree angle, five directions (the game mirrors
+   the other three). How it looks is all in `look.json`: Blender's
+   Standard view transform with a contrast look (cartoon colors as
+   painted), a soft key light with a warm fill (no harsh white glare), skin
+   with little sheen and no subsurface haze, painted vertex colors evened
+   out so color borders are clean edges rather than streaks, 32 samples
+   with denoising, and the resolution (84 pixels a tile, 1.5 times the old
+   56, so animals stay sharp on a phone). Sheets and portraits are saved
+   lossless; the game compresses nothing in them (`set_import.py`, from
+   `look.json` "import"). A sheet over 4096 pixels on a side goes onto more
+   pages (`sheet_1.webp`...). It also writes where the eyes are in
    every frame (and how big they are and the skin color around them) into
    `sheet.json`, so the game can draw blinks and cartoon faces over them,
    and the body plan. Sheets are version 3: each animation is cropped to
@@ -89,8 +99,9 @@ python set_import.py                     # after Godot imports the new files
 animal with fur instead. `python arena.py` renders the arenas (about 5
 minutes each; `--only <arena>` for one).
 
-A full animal takes about 7-15 minutes on four CPU cores (the fidget and
-second attack add about half again). `--anims new` renders only the
+A full animal takes about 12-30 minutes on four CPU cores at 84 pixels a
+tile (the Red Fox: 15 minutes; big animals and ones with more animations
+take longer); all 35 about 12-15 hours. `--anims new` renders only the
 animations a sheet doesn't have yet and repacks the rest. To redo one
 animation after changing it in `motion.py`, keeping the rest of the sheet
 (the eye data is written again for every animation):

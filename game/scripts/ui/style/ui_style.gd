@@ -213,7 +213,7 @@ static func theme() -> Theme:
 
 	# Thin, rounded scroll bars.
 	var grabber := StyleBoxFlat.new()
-	grabber.bg_color = Color(1, 1, 1, 0.45)
+	grabber.bg_color = Color("#e9f2ff")
 	grabber.set_corner_radius_all(6)
 	grabber.content_margin_left = 6
 	grabber.content_margin_right = 6
@@ -221,7 +221,7 @@ static func theme() -> Theme:
 	t.set_stylebox("grabber_highlight", "VScrollBar", grabber)
 	t.set_stylebox("grabber_pressed", "VScrollBar", grabber)
 	var track := StyleBoxFlat.new()
-	track.bg_color = Color(ink, 0.2)
+	track.bg_color = UIKit.DEEP
 	track.set_corner_radius_all(6)
 	t.set_stylebox("scroll", "VScrollBar", track)
 	_theme = t

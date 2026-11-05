@@ -32,8 +32,8 @@ static func label() -> Label:
 	var l := Label.new()
 	l.text = text()
 	l.add_theme_font_size_override("font_size", 18)
-	l.add_theme_color_override("font_color", Color(1, 1, 1, 0.75))
-	l.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0.6))
+	l.add_theme_color_override("font_color", Color.WHITE)
+	l.add_theme_color_override("font_outline_color", UIKit.INK)
 	l.add_theme_constant_override("outline_size", 4)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l

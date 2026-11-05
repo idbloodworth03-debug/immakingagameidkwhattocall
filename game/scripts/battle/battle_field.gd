@@ -23,8 +23,19 @@ signal tapped(at: Vector2i)
 ## A strong hit (see _land) by one of `team`'s animals.
 signal strong_hit(team: int)
 
-const OWN_COLOR := Color("#3d7fd9")
-const ENEMY_COLOR := Color("#d94a4a")
+## The two sides' colors in battle (rings, health bars, banners): the UI's
+## own bold player and enemy colors (ui_style.json).
+static func own_color() -> Color:
+	return UIStyle.color("player")
+
+
+static func enemy_color() -> Color:
+	return UIStyle.color("enemy")
+
+
+static func team_color(team: int) -> Color:
+	return own_color() if team == 0 else enemy_color()
+
 const EFFECT_COLORS := {
 	"net": Color("#d8c08a"), "air_horn": Color("#ffffff"), "flare": Color("#ff8a3d"),
 	"medkit": Color("#5ef08a"), "tranq_dart": Color("#b07cff"), "bait": Color("#c98b4a"),
@@ -125,6 +136,8 @@ var _last_steps := [-1, -1]
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	clip_contents = true
+	# Hold an animal for its info (HoldInfo).
+	add_to_group("hold_info_field")
 	# The arena and animals are drawn smaller than their pictures.
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	_world = Node2D.new()
@@ -132,7 +145,7 @@ func _ready() -> void:
 	_arena = _Painter.new(_draw_arena)
 	var ground := ShaderMaterial.new()
 	ground.shader = GROUND_SHADER
-	ground.set_shader_parameter("saturation", Feel.num("background", "arena_saturation", 0.82))
+	ground.set_shader_parameter("saturation", Feel.num("background", "arena_saturation", 1.0))
 	ground.set_shader_parameter("brightness", Feel.num("background", "arena_brightness", 1.02))
 	_arena.material = ground
 	_world.add_child(_arena)
@@ -330,6 +343,26 @@ func sprite_k_per_tile(per_tile: float, swarm: bool) -> float:
 
 func views() -> Array:
 	return _views.values()
+
+
+## The animal drawn under a point (viewport coordinates), or null: the one
+## whose picture's middle is nearest, among those the point is on.
+func view_at(point: Vector2) -> UnitView:
+	var best: UnitView = null
+	var best_d := INF
+	for v: UnitView in _views.values():
+		if v.defeat >= 0.0 or v.doomed or v.fighter == null or not v.visible or v.body == null:
+			continue
+		var to_screen_k := v.get_global_transform_with_canvas()
+		var feet: Vector2 = to_screen_k * v.body.position
+		var h: float = UnitSprites.top(v.id) * v.body.k * absf(v.body.scale.y) * to_screen_k.get_scale().y
+		var center := feet - Vector2(0, h * 0.5)
+		if absf(point.x - center.x) <= maxf(h * 0.45, 22.0) and absf(point.y - center.y) <= maxf(h * 0.6, 26.0):
+			var d := point.distance_to(center)
+			if d < best_d:
+				best = v
+				best_d = d
+	return best
 
 
 ## The field's own clock (seconds; stops during hit-stop, slows in a close-up).
@@ -749,8 +782,8 @@ func _draw_ambient(canvas: CanvasItem) -> void:
 		var color := base.lightened(t.shade) if float(t.shade) > 0.0 else base.darkened(-float(t.shade))
 		var edge := color.darkened(0.25)
 		if snowy:
-			color = Color(1, 1, 1, 0.85)
-			edge = Color("#9cc3dd", 0.5)
+			color = Color("#f4fbff")
+			edge = Color("#8db8d6")
 		for blade in 3:
 			var foot: Vector2 = t.pos + Vector2((blade - 1) * 3.0, 0)
 			var lean := (blade - 1) * 2.5 + sway * (0.7 + blade * 0.15)
@@ -861,7 +894,7 @@ func _show(e: Dictionary) -> void:
 		"war_horn":
 			# The whole army surges: a ring of its color sweeping out and
 			# every animal springing forward.
-			var color := OWN_COLOR if int(e.team) == 0 else ENEMY_COLOR
+			var color := team_color(int(e.team))
 			var middle := Vector2.ZERO
 			var count := 0
 			for v: UnitView in _views.values():
@@ -1322,7 +1355,7 @@ static func play_sounds(events: Array) -> void:
 # --- Drawing ---------------------------------------------------------------
 
 func _draw() -> void:
-	draw_rect(Rect2(Vector2.ZERO, size), grass.darkened(0.25))
+	draw_rect(Rect2(Vector2.ZERO, size), grass.darkened(0.12))
 
 
 ## The rendered arena (or plain grass), under everything. A bigger field
@@ -1356,7 +1389,7 @@ func _draw_arena(canvas: CanvasItem) -> void:
 		canvas.draw_set_transform(Vector2.ZERO)
 		return
 	# Plain grass: tile stripes, the halfway line and the center ring.
-	canvas.draw_rect(Rect2(Vector2.ZERO, size).grow(20), grass.darkened(0.15))
+	canvas.draw_rect(Rect2(Vector2.ZERO, size).grow(20), grass.darkened(0.08))
 	canvas.draw_rect(field, grass)
 	var tile := BattleSim.TILE * s
 	var tiles := Vector2i((_field_size() / BattleSim.TILE).ceil())
@@ -1365,9 +1398,11 @@ func _draw_arena(canvas: CanvasItem) -> void:
 			if (row + col) % 2 == 0:
 				canvas.draw_rect(Rect2(field.position + Vector2(col, row) * tile, Vector2(tile, tile)).intersection(field), Color(1, 1, 1, 0.035))
 	var middle := to_screen(0, sim.middle if sim != null else BattleSim.MIDDLE).y
-	canvas.draw_line(Vector2(field.position.x, middle), Vector2(field.end.x, middle), Color(1, 1, 1, 0.35), 3.0)
-	canvas.draw_arc(field.get_center(), tile * 2.2, 0, TAU, 48, Color(1, 1, 1, 0.35), 3.0)
-	canvas.draw_rect(field, Color(0.25, 0.18, 0.1, 0.8), false, 4.0)
+	# Painted lines: a solid lighter grass, not see-through white.
+	var paint := grass.lightened(0.3)
+	canvas.draw_line(Vector2(field.position.x, middle), Vector2(field.end.x, middle), paint, 3.0)
+	canvas.draw_arc(field.get_center(), tile * 2.2, 0, TAU, 48, paint, 3.0)
+	canvas.draw_rect(field, Color(0.25, 0.18, 0.1), false, 4.0)
 
 
 ## Shadows and rings first, then the class badges: their circles, then the
@@ -1415,13 +1450,13 @@ func _draw_banners(canvas: CanvasItem) -> void:
 	var pole := Feel.num(a, "banner_pole_pixels", 22.0)
 	var w := Feel.num(a, "banner_width_pixels", 22.0)
 	var h := Feel.num(a, "banner_height_pixels", 17.0)
-	var alpha := Feel.num(a, "banner_alpha", 0.92)
+	var alpha := Feel.num(a, "banner_alpha", 1.0)
 	var ink := Color(UIKit.INK, alpha)
 	for sq: Dictionary in squads.values():
 		var base := Vector2(float(sq.x) / int(sq.n), float(sq.top) - 4.0)
 		var tip := base - Vector2(0, pole + h)
 		canvas.draw_line(base, tip, ink, 2.5)
-		var color: Color = (OWN_COLOR if int(sq.team) == 0 else ENEMY_COLOR)
+		var color: Color = team_color(int(sq.team))
 		if sq.gold:
 			color = Color("#ffc53d")
 		# The flag flies toward the enemy's side of the screen's top or
@@ -1462,7 +1497,7 @@ func _draw_highlight(canvas: CanvasItem, field: Rect2) -> void:
 			return
 	var pulse := 0.5 + 0.5 * sin(_time * 4.0)
 	canvas.draw_rect(area, Color(1, 1, 0.6, 0.1 + 0.06 * pulse))
-	canvas.draw_rect(area.grow(-2), Color(1, 1, 0.6, 0.7), false, 3.0)
+	canvas.draw_rect(area.grow(-2), Color(1, 1, 0.6), false, 3.0)
 
 
 func _draw_bait(canvas: CanvasItem, f: BattleSim.Fighter, s: float) -> void:

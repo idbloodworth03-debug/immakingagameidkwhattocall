@@ -113,7 +113,7 @@ func _build_arena() -> void:
 	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	overlay.add_child(stack)
 	var chip := PanelContainer.new()
-	var chip_style := UIKit.box(Color(UIKit.INK, 0.65), 14, 4)
+	var chip_style := UIKit.box(UIKit.DEEP, 14, 4)
 	chip_style.content_margin_left = 12
 	chip_style.content_margin_right = 12
 	chip.add_theme_stylebox_override("panel", chip_style)
@@ -141,7 +141,7 @@ func _build_arena() -> void:
 		var start_at := int(arena.min_trophies)
 		var bar_text := "Boss next: %s" % boss.name if boss_next else "Next arena at %s" % UIKit.format_number(next_at)
 		var bar := UIKit.progress(float(trophies - start_at) / float(next_at - start_at),
-				bar_text, UIKit.GOLD.darkened(0.25) if boss_next else UIKit.TROPHY.darkened(0.2), 34)
+				bar_text, UIKit.GOLD if boss_next else UIKit.TROPHY, 34)
 		bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -268,7 +268,7 @@ func _on_slot_tapped(slot: int) -> void:
 		row.add_child(start)
 
 	var skip_cost := Profile.cage_skip_cost(slot)
-	var skip := UIKit.button("Open now\n%d gems" % skip_cost, UIKit.GEMS.darkened(0.35), 24, Vector2(240, 80))
+	var skip := UIKit.button("Open now\n%d gems" % skip_cost, UIKit.GEMS.darkened(0.12), 24, Vector2(240, 80))
 	skip.pressed.connect(func() -> void:
 		if Profile.skip_cage_unlock(slot):
 			modal.close()

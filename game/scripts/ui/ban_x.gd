@@ -17,7 +17,7 @@ func _draw() -> void:
 	var width := minf(size.x, size.y) * 0.13
 	var lines := [[a, b], [Vector2(b.x, a.y), Vector2(a.x, b.y)]]
 	for pair in lines:
-		draw_line(pair[0], pair[1], Color(0.12, 0.02, 0.02, 0.85), width + 10.0, true)
+		draw_line(pair[0], pair[1], Color(0.12, 0.02, 0.02), width + 10.0, true)
 	for pair in lines:
 		draw_line(pair[0], pair[1], color, width, true)
 	for pair in lines:

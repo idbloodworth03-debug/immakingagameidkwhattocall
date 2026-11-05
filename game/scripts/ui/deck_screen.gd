@@ -54,7 +54,7 @@ func _ready() -> void:
 	column.add_child(top)
 
 	# The deck sits on a darker tray, apart from the collection below.
-	var tray := UIKit.panel(Color(0.18, 0.1, 0.04, 0.45), 10, 22)
+	var tray := UIKit.panel(Color("#5e3a1e"), 10, 22)
 	tray.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	_slots = _grid()
 	tray.add_child(_slots)
@@ -123,10 +123,10 @@ func _refresh() -> void:
 		var card := AnimalCard.create(id)
 		card.info = AnimalCard.Info.LEVEL
 		if _deck.has(id):
-			card.stamp = "IN DECK"
-			card.modulate = Color(1, 1, 1, 0.55)
+			# In your deck: fully bright, with a checkmark.
+			card.checked = true
 		elif _banned.has(id):
-			card.self_modulate = Color(0.5, 0.5, 0.55)
+			# Banned: in full color under the red X.
 			var x := BanX.new()
 			x.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 			card.add_child(x)
@@ -183,17 +183,17 @@ class _EmptySlot:
 
 	func _draw() -> void:
 		var rect := Rect2(Vector2(4, 4), size - Vector2(8, 8))
-		draw_style_box(UIKit.box(Color(0, 0, 0, 0.22), 16), rect)
+		draw_style_box(UIKit.box(Color("#3e2614"), 16), rect)
 		var points := 28
 		for i in points:
 			# A dashed rim, one dash in two.
 			if i % 2 == 0:
 				var a := _rim(rect, float(i) / points)
 				var b := _rim(rect, float(i + 1) / points)
-				draw_line(a, b, Color(1, 1, 1, 0.55), 4.0)
+				draw_line(a, b, Color("#d9b48a"), 4.0)
 		var c := rect.get_center()
-		draw_line(c - Vector2(22, 0), c + Vector2(22, 0), Color(1, 1, 1, 0.7), 8.0)
-		draw_line(c - Vector2(0, 22), c + Vector2(0, 22), Color(1, 1, 1, 0.7), 8.0)
+		draw_line(c - Vector2(22, 0), c + Vector2(22, 0), Color("#f3dcbc"), 8.0)
+		draw_line(c - Vector2(0, 22), c + Vector2(0, 22), Color("#f3dcbc"), 8.0)
 
 	## A point `u` (0-1) of the way around the rectangle's edge.
 	func _rim(rect: Rect2, u: float) -> Vector2:

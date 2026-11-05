@@ -122,11 +122,11 @@ func _draw() -> void:
 	for i in _cast.size():
 		var spot: Vector2 = SPOTS[i]
 		var foot := _tile_to_screen(spot.x, spot.y)
-		var color := BattleField.ENEMY_COLOR if i < 2 else BattleField.OWN_COLOR
+		var color := BattleField.enemy_color() if i < 2 else BattleField.own_color()
 		var ring := px * 0.45
 		draw_set_transform(foot, 0.0, Vector2(1.0, 0.42))
 		draw_circle(Vector2.ZERO, ring * 1.2, Color(0.05, 0.1, 0.05, 0.3))
 		draw_circle(Vector2.ZERO, ring, Color(color, 0.18))
-		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, Color(color.darkened(0.45), 0.9), 5.0 / 0.42)
-		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, Color(color.lightened(0.15), 0.9), 3.0 / 0.42)
+		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color.darkened(0.45), 5.0 / 0.42)
+		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color, 3.0 / 0.42)
 		draw_set_transform(Vector2.ZERO)

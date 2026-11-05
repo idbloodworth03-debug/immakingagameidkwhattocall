@@ -60,7 +60,8 @@ func _notification(what: int) -> void:
 
 
 func _draw() -> void:
-	var fill := color.darkened(0.55).lerp(Color(0.2, 0.2, 0.25), 0.5) if dimmed else color
+	# Locked: solid gray (not a darkened, washed-out color).
+	var fill := UIStyle.color("disabled").darkened(0.3) if dimmed else color
 	var edge := fill.darkened(0.4)
 	var rect := Rect2(Vector2.ZERO, size)
 	var short_side := minf(size.x, size.y)
@@ -102,15 +103,15 @@ func _draw() -> void:
 		# it pops out of it; its own transparent background shows the color.
 		var side := short_side * 1.12
 		var at := center - Vector2(side, side) / 2.0 + Vector2(0, -short_side * 0.04)
-		var tint := Color(0.45, 0.45, 0.5, 0.8) if dimmed else Color.WHITE
+		var tint := Color(0.3, 0.32, 0.4) if dimmed else Color.WHITE
 		draw_texture_rect(portrait, Rect2(at, Vector2(side, side)), false, tint)
 		return
 
 	if icon != null:
 		var side := short_side * icon_scale
 		var icon_rect := Rect2(center - Vector2(side, side) / 2.0, Vector2(side, side))
-		var tint := Color(icon_color, 0.45) if dimmed else icon_color
-		_draw_icon(icon_rect.position + Vector2(0, short_side * 0.03), side, Color(0, 0, 0, 0.3 * tint.a))
+		var tint := Color("#c9d0db") if dimmed else icon_color
+		_draw_icon(icon_rect.position + Vector2(0, short_side * 0.03), side, Color(0, 0, 0, 0.3))
 		_draw_icon(icon_rect.position, side, tint)
 		return
 
@@ -120,8 +121,8 @@ func _draw() -> void:
 	var font_size := int(short_side * (0.42 if text.length() <= 2 else 0.3))
 	var text_width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var baseline := Vector2((size.x - text_width) / 2.0, size.y / 2.0 + font_size * 0.36)
-	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, maxi(2, int(font_size * 0.18)), Color(0, 0, 0, 0.75))
-	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color(1, 1, 1, 0.55) if dimmed else Color.WHITE)
+	draw_string_outline(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, maxi(2, int(font_size * 0.18)), UIKit.INK)
+	draw_string(font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color("#c9d0db") if dimmed else Color.WHITE)
 
 
 func _draw_icon(top_left: Vector2, side: float, tint: Color) -> void:

@@ -143,12 +143,12 @@ static func _jet(canvas: CanvasItem, look: Dictionary, colors: Array, from: Vect
 			canvas.draw_circle(at, width * (0.6 + u * 0.9), Color(colors[0], 0.28 + 0.12 * u))
 			canvas.draw_circle(at, width * (0.35 + u * 0.5), Color(colors[1], 0.3))
 		return
-	canvas.draw_line(tail, head, Color(colors[0], 0.85), width)
-	canvas.draw_line(tail.lerp(head, 0.3), head, Color(colors[1], 0.9), width * 0.45)
+	canvas.draw_line(tail, head, colors[0], width)
+	canvas.draw_line(tail.lerp(head, 0.3), head, colors[1], width * 0.45)
 	canvas.draw_circle(head, width * 0.75, colors[0])
 	for i in 3:
 		var u := fposmod(now * 4.0 + i * 0.33, 1.0)
-		canvas.draw_circle(tail.lerp(head, u) + Vector2(0, -width * 1.2), width * 0.3, Color(colors[1], 0.8))
+		canvas.draw_circle(tail.lerp(head, u) + Vector2(0, -width * 1.2), width * 0.3, colors[1])
 
 
 static func _wave(canvas: CanvasItem, look: Dictionary, colors: Array, from: Vector2, to: Vector2, t: float, r: float) -> void:

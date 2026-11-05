@@ -10,11 +10,11 @@ var _gems: PanelContainer
 
 
 func _ready() -> void:
-	var style := UIKit.box(Color(UIKit.INK, 0.45), 0, 10)
+	var style := UIKit.box(UIKit.DEEP, 0, 10)
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.border_width_bottom = 2
-	style.border_color = Color(1, 1, 1, 0.1)
+	style.border_color = UIKit.PANEL
 	style.shadow_color = Color(UIKit.INK, 0.3)
 	style.shadow_size = 8
 	add_theme_stylebox_override("panel", style)

@@ -81,7 +81,7 @@ func _build(content: Control, title: String, width: float) -> void:
 	band.corner_radius_bottom_right = 0
 	band.content_margin_left = 22
 	band.border_width_bottom = 3
-	band.border_color = Color(UIKit.INK, 0.35)
+	band.border_color = UIKit.INK
 	header.add_theme_stylebox_override("panel", band if title != "" else UIKit.box(Color(0, 0, 0, 0), 22, 10))
 	column.add_child(header)
 	var header_row := UIKit.hbox(8)

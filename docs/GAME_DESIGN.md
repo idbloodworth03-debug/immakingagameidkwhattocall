@@ -599,6 +599,21 @@ in a little fight (with a Slow button).
     and enemy shots at anything in it crawl (flying twice as long, and
     coming 15% slower).
 
+**Hold for info:** holding a finger on any card (picking, offers, your army
+row, the deck and ban screens, the collection), or on an animal on the
+battlefield, pops up its info near the finger for as long as it's held: its
+name, class icon, rarity, stars, squad size ("×3"), its attack style in one
+line, and bars for Health, Damage, Speed and Range. It never pauses the
+fight (`scripts/autoload/hold_info.gd`, `scripts/ui/info_pop.gd`; timing in
+feel.json "info").
+
+**Colors** are bold and solid everywhere: no full-screen tint or darkened
+edges, arenas in their full painted colors, panels, bars and badges solid.
+States are shown without see-through dimming: cards in your deck stay
+bright with a green checkmark, banned cards stay in color under the red X,
+disabled buttons are solid gray and light up in their color when they can
+be pressed.
+
 **On screen** there's only the score, the armies (a banner with its class
 icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no
 words float up over the field. After a fight the new score pops up big over

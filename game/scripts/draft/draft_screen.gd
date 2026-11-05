@@ -63,7 +63,6 @@ var _herd_row: HBoxContainer
 var _army_view: BattleField
 var _fight_button: ChunkyButton
 var _flying := {}
-var _details: Control
 var _tip: Control
 var _pick_key := ""
 
@@ -93,6 +92,9 @@ func _ready() -> void:
 	var theirs := _rival_pool(opponent, mine)
 	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs], "banned": _banned})
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
+	# Only this match's animals' sprite sheets in memory (both decks, minus
+	# the bans; each loads when it first comes up), freed when it ends.
+	UnitSprites.keep_only(_match_animals())
 	_build()
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
@@ -336,7 +338,28 @@ func _debug_speed_buttons() -> Control:
 	return row
 
 
+## Prints how much graphics memory the match uses (the browser console, for
+## checking on a phone): all textures, and how much of it is the animals'
+## sprite sheets.
+func _log_memory(when: String) -> void:
+	print("[memory] %s: %d animals loaded, sprite sheets %.0f MB, all textures %.0f MB" % [when,
+		UnitSprites.loaded_ids().size(), UnitSprites.loaded_bytes() / 1048576.0,
+		Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED) / 1048576.0])
+
+
+## Every animal that can come up this match: both decks, minus the bans.
+func _match_animals() -> Array:
+	var ids := []
+	for pool: Array in duel.pools:
+		for id in pool:
+			if not GameData.is_tool(id) and not ids.has(id):
+				ids.append(id)
+	return ids
+
+
 func _exit_tree() -> void:
+	# The match is over: its sprite sheets go (menus load what they show).
+	UnitSprites.keep_only([])
 	Engine.time_scale = 1.0
 
 
@@ -347,7 +370,7 @@ func _show_view(which: String) -> void:
 	if _view == which and view.visible:
 		return
 	_view = which
-	_hide_details()
+	HoldInfo.hide_pop()
 	_hide_tip()
 	other.visible = false
 	view.visible = true
@@ -431,7 +454,7 @@ class _Pips:
 				var k := 1.0 + 0.5 * sin(t * PI) if _pop.has(i) else 1.0
 				UIStyle.draw_particle(self, "badge", c, 10.0 * k, color)
 			else:
-				draw_circle(c, 9.0, Color(ink, 0.55).lightened(0.15))
+				draw_circle(c, 9.0, ink.lightened(0.3))
 
 
 # --- Picking ---------------------------------------------------------------------
@@ -532,7 +555,9 @@ func _refresh_pick() -> void:
 		var done := 1.0 if item.taken else 0.0
 		if card.done != done:
 			card.create_tween().tween_property(card, "done", done, 0.2)
-		card.modulate.a = 1.0 if can or item.taken or not duel.has_any_pick(0) else 0.55
+		# Can't be picked right now: solid gray, like a disabled button (not
+		# see-through).
+		card.modulate = Color.WHITE if can or item.taken or not duel.has_any_pick(0) else Color(0.6, 0.63, 0.7)
 	_refresh_slots()
 	_refresh_herd_row()
 	var done_picking: bool = not duel.has_any_pick(0)
@@ -567,7 +592,7 @@ func _refresh_slots() -> void:
 				slot.add_child(card)
 				UIKit.pop_in(slot, 0.6, 0.3)
 				Sound.play("pop")
-		slot.modulate = Color(1, 1, 1, 1) if want != "" else Color(1, 1, 1, 0.75)
+		slot.modulate = Color.WHITE
 		# The latest pick can be taken back: a little back arrow in its corner.
 		# (On the card: the slot is a container and would stretch it.)
 		var card_now: Control = slot.get_child(0) if slot.get_child_count() > 0 else null
@@ -796,29 +821,21 @@ func _nope(card: Control) -> void:
 		tween.tween_property(card, "position:x", x + k, 0.04)
 
 
-## Taps, and holding to see a card's details (a name and one line).
-func _bind_card(card: Control, on_tap: Callable, id: String) -> void:
+## Taps (holding a card shows its info: HoldInfo, everywhere).
+func _bind_card(card: Control, on_tap: Callable, _id: String) -> void:
 	card.mouse_filter = Control.MOUSE_FILTER_PASS
-	var press := {"down": false, "held": false, "at": Vector2.ZERO, "serial": 0}
+	var press := {"down": false, "at": Vector2.ZERO}
 	card.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
 				press.down = true
-				press.held = false
 				press.at = event.global_position
-				press.serial = int(press.serial) + 1
-				var serial: int = press.serial
 				UIKit.press_squash(card)
-				get_tree().create_timer(Feel.num("pick", "hold_seconds", 0.35)).timeout.connect(func() -> void:
-					if bool(press.down) and int(press.serial) == serial and is_instance_valid(card):
-						press.held = true
-						_show_details(id, card))
 			elif press.down:
 				press.down = false
 				UIKit.release_bounce(card)
-				if press.held:
-					_hide_details()
-				elif event.global_position.distance_to(press.at) < 24.0:
+				# The release that ends a hold for info isn't a tap.
+				if not HoldInfo.just_held() and event.global_position.distance_to(press.at) < 24.0:
 					Sound.play("select")
 					UIFx.tap(event.global_position)
 					on_tap.call()
@@ -826,46 +843,10 @@ func _bind_card(card: Control, on_tap: Callable, id: String) -> void:
 			# A drag: scrolling, not a tap.
 			press.down = false
 			UIKit.release_bounce(card)
-			if press.held:
-				_hide_details()
 	)
 
 
 ## A short popup over a held card: its name, and one line.
-func _show_details(id: String, card: Control) -> void:
-	_hide_details()
-	var card_info := GameData.get_card(id)
-	var row := UIStyle.hbox("s")
-	var icon_key := "toolbox" if GameData.is_tool(id) else String(GameData.class_info(GameData.class_of(id)).get("icon", ""))
-	var tint := UIStyle.color("tool") if GameData.is_tool(id) else Color(String(GameData.class_info(GameData.class_of(id)).get("color", "#ffffff")))
-	row.add_child(UIStyle.icon(icon_key, tint.lightened(0.3), 52))
-	var words := UIStyle.vbox("xs")
-	words.add_theme_constant_override("separation", 0)
-	words.add_child(UIStyle.label(String(card_info.name), "body"))
-	var line := UIStyle.label(GameData.card_line(id), "small", UIStyle.color("text_soft"))
-	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	line.custom_minimum_size.x = 380
-	words.add_child(line)
-	row.add_child(words)
-	var popup := UIStyle.chip(row, UIStyle.color("toast"))
-	popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	popup.z_index = OVER_FIELD
-	add_child(popup)
-	popup.reset_size()
-	var rect := card.get_global_rect()
-	var screen := get_viewport_rect().size
-	popup.position = Vector2(clampf(rect.get_center().x - popup.size.x / 2.0, 8.0, screen.x - popup.size.x - 8.0),
-		maxf(8.0, rect.position.y - popup.size.y - 10.0))
-	UIKit.pop_in(popup, 0.7, 0.2)
-	_details = popup
-
-
-func _hide_details() -> void:
-	if _details != null and is_instance_valid(_details):
-		_details.queue_free()
-	_details = null
-
-
 ## A one-time hint in your very first match: what to tap.
 func _first_match_tip() -> void:
 	if not Profile.data.has("tips_seen"):
@@ -1011,6 +992,7 @@ func _handle_events(events: Array) -> void:
 				_intro_left = lineup + Feel.num("choreography", "intro_seconds", 0.4)
 				_field.snap_camera()
 				get_tree().create_timer(lineup).timeout.connect(func() -> void:
+					_log_memory("fight")
 					if duel.phase == "fight":
 						Sound.play("horn")
 						_banner("FIGHT!", UIStyle.color("gold"), Feel.count("choreography", "fight_banner_size", 96)))

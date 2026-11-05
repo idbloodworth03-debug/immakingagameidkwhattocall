@@ -1,8 +1,8 @@
-// The arena picture, toned down a little so the animals pop off it.
+// The arena picture: saturation and brightness knobs (1 = as painted).
 // Values from data/feel.json ("background").
 shader_type canvas_item;
 
-uniform float saturation = 0.82;
+uniform float saturation = 1.0;
 uniform float brightness = 1.02;
 
 void fragment() {

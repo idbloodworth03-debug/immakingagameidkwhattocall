@@ -17,8 +17,8 @@ dest_files=["res://.godot/imported/portrait.webp-1fa2204b537a0a3d43ef99b85e8bed2
 
 compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.85
-compress/uastc_level=0
+compress/lossy_quality=0.92
+compress/uastc_level=2
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0

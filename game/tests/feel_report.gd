@@ -211,7 +211,7 @@ func _watch_idle() -> void:
 		trail[f.uid] = path
 		if standing[0] == 0 or standing[1] == 0:
 			continue
-		if f.deploy_ticks > 0 or f.stun > 0 or f.memory.get("burrowing", false):
+		if f.deploy_ticks > 0 or f.stun > 0 or f.memory.get("burrowing", false) or BattleStyles.busy(sim, f):
 			continue
 		stats.war_ticks += 1
 		stats.war_by_class[f.cls] = int(stats.war_by_class.get(f.cls, 0)) + 1

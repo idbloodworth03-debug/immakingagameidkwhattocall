@@ -341,6 +341,56 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 					var shape := PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w * 0.55, -hh * 0.55), at + Vector2(0, -hh),
 						at + Vector2(w * 0.55, -hh * 0.55), at + Vector2(w, 0), at + Vector2(0, w * 0.45)])
 					canvas.draw_colored_polygon(shape, Color(color if layer == 0 else flame, 0.9 * fade))
+		"tentacle":
+			# A tentacle reaching from `at` to `end`: it rises in an arc, slams
+			# down, then pulls back.
+			var end: Vector2 = fx.get("end", p)
+			var reach := Ease.out_cubic(clampf(t * 2.5, 0.0, 1.0)) * (1.0 - Ease.in_cubic(clampf((t - 0.6) / 0.4, 0.0, 1.0)))
+			var tip := p.lerp(end, reach)
+			var rise := (1.0 - clampf(t * 2.5, 0.0, 1.0)) * p.distance_to(end) * 0.6 + 6.0
+			var mid := p.lerp(tip, 0.5) + Vector2(0, -rise)
+			var curve := PackedVector2Array()
+			for i in 13:
+				var u := i / 12.0
+				curve.append(p.lerp(mid, u).lerp(mid.lerp(tip, u), u))
+			for i in 12:
+				var width := r * (1.0 - i / 13.0) + 2.0
+				canvas.draw_line(curve[i], curve[i + 1], UIKit.INK, width + 4.0)
+			for i in 12:
+				var width := r * (1.0 - i / 13.0) + 2.0
+				canvas.draw_line(curve[i], curve[i + 1], color, width)
+				if i % 3 == 1:
+					canvas.draw_circle(curve[i] + (curve[i + 1] - curve[i]).orthogonal().normalized() * width * 0.3, width * 0.18, color.lightened(0.45))
+		"lightning":
+			# A jagged bolt from point to point, flickering.
+			var points: PackedVector2Array = fx.get("points", PackedVector2Array())
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed) + int(t * 12.0)
+			var fade := 1.0 - Ease.in_cubic(t)
+			for k in range(points.size() - 1):
+				var a := points[k]
+				var b := points[k + 1]
+				var bolt := PackedVector2Array([a])
+				var across := (b - a).orthogonal().normalized()
+				for j in range(1, 6):
+					bolt.append(a.lerp(b, j / 6.0) + across * rng.randf_range(-1.0, 1.0) * r * 0.35)
+				bolt.append(b)
+				canvas.draw_polyline(bolt, Color(color, 0.35 * fade), r * 0.9)
+				canvas.draw_polyline(bolt, Color(color, 0.9 * fade), r * 0.35)
+				canvas.draw_polyline(bolt, Color(1, 1, 1, fade), maxf(2.0, r * 0.14))
+		"slow_zone":
+			# A Sloth's slow-motion zone on the ground round it: a soft disc with
+			# a slowly turning dashed edge and a clock hand.
+			var turn: float = fx.get("turn", 0.0)
+			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.6))
+			canvas.draw_circle(Vector2.ZERO, r, Color(color, 0.24))
+			canvas.draw_circle(Vector2.ZERO, r * 0.6, Color(color, 0.1))
+			for i in 24:
+				var a0 := turn + TAU * i / 24.0
+				canvas.draw_arc(Vector2.ZERO, r, a0, a0 + TAU / 48.0, 4, Color(color.lightened(0.3), 0.95), 7.0)
+			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 3.0 - PI / 2) * r * 0.55, Color(color, 0.5), 4.0)
+			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 0.25 - PI / 2) * r * 0.35, Color(color, 0.5), 5.0)
+			canvas.draw_set_transform(Vector2.ZERO)
 		"wisp":
 			# A glowing wisp flying from `at` to `end`, a little trail behind.
 			var end: Vector2 = fx.get("end", p)

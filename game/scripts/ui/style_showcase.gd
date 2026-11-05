@@ -14,7 +14,8 @@ const T := BattleSim.TILE
 ## How each style is set up: who's on the field ([team, id, x tiles, y
 ## tiles], "self" for the animal shown), and what's arranged first:
 ## "hurt": the animal starts at this share of its health; "aim": every enemy
-## goes for the teammate at this index first.
+## goes for the teammate at this index first; "seconds": how long before it
+## starts over (else showcase_seconds).
 const STAGES := {
 	"cleave": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.8, 9.6], [1, "wild_boar", 9.2, 9.6]]},
 	"shell": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.8, 9.6], [1, "wild_boar", 9.2, 9.6]], "hurt": 0.45},
@@ -43,6 +44,14 @@ const STAGES := {
 	"crack": {"units": [[0, "self", 8, 13], [0, "brown_bear", 6.6, 11.2], [1, "asian_elephant", 8, 9.4]]},
 	"feast": {"units": [[0, "self", 8, 13], [0, "wild_boar", 5.5, 11.4], [0, "wild_boar", 10.5, 11.4], [1, "gray_squirrel", 5.5, 9.8], [1, "gray_squirrel", 10.5, 9.8], [1, "gray_squirrel", 8, 9]]},
 	"strafe": {"units": [[0, "self", 3, 12.5], [1, "wild_boar", 6, 10], [1, "wild_boar", 7.15, 9.04], [1, "wild_boar", 8.3, 8.08], [1, "wild_boar", 9.45, 7.12]]},
+	"dig": {"units": [[0, "self", 8, 12.5], [1, "brown_bear", 8, 10.5], [1, "gray_squirrel", 5.2, 8], [1, "gray_squirrel", 6.4, 8.3], [1, "gray_squirrel", 10.4, 8], [1, "gray_squirrel", 11.6, 8.2]], "seconds": 11.0},
+	"flip": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 10.5], [1, "gray_squirrel", 6.5, 7.5], [1, "gray_squirrel", 9.5, 7.5]]},
+	"slide": {"units": [[0, "self", 4.4, 11], [1, "raccoon", 6.2, 11], [1, "raccoon", 7.3, 11.2], [1, "raccoon", 8.4, 10.9], [1, "raccoon", 7, 7.6]]},
+	"tentacles": {"units": [[0, "self", 8, 12.5], [1, "wild_boar", 6.3, 11], [1, "wild_boar", 8, 10.5], [1, "wild_boar", 9.7, 11]]},
+	"chain": {"units": [[0, "self", 8, 12.5], [1, "wild_boar", 5.9, 10.5], [1, "wild_boar", 7.3, 10.3], [1, "wild_boar", 8.7, 10.3], [1, "wild_boar", 10.1, 10.5]]},
+	"chest_beat": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.5, 10.4], [1, "wild_boar", 8, 9.8], [1, "wild_boar", 9.5, 10.4], [1, "wolf_pack", 8, 13.2]]},
+	"stand_tall": {"units": [[0, "self", 8, 12], [1, "wild_boar", 6.5, 10], [1, "wild_boar", 8, 9.5], [1, "wild_boar", 9.5, 10]]},
+	"crawl": {"units": [[0, "self", 8, 11], [0, "brown_bear", 9.4, 11.3], [1, "wild_boar", 7, 8], [1, "wild_boar", 9, 8], [1, "gray_squirrel", 6.5, 4.8], [1, "gray_squirrel", 9.5, 4.8]]},
 }
 
 var field: BattleField
@@ -54,6 +63,7 @@ var _line: Label
 var _accumulator := 0.0
 var _age := 0.0
 var _over := 0.0
+var _stage: Dictionary = {}
 
 
 func _ready() -> void:
@@ -128,6 +138,7 @@ func _show(index: int) -> void:
 	_title.text = String(GameData.cards[id].name)
 	_line.text = GameData.style_line(id)
 	var stage: Dictionary = STAGES[String(GameData.styles[id].kind)]
+	_stage = stage
 	sim = BattleSim.new([{}, {}], 7 + _index)
 	# An army with nobody in it: the camera frames the fight like a battle.
 	sim.army = BattleArmy.new(sim.rules, sim.tps)
@@ -148,6 +159,10 @@ func _show(index: int) -> void:
 			if f.team == 1:
 				f.target = made[int(stage.aim)]
 	field.sim = sim
+	# Nothing left over from the last fight (a fire still burning, a zone).
+	field.fx.effects.clear()
+	field.fx.projectiles.clear()
+	field.fx.particles.clear()
 	field.snap_camera()
 	_accumulator = 0.0
 	_age = 0.0
@@ -165,7 +180,7 @@ func _process(delta: float) -> void:
 	# Over a moment after one side is gone (so the knockout shows), or after
 	# showcase_seconds anyway.
 	_over = _over + delta if sim.units(0).is_empty() or sim.units(1).is_empty() else 0.0
-	if _age > Feel.num("styles", "showcase_seconds", 7.0) or _over > 1.5:
+	if _age > float(_stage.get("seconds", Feel.num("styles", "showcase_seconds", 7.0))) or _over > 1.5:
 		_show(_index)
 		return
 	if field.is_frozen():

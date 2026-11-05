@@ -220,7 +220,7 @@ func _idle_share(m: DraftMatch) -> float:
 			if path.size() > window + 1:
 				path.pop_front()
 			trail[f.uid] = path
-			if standing[0] == 0 or standing[1] == 0 or f.deploy_ticks > 0 or f.stun > 0 or f.memory.get("burrowing", false):
+			if standing[0] == 0 or standing[1] == 0 or f.deploy_ticks > 0 or f.stun > 0 or f.memory.get("burrowing", false) or BattleStyles.busy(sim, f):
 				continue
 			on_field += 1
 			if f.target != null and f.target.alive and sim.in_range(f, f.target):

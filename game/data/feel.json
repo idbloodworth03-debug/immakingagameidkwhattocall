@@ -323,7 +323,7 @@
   },
 
   "styles": {
-    "_note": "How the animals' attack styles look (fx/style_look.gd on the animal, battle_field.gd for the moments; the rules are styles.json). The Brown Bear's swipe draws one wide arc across both targets for sweep_seconds. The Yeti glows frost the hit before its ground pound, which rings out in frost and shakes the field pound_shake. The turtle's shell is shell_width of its height across. A shot the Elephant takes for a teammate flashes a shield for shield_seconds. Colors for each. A Wild Boar's or Tiger's big first hit shakes the field slam_shake; Cerberus's three bites land bite_stagger_seconds apart. The Raccoon's trash flies lob_arc times higher and lob_flight times longer; the Cobra's shots take sniper_flight of the time, flat; the Camel's spit is spit_scale times as big; the Squirrel's pinecones are pellet_scale of a nut, pellet_stagger_seconds apart; the Orangutan's fruit bounces on bounce_seconds after it lands. Profile > Developer tools > Attack styles starts each animal's little fight over every showcase_seconds, its enemies biting at showcase_enemy_bite_pct; Slow plays it at showcase_slow_speed. The Falcon rises climb_pixels as it climbs away from a dive, stretched out with speed lines as it dives; the Owl leaves a ghostly owl_trail; the Harpy Eagle flies carry_lift of its height higher with its catch dangling below; a cracked animal shows a crack mark for as long as it lasts; the Condor grows feast_grow bigger for every fall it feasts on, a wisp flying into it over feast_seconds; the Dragon's burning line sweeps out over fire_reveal_seconds and flickers until it goes out.",
+    "_note": "How the animals' attack styles look (fx/style_look.gd on the animal, battle_field.gd for the moments; the rules are styles.json). The Brown Bear's swipe draws one wide arc across both targets for sweep_seconds. The Yeti glows frost the hit before its ground pound, which rings out in frost and shakes the field pound_shake. The turtle's shell is shell_width of its height across. A shot the Elephant takes for a teammate flashes a shield for shield_seconds. Colors for each. A Wild Boar's or Tiger's big first hit shakes the field slam_shake; Cerberus's three bites land bite_stagger_seconds apart. The Raccoon's trash flies lob_arc times higher and lob_flight times longer; the Cobra's shots take sniper_flight of the time, flat; the Camel's spit is spit_scale times as big; the Squirrel's pinecones are pellet_scale of a nut, pellet_stagger_seconds apart; the Orangutan's fruit bounces on bounce_seconds after it lands. Profile > Developer tools > Attack styles starts each animal's little fight over every showcase_seconds, its enemies biting at showcase_enemy_bite_pct; Slow plays it at showcase_slow_speed. The Falcon rises climb_pixels as it climbs away from a dive, stretched out with speed lines as it dives; the Owl leaves a ghostly owl_trail; the Harpy Eagle flies carry_lift of its height higher with its catch dangling below; a cracked animal shows a crack mark for as long as it lasts; the Condor grows feast_grow bigger for every fall it feasts on, a wisp flying into it over feast_seconds; the Dragon's burning line sweeps out over fire_reveal_seconds and flickers until it goes out. Specialists: the Pangolin curls into a scaly ball (scales colors), a flipped Tank lies upside down; the Seal flattens out on a slide with water streaks; the Kraken's tentacles (tentacle) reach out and slam, tentacle_stagger_seconds apart; the Eel's lightning (lightning) jumps from one to the next, crackling the hit before; the Gorilla's shockwave (shock) shakes the field shock_shake; the Red Panda rears up tall (panda ring); the Sloth's slow-motion zone (zone) is drawn on the ground round it, and shots into it take crawl_flight times as long.",
     "showcase_seconds": 7.0,
     "showcase_enemy_bite_pct": 25,
     "showcase_slow_speed": 0.3,
@@ -365,7 +365,18 @@
     "feast_grow": 0.05,
     "feast_seconds": 0.45,
     "fire_reveal_seconds": 0.35,
-    "flame": "#ffc23a"
+    "flame": "#ffc23a",
+    "scales": "#a8794f",
+    "scales_dark": "#6e4a2c",
+    "water": "#9fdcff",
+    "tentacle": "#8e5bd6",
+    "tentacle_stagger_seconds": 0.08,
+    "lightning": "#fff27a",
+    "shock": "#f3e3c0",
+    "shock_shake": 0.22,
+    "panda": "#ff8a3d",
+    "zone": "#5fd3c6",
+    "crawl_flight": 2.0
   },
 
   "army": {

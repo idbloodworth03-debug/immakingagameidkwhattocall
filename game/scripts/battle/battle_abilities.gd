@@ -75,6 +75,8 @@ static func counter_pct(from: String, to: String) -> int:
 
 static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, amount: int) -> void:
 	BattleStyles.after_hit(sim, f, t, amount)
+	if BattleStyles.owns_trait(f):
+		return  # its style is how its trait works (the Eel's chain, ...)
 	match f.ability_id():
 		"splash":
 			var share := amount * int(f.param("pct", 60)) / 100

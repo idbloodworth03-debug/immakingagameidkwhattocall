@@ -239,14 +239,19 @@ func test_splash_stun_and_slow() -> void:
 	var seal: BattleSim.Fighter = sim.spawn(0, "harbor_seal", 8 * T, 12 * T)[0]
 	var target: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 10 * T)[0]
 	var beside: BattleSim.Fighter = sim.spawn(1, "wild_boar", 9 * T, 10 * T)[0]
+	# The plain traits (these three have styles of their own that take their
+	# place: tests/test_styles.gd), for a Specialist without one.
+	seal.style_kind = ""
 	var before := beside.hp
 	BattleAbilities.after_hit(sim, seal, target, 100)
 	check(beside.hp < before, "Splash hits the one beside it too")
 	var gorilla: BattleSim.Fighter = sim.spawn(0, "mountain_gorilla", 6 * T, 12 * T)[0]
+	gorilla.style_kind = ""
 	for i in int(GameData.traits.stun.every):
 		BattleAbilities.after_hit(sim, gorilla, target, 10)
 	check(target.stun > 0, "Stun: every few hits freeze the target")
 	var panda: BattleSim.Fighter = sim.spawn(0, "red_panda", 4 * T, 12 * T)[0]
+	panda.style_kind = ""
 	BattleAbilities.after_hit(sim, panda, beside, 10)
 	check(beside.slow > 0 and beside.slow_pct == int(GameData.traits.slow.pct), "Slow slows")
 

@@ -563,6 +563,41 @@ in a little fight (with a Slow button).
     a run over the nearest ground enemy, breathing fire, and leaves a
     5-tile line of fire burning for 3 s (30% of its bite a second to anyone
     on the ground in it).
+- Specialists (the Burrowers still start underground; for the others the
+  style is how their trait works, in place of the plain every-hit splash,
+  stun or slow):
+  - **Red Fox** (Burrow), "Pops up behind, hits Ranged, digs again.": it
+    surfaces right behind the nearest enemy Ranged and goes for them; after
+    3 hits, or when it's down to half health, it digs down again (once a
+    fight) and pops up by another group of Ranged at least 3 tiles away.
+  - **Sunda Pangolin** (Burrow), "Flips a Tank, then rolls into a ball.":
+    it surfaces under the nearest enemy Tank and flips it onto its back (1.5
+    times its bite, stunned 1.5 s, legs kicking); when hit it curls into a
+    scaly ball for 1.5 s, taking half damage, then not again for 6 s.
+  - **Harbor Seal** (Splash), "Belly-slides through a line, splashing all.":
+    every 5 s, with an enemy within 3 tiles, it flops onto its belly and
+    slides 3 tiles at it, hitting everyone it passes with a splash and
+    bowling them aside.
+  - **Kraken** (Splash), "Tentacles slam and drag enemies together.": every
+    attack, purple tentacles slam its target and two more enemies within
+    2.5 tiles (everyone near a slam takes 45%), then drag them all in toward
+    it.
+  - **Electric Eel** (Stun), "Lightning chains through four, stunning
+    them.": every 2nd hit, lightning jumps from its target through up to
+    four enemies, stunning each for 0.6 s (25% of its bite to the ones it
+    jumps to); it crackles with sparks the hit before.
+  - **Mountain Gorilla** (Stun), "Chest-beat roar stuns everyone around.":
+    every 7 s, with an enemy close, it beats its chest for half a second,
+    then a shockwave: everyone on the ground within 2.5 tiles takes 30%, is
+    stunned 0.8 s and knocked back.
+  - **Red Panda** (Slow), "Stands tall: everyone near slows down.": every
+    6 s, with an enemy within 3 tiles, it rears up tall (an orange ring) and
+    everyone within 3 tiles moves 35% slower for 3 s.
+  - **Pygmy Three-toed Sloth** (Slow), "Slow-motion zone: everything
+    crawls, even shots.": a 2.5-tile slow-motion zone (a turning teal ring)
+    goes with it: enemies in it move at half speed and attack 15% slower,
+    and enemy shots at anything in it crawl (flying twice as long, and
+    coming 15% slower).
 
 **On screen** there's only the score, the armies (a banner with its class
 icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no

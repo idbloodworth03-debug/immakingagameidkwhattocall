@@ -26,10 +26,17 @@ extends Node2D
 ##     talons.
 ##   feast (California Condor): bigger with every fall it feasts on.
 ##   strafe (Dragon): fire pouring from its mouth on a fire-breath run.
+##   flip (Sunda Pangolin): curled up in a scaly ball, rocking.
+##   slide (Harbor Seal): flat on its belly, water streaming off it.
+##   chain (Electric Eel): crackling with sparks the hit before its lightning.
+##   chest_beat (Mountain Gorilla): pounding its chest, puffing up.
+##   stand_tall (Red Panda): reared up tall on its back legs.
+##   crawl (Pygmy Three-toed Sloth): its slow-motion zone on the ground round
+##     it, turning slowly.
 ## And on any animal: a golden glow while a Lion's roar has it roused, a
 ## sickly green with drips while it's poisoned, a blue crack mark while a
 ## Macaw has cracked its armor, dangling and wriggling while an eagle carries
-## it off.
+## it off, upside down with its legs kicking while a Pangolin has it flipped.
 ## Sizes and colors: feel.json "styles".
 
 var view: UnitView
@@ -46,6 +53,8 @@ var _trail_in := 0.0
 ## eye glint).
 var _cracked := false
 var _glint_at := -10.0
+## The Sloth's zone on the ground (an effect it keeps moving along).
+var _zone: Dictionary = {}
 
 
 static func make(v: UnitView) -> StyleLook:
@@ -190,6 +199,41 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					var ahead := view.move_dir * 0.35
 					var fire := _color("fire", "#ff6a2a") if randf() < 0.5 else _color("flame", "#ffc23a")
 					_puffs(dt, "glow", fire, Vector2(ahead.x, ahead.y * 0.6 - 0.55), view.move_dir * 140.0 + Vector2(0, 170), 0.025, 11.0)
+			"flip":
+				if int(f.memory.get("ball", 0)) > 0:
+					# Curled up in a ball, rocking a little.
+					state = "ball"
+					p.sx = 0.9
+					p.sy = 0.5
+					p.rot = sin(now * 9.0) * 8.0
+			"slide":
+				if int(f.memory.get("slide_left", 0)) > 0:
+					# Flat on its belly, water streaming off it.
+					state = "slide"
+					p.sx = 1.3
+					p.sy = 0.58
+					p.rot = view.move_dir.x * 14.0
+			"chain":
+				var every := maxi(1, int(f.sp("every", 2)))
+				if int(f.memory.get("zaps", 0)) % every == every - 1 and _fighting(f):
+					# Its next bite will chain: crackling with sparks.
+					p.tint = Color(1.0, 1.0, 1.0).lerp(_color("lightning", "#fff27a"), 0.25 + 0.15 * sin(now * 30.0))
+					_puffs(dt, "spark", _color("lightning", "#fff27a"), Vector2(0.0, -0.5), Vector2(0, -90), 0.08, 6.0)
+			"chest_beat":
+				if int(f.memory.get("beat", 0)) > 0:
+					# Pounding its chest, puffed up.
+					var thump := absf(sin(now * 26.0))
+					p.sx = 1.08 + 0.08 * thump
+					p.sy = 1.1 - 0.05 * thump
+					p.lift = 3.0 * thump
+			"stand_tall":
+				if int(f.memory.get("tall", 0)) > 0:
+					# Reared up tall on its back legs.
+					p.sx = 0.86
+					p.sy = 1.34
+					p.lift = 6.0
+			"crawl":
+				_follow_zone(f)
 			"pound":
 				var every := maxi(1, int(f.sp("every", 3)))
 				if int(f.memory.get("pounds", 0)) % every == every - 1:
@@ -218,6 +262,14 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 				p.rot = sin(now * 13.0) * 14.0
 				p.sx = 0.92
 				p.sy = 1.08
+		# Flipped by a Pangolin: upside down, legs kicking.
+		var flipped := int(f.memory.get("flipped_until", -1)) - view.field.sim.tick
+		if flipped > 0:
+			var total := maxf(1.0, float(int(f.memory.get("flipped_for", 0))))
+			# Turned over about its feet, then lifted its own height so it lies
+			# on its back, with a little hop as it goes over.
+			p.rot = 180.0 + sin(now * 20.0) * 8.0
+			p.lift = _height() * 0.9 + 14.0 * sin(clampf(1.0 - flipped / total, 0.0, 0.25) * 4.0 * PI)
 	var cracked := f != null and view.defeat < 0.0 and view.field != null and view.field.sim != null \
 			and int(f.memory.get("cracked_until", -1)) > view.field.sim.tick
 	if cracked:
@@ -226,7 +278,9 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 	for dot in _trail:
 		dot[1] += dt
 	_trail = _trail.filter(func(dot: Array) -> bool: return float(dot[1]) < 0.45)
-	if state != _state or cracked != _cracked or state in ["snack", "shell", "dive", "carry"] or not _trail.is_empty() or now - _glint_at < 0.35:
+	if kind == "crawl" and (f == null or view.defeat >= 0.0):
+		_end_zone()
+	if state != _state or cracked != _cracked or state in ["snack", "shell", "dive", "carry", "ball", "slide"] or not _trail.is_empty() or now - _glint_at < 0.35:
 		_state = state
 		_cracked = cracked
 		queue_redraw()
@@ -282,6 +336,10 @@ func _draw() -> void:
 			_draw_speed_lines()
 		"carry":
 			_draw_talons()
+		"ball":
+			_draw_ball()
+		"slide":
+			_draw_water_streaks()
 	if _cracked:
 		_draw_crack()
 	if _time - _glint_at < 0.35:
@@ -406,3 +464,60 @@ func _draw_bamboo() -> void:
 		var leaf_shape := PackedVector2Array([b, b.lerp(tip, 0.5) + Vector2(0, -h * 0.07), tip, b.lerp(tip, 0.5) + Vector2(0, h * 0.05)])
 		draw_colored_polygon(leaf_shape, leaf)
 		draw_polyline(leaf_shape + PackedVector2Array([b]), UIKit.INK, 2.0)
+
+
+## The Sloth's slow-motion zone: drawn on the ground round it, moving with it.
+func _follow_zone(f: BattleSim.Fighter) -> void:
+	if view.field == null or view.field.sim == null:
+		return
+	var r := float(f.sp("radius", 3.0)) * BattleSim.TILE * view.field.field_scale()
+	if not _zone.is_empty() and not view.field.fx.effects.any(func(e): return is_same(e, _zone)):
+		_zone = {}  # cleared off the field (a new round): drawn afresh
+	if _zone.is_empty() or float(_zone.age) >= float(_zone.life):
+		_zone = view.field.fx.effect("slow_zone", view.position, r, _color("zone", "#5fd3c6"), 1e9, "", true)
+	_zone.at = view.position
+	_zone.radius = r
+	_zone.turn = _time * 0.6
+
+
+func _end_zone() -> void:
+	if not _zone.is_empty():
+		_zone.life = float(_zone.age)
+		_zone = {}
+
+
+func _exit_tree() -> void:
+	_end_zone()
+
+
+## The Pangolin curled up: a ball of overlapping brown scales.
+func _draw_ball() -> void:
+	var h := _height()
+	var r := h * 0.42
+	var mid := Vector2(0, -r * 0.95)
+	var light := _color("scales", "#a8794f")
+	var dark := _color("scales_dark", "#6e4a2c")
+	draw_circle(mid, r + maxf(2.0, h * 0.03), UIKit.INK)
+	draw_circle(mid, r, light)
+	var roll := sin(_time * 9.0) * 0.15
+	for row in 4:
+		var y := -r * 0.75 + row * r * 0.48
+		var half := sqrt(maxf(0.0, r * r - y * y))
+		var count := 2 + row % 2
+		for i in count:
+			var x := -half + (i + 0.5) * (2.0 * half / count) + roll * r
+			draw_arc(mid + Vector2(x, y), r * 0.3, 0.15 * PI, 0.85 * PI, 8, dark, maxf(2.0, h * 0.035))
+	draw_circle(mid + Vector2(-r * 0.35, -r * 0.4), r * 0.16, Color(1, 1, 1, 0.35))
+
+
+## Water streaming off the sliding Seal.
+func _draw_water_streaks() -> void:
+	var h := _height()
+	var back := -view.move_dir if view.move_dir.length() > 0.1 else Vector2.DOWN
+	var across := Vector2(-back.y, back.x)
+	var water := _color("water", "#9fdcff")
+	for i in 5:
+		var phase := fposmod(_time * 6.0 + i * 0.29, 1.0)
+		var start := Vector2(0, -h * 0.2) + across * (i - 2) * h * 0.16 + back * h * (0.45 + phase * 0.4)
+		draw_line(start, start + back * h * 0.35, Color(water, 0.9 * (1.0 - phase)), maxf(3.0, h * 0.05))
+		draw_circle(start + back * h * 0.35, maxf(2.0, h * 0.03) * (1.0 - phase), Color(1, 1, 1, 0.8 * (1.0 - phase)))

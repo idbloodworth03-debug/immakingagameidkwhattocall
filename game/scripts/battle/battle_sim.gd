@@ -301,6 +301,8 @@ func _update_zones() -> void:
 					zone.acc[f.uid] = int(zone.acc[f.uid]) % tps
 		if zone.has("line"):
 			BattleStyles.burn(self, zone)
+		if zone.has("crawl"):
+			BattleStyles.crawl(self, zone)
 	zones = zones.filter(func(z): return z.ticks > 0)
 
 
@@ -438,12 +440,19 @@ func _move_burrowed(f: Fighter) -> void:
 		f.memory.burrowing = false
 		if back != null:
 			events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
+			BattleStyles.on_emerge(self, f)
 		return
 	var behind := TILE if back.team == 1 else -TILE
 	var goal := Vector2i(back.x, clampi(back.y - behind, f.radius, height - f.radius))
+	# Its style may pick the spot (the Fox by the Ranged, the Pangolin under
+	# a Tank).
+	var own: Variant = BattleStyles.burrow_goal(self, f)
+	if own != null:
+		goal = own
 	if dist_to_point(f, goal.x, goal.y) <= TILE / 2:
 		f.memory.burrowing = false
 		events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
+		BattleStyles.on_emerge(self, f)
 		return
 	move_toward_point(f, goal, current_speed(f))
 

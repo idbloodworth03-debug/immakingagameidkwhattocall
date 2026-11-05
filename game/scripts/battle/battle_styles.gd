@@ -83,12 +83,51 @@ extends RefCounted
 ##     nearest enemy at `speed_pct` faster, leaving a burning line `tiles`
 ##     long (`width` tiles either side) that burns enemies on the ground for
 ##     `dps_pct` of its bite a second, for `seconds`.
+##
+## Specialists (the Burrowers still start underground; for the others the
+## style is how their trait works, in place of its plain every-hit effect):
+##   dig (Red Fox, Burrow): surfaces right behind the nearest enemy Ranged
+##     and goes for the Ranged within `reach` tiles; after `hits` hits, or
+##     below `below_pct` health, it digs down again (`digs` times a fight)
+##     and pops up by Ranged `away` tiles or more off.
+##   flip (Sunda Pangolin, Burrow): surfaces under the nearest enemy Tank
+##     and flips it (`flip_pct` of its bite, stunned `stun` seconds); when
+##     hit it curls into a ball for `seconds`, taking `taken_pct` of the
+##     damage and not fighting, then not again for `cooldown` seconds.
+##   slide (Harbor Seal, Splash): every `every` seconds, once an enemy on the
+##     ground is within `trigger` tiles, it belly-slides `tiles` tiles at it,
+##     `speed_pct` faster, hitting everyone it passes (within `width` tiles)
+##     for `pct` of its bite and bowling them `knock` tiles aside.
+##   tentacles (Kraken, Splash): every attack, tentacles slam its target and
+##     up to `slams` - 1 more enemies within `reach` tiles: everyone within
+##     `radius` tiles of a slam takes `pct` of its bite (its target the full
+##     bite), and all of them are dragged `pull` tiles in toward it.
+##   chain (Electric Eel, Stun): every `every` hits, lightning jumps from its
+##     target on through up to `chain` enemies in all (each within `reach`
+##     tiles of the last), stunning each for `stun` seconds; the ones it
+##     jumps to take `pct` of its bite.
+##   chest_beat (Mountain Gorilla, Stun): every `every` seconds, with an
+##     enemy within `trigger` tiles, it beats its chest for `windup` seconds,
+##     then a shockwave: enemies on the ground within `radius` tiles take
+##     `pct` of its bite, are stunned `stun` seconds and knocked `knock`
+##     tiles back.
+##   stand_tall (Red Panda, Slow): every `every` seconds, with an enemy within
+##     `radius` tiles, it rears up for `rear` seconds and everyone within
+##     `radius` tiles slows `pct` for `seconds`.
+##   crawl (Pygmy Three-toed Sloth, Slow): a slow-motion zone `radius` tiles
+##     round it: enemies in it move `pct` slower and attack `attack_pct`
+##     slower, and enemy shots at anything in it come `attack_pct` slower
+##     (and fly at `pct` of their speed, on screen).
 
 const T := BattleSim.TILE
 const KINDS := ["cleave", "shell", "snack", "reflect", "guard", "rhino_charge", "pound",
 	"rush", "pack", "roar", "fearless", "stalk", "venom", "triple",
 	"burst", "spray", "lob", "sniper", "spit", "bounce", "pierce",
-	"dive", "hunt", "grab", "crack", "feast", "strafe"]
+	"dive", "hunt", "grab", "crack", "feast", "strafe",
+	"dig", "flip", "slide", "tentacles", "chain", "chest_beat", "stand_tall", "crawl"]
+## Specialists whose style is how their trait works (in place of the trait's
+## plain every-hit splash, stun or slow).
+const OWN_TRAIT := ["slide", "tentacles", "chain", "chest_beat", "stand_tall", "crawl"]
 ## Reach (field units) from which a blow counts as a shot.
 const SHOT_REACH := 1500
 
@@ -130,6 +169,26 @@ static func on_tick(sim: BattleSim, f: BattleSim.Fighter) -> void:
 					if e.team != f.team and e.alive and e.is_unit() and BattleSim.edge_distance(f, e) <= trigger:
 						_roar(sim, f)
 						break
+		"flip":
+			var left := int(f.memory.get("ball", 0))
+			if left > 0:
+				f.memory.ball = left - 1
+				if left == 1:
+					sim.events.append({"type": "ball", "uid": f.uid, "on": false, "x": f.x, "y": f.y})
+		"crawl":
+			# Its slow-motion zone goes where it goes.
+			var zone: Dictionary = {}
+			for z: Dictionary in sim.zones:
+				if z.has("crawl") and int(z.get("uid", -1)) == f.uid:
+					zone = z
+					break
+			if zone.is_empty():
+				zone = {"team": f.team, "x": f.x, "y": f.y, "radius": tiles(f.sp("radius", 3.0)), "crawl": int(f.sp("pct", 50)),
+					"attack": int(f.sp("attack_pct", 25)), "ticks": 2, "uid": f.uid}
+				sim.add_zone(zone)
+			zone.x = f.x
+			zone.y = f.y
+			zone.ticks = 2
 		"shell":
 			var left := int(f.memory.get("shell", 0))
 			if left > 0:
@@ -174,7 +233,32 @@ static func act(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 			return _carry(sim, f)
 		"strafe":
 			return _strafe(sim, f)
+		"flip":
+			return int(f.memory.get("ball", 0)) > 0
+		"slide":
+			return _slide(sim, f)
+		"chest_beat":
+			return _chest_beat(sim, f)
+		"stand_tall":
+			return _stand_tall(sim, f)
 	return false
+
+
+## Whether `f` is busy with its style (in its shell or ball, snacking,
+## charging, beating its chest, standing tall, sliding, on a fire run,
+## climbing): not idle, even standing still.
+static func busy(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	for key in ["shell", "snack", "ball", "beat", "tall", "slide_left", "run_left"]:
+		if int(f.memory.get(key, 0)) > 0:
+			return true
+	return int(f.memory.get("charge_state", 0)) == 1 or int(f.memory.get("carry", -1)) >= 0 or int(f.memory.get("climb_until", -1)) > sim.tick \
+		or int(f.memory.get("spit_at", -1)) >= sim.tick
+
+
+## Whether `f`'s style is how its trait works (the trait's plain every-hit
+## effect doesn't happen as well).
+static func owns_trait(f: BattleSim.Fighter) -> bool:
+	return OWN_TRAIT.has(f.style_kind)
 
 
 ## Whether `f` keeps its own rhythm rather than firing with its army's
@@ -185,9 +269,43 @@ static func own_rhythm(f: BattleSim.Fighter) -> bool:
 
 ## How much faster than usual `f` attacks this tick (percent).
 static func haste_pct(sim: BattleSim, f: BattleSim.Fighter) -> int:
+	var pct := 0
 	if int(f.memory.get("roared", -1)) > sim.tick:
-		return int(f.memory.get("roar_pct", 0))
+		pct += int(f.memory.get("roar_pct", 0))
+	# In a Sloth's slow-motion zone, or shooting at someone in one: slower.
+	for zone: Dictionary in sim.zones:
+		if not zone.has("crawl") or int(zone.team) == f.team:
+			continue
+		var r := int(zone.radius)
+		var t := f.target
+		if BattleSim.dist_to_point(f, zone.x, zone.y) <= r + f.radius or (f.attack_range >= SHOT_REACH and t != null and t.alive \
+				and BattleSim.dist_to_point(t, zone.x, zone.y) <= r + t.radius):
+			pct -= int(zone.get("attack", zone.crawl))
+			break
+	return pct
+
+
+## Whether `f` is in a slow-motion zone of the other side's (a Sloth's).
+static func crawling(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	for zone: Dictionary in sim.zones:
+		if zone.has("crawl") and int(zone.team) != f.team and BattleSim.dist_to_point(f, zone.x, zone.y) <= int(zone.radius) + f.radius:
+			return true
+	return false
+
+
+## How much a shot from team `shooter` at `t` crawls (percent; 0 if it
+## doesn't): `t` is in a slow-motion zone of the other side's (a Sloth's).
+static func shot_crawl(sim: BattleSim, shooter: int, t: BattleSim.Fighter) -> int:
+	for zone: Dictionary in sim.zones:
+		if zone.has("crawl") and int(zone.team) != shooter and BattleSim.dist_to_point(t, zone.x, zone.y) <= int(zone.radius) + t.radius:
+			return int(zone.crawl)
 	return 0
+
+
+## Enemies in a Sloth's zone crawl (called every tick for the zone).
+static func crawl(sim: BattleSim, zone: Dictionary) -> void:
+	for e: BattleSim.Fighter in sim.enemies_near(int(zone.team), zone.x, zone.y, int(zone.radius)):
+		sim.slow_down(e, int(zone.crawl), 2)
 
 
 ## How much faster than usual `f` moves (percent).
@@ -265,6 +383,8 @@ static func prefer_target(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fig
 			return _nearest(sim, f, tiles(f.sp("reach", 5.0)), func(e): return e.poison <= 0)
 		"hunt":
 			return _nearest(sim, f, tiles(f.sp("reach", 12.0)), func(e): return e.cls == "ranged")
+		"dig":
+			return _nearest(sim, f, tiles(f.sp("reach", 3.0)), func(e): return e.cls == "ranged")
 		"lob":
 			# The one furthest back of those in reach (its army's back ranks).
 			var best: BattleSim.Fighter = null
@@ -323,6 +443,12 @@ static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter
 			_bounce(sim, f, t)
 		"pierce":
 			_pierce(sim, f, t)
+		"dig":
+			_dig_again(sim, f, t)
+		"chain":
+			_chain(sim, f, t)
+		"tentacles":
+			_tentacles(sim, f, t)
 		"dive":
 			# Up and away from where it struck.
 			var dx := f.x - t.x
@@ -351,6 +477,9 @@ static func incoming(sim: BattleSim, t: BattleSim.Fighter, amount: int, source: 
 	if int(t.memory.get("cracked_until", -1)) > sim.tick:
 		amount = amount * (100 + int(t.memory.get("crack_pct", 0))) / 100
 	match t.style_kind:
+		"flip":
+			if int(t.memory.get("ball", 0)) > 0:
+				amount = amount * int(t.sp("taken_pct", 50)) / 100
 		"hunt":
 			# Silent: the Ranged it hunts barely notice it.
 			if source != null and source.cls == "ranged":
@@ -372,6 +501,15 @@ static func incoming(sim: BattleSim, t: BattleSim.Fighter, amount: int, source: 
 ## After `t` takes damage and is still standing.
 static func after_damaged(sim: BattleSim, t: BattleSim.Fighter) -> void:
 	match t.style_kind:
+		"dig":
+			_dig_away(sim, t)
+		"flip":
+			if int(t.memory.get("ball", 0)) <= 0 and not t.memory.get("burrowing", false) and sim.tick >= int(t.memory.get("ball_ready", 0)):
+				var seconds := float(t.sp("seconds", 2.0))
+				t.memory.ball = ticks(sim, seconds)
+				t.memory.ball_ready = sim.tick + ticks(sim, seconds + float(t.sp("cooldown", 6.0)))
+				t.target = null
+				sim.events.append({"type": "ball", "uid": t.uid, "on": true, "x": t.x, "y": t.y})
 		"shell":
 			if int(t.memory.get("shell", 0)) <= 0 and t.hp * 100 < t.max_hp * int(t.sp("below_pct", 40)) and sim.tick >= int(t.memory.get("shell_ready", 0)):
 				var seconds := float(t.sp("seconds", 3.0))
@@ -445,6 +583,273 @@ static func burn(sim: BattleSim, zone: Dictionary) -> void:
 		zone.acc[e.uid] = int(zone.acc[e.uid]) % sim.tps
 		if amount > 0:
 			sim.deal_damage(e, amount, null)
+
+
+# --- Specialists -----------------------------------------------------------------
+
+## Where a burrowing animal heads for, if its style picks the spot (else
+## null: just behind the enemy's last row): the Fox right behind the nearest
+## enemy Ranged (of another group than it just left, if there is one), the
+## Pangolin under the nearest enemy Tank.
+static func burrow_goal(sim: BattleSim, f: BattleSim.Fighter) -> Variant:
+	match f.style_kind:
+		"dig":
+			# Dug down again: another group, `away` tiles or more from where
+			# it went under.
+			var prey: BattleSim.Fighter = null
+			if f.memory.has("dug_at"):
+				var at: Vector2i = f.memory.dug_at
+				var away := tiles(f.sp("away", 3.0))
+				prey = _nearest_any(sim, f, func(e): return e.cls == "ranged" and (e.x - at.x) * (e.x - at.x) + (e.y - at.y) * (e.y - at.y) >= away * away)
+			if prey == null:
+				prey = _nearest_any(sim, f, func(e): return e.cls == "ranged")
+			if prey == null:
+				return null
+			var behind := T * 7 / 10 * (-1 if prey.team == 1 else 1)
+			return Vector2i(prey.x, clampi(prey.y + behind, prey.radius, sim.height - prey.radius))
+		"flip":
+			var tank := _nearest_any(sim, f, func(e): return e.cls == "tank")
+			if tank != null:
+				return Vector2i(tank.x, tank.y)
+	return null
+
+
+## The nearest enemy on the ground (to a burrower: anywhere) that `ok` says
+## yes to, or null.
+static func _nearest_any(sim: BattleSim, f: BattleSim.Fighter, ok: Callable) -> BattleSim.Fighter:
+	var best: BattleSim.Fighter = null
+	var best_d := 1 << 60
+	for e: BattleSim.Fighter in sim.fighters:
+		if e.team == f.team or not e.alive or not e.is_unit() or e.is_flying() or e.memory.get("burrowing", false):
+			continue
+		var d := (e.x - f.x) * (e.x - f.x) + (e.y - f.y) * (e.y - f.y)
+		if d < best_d and ok.call(e):
+			best = e
+			best_d = d
+	return best
+
+
+## A burrowing animal just came up: the Pangolin flips the Tank above it.
+static func on_emerge(sim: BattleSim, f: BattleSim.Fighter) -> void:
+	match f.style_kind:
+		"dig":
+			f.memory.up_hits = 0
+		"flip":
+			var tank := _nearest(sim, f, tiles(1.0), func(e): return e.cls == "tank")
+			if tank == null:
+				return
+			var stun := ticks(sim, f.sp("stun", 1.5))
+			sim.events.append({"type": "flip", "uid": f.uid, "to": tank.uid, "x": tank.x, "y": tank.y})
+			sim.strike(f, tank, bite(sim, f, tank, f.sp("flip_pct", 100)), {"style": "flip"})
+			sim.stun(tank, stun)
+			tank.memory.flipped_until = sim.tick + stun
+			tank.memory.flipped_for = stun
+			sim.events.append({"type": "stun", "uid": tank.uid, "x": tank.x, "y": tank.y})
+			f.target = tank
+
+
+## The Fox, after `hits` hits since it came up: down again, off to another
+## of the enemy's Ranged (`digs` times a fight).
+static func _dig_again(sim: BattleSim, f: BattleSim.Fighter, _t: BattleSim.Fighter) -> void:
+	f.memory.up_hits = int(f.memory.get("up_hits", 0)) + 1
+	if int(f.memory.up_hits) < int(f.sp("hits", 3)) or int(f.memory.get("digs", 0)) >= int(f.sp("digs", 1)):
+		return
+	_dig_down(sim, f)
+
+
+## The Fox, badly hurt: it digs away (if it still can).
+static func _dig_away(sim: BattleSim, f: BattleSim.Fighter) -> void:
+	if f.memory.get("burrowing", false) or int(f.memory.get("digs", 0)) >= int(f.sp("digs", 1)):
+		return
+	if f.hp * 100 >= f.max_hp * int(f.sp("below_pct", 50)):
+		return
+	_dig_down(sim, f)
+
+
+## Down it goes, off to another group of the enemy's Ranged.
+static func _dig_down(sim: BattleSim, f: BattleSim.Fighter) -> void:
+	var away := tiles(f.sp("away", 3.0))
+	if _nearest_any(sim, f, func(e): return e.cls == "ranged" and (e.x - f.x) * (e.x - f.x) + (e.y - f.y) * (e.y - f.y) >= away * away) == null:
+		return  # no other group to go to
+	f.memory.digs = int(f.memory.get("digs", 0)) + 1
+	f.memory.up_hits = 0
+	f.memory.dug_at = Vector2i(f.x, f.y)
+	f.memory.burrowing = true
+	f.target = null
+	sim.events.append({"type": "dig", "uid": f.uid, "x": f.x, "y": f.y})
+
+
+## The Seal's belly-slide (its turn while it slides).
+static func _slide(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var left := int(f.memory.get("slide_left", 0))
+	if left > 0:
+		var dir: Vector2i = f.memory.slide_dir
+		var step := mini(sim.current_speed(f) * (100 + int(f.sp("speed_pct", 200))) / 100, left)
+		var x := clampi(f.x + dir.x * step / 1000, f.radius, sim.width - f.radius)
+		var y := clampi(f.y + dir.y * step / 1000, f.radius, sim.height - f.radius)
+		var moved := absi(x - f.x) + absi(y - f.y)
+		f.x = x
+		f.y = y
+		f.memory.slide_left = left - step if moved > 0 else 0
+		var slid: Array = f.memory.slid
+		var reach := tiles(f.sp("width", 0.5))
+		for e: BattleSim.Fighter in sim.fighters:
+			if e.team == f.team or not e.alive or not e.is_unit() or e.is_flying() or e.memory.get("burrowing", false) or slid.has(e.uid):
+				continue
+			if BattleSim.edge_distance(f, e) <= reach:
+				slid.append(e.uid)
+				sim.strike(f, e, bite(sim, f, e, f.sp("pct", 100)), {"style": "slide"})
+				sim.events.append({"type": "splash", "x": e.x, "y": e.y, "radius": tiles(0.9)})
+				# Bowled aside, off its line.
+				var side := Vector2i(-dir.y, dir.x)
+				if (e.x - f.x) * side.x + (e.y - f.y) * side.y < 0:
+					side = -side
+				sim.knock_back(e, e.x - side.x, e.y - side.y, tiles(f.sp("knock", 0.4)))
+		if int(f.memory.slide_left) <= 0:
+			sim.events.append({"type": "slide_end", "uid": f.uid, "x": f.x, "y": f.y})
+		return true
+	if sim.tick < int(f.memory.get("slide_ready", 0)) or (sim.army != null and f.memory.has("slot") and not sim.army.at_war()):
+		return false
+	var near := _nearest(sim, f, tiles(f.sp("trigger", 3.0)), func(e): return not e.is_flying())
+	if near == null:
+		return false
+	var dx := near.x - f.x
+	var dy := near.y - f.y
+	var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+	f.memory.slide_dir = Vector2i(dx * 1000 / d, dy * 1000 / d)
+	f.memory.slide_left = tiles(f.sp("tiles", 3.0))
+	f.memory.slid = []
+	f.memory.slide_ready = sim.tick + ticks(sim, f.sp("every", 5.0))
+	sim.events.append({"type": "slide", "uid": f.uid, "x": f.x, "y": f.y, "dx": dx * 1000 / d, "dy": dy * 1000 / d})
+	return true
+
+
+## The Kraken's tentacles: slams on its target and up to `slams` - 1 more,
+## then everyone slammed is dragged in toward it.
+static func _tentacles(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	var reach := tiles(f.sp("reach", 2.5))
+	var others := []
+	for e: BattleSim.Fighter in sim.fighters:
+		if e != t and e.team != f.team and e.alive and e.is_unit() and sim.can_target(f, e) and BattleSim.edge_distance(f, e) <= reach:
+			others.append(e)
+	others.sort_custom(func(a, b): return BattleSim.edge_distance(f, a) < BattleSim.edge_distance(f, b) or (BattleSim.edge_distance(f, a) == BattleSim.edge_distance(f, b) and a.uid < b.uid))
+	var slammed := [t] + others.slice(0, maxi(0, int(f.sp("slams", 3)) - 1))
+	var spots := []
+	for s: BattleSim.Fighter in slammed:
+		spots.append([s.x, s.y])
+	sim.events.append({"type": "tentacles", "uid": f.uid, "spots": spots, "x": t.x, "y": t.y})
+	var radius := tiles(f.sp("radius", 0.8))
+	var hit := {t.uid: t}
+	for spot: Array in spots:
+		for e: BattleSim.Fighter in sim.enemies_near(f.team, spot[0], spot[1], radius):
+			if hit.has(e.uid) or not sim.can_target(f, e):
+				continue
+			hit[e.uid] = e
+			sim.strike(f, e, bite(sim, f, e, f.sp("pct", 60)), {"style": "tentacles"})
+	var pull := tiles(f.sp("pull", 0.5))
+	for e: BattleSim.Fighter in hit.values():
+		_pull(sim, e, f, pull)
+
+
+## Drags `e` up to `distance` toward `f` (not into it).
+static func _pull(sim: BattleSim, e: BattleSim.Fighter, f: BattleSim.Fighter, distance: int) -> void:
+	if not e.alive or steady(e):
+		return
+	var dx := f.x - e.x
+	var dy := f.y - e.y
+	var d := BattleSim.isqrt(dx * dx + dy * dy)
+	var room := d - f.radius - e.radius
+	if d == 0 or room <= 0:
+		return
+	var step := mini(distance, room)
+	e.x = clampi(e.x + dx * step / d, e.radius, sim.width - e.radius)
+	e.y = clampi(e.y + dy * step / d, e.radius, sim.height - e.radius)
+
+
+## The Eel's lightning, every `every` hits: from its target on through the
+## nearest enemies, stunning each.
+static func _chain(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	f.memory.zaps = int(f.memory.get("zaps", 0)) + 1
+	if int(f.memory.zaps) % maxi(1, int(f.sp("every", 2))) != 0:
+		return
+	var chain: Array = [t]
+	var reach := tiles(f.sp("reach", 2.5))
+	while chain.size() < int(f.sp("chain", 4)):
+		var last: BattleSim.Fighter = chain[-1]
+		var next: BattleSim.Fighter = null
+		var best := 1 << 40
+		for e: BattleSim.Fighter in sim.fighters:
+			if e.team == f.team or not e.alive or not e.is_unit() or chain.has(e) or not sim.can_target(f, e):
+				continue
+			var d := BattleSim.edge_distance(last, e)
+			if d <= reach and (d < best or (d == best and next != null and e.uid < next.uid)):
+				next = e
+				best = d
+		if next == null:
+			break
+		chain.append(next)
+	var points := [[f.x, f.y]]
+	for e: BattleSim.Fighter in chain:
+		points.append([e.x, e.y])
+	sim.events.append({"type": "chain", "uid": f.uid, "points": points, "x": t.x, "y": t.y})
+	var stun := ticks(sim, f.sp("stun", 0.6))
+	for i in chain.size():
+		var e: BattleSim.Fighter = chain[i]
+		if i > 0:
+			sim.strike(f, e, bite(sim, f, e, f.sp("pct", 50)), {"style": "chain"})
+		sim.stun(e, stun)
+		if e.alive:
+			sim.events.append({"type": "stun", "uid": e.uid, "x": e.x, "y": e.y})
+
+
+## The Gorilla's chest-beat: beating its chest (its turn), then the
+## shockwave.
+static func _chest_beat(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var left := int(f.memory.get("beat", 0))
+	if left > 0:
+		f.memory.beat = left - 1
+		if left == 1:
+			var radius := tiles(f.sp("radius", 2.5))
+			sim.events.append({"type": "shockwave", "uid": f.uid, "x": f.x, "y": f.y, "radius": radius})
+			var stun := ticks(sim, f.sp("stun", 1.0))
+			for e: BattleSim.Fighter in sim.enemies_near(f.team, f.x, f.y, radius):
+				if e.is_flying() or e.memory.get("burrowing", false):
+					continue
+				sim.strike(f, e, bite(sim, f, e, f.sp("pct", 40)), {"style": "chest_beat"})
+				sim.stun(e, stun)
+				sim.knock_back(e, f.x, f.y, tiles(f.sp("knock", 0.5)))
+				if e.alive:
+					sim.events.append({"type": "stun", "uid": e.uid, "x": e.x, "y": e.y})
+		return true
+	if sim.tick < int(f.memory.get("beat_ready", 0)) or (sim.army != null and f.memory.has("slot") and not sim.army.at_war()):
+		return false
+	if _nearest(sim, f, tiles(f.sp("trigger", 1.5)), func(e): return not e.is_flying()) == null:
+		return false
+	f.memory.beat = maxi(1, ticks(sim, f.sp("windup", 0.5)))
+	f.memory.beat_ready = sim.tick + ticks(sim, f.sp("every", 6.0))
+	sim.events.append({"type": "chest_beat", "uid": f.uid, "x": f.x, "y": f.y})
+	return true
+
+
+## The Red Panda stands tall (its turn for a moment): everyone near slows.
+static func _stand_tall(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var left := int(f.memory.get("tall", 0))
+	if left > 0:
+		f.memory.tall = left - 1
+		return true
+	if sim.tick < int(f.memory.get("tall_ready", 0)) or (sim.army != null and f.memory.has("slot") and not sim.army.at_war()):
+		return false
+	var radius := tiles(f.sp("radius", 3.0))
+	var near := sim.enemies_near(f.team, f.x, f.y, radius).filter(func(e): return not e.memory.get("burrowing", false))
+	if near.is_empty():
+		return false
+	f.memory.tall = maxi(1, ticks(sim, f.sp("rear", 0.6)))
+	f.memory.tall_ready = sim.tick + ticks(sim, f.sp("every", 6.0))
+	sim.events.append({"type": "stand_tall", "uid": f.uid, "x": f.x, "y": f.y, "radius": radius})
+	var slow := ticks(sim, f.sp("seconds", 3.0))
+	for e: BattleSim.Fighter in near:
+		sim.slow_down(e, int(f.sp("pct", 35)), slow)
+	return true
 
 
 # --- Air ------------------------------------------------------------------------

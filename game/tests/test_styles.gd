@@ -521,3 +521,160 @@ func test_dragon_leaves_a_burning_line() -> void:
 	var hp := boars.map(func(b): return b.hp)
 	_run(sim, 1.0)
 	check(boars[0].hp < hp[0] and boars[1].hp < hp[1], "that burns the enemies along it")
+
+
+# --- Specialists -------------------------------------------------------------------
+
+## Steps until `done` says so (up to `seconds`); whether it did.
+func _until(sim: BattleSim, seconds: float, done: Callable) -> bool:
+	for i in roundi(seconds * sim.tps):
+		sim.step()
+		if done.call():
+			return true
+	return false
+
+
+func test_red_fox_pops_up_by_the_ranged_and_digs_again() -> void:
+	var sim := _sim()
+	var fox := _one(sim, 0, "red_fox", 8, 15)
+	var bear := _one(sim, 1, "brown_bear", 8, 10)
+	var a := _one(sim, 1, "gray_squirrel", 4, 8)
+	var b := _one(sim, 1, "gray_squirrel", 12, 8)
+	for e in [bear, a, b]:
+		e.stun = 99999
+		e.max_hp = 99999
+		e.hp = 99999
+	check(fox.memory.get("burrowing", false), "it starts underground")
+	check(_until(sim, 10.0, func(): return not fox.memory.get("burrowing", false)), "and comes up")
+	var first: BattleSim.Fighter = a if BattleSim.dist(fox, a) < BattleSim.dist(fox, b) else b
+	var other: BattleSim.Fighter = b if first == a else a
+	check(BattleSim.dist(fox, first) <= 2 * T, "right by a squirrel (%.1f tiles)" % (BattleSim.dist(fox, first) / float(T)))
+	sim.step()
+	check(fox.target == first, "and goes for it, not the bear")
+	check(_until(sim, 8.0, func(): return fox.memory.get("burrowing", false)), "after a few hits it digs down again")
+	check(_until(sim, 10.0, func(): return not fox.memory.get("burrowing", false)), "and comes up again")
+	check(BattleSim.dist(fox, other) <= 2 * T, "by the other squirrel this time")
+	# Badly hurt before its hits are up, a fresh fox digs away too.
+	var sim2 := _sim()
+	var fox2 := _one(sim2, 0, "red_fox", 8, 8.5)
+	fox2.memory.burrowing = false
+	var near := _one(sim2, 1, "gray_squirrel", 8, 7.6)
+	var far := _one(sim2, 1, "gray_squirrel", 13, 7.6)
+	near.stun = 99999
+	far.stun = 99999
+	sim2.strike(near, fox2, fox2.max_hp * (100 - int(GameData.styles.red_fox.below_pct)) / 100 + 1)
+	check(fox2.memory.get("burrowing", false), "badly hurt, it digs away")
+
+
+func test_sunda_pangolin_flips_a_tank_then_curls_up() -> void:
+	var sim := _sim()
+	var pangolin := _one(sim, 0, "sunda_pangolin", 8, 15)
+	var bear := _one(sim, 1, "brown_bear", 6, 10)
+	var squirrel := _one(sim, 1, "gray_squirrel", 10, 7)
+	squirrel.stun = 99999
+	bear.max_hp = 99999
+	bear.hp = 99999
+	check(_until(sim, 10.0, func(): return not pangolin.memory.get("burrowing", false)), "it comes up")
+	check(BattleSim.dist(pangolin, bear) <= T * 3 / 2, "under the bear (the Tank), not by the squirrel")
+	check(bear.stun > 0 and int(bear.memory.get("flipped_until", -1)) > sim.tick, "the bear is flipped and stunned")
+	check(bear.hp < 99999, "and hurt")
+	# Hit: it curls into a ball, taking half.
+	bear.stun = 99999
+	var hp := pangolin.hp
+	sim.strike(bear, pangolin, 100)
+	check(int(pangolin.memory.get("ball", 0)) > 0, "hit, it curls into a ball")
+	hp = pangolin.hp
+	sim.strike(bear, pangolin, 100)
+	check_eq(hp - pangolin.hp, int(GameData.styles.sunda_pangolin.taken_pct), "taking half")
+	check(BattleStyles.act(sim, pangolin), "and not fighting while curled up")
+
+
+func test_harbor_seal_belly_slides_through_a_line() -> void:
+	var sim := _sim()
+	var seal := _one(sim, 0, "harbor_seal", 8, 13)
+	var line := [_one(sim, 1, "wild_boar", 8, 11.6), _one(sim, 1, "wild_boar", 8.2, 10.6)]
+	for b in line:
+		b.stun = 99999
+	var hp := line.map(func(b): return b.hp)
+	var start := seal.y
+	sim.step()
+	check(int(seal.memory.get("slide_left", 0)) > 0, "it starts a slide")
+	_until(sim, 3.0, func(): return int(seal.memory.get("slide_left", 0)) <= 0)
+	check(start - seal.y >= 2 * T, "a long slide (%.1f tiles)" % ((start - seal.y) / float(T)))
+	check(line[0].hp < hp[0] and line[1].hp < hp[1], "hitting both it passed")
+	check(BattleStyles.owns_trait(seal), "its slide is its splash")
+
+
+func test_kraken_slams_and_drags_them_in() -> void:
+	var sim := _sim()
+	var kraken := _one(sim, 0, "kraken", 8, 12)
+	var bear := _one(sim, 1, "brown_bear", 8, 10.6)
+	var left := _one(sim, 1, "wild_boar", 6.2, 11.6)
+	var right := _one(sim, 1, "wild_boar", 9.8, 11.6)
+	var far := _one(sim, 1, "wild_boar", 8, 5)
+	var all := [bear, left, right, far]
+	var hp := all.map(func(e): return e.hp)
+	var gaps := all.map(func(e): return BattleSim.dist(kraken, e))
+	sim.attack(kraken, bear)
+	check(bear.hp < hp[0] and left.hp < hp[1] and right.hp < hp[2], "three tentacles, three slammed")
+	check_eq(far.hp, hp[3], "not one out of reach")
+	check(BattleSim.dist(kraken, left) < gaps[1] and BattleSim.dist(kraken, right) < gaps[2], "dragged in toward it")
+
+
+func test_electric_eel_lightning_chains_and_stuns() -> void:
+	var sim := _sim()
+	var eel := _one(sim, 0, "electric_eel", 8, 11)
+	var bear := _one(sim, 1, "brown_bear", 8, 9.8)
+	var chain := [_one(sim, 1, "wild_boar", 9.6, 9.4), _one(sim, 1, "wild_boar", 11.1, 9.4), _one(sim, 1, "wild_boar", 12.6, 9.4)]
+	var far := _one(sim, 1, "wild_boar", 3, 4)
+	sim.attack(eel, bear)
+	check(bear.stun <= 0 and chain.all(func(e): return e.stun <= 0), "the first hit: no lightning yet")
+	var hp := chain.map(func(e): return e.hp)
+	sim.attack(eel, bear)
+	check(bear.stun > 0 and chain.all(func(e): return e.stun > 0), "the second: lightning through all four, stunned")
+	check(chain[0].hp < hp[0] and chain[2].hp < hp[2], "and hurt")
+	check(far.stun <= 0, "not one far off")
+	check(BattleStyles.owns_trait(eel), "its lightning is its stun")
+
+
+func test_mountain_gorilla_chest_beat_stuns_all_around() -> void:
+	var sim := _sim()
+	var gorilla := _one(sim, 0, "mountain_gorilla", 8, 11)
+	var around := [_one(sim, 1, "wild_boar", 8, 9.9), _one(sim, 1, "wild_boar", 6.6, 11), _one(sim, 1, "wild_boar", 9.6, 12)]
+	var far := _one(sim, 1, "wild_boar", 8, 4)
+	var hp := around.map(func(e): return e.hp)
+	sim.step()
+	check(int(gorilla.memory.get("beat", 0)) > 0, "it beats its chest")
+	check(_until(sim, 1.5, func(): return around.all(func(e): return e.stun > 0)), "then everyone around is stunned")
+	check(around.all(func(e): return e.hp < hp[around.find(e)]), "and hurt")
+	check(far.stun <= 0, "not one far off")
+
+
+func test_red_panda_stands_tall_and_slows_everyone_near() -> void:
+	var sim := _sim()
+	var panda := _one(sim, 0, "red_panda", 8, 11)
+	var near := [_one(sim, 1, "wild_boar", 8, 9.5), _one(sim, 1, "wild_boar", 6, 11.5)]
+	var far := _one(sim, 1, "wild_boar", 8, 3)
+	sim.step()
+	check(int(panda.memory.get("tall", 0)) > 0, "it rears up")
+	check(near.all(func(e): return e.slow > 0 and e.slow_pct == int(GameData.styles.red_panda.pct)), "everyone near slows down")
+	check(far.slow <= 0, "not one far off")
+
+
+func test_sloth_zone_makes_everything_crawl() -> void:
+	var sim := _sim()
+	var sloth := _one(sim, 0, "pygmy_three_toed_sloth", 8, 11)
+	var friend := _one(sim, 0, "brown_bear", 8.8, 12)
+	var boar := _one(sim, 1, "wild_boar", 8, 9.5)
+	var squirrel := _one(sim, 1, "gray_squirrel", 8, 4)
+	var out := _one(sim, 0, "brown_bear", 2, 4)
+	sim.step()
+	var pct := int(GameData.styles.pygmy_three_toed_sloth.pct)
+	var attack := int(GameData.styles.pygmy_three_toed_sloth.attack_pct)
+	check(boar.slow > 0 and boar.slow_pct == pct, "an enemy in its zone moves slower")
+	check_eq(BattleStyles.haste_pct(sim, boar), -attack, "and attacks slower")
+	squirrel.target = friend
+	check_eq(BattleStyles.haste_pct(sim, squirrel), -attack, "a shot at someone in the zone crawls too")
+	squirrel.target = out
+	check_eq(BattleStyles.haste_pct(sim, squirrel), 0, "a shot at someone outside doesn't")
+	check_eq(BattleStyles.haste_pct(sim, friend), 0, "its own side isn't slowed")

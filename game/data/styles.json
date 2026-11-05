@@ -26,5 +26,13 @@
   "harpy_eagle": {"kind": "grab", "line": "Grabs a small enemy and drops it far.", "every": 6.0, "small": 0.42, "carry": 4.0, "drop_pct": 100, "stun": 0.6},
   "hyacinth_macaw": {"kind": "crack", "line": "Cracks armor: its target takes extra damage.", "seconds": 4.0, "pct": 25},
   "california_condor": {"kind": "feast", "line": "Grows stronger with every nearby fall.", "radius": 5.0, "pct": 8, "most": 8},
-  "dragon": {"kind": "strafe", "line": "Fire-breath runs leave a burning line.", "every": 6.0, "tiles": 5.0, "speed_pct": 100, "width": 0.6, "seconds": 3.0, "dps_pct": 30}
+  "dragon": {"kind": "strafe", "line": "Fire-breath runs leave a burning line.", "every": 6.0, "tiles": 5.0, "speed_pct": 100, "width": 0.6, "seconds": 3.0, "dps_pct": 30},
+  "red_fox": {"kind": "dig", "line": "Pops up behind, hits Ranged, digs again.", "hits": 3, "below_pct": 50, "digs": 1, "reach": 3.0, "away": 3.0},
+  "sunda_pangolin": {"kind": "flip", "line": "Flips a Tank, then rolls into a ball.", "flip_pct": 150, "stun": 1.5, "seconds": 1.5, "taken_pct": 50, "cooldown": 6.0},
+  "harbor_seal": {"kind": "slide", "line": "Belly-slides through a line, splashing all.", "every": 5.0, "trigger": 3.0, "tiles": 3.0, "speed_pct": 200, "width": 0.5, "pct": 100, "knock": 0.4},
+  "kraken": {"kind": "tentacles", "line": "Tentacles slam and drag enemies together.", "slams": 3, "reach": 2.5, "radius": 0.8, "pct": 45, "pull": 0.5},
+  "electric_eel": {"kind": "chain", "line": "Lightning chains through four, stunning them.", "every": 2, "chain": 4, "reach": 2.5, "pct": 25, "stun": 0.6},
+  "mountain_gorilla": {"kind": "chest_beat", "line": "Chest-beat roar stuns everyone around.", "every": 7.0, "trigger": 1.5, "windup": 0.5, "radius": 2.5, "pct": 30, "stun": 0.8, "knock": 0.5},
+  "red_panda": {"kind": "stand_tall", "line": "Stands tall: everyone near slows down.", "every": 6.0, "radius": 3.0, "pct": 35, "seconds": 3.0, "rear": 0.6},
+  "pygmy_three_toed_sloth": {"kind": "crawl", "line": "Slow-motion zone: everything crawls, even shots.", "radius": 2.5, "pct": 50, "attack_pct": 15}
 }

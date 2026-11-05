@@ -790,7 +790,7 @@ func add_events(events: Array) -> void:
 			"death":
 				_doom(e, float(chain.at) if not chain.is_empty() else _time)
 			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple", "spray", "pierce", \
-					"dive_hit", "crack", "grab", "drop", "feast":
+					"dive_hit", "crack", "grab", "drop", "feast", "tentacles", "chain", "flip":
 				# Shown when the hit they came with lands.
 				if not chain.is_empty() and float(chain.at) > _time:
 					chain.after.append(e)
@@ -831,7 +831,8 @@ func _show(e: Dictionary) -> void:
 			Sound.play("pop", -6.0, 0.2)
 		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end", \
 				"slam", "pack_bite", "roar", "venom", "triple", "pounce", "spray", "pierce", "spit_charge", \
-				"dive_hit", "crack", "grab", "drop", "feast", "fire_line":
+				"dive_hit", "crack", "grab", "drop", "feast", "fire_line", \
+				"dig", "flip", "ball", "slide", "slide_end", "tentacles", "chain", "chest_beat", "shockwave", "stand_tall":
 			_show_style(e)
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
@@ -1048,6 +1049,79 @@ func _show_style(e: Dictionary) -> void:
 			line.reveal = Feel.num("styles", "fire_reveal_seconds", 0.35)
 			line.flame = Color(String(looks.get("flame", "#ffc23a")))
 			Sound.play("whoosh", -2.0, 0.05)
+		"dig":
+			# The Fox digs down again: a spray of earth.
+			var ground := to_screen(e.x, e.y)
+			fx.effect("dust", ground, 900 * s, Color("#b49a78"), 0.55, "", true)
+			fx.burst("puff", ground, 6, 120.0, 0.45, 9.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 120.0)
+			Sound.play("land", -6.0, 0.15)
+		"flip":
+			# The Pangolin bursts up under a Tank and flips it.
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			fx.effect("dust", to_screen(e.x, e.y), 1300 * s, Color("#b49a78"), 0.6, "", true)
+			fx.effect("flash", hit_at, 420 * s, Color(1, 1, 1, 0.8), 0.2)
+			fx.burst("puff", to_screen(e.x, e.y), 8, 200.0, 0.5, 10.0, [Color("#c9b08a"), Color("#e6d3b0")], 160.0, 2.0, 160.0)
+			shake(Feel.num("styles", "slam_shake", 0.14))
+			Sound.play("boom", -6.0, 0.1)
+		"ball":
+			if e.on:
+				fx.burst("puff", at, 5, 120.0, 0.35, 7.0, [Color(String(looks.get("scales", "#a8794f"))), Color("#e6d3b0")], -20.0, 2.5)
+				Sound.play("land", -6.0, 0.2)
+			else:
+				Sound.play("pop", -8.0, 0.2)
+		"slide":
+			# The Seal flops onto its belly and slides: a spray of water.
+			var water := Color(String(looks.get("water", "#9fdcff")))
+			fx.effect("ring", to_screen(e.x, e.y), 700 * s, water, 0.35, "", true)
+			fx.burst("puff", at, 6, 160.0, 0.45, 8.0, [water, Color.WHITE], 220.0, 2.0, 140.0)
+			Sound.play("whoosh", -4.0, 0.1)
+		"slide_end":
+			fx.burst("puff", at, 4, 110.0, 0.4, 7.0, [Color(String(looks.get("water", "#9fdcff"))), Color.WHITE], 220.0, 2.0, 100.0)
+		"tentacles":
+			# Tentacles reach out and slam down, one after another.
+			var color := Color(String(looks.get("tentacle", "#8e5bd6")))
+			var spots: Array = e.get("spots", [])
+			for i in spots.size():
+				var spot := to_screen(spots[i][0], spots[i][1])
+				var arm := fx.effect("tentacle", at, maxf(12.0, 380 * s), color, 0.5)
+				arm.end = spot
+				arm.age = -i * Feel.num("styles", "tentacle_stagger_seconds", 0.08)
+				var slam := fx.effect("ring", spot, 900 * s, Color(String(looks.get("water", "#9fdcff"))), 0.4, "", true)
+				slam.age = arm.age - 0.15
+			shake(Feel.num("styles", "slam_shake", 0.14))
+			Sound.play("boom", -8.0, 0.1)
+		"chain":
+			# Lightning jumping from one to the next.
+			var points := PackedVector2Array()
+			for i in e.get("points", []).size():
+				var point: Array = e.points[i]
+				var who := view_for_uid(int(e.uid)) if i == 0 else null
+				points.append(who.middle() if who != null else to_screen(point[0], point[1]) - Vector2(0, 16))
+			var bolt := fx.effect("lightning", at, maxf(6.0, 120 * s), Color(String(looks.get("lightning", "#fff27a"))), 0.35)
+			bolt.points = points
+			for i in range(1, points.size()):
+				fx.effect("flash", points[i], 300 * s, Color(1, 1, 0.8, 0.8), 0.18)
+			Sound.play("zap", -4.0, 0.1)
+		"chest_beat":
+			# Beating its chest: thumps rippling out.
+			for i in 3:
+				var thump := fx.effect("ring", at, 500 * s, Color(String(looks.get("shock", "#f3e3c0"))), 0.25)
+				thump.age = -i * 0.15
+			Sound.play("tick", -2.0, 0.1)
+		"shockwave":
+			var ground := to_screen(e.x, e.y)
+			var shock := Color(String(looks.get("shock", "#f3e3c0")))
+			fx.effect("ring", ground, e.radius * s, shock, 0.55, "", true)
+			fx.effect("ring", ground, e.radius * s * 0.7, Color.WHITE, 0.4, "", true)
+			fx.effect("dust", ground, e.radius * s * 0.8, Color("#c9b08a"), 0.6, "", true)
+			shake(Feel.num("styles", "shock_shake", 0.22))
+			Sound.play("boom", -2.0, 0.1)
+		"stand_tall":
+			var orange := Color(String(looks.get("panda", "#ff8a3d")))
+			fx.effect("ring", to_screen(e.x, e.y), e.radius * s, orange, 0.6, "", true)
+			fx.burst("sparkle", at - Vector2(0, 14), 6, 160.0, 0.5, 7.0, [orange, Color.WHITE], -30.0, 2.5)
+			Sound.play("alert", -4.0, 0.1)
 
 
 ## A hit the fight just dealt: the attacker's strike plays (its wind-up
@@ -1101,6 +1175,10 @@ func _schedule_hit(e: Dictionary) -> Dictionary:
 					delay = maxf(delay, float(_shot_land.get(int(e.from), _time)) - _time + Feel.num(st, "bounce_seconds", 0.05))
 					if origin != null and target != null:
 						flight = clampf(origin.pos.distance_to(target.pos) / 1000.0 / maxf(0.1, Feel.num(c, "shot_tiles_per_second", 14.0)), Feel.num(c, "shot_min_seconds", 0.12), Feel.num(c, "shot_max_seconds", 0.32))
+			# Into a Sloth's slow-motion zone: the shot crawls.
+			if target != null and target.fighter != null and attacker.fighter != null and sim != null \
+					and BattleStyles.shot_crawl(sim, attacker.fighter.team, target.fighter) > 0:
+				flight *= Feel.num(st, "crawl_flight", 2.0)
 			flight = fx.shoot(attacker, target, Vector2(e.x, e.y), delay, flight, arc, scale, origin)
 			delay += flight
 			_shot_land[int(e.from)] = _time + delay

@@ -13,9 +13,10 @@
    "urban",
    "nocturnal"
   ],
+  "shot": "trash",
   "stats": {
-   "hp": 360,
-   "damage": 76,
+   "hp": 433,
+   "damage": 91,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -46,8 +47,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 240,
-   "damage": 74,
+   "hp": 316,
+   "damage": 97,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 5,
@@ -477,8 +478,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 320,
-   "damage": 63,
+   "hp": 475,
+   "damage": 94,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -526,8 +527,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 460,
-   "damage": 103,
+   "hp": 405,
+   "damage": 91,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 2,
@@ -550,8 +551,8 @@
    "primate"
   ],
   "stats": {
-   "hp": 1360,
-   "damage": 150,
+   "hp": 1141,
+   "damage": 125,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -624,8 +625,8 @@
    "desert"
   ],
   "stats": {
-   "hp": 930,
-   "damage": 113,
+   "hp": 1084,
+   "damage": 131,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 5,

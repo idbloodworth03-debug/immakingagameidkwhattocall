@@ -513,14 +513,17 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 		# keeps on with the army.
 		place = place_of(f, false)
 	if t != null and sim.in_range(f, t):
-		if f.cls == "ranged" and not free:
+		if f.cls == "ranged" and not free and not BattleStyles.own_rhythm(f):
 			# Ranged fire together, on the volley clock; each shot carries
 			# the damage of the time since the last.
 			if volley_now[f.team]:
 				var first := sim.events.size()
 				sim.attack(f, t, 100 * volley_ticks / maxi(1, f.hit_ticks))
-				if first < sim.events.size():
-					sim.events[first].volley = sim.tick
+				# Every shot of it (a Squirrel's pinecones too) is part of the
+				# volley.
+				for k in range(first, sim.events.size()):
+					if sim.events[k].type == "hit" and int(sim.events[k].from) == f.uid:
+						sim.events[k].volley = sim.tick
 			f.cooldown = maxi(0, next_volley[f.team] - sim.tick) * 100 if next_volley[f.team] >= 0 else f.cooldown
 		elif f.cooldown <= 0:
 			sim.attack(f, t)

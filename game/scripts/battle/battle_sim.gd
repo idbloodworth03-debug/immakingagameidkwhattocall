@@ -524,6 +524,8 @@ func attack(f: Fighter, t: Fighter, pct := 100) -> void:
 	}
 	if t != aimed:
 		hit.guard = true
+	if f.style_kind != "":
+		hit.style = f.style_kind
 	events.append(hit)
 	var hp_before := t.hp
 	deal_damage(t, amount, f)

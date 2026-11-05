@@ -30,6 +30,13 @@ const STAGES := {
 	"stalk": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 9.5]]},
 	"venom": {"units": [[0, "self", 8, 12.5], [1, "brown_bear", 6.6, 10], [1, "snapping_turtle", 8, 9.6], [1, "giant_panda", 9.4, 10]]},
 	"triple": {"units": [[0, "self", 8, 12], [1, "wild_boar", 6.9, 10.4], [1, "honey_badger", 8, 10], [1, "wolf_pack", 9.1, 10.4]]},
+	"burst": {"units": [[0, "self", 8, 15], [1, "brown_bear", 7.4, 9.5], [1, "peregrine_falcon", 9.4, 9.8]]},
+	"spray": {"units": [[0, "self", 8, 13.5], [1, "wild_boar", 6.9, 10.6], [1, "wild_boar", 8, 10.2], [1, "wild_boar", 9.1, 10.6]]},
+	"lob": {"units": [[0, "self", 8, 16], [1, "brown_bear", 8, 11], [1, "gray_squirrel", 7.4, 8], [1, "gray_squirrel", 8.6, 8]]},
+	"sniper": {"units": [[0, "self", 8, 17.5], [1, "brown_bear", 8, 8.5]]},
+	"spit": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 9.5]]},
+	"bounce": {"units": [[0, "self", 8, 15.5], [1, "wild_boar", 6.6, 9.8], [1, "wild_boar", 8, 9.2], [1, "wild_boar", 9.4, 9.8]]},
+	"pierce": {"units": [[0, "self", 8, 16.5], [1, "wild_boar", 8, 11.5], [1, "wild_boar", 8.1, 10], [1, "wild_boar", 7.9, 8.5]]},
 }
 
 var field: BattleField
@@ -49,8 +56,11 @@ func _ready() -> void:
 	for id in GameData.card_order:
 		if GameData.styles.has(id) and STAGES.has(String(GameData.styles[id].kind)):
 			_ids.append(id)
+	# By class (as they line up in battle), then in the cards' own order.
 	_ids.sort_custom(func(a: String, b: String) -> bool:
-		return GameData.class_order.find(GameData.class_of(a)) < GameData.class_order.find(GameData.class_of(b)))
+		var ca := GameData.class_order.find(GameData.class_of(a))
+		var cb := GameData.class_order.find(GameData.class_of(b))
+		return ca < cb if ca != cb else GameData.card_order.find(a) < GameData.card_order.find(b))
 	var safe := UIStyle.safe_margins(get_viewport())
 	var column := UIStyle.vbox("s")
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

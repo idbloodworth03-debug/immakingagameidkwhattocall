@@ -94,6 +94,23 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 			"fearless":
 				if _fighting(f):
 					_puffs(dt, "puff", _color("rage", "#ff5a3c"), Vector2(0.0, -0.9), Vector2(0, -70), 0.5, 8.0)
+			"spit":
+				var at := int(f.memory.get("spit_at", -1))
+				var sim := view.field.sim if view.field != null else null
+				if at >= 0 and sim != null:
+					# Cheeks puffing up as it charges, a green glow.
+					var total := maxf(1.0, float(f.sp("charge", 1.5)) * sim.tps)
+					var charged := clampf(1.0 - float(at - sim.tick) / total, 0.0, 1.0)
+					state = "spit"
+					p.sx = 1.0 + 0.2 * charged
+					p.sy = 1.0 - 0.06 * charged
+					p.tint = Color(1.0, 1.0, 1.0).lerp(Color("#c8f0d8"), 0.4 * charged)
+					_puffs(dt, "sparkle", Color("#e6f5f0"), Vector2(0.0, -0.75), Vector2(0, -30), 0.15, 6.0)
+			"sniper":
+				if view.attacking(now):
+					# Its hood flares as it takes aim.
+					p.sx = 1.14
+					p.sy = 1.04
 			"triple":
 				if _fighting(f):
 					_puffs(dt, "glow", _color("fire", "#ff6a2a"), Vector2(0.0, -0.85), Vector2(0, -60), 0.4, 4.5)
@@ -109,6 +126,9 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 		if int(f.memory.get("roared", -1)) > view.field.sim.tick:
 			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("roar", "#ffc93c"), 0.35)
 			_status_puffs(dt, "sparkle", _color("roar", "#ffc93c"), 0.3)
+		# Sprayed by a Skunk: stink lines rising.
+		if int(f.memory.get("stink_until", -1)) > view.field.sim.tick:
+			_status_puffs(dt, "puff", _color("stink", "#c8d84a"), 0.2)
 		# Poisoned: green, dripping.
 		if f.poison > 0:
 			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("venom", "#7ee04a"), 0.45)

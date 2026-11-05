@@ -39,7 +39,7 @@
     "_note": "How many animals one card brings into a fight (a squad), and how strong each one is, by class: `units` animals, each with hp_pct and damage_pct of the card's health and bite (so a squad of 3 at 36% is a little more than one animal at 100%). radius: how much room each takes (tiles). spacing: how far apart neighbours stand in a line (tiles, centre to centre). line_max: how many fit in one line before a second line forms behind. leash: how far (tiles) an animal may leave its place in the formation to fight. Specialists are single elite animals, stronger each, standing on the flanks. A Mythic (any class) is one big hero carrying share_pct of a whole squad of its class (all of its squad's health and bite in one animal), drawn hero_scale times as big.",
     "tank": {"units": 1, "hp_pct": 150, "damage_pct": 130, "radius": 0.6, "spacing": 1.45, "line_max": 7, "leash": 1.0},
     "tank_destroyer": {"units": 2, "hp_pct": 66, "damage_pct": 66, "radius": 0.42, "spacing": 1.1, "line_max": 10, "leash": 1.4},
-    "ranged": {"units": 3, "hp_pct": 28, "damage_pct": 27, "radius": 0.34, "spacing": 0.88, "line_max": 12, "leash": 0.4},
+    "ranged": {"units": 3, "hp_pct": 34, "damage_pct": 31, "radius": 0.34, "spacing": 0.88, "line_max": 12, "leash": 0.4},
     "air": {"units": 2, "hp_pct": 55, "damage_pct": 55, "radius": 0.4, "spacing": 1.35, "line_max": 8, "leash": 2.4},
     "specialist": {"units": 1, "hp_pct": 140, "damage_pct": 135, "radius": 0.5, "spacing": 1.2, "line_max": 4, "leash": 1.6, "elite": true},
     "mythic": {"units": 1, "share_pct": 100, "radius": 0.78, "spacing": 1.8, "leash": 1.6, "hero_scale": 1.3}

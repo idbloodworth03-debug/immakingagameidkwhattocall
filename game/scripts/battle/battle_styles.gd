@@ -49,10 +49,26 @@ extends RefCounted
 ##   triple (Cerberus): every attack is three bites of `pct` each, spread
 ##     over the enemies within its reach plus `reach` tiles (the one it's
 ##     after again if there aren't three).
+##
+## Ranged:
+##   burst (Gray Squirrel): every shot is `pellets` little pinecones (the
+##     same damage between them).
+##   spray (Striped Skunk): a short spray (`range` tiles) that also hits
+##     everyone else in a `cone`-degree cone, for `pct` of its bite.
+##   lob (Raccoon): lobs its trash at the enemy furthest back in its reach.
+##   sniper (King Cobra): `range` tiles of reach; its shots come
+##     `slow_pct` slower and hit as much harder.
+##   spit (Wild Bactrian Camel): charges up for `charge` seconds, then one
+##     giant spit of `spit_pct` of its bite (its own rhythm, not the volley).
+##   bounce (Sumatran Orangutan): its fruit bounces on to `bounces` more
+##     enemies, each within `reach` tiles of the last, for `pct` of its bite.
+##   pierce (Unicorn): its beam goes on through the line, hitting every
+##     enemy along it (within `width` tiles) for `pct` of its bite.
 
 const T := BattleSim.TILE
 const KINDS := ["cleave", "shell", "snack", "reflect", "guard", "rhino_charge", "pound",
-	"rush", "pack", "roar", "fearless", "stalk", "venom", "triple"]
+	"rush", "pack", "roar", "fearless", "stalk", "venom", "triple",
+	"burst", "spray", "lob", "sniper", "spit", "bounce", "pierce"]
 ## Reach (field units) from which a blow counts as a shot.
 const SHOT_REACH := 1500
 
@@ -72,8 +88,16 @@ static func bite(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, pct
 
 # --- Hooks ---------------------------------------------------------------------
 
-static func on_spawn(_sim: BattleSim, _f: BattleSim.Fighter) -> void:
-	pass
+static func on_spawn(_sim: BattleSim, f: BattleSim.Fighter) -> void:
+	match f.style_kind:
+		"spray":
+			f.attack_range = tiles(f.sp("range", 3.0))
+		"sniper":
+			f.attack_range = maxi(f.attack_range, tiles(f.sp("range", 10.0)))
+			var slow := int(f.sp("slow_pct", 160))
+			f.hit_ticks = maxi(1, f.hit_ticks * slow / 100)
+			f.damage = maxi(1, f.damage * slow / 100)
+			f.cooldown = f.hit_ticks * 50
 
 
 ## Every tick, for every animal (even stunned): its style's timers.
@@ -122,7 +146,15 @@ static func act(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 			return _rhino_charge(sim, f)
 		"stalk":
 			return _stalk(sim, f)
+		"spit":
+			return _spit(sim, f)
 	return false
+
+
+## Whether `f` keeps its own rhythm rather than firing with its army's
+## volleys (the Camel, charging up its spit).
+static func own_rhythm(f: BattleSim.Fighter) -> bool:
+	return f.style_kind == "spit"
 
 
 ## How much faster than usual `f` attacks this tick (percent).
@@ -161,6 +193,8 @@ static func attack_amount(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fig
 					return amount * (100 + int(f.sp("pct", 40))) / 100
 		"triple":
 			return amount * int(f.sp("pct", 45)) / 100
+		"burst":
+			return amount / maxi(1, int(f.sp("pellets", 3)))
 	return amount
 
 
@@ -195,6 +229,16 @@ static func prefer_target(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fig
 			return best
 		"venom":
 			return _nearest(sim, f, tiles(f.sp("reach", 5.0)), func(e): return e.poison <= 0)
+		"lob":
+			# The one furthest back of those in reach (its army's back ranks).
+			var best: BattleSim.Fighter = null
+			for e: BattleSim.Fighter in sim.fighters:
+				if e.team == f.team or not e.alive or not e.is_unit() or not sim.can_target(f, e) or not sim.in_range(f, e):
+					continue
+				var back := -e.y if f.team == 0 else e.y
+				if best == null or back > (-best.y if f.team == 0 else best.y):
+					best = e
+			return best
 	return null
 
 
@@ -214,7 +258,7 @@ static func _nearest(sim: BattleSim, f: BattleSim.Fighter, reach: int, ok: Calla
 
 
 ## After `f` lands a blow of `amount` on `t`.
-static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, _amount: int) -> void:
+static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, amount: int) -> void:
 	if not t.is_unit():
 		return
 	match f.style_kind:
@@ -234,6 +278,15 @@ static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter
 			_venom(sim, f, t)
 		"triple":
 			_triple(sim, f, t)
+		"burst":
+			for k in range(1, maxi(1, int(f.sp("pellets", 3)))):
+				sim.strike(f, t, amount, {"ranged": true, "pellet": k, "style": "burst"})
+		"spray":
+			_spray(sim, f, t)
+		"bounce":
+			_bounce(sim, f, t)
+		"pierce":
+			_pierce(sim, f, t)
 		"cleave":
 			_cleave(sim, f, t)
 		"pound":
@@ -298,6 +351,96 @@ static func redirect(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter)
 			best = g
 			best_gap = gap
 	return best if best != null else t
+
+
+# --- Ranged ---------------------------------------------------------------------
+
+## The Skunk's spray: everyone else in the cone toward its target gets it
+## too, and goes stinky for a moment.
+static func _spray(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	var dx := t.x - f.x
+	var dy := t.y - f.y
+	var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+	var cos_half := roundi(cos(deg_to_rad(float(f.sp("cone", 60)) / 2.0)) * 1000.0)
+	var reach := f.attack_range + f.radius
+	var stink := sim.tick + ticks(sim, 1.0)
+	t.memory.stink_until = stink
+	for e: BattleSim.Fighter in sim.fighters:
+		if e == t or e.team == f.team or not e.alive or not e.is_unit() or not sim.can_target(f, e):
+			continue
+		var ex := e.x - f.x
+		var ey := e.y - f.y
+		var ed := maxi(1, BattleSim.isqrt(ex * ex + ey * ey))
+		if ed - e.radius > reach or (ex * dx + ey * dy) * 1000 / (ed * d) < cos_half:
+			continue
+		e.memory.stink_until = stink
+		sim.strike(f, e, bite(sim, f, e, f.sp("pct", 70)), {"style": "spray"})
+	sim.events.append({"type": "spray", "uid": f.uid, "x": f.x, "y": f.y, "tx": t.x, "ty": t.y, "reach": reach, "cone": int(f.sp("cone", 60))})
+
+
+## The Orangutan's fruit bounces on from enemy to enemy.
+static func _bounce(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	var hit := [t.uid]
+	var last := t
+	var reach := tiles(f.sp("reach", 2.5))
+	for k in range(1, int(f.sp("bounces", 2)) + 1):
+		var next: BattleSim.Fighter = null
+		var best := 1 << 40
+		for e: BattleSim.Fighter in sim.fighters:
+			if e.team == f.team or not e.alive or not e.is_unit() or hit.has(e.uid) or not sim.can_target(f, e):
+				continue
+			var d := BattleSim.edge_distance(last, e)
+			if d <= reach and d < best:
+				next = e
+				best = d
+		if next == null:
+			return
+		hit.append(next.uid)
+		sim.strike(f, next, bite(sim, f, next, f.sp("pct", 70)), {"ranged": true, "bounce": k, "bounce_from": last.uid, "style": "bounce"})
+		last = next
+
+
+## The Unicorn's beam goes on through its target, hitting everyone along
+## the line out to its reach.
+static func _pierce(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	var dx := t.x - f.x
+	var dy := t.y - f.y
+	var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+	var length := f.attack_range + f.radius + T
+	var width := tiles(f.sp("width", 0.3))
+	for e: BattleSim.Fighter in sim.fighters:
+		if e == t or e.team == f.team or not e.alive or not e.is_unit() or not sim.can_target(f, e):
+			continue
+		var ex := e.x - f.x
+		var ey := e.y - f.y
+		var along := (ex * dx + ey * dy) / d
+		var side := absi(ey * dx - ex * dy) / d
+		if along > 0 and along <= length and side <= e.radius + width:
+			sim.strike(f, e, bite(sim, f, e, f.sp("pct", 60)), {"style": "pierce"})
+	sim.events.append({"type": "pierce", "uid": f.uid, "x": f.x, "y": f.y,
+		"ex": f.x + dx * length / d, "ey": f.y + dy * length / d})
+
+
+## The Camel: in reach and ready, it charges up (standing still), then lets
+## fly one giant spit.
+static func _spit(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var t := f.target
+	var at := int(f.memory.get("spit_at", -1))
+	var ok := t != null and t.alive and sim.can_target(f, t) and sim.in_range(f, t)
+	if at >= 0:
+		if not ok:
+			f.memory.spit_at = -1
+			return false
+		if sim.tick >= at:
+			f.memory.spit_at = -1
+			sim.attack(f, t, int(f.sp("spit_pct", 300)))
+			f.cooldown = f.hit_ticks * 100
+		return true
+	if ok and f.cooldown <= 0:
+		f.memory.spit_at = sim.tick + ticks(sim, f.sp("charge", 1.5))
+		sim.events.append({"type": "spit_charge", "uid": f.uid, "x": f.x, "y": f.y})
+		return true
+	return false
 
 
 # --- Tank Destroyers -------------------------------------------------------------

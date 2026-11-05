@@ -129,13 +129,16 @@ func allow_sparks(amount: int) -> bool:
 ## `delay` seconds) and flies `flight` seconds (or so: some looks fly
 ## slower, data/shots.json) to `target`, following it, or to `to` (field
 ## units) if it has no view. Gives the real flight time.
-func shoot(attacker: UnitView, target: UnitView, to: Vector2, delay: float, flight: float, arc := 1.0) -> float:
+## `scale`: its size (a giant spit, little pinecones); `origin`: where it
+## flies from if not the attacker (a fruit bouncing on from the last one hit).
+func shoot(attacker: UnitView, target: UnitView, to: Vector2, delay: float, flight: float, arc := 1.0, scale := 1.0, origin: UnitView = null) -> float:
 	var look := ShotLooks.look_for(GameData.cards.get(attacker.id, {}))
-	if arc != 1.0:
+	if arc != 1.0 or scale != 1.0:
 		look = look.duplicate()
 		look.arc = float(look.get("arc", 0.3)) * arc
+		look.size = float(look.get("size", 0.2)) * scale
 	flight *= ShotLooks.flight_scale(look)
-	projectiles.append({"attacker": attacker, "target": target, "to": to, "from": Vector2.ZERO,
+	projectiles.append({"attacker": attacker, "target": target, "to": to, "from": Vector2.ZERO, "origin": origin,
 		"launch": time + delay, "land": time + delay + flight, "trail": [], "look": look})
 	return flight
 
@@ -238,6 +241,8 @@ func _draw_projectile(pr: Dictionary) -> void:
 	if not pr.has("launched"):
 		pr.launched = true
 		var shooter: UnitView = pr.attacker if is_instance_valid(pr.attacker) else null
+		if pr.get("origin") != null and is_instance_valid(pr.origin):
+			shooter = pr.origin
 		pr.from = shooter.middle() if shooter != null else field.to_screen(pr.to.x, pr.to.y)
 	var target: UnitView = pr.target if is_instance_valid(pr.target) else null
 	var to: Vector2 = target.middle() if target != null else field.to_screen(pr.to.x, pr.to.y) + Vector2(0, -10.0)
@@ -285,6 +290,29 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			canvas.draw_arc(p, r, minf(from, to), maxf(from, to), 18, Color(UIKit.INK, 0.45 * fade), 14.0)
 			canvas.draw_arc(p, r, minf(from, to), maxf(from, to), 18, Color(color, 0.95 * fade), 8.0)
 			canvas.draw_arc(p, r * 0.86, minf(from, to), maxf(from, to), 18, Color(color, 0.6 * fade), 4.0)
+		"cone":
+			# A spray fanning out toward its target.
+			var ang: float = fx.dir.angle()
+			var half := deg_to_rad(float(fx.get("spread", 60.0)) / 2.0)
+			var reach := r * Ease.out_cubic(clampf(t * 3.0, 0.0, 1.0))
+			var fan := PackedVector2Array([p])
+			for i in 9:
+				var u := ang - half + 2.0 * half * i / 8.0
+				fan.append(p + Vector2(cos(u), sin(u) * 0.75) * reach)
+			canvas.draw_colored_polygon(fan, Color(color, 0.4 * (1.0 - t)))
+			canvas.draw_polyline(fan + PackedVector2Array([p]), Color(color.lightened(0.3), 0.7 * (1.0 - t)), 3.0)
+		"rainbow":
+			# A rainbow beam right through the line.
+			var end: Vector2 = fx.get("end", p)
+			var dir := (end - p).normalized()
+			var across := Vector2(-dir.y, dir.x)
+			var bands := [Color("#ff6b6b"), Color("#ffb347"), Color("#fff176"), Color("#7ee08a"), Color("#6ec6ff"), Color("#b39ddb")]
+			var fade := 1.0 - Ease.in_cubic(t)
+			var width := r * (1.0 - 0.5 * t)
+			for i in bands.size():
+				var off := across * (i - 2.5) * width / bands.size()
+				canvas.draw_line(p + off, end + off, Color(bands[i], 0.85 * fade), maxf(2.0, width / bands.size() + 1.0))
+			canvas.draw_line(p, end, Color(1, 1, 1, 0.6 * fade), maxf(1.5, width * 0.15))
 		"shield":
 			# A curved shield flashing up on the side a shot came from.
 			var ang: float = fx.dir.angle()

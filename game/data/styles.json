@@ -13,5 +13,12 @@
   "honey_badger": {"kind": "fearless", "line": "Fearless: always picks the biggest enemy.", "reach": 4.0},
   "tiger": {"kind": "stalk", "line": "Circles the flank, pounces from the side.", "flank": 2.0, "speed_pct": 130, "pounce": 1.8, "pounce_pct": 220, "first_pct": 180},
   "komodo_dragon": {"kind": "venom", "line": "Venom bite keeps hurting; moves to the next.", "seconds": 4.0, "dps_pct": 40, "reach": 5.0},
-  "cerberus": {"kind": "triple", "line": "Three heads, three bites every attack.", "pct": 42, "reach": 0.6}
+  "cerberus": {"kind": "triple", "line": "Three heads, three bites every attack.", "pct": 42, "reach": 0.6},
+  "gray_squirrel": {"kind": "burst", "line": "Rapid fire: lots of little pinecones.", "pellets": 3},
+  "striped_skunk": {"kind": "spray", "line": "Stink spray hits a whole group.", "range": 4.5, "cone": 60, "pct": 90},
+  "raccoon": {"kind": "lob", "line": "Lobs trash over the line at the back."},
+  "king_cobra": {"kind": "sniper", "line": "Sniper: shoots farthest, from the very back.", "range": 10.0, "slow_pct": 160},
+  "wild_bactrian_camel": {"kind": "spit", "line": "Charges up one giant spit.", "charge": 1.5, "spit_pct": 350},
+  "sumatran_orangutan": {"kind": "bounce", "line": "Bouncing fruit hits up to three.", "bounces": 2, "pct": 50, "reach": 2.5},
+  "unicorn": {"kind": "pierce", "line": "Rainbow beam pierces the whole line.", "pct": 60, "width": 0.3}
 }

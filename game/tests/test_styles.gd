@@ -307,3 +307,106 @@ func test_cerberus_bites_three_times() -> void:
 	sim2.attack(alone, one)
 	var hits := sim2.events.slice(events_before).filter(func(e): return e.type == "hit" and int(e.to) == one.uid).size()
 	check_eq(hits, 3, "alone, all three bites on the one")
+
+
+# --- Ranged ---------------------------------------------------------------------
+
+func test_gray_squirrel_fires_little_pinecones() -> void:
+	var sim := _sim()
+	var squirrel := _one(sim, 0, "gray_squirrel", 8, 14)
+	var bear := _one(sim, 1, "brown_bear", 8, 9)
+	bear.stun = 9999
+	var start := sim.events.size()
+	var hp := bear.hp
+	sim.attack(squirrel, bear)
+	var shots := sim.events.slice(start).filter(func(e): return e.type == "hit")
+	check_eq(shots.size(), int(GameData.styles.gray_squirrel.pellets), "three pinecones a shot")
+	check(shots.all(func(e): return bool(e.ranged)), "all of them thrown")
+	var one_bite := BattleAbilities.outgoing_damage(sim, squirrel, bear, squirrel.damage)
+	check(absi((hp - bear.hp) - one_bite) <= 3, "the same damage as one shot between them (%d vs %d)" % [hp - bear.hp, one_bite])
+
+
+func test_striped_skunk_sprays_a_whole_group() -> void:
+	var sim := _sim()
+	var skunk := _one(sim, 0, "striped_skunk", 8, 12)
+	check(skunk.attack_range <= roundi(float(GameData.styles.striped_skunk.range) * T), "a short spray")
+	var target := _one(sim, 1, "wild_boar", 8, 10)
+	var beside := _one(sim, 1, "wild_boar", 8.9, 10.1)
+	var behind_it := _one(sim, 1, "wild_boar", 8, 15)
+	for f in [target, beside, behind_it]:
+		f.stun = 9999
+	var hp := [beside.hp, behind_it.hp]
+	sim.attack(skunk, target)
+	check(beside.hp < hp[0], "the one beside its target gets it too")
+	check_eq(behind_it.hp, hp[1], "not one behind the skunk")
+	check(int(beside.memory.get("stink_until", -1)) > sim.tick, "and goes stinky")
+
+
+func test_raccoon_lobs_at_the_back_ranks() -> void:
+	var sim := _sim()
+	var raccoon := _one(sim, 0, "raccoon", 8, 16)
+	var front := _one(sim, 1, "brown_bear", 8, 12)
+	var back := _one(sim, 1, "gray_squirrel", 8.5, 9.5)
+	front.stun = 9999
+	back.stun = 9999
+	sim.step()
+	check(raccoon.target == back, "over the bear in front, at the one at the back")
+
+
+func test_king_cobra_snipes_from_far() -> void:
+	var sim := _sim()
+	var cobra := _one(sim, 0, "king_cobra", 8, 18)
+	var squirrel := _one(sim, 0, "gray_squirrel", 9, 18)
+	check(cobra.attack_range >= roundi(float(GameData.styles.king_cobra.range) * T), "10 tiles of reach")
+	check(cobra.attack_range > squirrel.attack_range, "further than any other shooter")
+	var bear := _one(sim, 1, "brown_bear", 8, 9)
+	bear.stun = 9999
+	check(sim.in_range(cobra, bear), "it reaches a bear 9 tiles off")
+	check(not sim.in_range(squirrel, bear), "the squirrel doesn't")
+
+
+func test_camel_charges_one_giant_spit() -> void:
+	var sim := _sim()
+	var camel := _one(sim, 0, "wild_bactrian_camel", 8, 13)
+	var bear := _one(sim, 1, "brown_bear", 8, 9)
+	bear.stun = 9999
+	camel.target = bear
+	camel.cooldown = 0
+	var hp := bear.hp
+	var charge := float(GameData.styles.wild_bactrian_camel.charge)
+	_run(sim, charge - 0.2)
+	check_eq(bear.hp, hp, "nothing while it charges up")
+	check(int(camel.memory.get("spit_at", -1)) >= 0, "charging")
+	_run(sim, 0.4)
+	var spit := hp - bear.hp
+	var bite := BattleAbilities.outgoing_damage(sim, camel, bear, camel.damage)
+	check(spit >= bite * (int(GameData.styles.wild_bactrian_camel.spit_pct) - 10) / 100, "then one giant spit (%d, a bite is %d)" % [spit, bite])
+
+
+func test_orangutan_fruit_bounces_on() -> void:
+	var sim := _sim()
+	var ape := _one(sim, 0, "sumatran_orangutan", 8, 15)
+	var foes := [_one(sim, 1, "wild_boar", 8, 9), _one(sim, 1, "wild_boar", 9.6, 9.3), _one(sim, 1, "wild_boar", 11.0, 9.8)]
+	for f in foes:
+		f.stun = 9999
+	var hp := foes.map(func(f): return f.hp)
+	sim.attack(ape, foes[0])
+	var hit := 0
+	for i in foes.size():
+		if foes[i].hp < hp[i]:
+			hit += 1
+	check_eq(hit, 3, "one fruit, three enemies")
+
+
+func test_unicorn_beam_pierces_the_line() -> void:
+	var sim := _sim()
+	var unicorn := _one(sim, 0, "unicorn", 8, 16)
+	var first := _one(sim, 1, "wild_boar", 8, 12)
+	var second := _one(sim, 1, "wild_boar", 8.1, 10.5)
+	var aside := _one(sim, 1, "wild_boar", 11, 11)
+	for f in [first, second, aside]:
+		f.stun = 9999
+	var hp := [second.hp, aside.hp]
+	sim.attack(unicorn, first)
+	check(second.hp < hp[0], "the one behind its target in the line is hit too")
+	check_eq(aside.hp, hp[1], "not one off to the side")

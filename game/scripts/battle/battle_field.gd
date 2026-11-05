@@ -74,6 +74,9 @@ var _trauma := 0.0
 ## Hits on their way: {"at": when they land, "e": the fight's event,
 ## "target", "attacker": views, "after": events that land with them}.
 var _impacts: Array = []
+## When each shooter's latest shot lands (field time, by its uid): what it
+## sets off (a bounce, a pierce, a spray) lands with it.
+var _shot_land := {}
 ## Set by a test to keep a note of every hit as it lands (see _land).
 var impact_log: Array = []
 var log_impacts := false
@@ -786,7 +789,7 @@ func add_events(events: Array) -> void:
 				chain = _schedule_hit(e)
 			"death":
 				_doom(e, float(chain.at) if not chain.is_empty() else _time)
-			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple":
+			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple", "spray", "pierce":
 				# Shown when the hit they came with lands.
 				if not chain.is_empty() and float(chain.at) > _time:
 					chain.after.append(e)
@@ -826,7 +829,7 @@ func _show(e: Dictionary) -> void:
 			fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
 			Sound.play("pop", -6.0, 0.2)
 		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end", \
-				"slam", "pack_bite", "roar", "venom", "triple", "pounce":
+				"slam", "pack_bite", "roar", "venom", "triple", "pounce", "spray", "pierce", "spit_charge":
 			_show_style(e)
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
@@ -978,6 +981,21 @@ func _show_style(e: Dictionary) -> void:
 		"pounce":
 			fx.burst("puff", to_screen(e.x, e.y), 5, 140.0, 0.4, 7.0, [Color(String(looks.get("pounce", "#ff9a2e"))), Color("#ffe0b0")], -20.0, 3.0)
 			Sound.play("whoosh", -6.0, 0.1)
+		"spray":
+			var toward := to_screen(e.tx, e.ty) - Vector2(0, 10)
+			var cone := fx.effect("cone", at, int(e.reach) * s, Color(String(looks.get("spray", "#d6e05a"))), 0.45)
+			cone.dir = (toward - at).normalized()
+			cone.spread = float(e.cone)
+			for i in 5:
+				var u := (i + 1) / 6.0
+				fx.particle("puff", at.lerp(toward, u), (toward - at).normalized() * 60.0, 0.6, 9.0, Color(String(looks.get("stink", "#c8d84a")), 0.7), -20.0, 2.0)
+			Sound.play("pop", -9.0, 0.3)
+		"pierce":
+			var beam := fx.effect("rainbow", at, 22.0, Color.WHITE, 0.4)
+			beam.end = to_screen(e.ex, e.ey) - Vector2(0, 12)
+			Sound.play("zap", -8.0, 0.1)
+		"spit_charge":
+			Sound.play("tick", -10.0, 0.2)
 
 
 ## A hit the fight just dealt: the attacker's strike plays (its wind-up
@@ -1009,8 +1027,34 @@ func _schedule_hit(e: Dictionary) -> Dictionary:
 				var a := "army"
 				flight = clampf(tiles / maxf(0.1, Feel.num(a, "volley_tiles_per_second", 9.0)), Feel.num(a, "volley_min_seconds", 0.45), Feel.num(a, "volley_max_seconds", 0.85))
 				arc = Feel.num(a, "volley_arc", 1.8)
-			flight = fx.shoot(attacker, target, Vector2(e.x, e.y), delay, flight, arc)
+			# The shooter's attack style: how its shot flies.
+			var st := "styles"
+			var scale := 1.0
+			var origin: UnitView = null
+			match String(e.get("style", "")):
+				"lob":
+					arc *= Feel.num(st, "lob_arc", 2.2)
+					flight *= Feel.num(st, "lob_flight", 1.35)
+				"sniper":
+					arc *= 0.25
+					flight *= Feel.num(st, "sniper_flight", 0.55)
+				"spit":
+					scale = Feel.num(st, "spit_scale", 2.2)
+				"burst":
+					scale = Feel.num(st, "pellet_scale", 0.75)
+					delay += float(e.get("pellet", 0)) * Feel.num(st, "pellet_stagger_seconds", 0.07)
+				"bounce":
+					# On from the last one hit, once the fruit lands there.
+					origin = view_for_uid(int(e.get("bounce_from", -1)))
+					delay = maxf(delay, float(_shot_land.get(int(e.from), _time)) - _time + Feel.num(st, "bounce_seconds", 0.05))
+					if origin != null and target != null:
+						flight = clampf(origin.pos.distance_to(target.pos) / 1000.0 / maxf(0.1, Feel.num(c, "shot_tiles_per_second", 14.0)), Feel.num(c, "shot_min_seconds", 0.12), Feel.num(c, "shot_max_seconds", 0.32))
+			flight = fx.shoot(attacker, target, Vector2(e.x, e.y), delay, flight, arc, scale, origin)
 			delay += flight
+			_shot_land[int(e.from)] = _time + delay
+		elif String(e.get("style", "")) in ["spray", "pierce"]:
+			# Hit by the same spray or beam: lands with it.
+			delay = maxf(delay, float(_shot_land.get(int(e.from), _time)) - _time)
 		hit.at = _time + delay
 	if target != null and target.fighter != null:
 		hit.max_hp = target.fighter.max_hp

@@ -323,7 +323,7 @@
   },
 
   "styles": {
-    "_note": "How the animals' attack styles look (fx/style_look.gd on the animal, battle_field.gd for the moments; the rules are styles.json). The Brown Bear's swipe draws one wide arc across both targets for sweep_seconds. The Yeti glows frost the hit before its ground pound, which rings out in frost and shakes the field pound_shake. The turtle's shell is shell_width of its height across. A shot the Elephant takes for a teammate flashes a shield for shield_seconds. Colors for each. A Wild Boar's or Tiger's big first hit shakes the field slam_shake; Cerberus's three bites land bite_stagger_seconds apart. Profile > Developer tools > Attack styles starts each animal's little fight over every showcase_seconds, its enemies biting at showcase_enemy_bite_pct; Slow plays it at showcase_slow_speed.",
+    "_note": "How the animals' attack styles look (fx/style_look.gd on the animal, battle_field.gd for the moments; the rules are styles.json). The Brown Bear's swipe draws one wide arc across both targets for sweep_seconds. The Yeti glows frost the hit before its ground pound, which rings out in frost and shakes the field pound_shake. The turtle's shell is shell_width of its height across. A shot the Elephant takes for a teammate flashes a shield for shield_seconds. Colors for each. A Wild Boar's or Tiger's big first hit shakes the field slam_shake; Cerberus's three bites land bite_stagger_seconds apart. The Raccoon's trash flies lob_arc times higher and lob_flight times longer; the Cobra's shots take sniper_flight of the time, flat; the Camel's spit is spit_scale times as big; the Squirrel's pinecones are pellet_scale of a nut, pellet_stagger_seconds apart; the Orangutan's fruit bounces on bounce_seconds after it lands. Profile > Developer tools > Attack styles starts each animal's little fight over every showcase_seconds, its enemies biting at showcase_enemy_bite_pct; Slow plays it at showcase_slow_speed.",
     "showcase_seconds": 7.0,
     "showcase_enemy_bite_pct": 25,
     "showcase_slow_speed": 0.3,
@@ -346,6 +346,15 @@
     "venom": "#7ee04a",
     "fire": "#ff6a2a",
     "slam_shake": 0.14,
+    "lob_arc": 2.2,
+    "lob_flight": 1.35,
+    "sniper_flight": 0.55,
+    "spit_scale": 2.2,
+    "pellet_scale": 0.75,
+    "pellet_stagger_seconds": 0.07,
+    "bounce_seconds": 0.05,
+    "spray": "#d6e05a",
+    "stink": "#c8d84a",
     "bite_stagger_seconds": 0.07
   },
 

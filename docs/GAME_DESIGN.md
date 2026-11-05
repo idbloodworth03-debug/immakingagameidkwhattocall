@@ -520,6 +520,25 @@ in a little fight (with a Slow button).
     not poisoned yet.
   - **Cerberus**, "Three heads, three bites every attack.": three quick fiery
     bites (42% each), spread over the enemies in reach.
+- Ranged (every Ranged animal is a little tougher than before, 34% of its
+  card's health and 31% of its bite each, so they hold up now that
+  everyone fights everywhere):
+  - **Gray Squirrel**, "Rapid fire: lots of little pinecones.": every shot
+    is three little pinecones, a moment apart (the same damage between them).
+  - **Striped Skunk**, "Stink spray hits a whole group.": a short spray (4.5
+    tiles) that fans out and hits everyone in a 60-degree cone for 90%; the
+    sprayed give off stink lines.
+  - **Raccoon**, "Lobs trash over the line at the back.": it lobs tin cans in
+    high arcs at the enemy furthest back in its reach.
+  - **King Cobra**, "Sniper: shoots farthest, from the very back.": 10 tiles
+    of reach; slower, harder, fast flat shots; its hood flares as it aims.
+  - **Wild Bactrian Camel**, "Charges up one giant spit.": it stands still,
+    cheeks puffing up, for 1.5 s, then one giant spit for 3.5 times its bite
+    (its own rhythm, not the volley).
+  - **Sumatran Orangutan**, "Bouncing fruit hits up to three.": its fruit
+    bounces on to two more enemies (50% each).
+  - **Unicorn**, "Rainbow beam pierces the whole line.": a rainbow beam that
+    goes on through its target, hitting every enemy along it (60%).
 
 **On screen** there's only the score, the armies (a banner with its class
 icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no

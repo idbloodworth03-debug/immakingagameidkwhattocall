@@ -40,7 +40,7 @@
 - [x] Hearts instead of dens: 30 each; a lost fight costs the round number plus 1 per enemy animal still standing
 - [x] An open 16x20 field with no river, bridges or dens; animals go for the nearest enemy
 - [x] Classic battle removed, with its bot, the 8-card deck, energy and release requirements
-- [x] Your collection is your draft pool, and your cards fight at their levels (the opponent's are leveled to match)
+- [x] Your collection is your draft pool (now your deck of 8: see Phase 1d), and your cards fight at their levels (the opponent's are leveled to match)
 - [x] Abilities reworked for the new field (the Raccoon steals Acorns, the Hippo guards its own half, the Bison shoves)
 - [x] 12 arenas re-rendered as open, fenced fields
 - [x] Starters: pick up to 3 animals you own (within a 12-Acorn budget) to start the match with
@@ -60,6 +60,18 @@
 - [ ] A balance pass for the open field, from real play
 - [ ] Settle the open questions at the end of [GAME_DESIGN.md](GAME_DESIGN.md)
 - [ ] Online Draft Duel: picking is turn-based, so it suits online play well
+
+## Phase 1d: Armies (done; the standard way Draft Duel plays)
+
+- [x] Roster cut to 35 animals; the other 87 archived with their art kept (saves keep their levels)
+- [x] A deck of 8: chosen before a match (DECK on the home screen, last deck remembered); round 1 offers your 8, later rounds only your deck's animals and your tools; rivals bring decks that suit them
+- [x] New players start with 8 animals across all five classes plus the Net, which is also their first deck
+- [x] Squads: Tank 1, Tank Destroyer 2, Ranged 3, Air 2, elite Specialist 1, Mythic hero 1; picking an animal you have adds a squad, an upgrade stars every squad, armies stop at 40 animals
+- [x] Formations: Tank wall, Tank Destroyer line, Air over it, staggered Ranged ranks, Specialists on the flanks, heroes in the middle; squad banners; your army shown in formation while you pick, new squads marching in
+- [x] Battle phases: lineup and FIGHT!, the march in step, Ranged volleys, the clash, the Tank Destroyer charge, lines that hold and close up; the War Horn rouses the whole army; a camera that frames the battle line
+- [x] Unison for every army action; random variety only for idle fidgets and faces
+- [x] Tuned with bot-vs-bot reports (power, class against class, whole matches): every rarity on its target, Tank Destroyers beat Tanks, each class wins about half its fights
+- [x] Big army test (Profile > Developer tools): 40 against 40 runs smoothly on an iPhone
 
 ## Phase 2: Look and feel (first pass done)
 

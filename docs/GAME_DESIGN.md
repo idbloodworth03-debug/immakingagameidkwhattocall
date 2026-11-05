@@ -104,7 +104,9 @@ for the next fight. The camera frames the whole battle line, easing in as
 the armies close. The army that outlasts the other wins the round; at the
 bell (40 seconds), the one with more of itself left. Everyone marches,
 shoots and charges in unison; small random differences are kept only for
-standing about (breathing, fidgets, blinks, faces).
+standing about (breathing, fidgets, blinks, faces). The biggest armies (40 a
+side) run smoothly on an iPhone; Profile > Developer tools > Big army test
+checks it.
 
 **Big moments:** reaching 3 stars ("3 STARS!", stars and confetti), a
 flawless round ("FLAWLESS!"), and winning a match after being 2 rounds down

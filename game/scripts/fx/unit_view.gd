@@ -863,11 +863,28 @@ func animate(dt: float, now: float) -> void:
 	var t := _tuning()
 	var stiff := float(t.spring_stiffness)
 	var damp := float(t.spring_damping)
-	# Springs: squash and knockback settle back with a wobble.
-	squash_v += (-stiff * squash - damp * squash_v) * dt
-	squash += squash_v * dt
-	knock_v += (-stiff * knock - damp * knock_v) * dt
-	knock += knock_v * dt
+	# Springs: squash, knockback and flinch settle back with a wobble. They
+	# move in small steps (at most 1/60 s each) however long the frame was:
+	# in one big step (a slow frame, a hitch while pictures load) a stiff
+	# spring overshoots further every frame and blows up, stretching the
+	# animal into a strip or squashing it to nothing.
+	var substeps := clampi(ceili(dt * 60.0), 1, 30)
+	var step_dt := dt / substeps
+	for i in substeps:
+		squash_v += (-stiff * squash - damp * squash_v) * step_dt
+		squash += squash_v * step_dt
+		knock_v += (-stiff * knock - damp * knock_v) * step_dt
+		knock += knock_v * step_dt
+		_flinch_v += (-stiff * _flinch - damp * _flinch_v) * step_dt
+		_flinch += _flinch_v * step_dt
+	# (And a frame longer than half a second just settles them.)
+	if dt > 0.5:
+		squash = 0.0
+		squash_v = 0.0
+		knock = Vector2.ZERO
+		knock_v = Vector2.ZERO
+		_flinch = 0.0
+		_flinch_v = 0.0
 	flash = maxf(0.0, flash - dt / maxf(0.01, float(t.hit_flash_seconds)))
 	pop = minf(1.0, pop + dt / maxf(0.01, float(t.spawn_pop_seconds)))
 	upgrade = maxf(0.0, upgrade - dt / 0.6)
@@ -884,8 +901,6 @@ func animate(dt: float, now: float) -> void:
 	if defeat >= 0.0:
 		var lasts := float(t.fling_seconds) if _defeat_kind == "fling" else float(t.defeat_seconds)
 		defeat = minf(1.0, defeat + dt / maxf(0.05, lasts))
-	_flinch_v += (-stiff * _flinch - damp * _flinch_v) * dt
-	_flinch += _flinch_v * dt
 	# The health bar drains smoothly; the "damage taken" part waits, then follows.
 	bar_shown = move_toward(bar_shown, hp_ratio, dt * float(t.health_bar_drain_speed))
 	if hp_ratio > bar_trail:

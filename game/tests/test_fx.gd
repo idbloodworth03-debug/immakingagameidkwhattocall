@@ -117,3 +117,18 @@ func test_the_last_knockout_gets_a_close_up() -> void:
 	check(field.is_celebrating(), "the camera pushes in on it")
 	check(field.view_for_uid(bear.uid).is_celebrating(field.now() + 5.0) == false, "the winner's celebration doesn't last forever")
 	field.free()
+
+
+## Slow frames (a phone hitching while pictures load, or a slow browser)
+## must not make an animal's bounce blow up: it stays its own shape.
+func test_slow_frames_keep_animals_in_shape() -> void:
+	var made := _field()
+	var field: BattleField = made.field
+	var view := field.view_for_uid(made.boar.uid)
+	for frame_seconds in [1.0 / 9.0, 0.2, 0.35]:
+		view.hurt(Vector2(0, 1), true)
+		for i in 40:
+			field._process(frame_seconds)
+			check(absf(view.squash) < 1.0, "%.0f frames a second: its squash stays small (%.2f)" % [1.0 / frame_seconds, view.squash])
+			check(view.body.scale.y < 3.0 and view.body.scale.x > 0.2, "%.0f frames a second: no strips or lines (%.2f x %.2f)" % [1.0 / frame_seconds, view.body.scale.x, view.body.scale.y])
+	field.free()

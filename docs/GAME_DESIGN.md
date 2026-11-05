@@ -152,10 +152,27 @@ start, their big hits, and rounds going their way or not.
   difficulty and cards `ease_card_levels` lower. Nothing on screen says so.
 - Timings and sizes for the VS screen and emotes are in `feel.json` ("rivals").
 
-**Your deck of 8.** DRAFT DUEL opens your deck before every match: 8 big
-slots filled with your last deck, your collection below (tap a card to add
-or take it out). START (once all 8 slots are full) saves it and begins the
-match, so it's one tap if nothing changes.
+**Bans.** Once you own 11 animals, every match starts with bans
+(`scripts/ui/ban_screen.gd`, rules in `scripts/draft/ban_phase.gd`, numbers
+in `draft_rules.json` "bans"). A coin flip decides who bans first; then you
+and the rival take turns, 3 bans each (you, rival, you, rival, you, rival).
+Nobody can use a banned animal that match: not in a deck, never offered,
+never in an army. The screen is a grid of big cards (yours and every animal
+the rival could bring), a big "Your turn" / "Rival's turn" banner and each
+side's three ban slots; on your turn tap a card and BAN; the rival thinks a
+second (dots bouncing) and bans one of yours, going for what beats its
+favorite class (`threats`), your best-leveled and strongest first. Every
+ban stamps a big red X on its card with a thump. You can always fill a
+deck: 11 is a deck plus the rival's 3 bans, and a ban of one of your own is
+refused if it could leave you short. The first time, one line explains it.
+With fewer than 11 animals, matches go straight to your deck.
+
+**Your deck of 8.** DRAFT DUEL opens your deck before every match (after
+the bans): 8 big slots filled with your last deck, your collection below
+(tap a card to add or take it out). A slot that held a banned animal shows
+empty for you to fill, and banned animals are crossed out. START (once all
+8 slots are full) saves it and begins the match, so it's one tap if nothing
+changes.
 Round 1 offers exactly those 8, and you pick 3 to start. From round 2 the
 options are 4 animals from your deck's 8 and 2 of the tools you own (the
 computer gets the same). Every card

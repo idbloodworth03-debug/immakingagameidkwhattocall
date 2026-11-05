@@ -1,8 +1,10 @@
 extends Control
 ## Battle tab (the home screen): a window onto your arena, the Draft Duel
-## button (it opens your deck first) and the four cage slots.
+## button (it opens the bans first once you own enough animals, then your
+## deck) and the four cage slots.
 
 const DECK_SCENE := "res://scenes/deck.tscn"
+const BAN_SCENE := "res://scenes/ban.tscn"
 
 var _arena_holder: PanelContainer
 var _slots_row: HBoxContainer
@@ -38,8 +40,12 @@ func _ready() -> void:
 	battle.icon = UIKit.icon(GameData.ui_icon("tab_battle"))
 	battle.add_theme_constant_override("icon_max_width", 58)
 	battle.add_theme_constant_override("h_separation", 14)
-	# Every match starts with your deck of 8 (filled with your last one).
-	battle.pressed.connect(func() -> void: Transition.go(DECK_SCENE))
+	# Every match starts with the bans (once you own enough animals), then
+	# your deck of 8 (filled with your last one).
+	battle.pressed.connect(func() -> void:
+		MatchPlan.clear()
+		var owned := GameData.card_order.filter(func(id): return Profile.has_card(id) and not GameData.is_tool(id)).size()
+		Transition.go(BAN_SCENE if BanPhase.unlocked(owned) else DECK_SCENE))
 	battle.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(battle)
 	# A gentle pulse so the main button invites a tap.

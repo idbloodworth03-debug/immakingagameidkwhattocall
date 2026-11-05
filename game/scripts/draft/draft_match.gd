@@ -46,6 +46,9 @@ var tools_ready := [[], []]
 ## The cards each player's options come from: their deck of animals and
 ## their tools.
 var pools := [[], []]
+## Animals nobody can use this match (the ban phase): left out of both
+## pools, so they're never offered or put in an army.
+var banned: Array = []
 ## This round's options for each team: {"id": String, "taken": bool}. In
 ## round 1, every animal in the player's deck.
 var offers := [[], []]
@@ -84,15 +87,17 @@ var _dice := [RandomNumberGenerator.new(), RandomNumberGenerator.new()]
 
 
 ## `setup` may hold "levels" (two dictionaries of card id -> level; a card
-## not listed fights at its rarity's starting level) and "pool" (the card
-## ids both players draw from) or "pools" (one list per player).
+## not listed fights at its rarity's starting level), "pool" (the card ids
+## both players draw from) or "pools" (one list per player), and "banned"
+## (animals nobody may use this match).
 func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}) -> void:
 	rules = draft_rules if not draft_rules.is_empty() else GameData.draft_rules
 	rng.seed = seed_value
 	sim = BattleSim.new(setup.get("levels", [{}, {}]), seed_value)
 	var pool: Array = setup.get("pool", GameData.card_order)
 	var both: Array = setup.get("pools", [pool, pool])
-	pools = [both[0].duplicate(), both[1].duplicate()]
+	banned = setup.get("banned", []).duplicate()
+	pools = [both[0].filter(func(id): return not banned.has(id)), both[1].filter(func(id): return not banned.has(id))]
 	fight_ticks = roundi(float(rules.fight_seconds) * sim.tps)
 	for team in 2:
 		_dice[team].seed = seed_value * 31 + team + 1

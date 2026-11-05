@@ -307,6 +307,9 @@ func validate() -> Array:
 		problems.append("There must be at least %d starting tools to fill the Draft Duel tool options" % int(draft_rules.get("offer_tools", 2)))
 	if starter_animals < int(draft_rules.get("offer_animals", 4)):
 		problems.append("There must be at least %d starting animals to fill the Draft Duel animal options" % int(draft_rules.get("offer_animals", 4)))
+	var bans: Dictionary = draft_rules.get("bans", {})
+	if int(bans.get("unlock_owned", 11)) < int(draft_rules.get("deck_size", 8)) + int(bans.get("per_player", 3)):
+		problems.append("Bans must unlock at a deck plus the rival's bans at least, so a deck can always be filled")
 	if starter_animals < int(draft_rules.get("picks_per_round", 3)):
 		problems.append("At least %d starting cards must be animals" % int(draft_rules.get("picks_per_round", 3)))
 	var starter_classes := {}

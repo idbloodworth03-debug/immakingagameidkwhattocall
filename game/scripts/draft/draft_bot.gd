@@ -81,8 +81,8 @@ static func build_deck(available: Array, bot_style: Dictionary, rng: RandomNumbe
 ## (topped up from the starting cards, then the earliest arenas' animals,
 ## where too few are unlocked yet), leaning to its favorite class
 ## (build_deck).
-static func rival_deck(arena_index: int, bot_style: Dictionary, rng: RandomNumberGenerator, difficulty := 0.5, size := 8) -> Array:
-	var unlocked: Array = GameData.card_order.filter(func(id): return not GameData.is_tool(id) and int(GameData.cards[id].unlock_arena_index) <= arena_index)
+static func rival_deck(arena_index: int, bot_style: Dictionary, rng: RandomNumberGenerator, difficulty := 0.5, size := 8, banned: Array = []) -> Array:
+	var unlocked: Array = GameData.card_order.filter(func(id): return not GameData.is_tool(id) and not banned.has(id) and int(GameData.cards[id].unlock_arena_index) <= arena_index)
 	if unlocked.size() < size:
 		var more: Array = GameData.progression.get("starting_cards", []).duplicate()
 		var by_arena: Array = GameData.card_order.duplicate()
@@ -91,7 +91,7 @@ static func rival_deck(arena_index: int, bot_style: Dictionary, rng: RandomNumbe
 		for id in more:
 			if unlocked.size() >= size:
 				break
-			if not GameData.is_tool(id) and not unlocked.has(id):
+			if not GameData.is_tool(id) and not unlocked.has(id) and not banned.has(id):
 				unlocked.append(id)
 	return build_deck(unlocked, bot_style, rng, difficulty, size)
 

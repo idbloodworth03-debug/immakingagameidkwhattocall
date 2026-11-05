@@ -279,6 +279,21 @@
     "army_min_tiles": 9.0
   },
 
+  "bans": {
+    "_note": "The ban screen before a match (scripts/ui/ban_screen.gd). card: [width, height] of each animal card in the grid (columns across). The coin flip spins for coin_seconds. The rival thinks for between the two think_seconds before each ban (dots bouncing by its face). A ban stamps a big red X on the card: it drops in over stamp_seconds from stamp_scale times its size, with a shake of stamp_shake pixels. After the last ban, the screen waits done_seconds and goes on to your deck.",
+    "card": [158, 214],
+    "columns": 4,
+    "coin_seconds": 1.2,
+    "think_seconds": [0.8, 1.2],
+    "stamp_seconds": 0.28,
+    "stamp_scale": 2.6,
+    "stamp_shake": 10.0,
+    "stamp_color": "#e0302a",
+    "done_seconds": 1.0,
+    "you_color": "#3b8ff0",
+    "rival_color": "#e0523b"
+  },
+
   "grade": {
     "_note": "A warm afternoon grade over the whole game, darker toward the edges (a gentle vignette). Colors are in ui_style.json (grade_center, grade_edge); strength 0 turns it off without removing it.",
     "enabled": true,

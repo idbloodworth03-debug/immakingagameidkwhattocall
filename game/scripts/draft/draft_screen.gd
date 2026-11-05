@@ -54,6 +54,8 @@ var _pick_title: Label
 var _slots: Array = []
 var _options_holder: Control
 var _option_cards: Array = []
+## Animals nobody can use this match (the ban phase).
+var _banned: Array = []
 var _herd_scroll: ScrollContainer
 var _herd_row: HBoxContainer
 ## Your army in formation while you pick (new squads march into place; tap
@@ -83,10 +85,13 @@ func _ready() -> void:
 	# win would take you up), with their own way of playing (see Opponents).
 	# You pick from your deck and your tools; the rival brings a deck of its
 	# own that suits it, at about your card levels.
-	opponent = Opponents.next_for_player(_rng)
-	var mine: Array = DraftMatch.with_enough(Profile.get_deck() + Profile.owned_tools())
+	# The rival and the bans come from the ban screen, if there was one.
+	opponent = MatchPlan.opponent if not MatchPlan.opponent.is_empty() else Opponents.next_for_player(_rng)
+	_banned = MatchPlan.banned.duplicate()
+	MatchPlan.clear()
+	var mine: Array = DraftMatch.with_enough(Profile.get_deck().filter(func(id): return not _banned.has(id)) + Profile.owned_tools())
 	var theirs := _rival_pool(opponent, mine)
-	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs]})
+	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs], "banned": _banned})
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
 	_build()
 	Sound.play_music("battle")
@@ -106,7 +111,7 @@ func _ready() -> void:
 func _rival_pool(rival: Dictionary, player_pool: Array) -> Array:
 	var arena := int(rival.get("arena_index", 0))
 	var size := int(GameData.draft_rules.get("deck_size", 8))
-	var deck := DraftBot.rival_deck(arena, rival.get("style", {}), _rng, float(rival.get("difficulty", 0.5)), size)
+	var deck := DraftBot.rival_deck(arena, rival.get("style", {}), _rng, float(rival.get("difficulty", 0.5)), size, _banned)
 	var tools: Array = GameData.card_order.filter(func(id): return GameData.is_tool(id) and int(GameData.cards[id].unlock_arena_index) <= arena)
 	var want := maxi(int(GameData.draft_rules.offer_tools), player_pool.filter(func(id): return GameData.is_tool(id)).size())
 	while tools.size() > want:

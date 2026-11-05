@@ -7,6 +7,25 @@
   "army_max_units": 40,
   "offer_animals": 4,
   "offer_tools": 2,
+  "bans": {
+    "_note": "Before a match, once a player owns at least unlock_owned animals (a deck plus the rival's bans, so a deck can always be filled): a coin flip decides who bans first, then the two take turns until each has banned per_player animals. Nobody can use a banned animal that match. A ban of one of your own animals is refused if it could leave you fewer than a deck's worth once the rival's bans are in. The computer bans your animals that beat its favorite class (threats: favorite class -> the classes that beat it) at threat, your animals at owned (plus level for each level above the rarity's start), each point of power (cost) at power, and never likes banning its favorite class (favorite, negative); a weaker rival adds more luck (luck_easy to luck_hard).",
+    "per_player": 3,
+    "unlock_owned": 11,
+    "threats": {
+      "tank": ["tank_destroyer"],
+      "tank_destroyer": ["air"],
+      "air": ["ranged"],
+      "ranged": ["tank_destroyer"],
+      "specialist": ["air"]
+    },
+    "threat": 5.0,
+    "owned": 3.0,
+    "level": 0.5,
+    "power": 0.4,
+    "favorite": -6.0,
+    "luck_easy": 4.0,
+    "luck_hard": 1.0
+  },
   "rarity_weights": {
     "common": 55,
     "rare": 27,

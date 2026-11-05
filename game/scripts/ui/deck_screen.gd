@@ -3,13 +3,18 @@ extends Control
 ## from (your tools come along). Eight big slots at the top, filled with
 ## your last deck, so START is one tap if nothing changes; tap an animal
 ## from your collection below to add it, a card in the deck to take it out.
+## After a ban phase (MatchPlan.banned), a slot that held a banned animal
+## shows empty for you to fill, and banned animals are crossed out below.
 ## START saves the deck and begins the match once all 8 slots are full.
 
 const MENU_SCENE := "res://scenes/main.tscn"
 const MATCH_SCENE := "res://scenes/draft.tscn"
 
+## The deck's slots in order ("" for an empty one).
 var _deck: Array = []
 var _size := 8
+## Animals nobody can use this match (the ban phase).
+var _banned: Array = []
 var _slots: GridContainer
 var _collection: GridContainer
 var _count: Label
@@ -20,7 +25,11 @@ func _ready() -> void:
 	theme = UIStyle.theme()
 	add_child(UIStyle.backdrop())
 	_size = int(GameData.draft_rules.get("deck_size", 8))
-	_deck = Profile.get_deck()
+	_banned = MatchPlan.banned.duplicate()
+	var saved: Array = Profile.get_deck()
+	for i in _size:
+		var id: String = saved[i] if i < saved.size() else ""
+		_deck.append("" if _banned.has(id) else id)
 	var safe := UIStyle.safe_margins(get_viewport())
 	var column := UIKit.vbox(12)
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -32,7 +41,9 @@ func _ready() -> void:
 
 	var top := UIKit.hbox(12)
 	var back := UIStyle.button("Back", "secondary", "", -1, "small")
-	back.pressed.connect(func() -> void: Transition.go(MENU_SCENE))
+	back.pressed.connect(func() -> void:
+		MatchPlan.clear()
+		Transition.go(MENU_SCENE))
 	top.add_child(back)
 	var title := UIStyle.label("YOUR DECK", "title", Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -100,7 +111,7 @@ func _refresh() -> void:
 			grid.remove_child(child)
 			child.queue_free()
 	for i in _size:
-		if i < _deck.size():
+		if _deck[i] != "":
 			var id: String = _deck[i]
 			var card := AnimalCard.create(id)
 			card.info = AnimalCard.Info.LEVEL
@@ -114,19 +125,32 @@ func _refresh() -> void:
 		if _deck.has(id):
 			card.stamp = "IN DECK"
 			card.modulate = Color(1, 1, 1, 0.55)
+		elif _banned.has(id):
+			card.self_modulate = Color(0.5, 0.5, 0.55)
+			var x := BanX.new()
+			x.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+			card.add_child(x)
 		UIKit.on_tap(card, func() -> void: _toggle(id))
 		_collection.add_child(card)
-	_count.text = "%d/%d" % [_deck.size(), _size]
-	_done.disabled = _deck.size() < _size
+	_count.text = "%d/%d" % [_filled(), _size]
+	_done.disabled = _filled() < _size
 
 
-## Adds an animal to the deck, or takes it out if it's in.
+func _filled() -> int:
+	return _deck.filter(func(id): return id != "").size()
+
+
+## Adds an animal to the deck (in the first empty slot), or takes it out if
+## it's in. A banned one can't go in.
 func _toggle(id: String) -> void:
 	if _deck.has(id):
-		_deck.erase(id)
+		_deck[_deck.find(id)] = ""
 		Sound.play("tap", -4.0)
-	elif _deck.size() < _size:
-		_deck.append(id)
+	elif _banned.has(id):
+		Sound.play("error", -4.0)
+		return
+	elif _deck.has(""):
+		_deck[_deck.find("")] = id
 		Sound.play("pop", -4.0)
 	else:
 		# Full: a little shake of the deck says so.
@@ -142,7 +166,7 @@ func _toggle(id: String) -> void:
 
 
 func _save() -> void:
-	if _deck.size() < _size:
+	if _filled() < _size:
 		return
 	Profile.set_deck(_deck)
 	Sound.play("upgrade", -4.0)

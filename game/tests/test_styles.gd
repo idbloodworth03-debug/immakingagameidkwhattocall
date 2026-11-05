@@ -410,3 +410,114 @@ func test_unicorn_beam_pierces_the_line() -> void:
 	sim.attack(unicorn, first)
 	check(second.hp < hp[0], "the one behind its target in the line is hit too")
 	check_eq(aside.hp, hp[1], "not one off to the side")
+
+
+# --- Air ------------------------------------------------------------------------
+
+func test_peregrine_falcon_dives_then_climbs() -> void:
+	var sim := _sim()
+	var falcon := _one(sim, 0, "peregrine_falcon", 8, 14)
+	var boar := _one(sim, 1, "wild_boar", 8, 9)
+	boar.stun = 9999
+	falcon.target = boar
+	check(BattleStyles.speed_bonus(sim, falcon) > 0, "diving at its prey, fast")
+	var hp := boar.hp
+	sim.attack(falcon, boar)
+	var dive := hp - boar.hp
+	var plain := BattleAbilities.outgoing_damage(sim, falcon, boar, falcon.damage)
+	check(dive >= plain * (int(GameData.styles.peregrine_falcon.dive_pct) - 5) / 100, "a dive hits harder (%d, a plain bite %d)" % [dive, plain])
+	var y := falcon.y
+	sim.step()
+	check(falcon.y > y, "then it climbs away")
+
+
+func test_barn_owl_hunts_the_ranged() -> void:
+	var sim := _sim()
+	var owl := _one(sim, 0, "barn_owl", 8, 15)
+	var front := _one(sim, 1, "wild_boar", 8, 12)
+	var back := _one(sim, 1, "gray_squirrel", 8, 7)
+	front.stun = 9999
+	back.stun = 9999
+	sim.step()
+	check(owl.target == back, "past the boar, after the squirrel at the back")
+	# Silent: the Ranged it hunts barely notice it.
+	var hp := owl.hp
+	sim.strike(back, owl, 100)
+	check_eq(hp - owl.hp, int(GameData.styles.barn_owl.ranged_taken_pct), "Ranged hurt it less (of a 100 blow)")
+	hp = owl.hp
+	sim.strike(front, owl, 100)
+	check_eq(hp - owl.hp, 100, "others as much as ever")
+
+
+func test_harpy_eagle_carries_one_off() -> void:
+	var sim := _sim()
+	var harpy := _one(sim, 0, "harpy_eagle", 8, 11)
+	var squirrel := _one(sim, 1, "gray_squirrel", 8, 10)
+	var start := squirrel.y
+	sim.attack(harpy, squirrel)
+	check(squirrel.memory.has("carried_by"), "grabbed")
+	for i in 5 * sim.tps:
+		sim.step()
+		if not squirrel.memory.has("carried_by"):
+			break
+	check(not squirrel.memory.has("carried_by"), "and dropped")
+	check(squirrel.y - start >= 3 * T, "far back over the eagle's own side (%.1f tiles)" % ((squirrel.y - start) / float(T)))
+	var bear := _one(sim, 1, "brown_bear", 9, 10)
+	harpy.memory.grab_ready = 0
+	sim.attack(harpy, bear)
+	check(not bear.memory.has("carried_by"), "a bear is too big to carry")
+
+
+func test_hyacinth_macaw_cracks_armor() -> void:
+	var sim := _sim()
+	var macaw := _one(sim, 0, "hyacinth_macaw", 8, 11)
+	var hippo := _one(sim, 0, "hippopotamus", 9, 11)
+	var bear := _one(sim, 1, "brown_bear", 8, 9.6)
+	bear.stun = 9999
+	var hp := bear.hp
+	sim.attack(hippo, bear)
+	var before := hp - bear.hp
+	sim.attack(macaw, bear)
+	hp = bear.hp
+	sim.attack(hippo, bear)
+	var after := hp - bear.hp
+	check(absi(after - before * (100 + int(GameData.styles.hyacinth_macaw.pct)) / 100) <= 3, "everyone hits it 25%% harder (%d, then %d)" % [before, after])
+	macaw.stun = 9999
+	hippo.stun = 9999
+	_run(sim, float(GameData.styles.hyacinth_macaw.seconds) + 0.1)
+	hp = bear.hp
+	sim.attack(hippo, bear)
+	check(absi((hp - bear.hp) - before) <= 3, "for a few seconds")
+
+
+func test_california_condor_grows_on_every_fall() -> void:
+	var sim := _sim()
+	var condor := _one(sim, 0, "california_condor", 8, 11)
+	var bear := _one(sim, 1, "brown_bear", 8, 9.6)
+	bear.stun = 9999
+	var hp := bear.hp
+	sim.attack(condor, bear)
+	var before := hp - bear.hp
+	for i in 3:
+		var squirrel := _one(sim, 1, "gray_squirrel", 9, 10)
+		sim.deal_damage(squirrel, squirrel.hp, null)
+	var far := _one(sim, 1, "gray_squirrel", 1, 1)
+	sim.deal_damage(far, far.hp, null)
+	check_eq(int(condor.memory.get("feasts", 0)), 3, "three fell near it (not the one far off)")
+	hp = bear.hp
+	sim.attack(condor, bear)
+	var after := hp - bear.hp
+	check(after > before, "its bite grows (%d, then %d)" % [before, after])
+
+
+func test_dragon_leaves_a_burning_line() -> void:
+	var sim := _sim()
+	var dragon := _one(sim, 0, "dragon", 8, 15)
+	var boars := [_one(sim, 1, "wild_boar", 8, 10), _one(sim, 1, "wild_boar", 8, 8.5)]
+	for b in boars:
+		b.stun = 9999
+	sim.step()
+	check(sim.zones.any(func(z): return z.has("line")), "a fire-breath run lays a burning line")
+	var hp := boars.map(func(b): return b.hp)
+	_run(sim, 1.0)
+	check(boars[0].hp < hp[0] and boars[1].hp < hp[1], "that burns the enemies along it")

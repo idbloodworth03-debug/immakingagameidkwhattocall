@@ -28,7 +28,7 @@
     "contact_gap": 1.6,
     "damage_pct": 200,
     "war": {
-      "_note": "All-out war (battle_army.gd): from the clash, or once a front has been held up by a fight for after_hold_seconds, nobody keeps its place or waits. Every animal goes for an enemy anywhere on the field. A fighter (reach under shooter_reach tiles) takes an open spot next to its target, checked every spot_seconds; each teammate already on that enemy makes it count crowd_cost tiles further away, and full_cost more once there's no room left around it, so attackers spread along the whole enemy line. Walking there, it looks look_ahead tiles ahead and passes anyone in its way (teammates, and enemies it isn't after) with pass_margin tiles to spare, on round the same side to the end of a line. It only switches to another enemy (not yet in reach) at least switch_margin tiles nearer. Shooters close in until they're in reach; nothing blocks their shots.",
+      "_note": "All-out war (battle_army.gd): from the clash, or once a front has been held up by a fight for after_hold_seconds, nobody keeps its place or waits. Every animal goes for an enemy anywhere on the field. A fighter (reach under shooter_reach tiles) takes an open spot next to its target, checked every spot_seconds; each teammate already on that enemy makes it count crowd_cost tiles further away, and full_cost more once there's no room left around it, so attackers spread along the whole enemy line. Walking there, it looks look_ahead tiles ahead and passes anyone in its way (teammates, and enemies it isn't after) with pass_margin tiles to spare, on round the same side to the end of a line; once it steps aside, it keeps on to the spot beside them for up to detour_seconds (rather than turning straight back into them). It only switches to another enemy (not yet in reach) at least switch_margin tiles nearer. Shooters close in until they're in reach; nothing blocks their shots.",
       "after_hold_seconds": 1.0,
       "shooter_reach": 1.5,
       "spot_seconds": 0.15,
@@ -36,7 +36,8 @@
       "full_cost": 6.0,
       "look_ahead": 1.2,
       "pass_margin": 0.15,
-      "switch_margin": 0.8
+      "switch_margin": 0.8,
+      "detour_seconds": 0.4
     }
   }
 }

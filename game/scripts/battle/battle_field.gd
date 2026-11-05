@@ -789,7 +789,8 @@ func add_events(events: Array) -> void:
 				chain = _schedule_hit(e)
 			"death":
 				_doom(e, float(chain.at) if not chain.is_empty() else _time)
-			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple", "spray", "pierce":
+			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple", "spray", "pierce", \
+					"dive_hit", "crack", "grab", "drop", "feast":
 				# Shown when the hit they came with lands.
 				if not chain.is_empty() and float(chain.at) > _time:
 					chain.after.append(e)
@@ -829,7 +830,8 @@ func _show(e: Dictionary) -> void:
 			fx.burst("star", top, 4, 70.0, 0.9, 7.0, [Color("#ffe14d"), Color.WHITE], 0.0, 2.5)
 			Sound.play("pop", -6.0, 0.2)
 		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end", \
-				"slam", "pack_bite", "roar", "venom", "triple", "pounce", "spray", "pierce", "spit_charge":
+				"slam", "pack_bite", "roar", "venom", "triple", "pounce", "spray", "pierce", "spit_charge", \
+				"dive_hit", "crack", "grab", "drop", "feast", "fire_line":
 			_show_style(e)
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
@@ -996,6 +998,56 @@ func _show_style(e: Dictionary) -> void:
 			Sound.play("zap", -8.0, 0.1)
 		"spit_charge":
 			Sound.play("tick", -10.0, 0.2)
+		"dive_hit":
+			# The Falcon's dive lands: a white flash, feathers and sparks.
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			var white := Color(String(looks.get("speed_lines", "#ffffff")))
+			fx.effect("flash", hit_at, 420 * s, Color(white, 0.85), 0.2)
+			fx.effect("ring", hit_at, 700 * s, white, 0.3)
+			fx.effect("feathers", hit_at, 520 * s, Color("#d9c6a5"), 0.6)
+			fx.burst("spark", hit_at, 8, 380.0, 0.3, 8.0, [white, Color("#fff6b0")], 0.0, 5.0)
+			shake(Feel.num("styles", "slam_shake", 0.14) * 0.7)
+			Sound.play("whoosh", -6.0, 0.1)
+		"crack":
+			# The Macaw cracks its target's armor: blue shards flying off.
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			var blue := Color(String(looks.get("crack", "#3d8bff")))
+			fx.effect("ring", hit_at, 520 * s, blue, 0.3)
+			fx.burst("spark", hit_at, 7, 260.0, 0.35, 7.0, [blue, Color.WHITE], 200.0, 3.0)
+			Sound.play("pop", -6.0, 0.3)
+		"grab":
+			# The Harpy Eagle's talons snatch it up.
+			var target := view_for_uid(int(e.to))
+			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
+			var claws := fx.effect("slash", hit_at, 760 * s, Color("#f2c14e"), 0.4)
+			claws.dir = Vector2.DOWN
+			fx.effect("feathers", hit_at, 480 * s, Color("#8a8f99"), 0.6)
+			fx.burst("puff", to_screen(e.x, e.y), 5, 140.0, 0.4, 8.0, [Color("#c9b08a"), Color("#e6d3b0")], -20.0, 2.5)
+			Sound.play("whoosh", -4.0, 0.1)
+		"drop":
+			# ...and drops it far back: a thud and a cloud of dust.
+			var ground := to_screen(e.x, e.y)
+			fx.effect("dust", ground, 1000 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.5, "", true)
+			fx.effect("ring", ground, 800 * s, Color("#f3e3c0"), 0.4, "", true)
+			shake(Feel.num("styles", "slam_shake", 0.14))
+			Sound.play("land", -2.0, 0.1)
+		"feast":
+			# A wisp flies from the fallen animal into the Condor, which grows.
+			var wisp := fx.effect("wisp", to_screen(e.x, e.y) - Vector2(0, 14), 340 * s, Color(String(looks.get("feast", "#b48cff"))), Feel.num("styles", "feast_seconds", 0.45))
+			wisp.end = at
+			var swell := fx.effect("ring", at, 700 * s, Color(String(looks.get("feast", "#b48cff"))), 0.35)
+			swell.age = -Feel.num("styles", "feast_seconds", 0.45)
+			Sound.play("heal", -10.0, 0.2)
+		"fire_line":
+			# The Dragon's fire-breath run: a line of fire along the ground,
+			# its flames drawn over the animals standing in it.
+			var line := fx.effect("fire_line", to_screen(e.x1, e.y1), maxf(8.0, int(e.width) * s), Color(String(looks.get("fire", "#ff6a2a"))), float(e.seconds))
+			line.end = to_screen(e.x2, e.y2)
+			line.reveal = Feel.num("styles", "fire_reveal_seconds", 0.35)
+			line.flame = Color(String(looks.get("flame", "#ffc23a")))
+			Sound.play("whoosh", -2.0, 0.05)
 
 
 ## A hit the fight just dealt: the attacker's strike plays (its wind-up

@@ -87,6 +87,7 @@ var crowd_cost := 600
 var full_cost := 6000
 var spot_ticks := 3
 var switch_margin := 800
+var detour_ticks := 8
 ## Reach (field units) from which an animal counts as a shooter: it needs no
 ## spot of its own next to its target.
 var shooter_reach := 1500
@@ -115,6 +116,7 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	full_cost = roundi(float(w.get("full_cost", 6.0)) * T)
 	spot_ticks = maxi(1, roundi(float(w.get("spot_seconds", 0.15)) * tps))
 	switch_margin = roundi(float(w.get("switch_margin", 0.8)) * T)
+	detour_ticks = maxi(1, roundi(float(w.get("detour_seconds", 0.4)) * tps))
 	shooter_reach = roundi(float(w.get("shooter_reach", 1.5)) * T)
 	bite_pct = int(a.get("damage_pct", 100))
 
@@ -848,7 +850,16 @@ func _go(sim: BattleSim, f: BattleSim.Fighter, goal: Vector2i, speed: int) -> vo
 			block_along = along
 			block_side = side
 	if block == null:
+		# On its way round someone: it keeps on to the spot beside them for a
+		# moment, rather than turning straight back into them.
+		var way_until := int(f.memory.get("way_until", -1))
+		if way_until > sim.tick:
+			var spot: Vector2i = f.memory.way
+			if BattleSim.dist_to_point(f, spot.x, spot.y) > speed:
+				sim.move_toward_point(f, spot, speed)
+				return
 		f.memory.detour = 0
+		f.memory.way_until = -1
 		sim.move_toward_point(f, goal, speed)
 		return
 	var turn := int(f.memory.get("detour", 0))
@@ -862,6 +873,8 @@ func _go(sim: BattleSim, f: BattleSim.Fighter, goal: Vector2i, speed: int) -> vo
 	var way := Vector2i(block.x - dy * turn * clear / d, block.y + dx * turn * clear / d)
 	way.x = clampi(way.x, f.radius, sim.width - f.radius)
 	way.y = clampi(way.y, f.radius, sim.height - f.radius)
+	f.memory.way = way
+	f.memory.way_until = sim.tick + detour_ticks
 	sim.move_toward_point(f, way, speed)
 
 ## The nearest point to `goal` no more than `leash` from `place`.

@@ -114,8 +114,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 510,
-   "damage": 234,
+   "hp": 423,
+   "damage": 194,
    "hit_speed": 1.3,
    "speed": "very_fast",
    "range": 1,
@@ -444,8 +444,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 1370,
-   "damage": 216,
+   "hp": 1507,
+   "damage": 238,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,
@@ -504,8 +504,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 460,
-   "damage": 173,
+   "hp": 598,
+   "damage": 225,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -527,8 +527,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 405,
-   "damage": 91,
+   "hp": 370,
+   "damage": 83,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 2,
@@ -577,8 +577,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 600,
-   "damage": 191,
+   "hp": 680,
+   "damage": 216,
    "hit_speed": 1.4,
    "speed": "fast",
    "range": 1,
@@ -601,8 +601,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 610,
-   "damage": 173,
+   "hp": 711,
+   "damage": 201,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -648,8 +648,8 @@
    "flying"
   ],
   "stats": {
-   "hp": 1490,
-   "damage": 264,
+   "hp": 1401,
+   "damage": 248,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,

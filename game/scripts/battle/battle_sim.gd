@@ -299,6 +299,8 @@ func _update_zones() -> void:
 					zone.acc[f.uid] = int(zone.acc.get(f.uid, 0)) + int(zone.hps)
 					heal(f, int(zone.acc[f.uid]) / tps)
 					zone.acc[f.uid] = int(zone.acc[f.uid]) % tps
+		if zone.has("line"):
+			BattleStyles.burn(self, zone)
 	zones = zones.filter(func(z): return z.ticks > 0)
 
 

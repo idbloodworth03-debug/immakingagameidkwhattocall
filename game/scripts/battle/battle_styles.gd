@@ -64,11 +64,31 @@ extends RefCounted
 ##     enemies, each within `reach` tiles of the last, for `pct` of its bite.
 ##   pierce (Unicorn): its beam goes on through the line, hitting every
 ##     enemy along it (within `width` tiles) for `pct` of its bite.
+##
+## Air:
+##   dive (Peregrine Falcon): dives at its prey `speed_pct` faster, hits for
+##     `dive_pct` of its bite, then climbs away for `climb` seconds.
+##   hunt (Barn Owl): goes for the nearest enemy Ranged within `reach`
+##     tiles, past the front line; Ranged hurt it only `ranged_taken_pct`
+##     as much (it's silent).
+##   grab (Harpy Eagle): every `every` seconds it grabs a small enemy it hits
+##     (on the ground, no wider than `small` tiles), carries it `carry` tiles
+##     back over its own army and drops it (`drop_pct` of its bite, stunned
+##     `stun` seconds).
+##   crack (Hyacinth Macaw): its target takes `pct` more damage from
+##     everyone for `seconds`.
+##   feast (California Condor): `pct` more bite for every animal that falls
+##     within `radius` tiles of it, up to `most` times.
+##   strafe (Dragon): every `every` seconds, a fire-breath run over the
+##     nearest enemy at `speed_pct` faster, leaving a burning line `tiles`
+##     long (`width` tiles either side) that burns enemies on the ground for
+##     `dps_pct` of its bite a second, for `seconds`.
 
 const T := BattleSim.TILE
 const KINDS := ["cleave", "shell", "snack", "reflect", "guard", "rhino_charge", "pound",
 	"rush", "pack", "roar", "fearless", "stalk", "venom", "triple",
-	"burst", "spray", "lob", "sniper", "spit", "bounce", "pierce"]
+	"burst", "spray", "lob", "sniper", "spit", "bounce", "pierce",
+	"dive", "hunt", "grab", "crack", "feast", "strafe"]
 ## Reach (field units) from which a blow counts as a shot.
 const SHOT_REACH := 1500
 
@@ -148,6 +168,12 @@ static func act(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 			return _stalk(sim, f)
 		"spit":
 			return _spit(sim, f)
+		"dive":
+			return _climb(sim, f)
+		"grab":
+			return _carry(sim, f)
+		"strafe":
+			return _strafe(sim, f)
 	return false
 
 
@@ -166,6 +192,10 @@ static func haste_pct(sim: BattleSim, f: BattleSim.Fighter) -> int:
 
 ## How much faster than usual `f` moves (percent).
 static func speed_bonus(sim: BattleSim, f: BattleSim.Fighter) -> int:
+	if f.style_kind == "dive":
+		var t := f.target
+		if t != null and t.alive and not sim.in_range(f, t) and int(f.memory.get("climb_until", -1)) <= sim.tick:
+			return int(f.sp("speed_pct", 150))
 	if f.style_kind == "rush":
 		var t := f.target
 		if t != null and t.alive and t.cls == "tank" and not f.memory.get("slammed", []).has(t.uid) and not sim.in_range(f, t):
@@ -195,6 +225,10 @@ static func attack_amount(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fig
 			return amount * int(f.sp("pct", 45)) / 100
 		"burst":
 			return amount / maxi(1, int(f.sp("pellets", 3)))
+		"dive":
+			return amount * int(f.sp("dive_pct", 160)) / 100
+		"feast":
+			return amount * (100 + int(f.memory.get("feasts", 0)) * int(f.sp("pct", 8))) / 100
 	return amount
 
 
@@ -229,6 +263,8 @@ static func prefer_target(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fig
 			return best
 		"venom":
 			return _nearest(sim, f, tiles(f.sp("reach", 5.0)), func(e): return e.poison <= 0)
+		"hunt":
+			return _nearest(sim, f, tiles(f.sp("reach", 12.0)), func(e): return e.cls == "ranged")
 		"lob":
 			# The one furthest back of those in reach (its army's back ranks).
 			var best: BattleSim.Fighter = null
@@ -287,6 +323,20 @@ static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter
 			_bounce(sim, f, t)
 		"pierce":
 			_pierce(sim, f, t)
+		"dive":
+			# Up and away from where it struck.
+			var dx := f.x - t.x
+			var dy := f.y - t.y
+			var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+			f.memory.climb_dir = Vector2i(dx * 1000 / d, dy * 1000 / d)
+			f.memory.climb_until = sim.tick + ticks(sim, f.sp("climb", 0.6))
+			sim.events.append({"type": "dive_hit", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
+		"crack":
+			t.memory.cracked_until = sim.tick + ticks(sim, f.sp("seconds", 4.0))
+			t.memory.crack_pct = int(f.sp("pct", 25))
+			sim.events.append({"type": "crack", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
+		"grab":
+			_grab(sim, f, t)
 		"cleave":
 			_cleave(sim, f, t)
 		"pound":
@@ -297,7 +347,14 @@ static func after_hit(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter
 
 ## The damage `t` takes of `amount` (from `source`, or null).
 static func incoming(sim: BattleSim, t: BattleSim.Fighter, amount: int, source: BattleSim.Fighter) -> int:
+	# Cracked by a Macaw: everyone's blows hurt more.
+	if int(t.memory.get("cracked_until", -1)) > sim.tick:
+		amount = amount * (100 + int(t.memory.get("crack_pct", 0))) / 100
 	match t.style_kind:
+		"hunt":
+			# Silent: the Ranged it hunts barely notice it.
+			if source != null and source.cls == "ranged":
+				amount = amount * int(t.sp("ranged_taken_pct", 100)) / 100
 		"shell":
 			if int(t.memory.get("shell", 0)) > 0:
 				amount = amount * int(t.sp("taken_pct", 25)) / 100
@@ -351,6 +408,146 @@ static func redirect(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter)
 			best = g
 			best_gap = gap
 	return best if best != null else t
+
+
+## An animal fell: Condors near it grow stronger.
+static func on_defeated(sim: BattleSim, t: BattleSim.Fighter) -> void:
+	for c: BattleSim.Fighter in sim.fighters:
+		if c.style_kind != "feast" or not c.alive or c == t:
+			continue
+		if BattleSim.dist(c, t) <= tiles(c.sp("radius", 5.0)) and int(c.memory.get("feasts", 0)) < int(c.sp("most", 8)):
+			c.memory.feasts = int(c.memory.get("feasts", 0)) + 1
+			sim.events.append({"type": "feast", "uid": c.uid, "x": t.x, "y": t.y, "feasts": c.memory.feasts})
+
+
+## A burning line (the Dragon's) burns the enemies on the ground along it.
+static func burn(sim: BattleSim, zone: Dictionary) -> void:
+	var line: Array = zone.line
+	var ax: int = line[0]
+	var ay: int = line[1]
+	var bx: int = line[2]
+	var by: int = line[3]
+	var lx := bx - ax
+	var ly := by - ay
+	var length_sq := maxi(1, lx * lx + ly * ly)
+	for e: BattleSim.Fighter in sim.fighters:
+		if e.team == int(zone.team) or not e.alive or not e.is_unit() or e.is_flying() or e.memory.get("burrowing", false):
+			continue
+		# The nearest point of the line to it.
+		var u := clampi(((e.x - ax) * lx + (e.y - ay) * ly) * 1000 / length_sq, 0, 1000)
+		var px := ax + lx * u / 1000
+		var py := ay + ly * u / 1000
+		var reach := int(zone.width) + e.radius
+		if (e.x - px) * (e.x - px) + (e.y - py) * (e.y - py) > reach * reach:
+			continue
+		zone.acc[e.uid] = int(zone.acc.get(e.uid, 0)) + int(zone.dps)
+		var amount := int(zone.acc[e.uid]) / sim.tps
+		zone.acc[e.uid] = int(zone.acc[e.uid]) % sim.tps
+		if amount > 0:
+			sim.deal_damage(e, amount, null)
+
+
+# --- Air ------------------------------------------------------------------------
+
+## The Falcon climbs away after a dive (its turn while it does).
+static func _climb(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	if int(f.memory.get("climb_until", -1)) <= sim.tick:
+		return false
+	var dir: Vector2i = f.memory.climb_dir
+	var step := sim.current_speed(f)
+	f.x = clampi(f.x + dir.x * step / 1000, f.radius, sim.width - f.radius)
+	f.y = clampi(f.y + dir.y * step / 1000, f.radius, sim.height - f.radius)
+	return true
+
+
+## The Harpy Eagle grabs a small enemy it hits, when it's ready to.
+static func _grab(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	if sim.tick < int(f.memory.get("grab_ready", 0)) or not t.alive or t.is_flying():
+		return
+	if t.radius > tiles(f.sp("small", 0.42)) or t.memory.has("carried_by") or int(f.memory.get("carry", -1)) >= 0:
+		return
+	f.memory.carry = t.uid
+	f.memory.carry_left = tiles(f.sp("carry", 4.0))
+	f.memory.grab_ready = sim.tick + ticks(sim, f.sp("every", 6.0))
+	t.memory.carried_by = f.uid
+	t.stun = maxi(t.stun, 2)
+	t.target = null
+	sim.events.append({"type": "grab", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
+
+
+## Carrying its catch back over its own army, then dropping it.
+static func _carry(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var uid := int(f.memory.get("carry", -1))
+	if uid < 0:
+		return false
+	var victim: BattleSim.Fighter = null
+	for e: BattleSim.Fighter in sim.fighters:
+		if e.uid == uid:
+			victim = e
+			break
+	if victim == null or not victim.alive:
+		f.memory.carry = -1
+		return false
+	var back := 1 if f.team == 0 else -1
+	var step := mini(sim.current_speed(f), int(f.memory.carry_left))
+	var ny := clampi(f.y + back * step, f.radius, sim.height - f.radius)
+	var moved := absi(ny - f.y)
+	f.y = ny
+	f.memory.carry_left = int(f.memory.carry_left) - maxi(1, moved)
+	victim.x = clampi(f.x, victim.radius, sim.width - victim.radius)
+	victim.y = clampi(f.y, victim.radius, sim.height - victim.radius)
+	victim.stun = maxi(victim.stun, 2)
+	if int(f.memory.carry_left) <= 0 or moved == 0:
+		f.memory.carry = -1
+		victim.memory.erase("carried_by")
+		sim.strike(f, victim, bite(sim, f, victim, f.sp("drop_pct", 100)), {"drop": true})
+		sim.stun(victim, ticks(sim, f.sp("stun", 0.6)))
+		sim.events.append({"type": "drop", "uid": f.uid, "to": victim.uid, "x": victim.x, "y": victim.y})
+	return true
+
+
+## The Dragon's fire-breath run: over the nearest enemy and on, leaving a
+## burning line; its turn while it flies the run.
+static func _strafe(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	var left := int(f.memory.get("run_left", 0))
+	if left > 0:
+		var dir: Vector2i = f.memory.run_dir
+		var step := mini(sim.current_speed(f) * (100 + int(f.sp("speed_pct", 100))) / 100, left)
+		f.x = clampi(f.x + dir.x * step / 1000, f.radius, sim.width - f.radius)
+		f.y = clampi(f.y + dir.y * step / 1000, f.radius, sim.height - f.radius)
+		f.memory.run_left = left - step
+		return true
+	if sim.tick < int(f.memory.get("run_ready", 0)) or (sim.army != null and f.memory.has("slot") and not sim.army.at_war()):
+		return false
+	var near: BattleSim.Fighter = null
+	var near_d := 1 << 60
+	for e: BattleSim.Fighter in sim.fighters:
+		if e.team != f.team and e.alive and e.is_unit() and not e.is_flying() and sim.can_target(f, e):
+			var d := (e.x - f.x) * (e.x - f.x) + (e.y - f.y) * (e.y - f.y)
+			if d < near_d:
+				near = e
+				near_d = d
+	if near == null:
+		return false
+	var dx := near.x - f.x
+	var dy := near.y - f.y
+	var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+	var dir := Vector2i(dx * 1000 / d, dy * 1000 / d)
+	var length := tiles(f.sp("tiles", 5.0))
+	# The burning line: from just before its target to `tiles` on.
+	var ax := clampi(near.x - dir.x * T / 1000, 0, sim.width)
+	var ay := clampi(near.y - dir.y * T / 1000, 0, sim.height)
+	var bx := clampi(ax + dir.x * length / 1000, 0, sim.width)
+	var by := clampi(ay + dir.y * length / 1000, 0, sim.height)
+	var seconds := float(f.sp("seconds", 3.0))
+	sim.add_zone({"team": f.team, "line": [ax, ay, bx, by], "width": tiles(f.sp("width", 0.6)),
+		"dps": f.damage * int(f.sp("dps_pct", 60)) / 100, "ticks": ticks(sim, seconds), "x": (ax + bx) / 2, "y": (ay + by) / 2, "radius": length / 2})
+	f.memory.run_dir = dir
+	f.memory.run_left = BattleSim.isqrt((bx - f.x) * (bx - f.x) + (by - f.y) * (by - f.y))
+	f.memory.run_ready = sim.tick + ticks(sim, f.sp("every", 6.0))
+	sim.events.append({"type": "fire_line", "uid": f.uid, "x1": ax, "y1": ay, "x2": bx, "y2": by, "seconds": seconds,
+		"width": tiles(f.sp("width", 0.6))})
+	return true
 
 
 # --- Ranged ---------------------------------------------------------------------

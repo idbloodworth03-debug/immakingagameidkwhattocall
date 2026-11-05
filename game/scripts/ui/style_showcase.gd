@@ -37,6 +37,12 @@ const STAGES := {
 	"spit": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 9.5]]},
 	"bounce": {"units": [[0, "self", 8, 15.5], [1, "wild_boar", 6.6, 9.8], [1, "wild_boar", 8, 9.2], [1, "wild_boar", 9.4, 9.8]]},
 	"pierce": {"units": [[0, "self", 8, 16.5], [1, "wild_boar", 8, 11.5], [1, "wild_boar", 8.1, 10], [1, "wild_boar", 7.9, 8.5]]},
+	"dive": {"units": [[0, "self", 8, 14.5], [1, "wild_boar", 7, 9.5], [1, "wild_boar", 9, 9.8]]},
+	"hunt": {"units": [[0, "self", 8, 13.5], [1, "brown_bear", 8, 11.2], [1, "gray_squirrel", 7.4, 8.4], [1, "gray_squirrel", 8.6, 8.7]]},
+	"grab": {"units": [[0, "self", 8, 12.5], [1, "gray_squirrel", 7.4, 9.5], [1, "gray_squirrel", 8.6, 9.5]]},
+	"crack": {"units": [[0, "self", 8, 13], [0, "brown_bear", 6.6, 11.2], [1, "asian_elephant", 8, 9.4]]},
+	"feast": {"units": [[0, "self", 8, 13], [0, "wild_boar", 5.5, 11.4], [0, "wild_boar", 10.5, 11.4], [1, "gray_squirrel", 5.5, 9.8], [1, "gray_squirrel", 10.5, 9.8], [1, "gray_squirrel", 8, 9]]},
+	"strafe": {"units": [[0, "self", 3, 12.5], [1, "wild_boar", 6, 10], [1, "wild_boar", 7.15, 9.04], [1, "wild_boar", 8.3, 8.08], [1, "wild_boar", 9.45, 7.12]]},
 }
 
 var field: BattleField

@@ -20,5 +20,11 @@
   "king_cobra": {"kind": "sniper", "line": "Sniper: shoots farthest, from the very back.", "range": 10.0, "slow_pct": 160},
   "wild_bactrian_camel": {"kind": "spit", "line": "Charges up one giant spit.", "charge": 1.5, "spit_pct": 350},
   "sumatran_orangutan": {"kind": "bounce", "line": "Bouncing fruit hits up to three.", "bounces": 2, "pct": 50, "reach": 2.5},
-  "unicorn": {"kind": "pierce", "line": "Rainbow beam pierces the whole line.", "pct": 60, "width": 0.3}
+  "unicorn": {"kind": "pierce", "line": "Rainbow beam pierces the whole line.", "pct": 60, "width": 0.3},
+  "peregrine_falcon": {"kind": "dive", "line": "Super-fast dives, then climbs back up.", "dive_pct": 135, "speed_pct": 150, "climb": 0.6},
+  "barn_owl": {"kind": "hunt", "line": "Silent hunter: picks off enemy Ranged.", "reach": 12.0, "ranged_taken_pct": 65},
+  "harpy_eagle": {"kind": "grab", "line": "Grabs a small enemy and drops it far.", "every": 6.0, "small": 0.42, "carry": 4.0, "drop_pct": 100, "stun": 0.6},
+  "hyacinth_macaw": {"kind": "crack", "line": "Cracks armor: its target takes extra damage.", "seconds": 4.0, "pct": 25},
+  "california_condor": {"kind": "feast", "line": "Grows stronger with every nearby fall.", "radius": 5.0, "pct": 8, "most": 8},
+  "dragon": {"kind": "strafe", "line": "Fire-breath runs leave a burning line.", "every": 6.0, "tiles": 5.0, "speed_pct": 100, "width": 0.6, "seconds": 3.0, "dps_pct": 30}
 }

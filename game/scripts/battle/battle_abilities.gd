@@ -116,5 +116,5 @@ static func prevent_defeat(_sim: BattleSim, _t: BattleSim.Fighter) -> bool:
 	return false
 
 
-static func on_defeated(_sim: BattleSim, _t: BattleSim.Fighter, _source: BattleSim.Fighter) -> void:
-	pass
+static func on_defeated(sim: BattleSim, t: BattleSim.Fighter, _source: BattleSim.Fighter) -> void:
+	BattleStyles.on_defeated(sim, t)

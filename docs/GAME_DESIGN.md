@@ -539,6 +539,30 @@ in a little fight (with a Slow button).
     bounces on to two more enemies (50% each).
   - **Unicorn**, "Rainbow beam pierces the whole line.": a rainbow beam that
     goes on through its target, hitting every enemy along it (60%).
+- Air:
+  - **Peregrine Falcon**, "Super-fast dives, then climbs back up.": it dives
+    at 2.5 times its speed, stretched out with white speed lines, dropping
+    lower (its shadow growing) as it closes in; the dive hits for 1.35 times
+    in a white flash and feathers, then it climbs away for 0.6 s and dives
+    again.
+  - **Barn Owl**, "Silent hunter: picks off enemy Ranged.": it flies past the
+    front line to the nearest enemy Ranged animal within 12 tiles; pale as a
+    ghost with a misty trail, its eyes glinting as it strikes. Silent, it
+    takes only 65% from Ranged (who otherwise hit Air hard).
+  - **Harpy Eagle**, "Grabs a small enemy and drops it far.": every 6 s it
+    snatches up a small enemy (a Ranged-sized one) it hits, flies it 4 tiles
+    back over its own side, dangling and wriggling in its talons, and drops
+    it with a thud (a full bite, and 0.6 s stunned).
+  - **Hyacinth Macaw**, "Cracks armor: its target takes extra damage.": its
+    peck leaves a blue crack mark; for 4 s that enemy takes 25% more from
+    everyone.
+  - **California Condor**, "Grows stronger with every nearby fall.": every
+    animal that falls within 5 tiles sends a wisp into it, and it grows and
+    bites 8% harder (up to 8 times).
+  - **Dragon**, "Fire-breath runs leave a burning line.": every 6 s it flies
+    a run over the nearest ground enemy, breathing fire, and leaves a
+    5-tile line of fire burning for 3 s (30% of its bite a second to anyone
+    on the ground in it).
 
 **On screen** there's only the score, the armies (a banner with its class
 icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no

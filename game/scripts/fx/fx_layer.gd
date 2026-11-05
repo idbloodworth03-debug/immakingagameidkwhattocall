@@ -313,6 +313,45 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 				var off := across * (i - 2.5) * width / bands.size()
 				canvas.draw_line(p + off, end + off, Color(bands[i], 0.85 * fade), maxf(2.0, width / bands.size() + 1.0))
 			canvas.draw_line(p, end, Color(1, 1, 1, 0.6 * fade), maxf(1.5, width * 0.15))
+		"fire_line":
+			# A line of fire burning along the ground (the Dragon's run): it
+			# sweeps out along the line, flickers, and dies down at the end.
+			var end: Vector2 = fx.get("end", p)
+			var age: float = fx.age
+			var tip := p.lerp(end, clampf(age / maxf(0.01, float(fx.get("reveal", 0.35))), 0.0, 1.0))
+			var fade := 1.0 - clampf((t - 0.75) / 0.25, 0.0, 1.0)
+			var flame: Color = fx.get("flame", Color("#ffc23a"))
+			canvas.draw_line(p, tip, Color(color.darkened(0.45), 0.4 * fade), r * 2.0)
+			canvas.draw_line(p, tip, Color(color, 0.5 * fade), r * 1.1)
+			var length := p.distance_to(tip)
+			var count := int(length / maxf(6.0, r * 0.7))
+			var dir := (end - p).normalized()
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			for i in count + 1:
+				var u := i / float(maxi(count, 1))
+				var at := p.lerp(tip, u) + Vector2(dir.y, -dir.x) * rng.randf_range(-0.5, 0.5) * r
+				var flick := 0.6 + 0.4 * sin(age * 14.0 + rng.randf() * TAU)
+				var high := r * (0.9 + 0.7 * rng.randf()) * flick * fade
+				if high < 2.0:
+					continue
+				for layer in 2:
+					var w := r * (0.45 if layer == 0 else 0.25)
+					var hh := high * (1.0 if layer == 0 else 0.6)
+					var shape := PackedVector2Array([at + Vector2(-w, 0), at + Vector2(-w * 0.55, -hh * 0.55), at + Vector2(0, -hh),
+						at + Vector2(w * 0.55, -hh * 0.55), at + Vector2(w, 0), at + Vector2(0, w * 0.45)])
+					canvas.draw_colored_polygon(shape, Color(color if layer == 0 else flame, 0.9 * fade))
+		"wisp":
+			# A glowing wisp flying from `at` to `end`, a little trail behind.
+			var end: Vector2 = fx.get("end", p)
+			for i in 5:
+				var u := clampf(t - i * 0.06, 0.0, 1.0)
+				var at := p.lerp(end, u * u) + Vector2(0, -sin(u * PI) * r * 1.5)
+				var size := r * (0.5 - i * 0.08)
+				canvas.draw_circle(at, size * 1.8, Color(color, 0.18 * (1.0 - i * 0.18)))
+				canvas.draw_circle(at, size, Color(color.lightened(0.3), 0.8 * (1.0 - i * 0.18)))
+			var head := p.lerp(end, t * t) + Vector2(0, -sin(t * PI) * r * 1.5)
+			canvas.draw_circle(head, r * 0.18, Color.WHITE)
 		"shield":
 			# A curved shield flashing up on the side a shot came from.
 			var ang: float = fx.dir.angle()

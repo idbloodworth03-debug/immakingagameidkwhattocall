@@ -19,7 +19,7 @@
   "star_max": 3,
   "star_bonus_pct": 60,
   "rally": {
-    "radius": 3.0,
+    "_note": "The War Horn (once a fight): your whole army surges for `seconds`, biting damage_pct harder, attacking attack_pct faster and moving speed_pct faster.",
     "seconds": 4,
     "damage_pct": 30,
     "speed_pct": 20,
@@ -27,10 +27,12 @@
   },
   "fight_seconds": 40,
   "bot": {
-    "_note": "How the computer opponent weighs a pick (scripts/draft/draft_bot.gd): a new animal starts at new_animal, a star at star, a tool at tool (plus tool_per_animal for each animal in its herd, at most 2; tool_swap when its belt is full). A card's power (its cost in animals.json, from 2 to 8) adds power per point above an ordinary 4.5. A class its herd doesn't have yet adds new_class; counters against your herd add up to 4 more. A Rival's style and some luck do the rest. A rival's deck has deck_favorite cards of its favorite class, at least one of every other class, and the rest its strongest picks.",
+    "_note": "How the computer opponent weighs a pick (scripts/draft/draft_bot.gd): a new animal starts at new_animal, another squad of one it has at squad, an upgrade at star (plus star_per_squad for each squad after the first), a tool at tool (plus tool_per_animal for each animal in its herd, at most 2; tool_swap when its belt is full). A card's power (its cost in animals.json, from 2 to 8) adds power per point above an ordinary 4.5. A class its herd doesn't have yet adds new_class; counters against your herd add up to 4 more. A Rival's style and some luck do the rest. A rival's deck has deck_favorite cards of its favorite class, at least one of every other class, and the rest its strongest picks.",
     "deck_favorite": 3,
     "new_animal": 5.0,
     "star": 4.0,
+    "star_per_squad": 0.6,
+    "squad": 4.6,
     "tool": 4.0,
     "tool_per_animal": 0.25,
     "tool_swap": 1.0,

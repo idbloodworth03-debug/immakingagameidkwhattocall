@@ -8,16 +8,17 @@ extends RefCounted
 ##   Pick: each player makes 3 picks. In round 1, three starting animals
 ##   from their deck. After that, from 5 options (animals from their deck,
 ##   and their tools), each pick is one of:
-##     - an offered animal (one already in the herd gets a star instead),
+##     - an offered animal: a new squad of it joins the army (another squad
+##       if the army has it already),
 ##     - an offered tool (two at most; a third replaces one of them),
-##     - a star for an animal already in the herd.
-##   Picks can be taken back until the player is ready. There's no money
-##   and no limit on the herd: it grows every round.
+##     - an upgrade: a star for every squad of an animal in the army.
+##   Picks can be taken back until the player is ready. There's no money;
+##   the army grows every round, up to army_max_units animals.
 ##
-##   Fight: the herds take their places by class (Tanks in front, Tank
-##   Destroyers in the middle, Ranged at the back, Air over the middle,
-##   Specialists where their trait works best) and fight on their own
-##   (BattleSim). Each player can Rally once and use each tool once.
+##   Fight: each army lines up in formation (Tank wall in front, Tank
+##   Destroyers behind it, Air over the middle, Ranged ranks at the back,
+##   Specialists on the flanks) and fights as one (BattleArmy). Each player
+##   can blow the War Horn once and use each tool once.
 ##
 ##   Result: the herd that outlasts the other wins the round (at the bell,
 ##   the one with more of itself left).
@@ -35,7 +36,8 @@ var phase := ""
 var round_number := 0
 ## Rounds won.
 var wins := [0, 0]
-## Each team's animals: {"id": String, "stars": 1 to star_max}.
+## Each team's animals: {"id": String, "stars": 1 to star_max, "squads":
+## how many squads of it}.
 var herds := [[], []]
 ## Each team's tools (card ids), and which can still be used this fight.
 var tools := [[], []]
@@ -47,11 +49,12 @@ var pools := [[], []]
 ## round 1, every animal in the player's deck.
 var offers := [[], []]
 var picks_left := [0, 0]
-## This round's picks, in order, for the screen: {"kind": "animal", "star"
-## or "tool", "id", "index" (herd or tool slot)}.
+## This round's picks, in order, for the screen: {"kind": "animal",
+## "squad" (another squad of one in the army), "star" or "tool", "id",
+## "index" (herd or tool slot)}.
 var picks_made := [[], []]
 var ready := [false, false]
-## Each player's Rally for this fight (true until used).
+## Each player's War Horn for this fight (true until used).
 var rally_ready := [true, true]
 var fight_tick := 0
 var fight_ticks := 0
@@ -62,15 +65,15 @@ var wiped_at := [-1, -1]
 var last_round: Dictionary = {}
 ## Things that happened, for the screen to show.
 var events: Array = []
-## The battle-field groups of each herd's animals, in herd order, so a tap on
-## an animal finds its herd entry.
 ## The herds as they were when this round's picking started: what each
 ## player has seen of the other's (the computer opponent goes by this, not by
 ## picks it can't see yet).
 var herds_seen := [[], []]
 ## How much bigger than its smallest size the field is this fight (see
-## choose_field_scale).
+## BattleArmy.field_scale_for).
 var field_scale := 1.0
+## The battle-field groups (one per squad) of each herd entry, in herd
+## order, so a tap on an animal finds its herd entry.
 var groups := [[], []]
 var _defeated_at_start := [0, 0]
 var _undo := [[], []]
@@ -160,16 +163,37 @@ static func judge(battle: BattleSim, wiped: Array) -> int:
 	return NO_WINNER
 
 
-## How many of `team`'s herd (a swarm counts once) are still standing.
+## How many of `team`'s herd entries (any of their squads) are still
+## standing.
 func standing(team: int) -> int:
 	var alive := {}
 	for f in sim.units(team):
 		alive[int(f.memory.get("group", -1))] = true
 	var count := 0
-	for g in groups[team]:
-		if alive.has(g):
-			count += 1
+	for entry_groups in groups[team]:
+		for g in entry_groups:
+			if alive.has(g):
+				count += 1
+				break
 	return count
+
+
+## How many animals `team`'s army brings to a fight.
+func army_units(team: int) -> int:
+	var total := 0
+	for entry in herds[team]:
+		total += squad_units(String(entry.id)) * int(entry.get("squads", 1))
+	return total
+
+
+## How many animals one squad of `id` is.
+static func squad_units(id: String) -> int:
+	return int(BattleArmy.squad_of(id).units)
+
+
+## True if another squad of `id` would make `team`'s army too big.
+func army_full(team: int, id: String) -> bool:
+	return army_units(team) + squad_units(id) > int(rules.get("army_max_units", 40))
 
 
 ## Where `id` is in `team`'s herd, or -1.
@@ -200,9 +224,10 @@ func can_pick(team: int, slot: int) -> String:
 	if item.taken:
 		return "Already picked"
 	if not GameData.is_tool(item.id):
-		var index := herd_index(team, item.id)
-		if index >= 0 and (is_first_round() or int(herds[team][index].stars) >= int(rules.star_max)):
-			return "Already picked" if is_first_round() else "Fully trained"
+		if is_first_round() and herd_index(team, item.id) >= 0:
+			return "Already picked"
+		if army_full(team, item.id):
+			return "Army full"
 	return ""
 
 
@@ -214,9 +239,9 @@ func needs_tool_swap(team: int, slot: int) -> bool:
 	return GameData.is_tool(offers[team][slot].id) and tools[team].size() >= int(rules.tools_max)
 
 
-## Takes option `slot`: an animal joins the herd (or, if it's already there,
-## gets a star); a tool joins the tool belt (replacing tool `replace` if
-## the belt is full).
+## Takes option `slot`: a squad of an animal joins the army (another squad
+## if it's there already); a tool joins the tool belt (replacing tool
+## `replace` if the belt is full).
 func pick(team: int, slot: int, replace := -1) -> bool:
 	if can_pick(team, slot) != "":
 		return false
@@ -239,17 +264,17 @@ func pick(team: int, slot: int, replace := -1) -> bool:
 	else:
 		var index := herd_index(team, id)
 		if index >= 0:
-			made.kind = "star"
-			herds[team][index].stars = int(herds[team][index].stars) + 1
+			made.kind = "squad"
+			herds[team][index].squads = int(herds[team][index].get("squads", 1)) + 1
 			made.index = index
 		else:
-			herds[team].append({"id": id, "stars": 1})
+			herds[team].append({"id": id, "stars": 1, "squads": 1})
 			made.index = herds[team].size() - 1
 	_picked(team, made)
 	return true
 
 
-## Why `team` can't add a star to herd animal `index` ("" if it can).
+## Why `team` can't upgrade herd animal `index` ("" if it can).
 func can_star(team: int, index: int) -> String:
 	if phase != "pick" or ready[team]:
 		return "Not now"
@@ -264,7 +289,7 @@ func can_star(team: int, index: int) -> String:
 	return ""
 
 
-## Uses a pick to add a star to herd animal `index`.
+## Uses a pick to upgrade herd animal `index`: a star for all its squads.
 func star(team: int, index: int) -> bool:
 	if can_star(team, index) != "":
 		return false
@@ -328,15 +353,16 @@ func _picked(team: int, made: Dictionary) -> void:
 	event["team"] = team
 	if made.kind != "tool":
 		event["stars"] = int(herds[team][made.index].stars)
+		event["squads"] = int(herds[team][made.index].get("squads", 1))
 	events.append(event)
 
 
-## This round's options: five cards from the collection, a mix of animals
-## and tools (between offer_tools_min and offer_tools_max tools when there
-## are any), rarer ones less often, never a fully trained animal.
+## This round's options: five cards from the deck and tools, a mix of
+## animals and tools (between offer_tools_min and offer_tools_max tools
+## when there are any), rarer ones less often.
 func _roll_offers(team: int) -> Array:
 	var dice: RandomNumberGenerator = _dice[team]
-	var animals: Array = pools[team].filter(func(id): return not GameData.is_tool(id) and not _fully_trained(team, id))
+	var animals: Array = pools[team].filter(func(id): return not GameData.is_tool(id))
 	var tool_ids: Array = pools[team].filter(func(id): return GameData.is_tool(id))
 	var count := int(rules.offer_count)
 	var want_tools := mini(tool_ids.size(), dice.randi_range(int(rules.offer_tools_min), int(rules.offer_tools_max)))
@@ -353,11 +379,6 @@ func _roll_offers(team: int) -> Array:
 	# Animals first, then tools.
 	chosen.sort_custom(func(a, b): return int(GameData.is_tool(a)) < int(GameData.is_tool(b)))
 	return chosen.map(func(id): return {"id": id, "taken": false})
-
-
-func _fully_trained(team: int, id: String) -> bool:
-	var index := herd_index(team, id)
-	return index >= 0 and int(herds[team][index].stars) >= int(rules.star_max)
 
 
 ## A card from `ids` (not in `exclude`), rarer rarities less often.
@@ -392,149 +413,41 @@ static func row_of(card_id: String) -> String:
 	return String(GameData.class_info(GameData.class_of(card_id)).get("row", "middle"))
 
 
-## Where an animal stands: its class's row (Air gets its own line, hovering
-## just behind the middle row).
-static func band_of(card_id: String) -> String:
-	return "air" if GameData.class_of(card_id) == "air" else row_of(card_id)
-
-
-## Every animal takes its place by class (classes.json "rows"): front row,
-## middle row, Air, back row, each a line across the field. A band too full
-## for one line gets more lines behind it, and later bands move back to make
-## room. The field grows (draft_rules.json "field") as the herds do, so
-## everyone fits with room to spare.
+## Both armies line up in formation (BattleArmy): one squad per pick,
+## each animal in its place. The field grows (draft_rules.json "field") so
+## both formations fit.
 func _lay_out_herds() -> void:
 	sim.clear_units()
 	groups = [[], []]
-	var layout: Dictionary = GameData.class_rules.get("rows", {})
-	var bands := [{}, {}]
-	var units := 0
-	for team in 2:
-		var on_field := 0
-		for index in herds[team].size():
-			var id: String = herds[team][index].id
-			var band := band_of(id)
-			if not bands[team].has(band):
-				bands[team][band] = []
-			bands[team][band].append(index)
-			on_field += BattleSim.group_size(GameData.get_card(id))
-		units = maxi(units, on_field)
-	field_scale = choose_field_scale([_counts(bands[0]), _counts(bands[1])], units, layout, rules.get("field", {}))
+	field_scale = BattleArmy.field_scale_for(herds, rules.get("field", {}))
 	sim.set_size(field_scale)
+	sim.army = BattleArmy.new(sim.rules, sim.tps)
+	sim.army.set_up(sim)
 	for team in 2:
-		var spots := {}
-		var places := band_spots(_counts(bands[team]), field_scale, layout, rules.get("field", {}))
-		for band in bands[team]:
-			for i in bands[team][band].size():
-				spots[bands[team][band][i]] = places[band][i]
+		var order := 0
 		for index in herds[team].size():
 			var entry: Dictionary = herds[team][index]
-			var at: Vector2 = spots[index]
-			var x := roundi(at.x * BattleSim.TILE)
-			var y := sim.middle + roundi(at.y * BattleSim.TILE) * (1 if team == 0 else -1)
-			var made := sim.spawn(team, entry.id, x if team == 0 else sim.width - x, y)
-			for member in made.size():
-				var f: BattleSim.Fighter = made[member]
-				f.deploy_ticks = 0
-				apply_stars(f, int(entry.get("stars", 1)), rules)
-				# For the screen only: the same animal keeps the same view when
-				# the herds are laid out again, so it hops instead of popping in.
-				f.memory.view_key = "%d/%d/%d" % [team, index, member]
-			groups[team].append(int(made[0].memory.group) if not made.is_empty() else -1)
+			var entry_groups := []
+			for squad in maxi(1, int(entry.get("squads", 1))):
+				var made := sim.army.spawn_squad(sim, team, entry.id, order)
+				order += 1
+				for member in made.size():
+					var f: BattleSim.Fighter = made[member]
+					f.deploy_ticks = 0
+					apply_stars(f, int(entry.get("stars", 1)), rules)
+					# For the screen only: the same animal keeps the same view
+					# when the armies line up again, so it moves instead of
+					# popping in.
+					f.memory.view_key = "%d/%d/%d/%d" % [team, index, squad, member]
+				if not made.is_empty():
+					entry_groups.append(int(made[0].memory.group))
+			groups[team].append(entry_groups)
+		sim.army.layout(sim, team, true)
 	sim.take_events()
 
 
-static func _counts(bands: Dictionary) -> Dictionary:
-	var counts := {}
-	for band in bands:
-		counts[band] = (bands[band] as Array).size()
-	return counts
-
-
-const BANDS := ["front", "middle", "air", "back"]
-
-
-## The lines each band stands in (tiles back from the middle line) on a field
-## `scale` times its smallest size (rows move back with it, so a bigger herd
-## stands deeper as well as wider), and how many fit across one line.
-## {"lines": {band: [depth, ...]}, "per_line", "depth": the furthest line,
-## "room": how far back a line can be}.
-static func band_lines(counts: Dictionary, scale: float, layout: Dictionary, field: Dictionary) -> Dictionary:
-	var width := float(BattleSim.WIDTH) / BattleSim.TILE * scale
-	var half := float(BattleSim.MIDDLE) / BattleSim.TILE * scale
-	var spacing := float(layout.get("spacing", 1.7))
-	var gap := float(layout.get("depth", 1.1)) * scale
-	var per_line := maxi(1, floori((width - 1.0) / spacing))
-	var lines := {}
-	var last := -1.0
-	for band in BANDS:
-		var count := int(counts.get(band, 0))
-		if count <= 0:
-			continue
-		var nominal := float(layout.get(band, 4.4)) * scale
-		var start := nominal if last < 0.0 else maxf(nominal, last + gap)
-		var depths := []
-		for i in ceili(count / float(per_line)):
-			depths.append(start + i * gap)
-		last = depths[-1]
-		lines[band] = depths
-	return {"lines": lines, "per_line": per_line, "depth": last, "room": half - float(field.get("edge", 0.8))}
-
-
-## How much bigger than its smallest size the field is this fight: it grows
-## as the herds do (between grow_from_units and grow_full_units animals on
-## the bigger side), and further if the rows wouldn't fit, up to max_scale.
-static func choose_field_scale(counts: Array, units: int, layout: Dictionary, field: Dictionary) -> float:
-	var top := float(field.get("max_scale", 1.5))
-	var from := float(field.get("grow_from_units", 12))
-	var full := maxf(from + 1.0, float(field.get("grow_full_units", 36)))
-	var scale := 1.0 + (top - 1.0) * clampf((units - from) / (full - from), 0.0, 1.0)
-	scale = snappedf(scale, 0.05)
-	while scale < top:
-		var fits := true
-		for team_counts in counts:
-			var plan := band_lines(team_counts, scale, layout, field)
-			fits = fits and float(plan.depth) <= float(plan.room)
-		if fits:
-			break
-		scale += 0.05
-	return minf(scale, top)
-
-
-## Where each animal of each band stands: {band: [Vector2(x across, y back
-## from the middle line) in tiles, ...]}. A band's animals share its lines
-## evenly and spread evenly across each; every other line is shifted half a
-## place, so nobody hides right behind another. If even the biggest field
-## is too small, the lines squeeze closer together.
-static func band_spots(counts: Dictionary, scale: float, layout: Dictionary, field: Dictionary) -> Dictionary:
-	var plan := band_lines(counts, scale, layout, field)
-	var width := float(BattleSim.WIDTH) / BattleSim.TILE * scale
-	var first := float(layout.get("front", 2.2)) * scale
-	var squeeze := 1.0
-	if float(plan.depth) > float(plan.room):
-		squeeze = maxf(0.1, (float(plan.room) - first) / maxf(0.01, float(plan.depth) - first))
-	var spots := {}
-	var line_index := 0
-	for band in BANDS:
-		if not plan.lines.has(band):
-			continue
-		var depths: Array = plan.lines[band]
-		var count := int(counts[band])
-		var places := []
-		for j in depths.size():
-			var in_line := count / depths.size() + (1 if j < count % depths.size() else 0)
-			var y := first + (float(depths[j]) - first) * squeeze
-			var shift := 0.5 if line_index % 2 == 0 else 1.0
-			var slots := float(in_line) if line_index % 2 == 0 else float(in_line + 1)
-			for i in in_line:
-				places.append(Vector2(0.5 + (width - 1.0) * (i + shift) / slots, y))
-			line_index += 1
-		spots[band] = places
-	return spots
-
-
 ## Every star after the first adds star_bonus_pct to an animal's health
-## and bite.
+## and bite (every animal of every squad of it).
 static func apply_stars(f: BattleSim.Fighter, stars: int, draft_rules: Dictionary) -> void:
 	f.memory.stars = stars
 	if stars <= 1:
@@ -571,21 +484,21 @@ func use_tool(team: int, index: int, x: int, y: int) -> bool:
 	return true
 
 
-## Rally, once a fight: your animals near (x, y) bite harder, attack faster
-## and run faster for a few seconds.
+## The War Horn, once a fight: the whole army surges, biting harder,
+## attacking faster and running faster for a few seconds. (x, y) is only
+## where the screen shows it.
 func rally(team: int, x: int, y: int) -> bool:
 	if phase != "fight" or not rally_ready[team]:
 		return false
 	rally_ready[team] = false
 	var r: Dictionary = rules.rally
-	var radius := roundi(float(r.radius) * BattleSim.TILE)
 	var duration := roundi(float(r.seconds) * sim.tps)
-	for f in sim.allies_near(team, x, y, radius):
+	for f in sim.units(team):
 		f.rage = maxi(f.rage, duration)
 		f.rage_damage_pct = maxi(f.rage_damage_pct, int(r.damage_pct))
 		f.rage_speed_pct = maxi(f.rage_speed_pct, int(r.speed_pct))
 		f.rage_attack_pct = maxi(f.rage_attack_pct, int(r.attack_pct))
-	sim.events.append({"type": "rage", "x": x, "y": y, "radius": radius})
+	sim.events.append({"type": "war_horn", "team": team, "x": x, "y": y})
 	events.append({"type": "rally", "team": team, "x": x, "y": y})
 	return true
 

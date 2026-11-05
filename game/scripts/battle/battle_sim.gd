@@ -11,7 +11,8 @@ extends RefCounted
 ## Positions are in thousandths of a tile. The field is at least 16 tiles wide
 ## and 20 long, and grows (keeping its shape) for big herds: set_size(). Team 0
 ## starts on the near half (the bottom), team 1 on the far half.
-## Animals go for the nearest enemy they can reach. Nothing here draws
+## Animals go for the nearest enemy they can reach, or, in Draft Duel's
+## armies, fight in formation (battle_army.gd). Nothing here draws
 ## anything (battle_field.gd does that), and Draft Duel (draft_match.gd) runs
 ## the rounds around it.
 
@@ -120,6 +121,9 @@ var retarget_margin := 0
 var width := WIDTH
 var height := HEIGHT
 var middle := MIDDLE
+## The armies' formations and battle phases (Draft Duel), or null: then
+## every animal simply goes for the nearest enemy.
+var army: BattleArmy
 var _next_uid := 1
 var _next_group := 1
 
@@ -171,13 +175,13 @@ func on_own_half(team: int, y: int) -> bool:
 
 
 ## How much of a team's herd is still standing: each animal counts its card's
-## power ("cost" in animals.json; split among a pack, and times its stars in
-## Draft Duel) times the share of health it has left, in thousandths of a
+## power ("cost" in animals.json; split among a pack or squad, and times its
+## stars in Draft Duel) times the share of health it has left, in thousandths of a
 ## power point.
 func herd_value(team: int) -> int:
 	var total := 0
 	for f in units(team):
-		var count := group_size(f.card)
+		var count := int(f.memory.get("squad_units", group_size(f.card)))
 		var stars := maxi(1, int(f.memory.get("stars", 1)))
 		total += int(f.card.cost) * stars * 1000 * f.hp / maxi(1, f.max_hp) / count
 	return total
@@ -200,6 +204,8 @@ func step() -> void:
 	for f in fighters:
 		f.prev_x = f.x
 		f.prev_y = f.y
+	if army != null:
+		army.before_tick(self)
 	for f in fighters.duplicate():
 		if f.alive:
 			_update(f)
@@ -229,15 +235,18 @@ func _update(f: Fighter) -> void:
 	if f.memory.get("burrowing", false):
 		_move_burrowed(f)
 		return
+	if army != null and f.memory.has("slot"):
+		army.update_unit(self, f)
+		return
 	_choose_target(f)
 	if f.target == null:
 		return
 	if in_range(f, f.target):
 		if f.cooldown <= 0:
-			_attack(f, f.target)
+			attack(f, f.target)
 			f.cooldown = f.hit_ticks * 100
 	else:
-		_move_toward(f, Vector2i(f.target.x, f.target.y), current_speed(f))
+		move_toward_point(f, Vector2i(f.target.x, f.target.y), current_speed(f))
 
 
 func _tick_effects(f: Fighter) -> void:
@@ -372,7 +381,7 @@ func current_speed(f: Fighter) -> int:
 	return maxi(0, f.speed * maxi(0, pct) / 100)
 
 
-func _move_toward(f: Fighter, goal: Vector2i, step_size: int) -> void:
+func move_toward_point(f: Fighter, goal: Vector2i, step_size: int) -> void:
 	var dx := goal.x - f.x
 	var dy := goal.y - f.y
 	var d := isqrt(dx * dx + dy * dy)
@@ -407,7 +416,7 @@ func _move_burrowed(f: Fighter) -> void:
 		f.memory.burrowing = false
 		events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
 		return
-	_move_toward(f, goal, current_speed(f))
+	move_toward_point(f, goal, current_speed(f))
 
 
 ## Pushes overlapping animals apart and keeps everyone on the field. Only
@@ -463,8 +472,10 @@ func _push_apart(a: Fighter, b: Fighter) -> void:
 
 # --- Fighting --------------------------------------------------------------
 
-func _attack(f: Fighter, t: Fighter) -> void:
-	var amount := f.damage
+## One blow (or shot) from `f` at `t`, carrying `pct` percent of its bite
+## (a volley's shot carries the time since the last).
+func attack(f: Fighter, t: Fighter, pct := 100) -> void:
+	var amount := f.damage * pct / 100
 	if f.rage > 0:
 		amount = amount * (100 + f.rage_damage_pct) / 100
 	amount = BattleAbilities.outgoing_damage(self, f, t, amount)
@@ -519,6 +530,8 @@ func _defeat(t: Fighter, source: Fighter) -> void:
 	if t.is_unit():
 		teams[t.team].defeated += 1
 		BattleAbilities.on_defeated(self, t, source)
+		if army != null:
+			army.fell(self, t)
 
 
 func stun(t: Fighter, ticks: int) -> void:
@@ -579,6 +592,24 @@ func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	for i in count:
 		var offset := formation(i, count)
 		var f := _make_unit(team, card, level_of(team, card_id), x + offset.x, y + offset.y)
+		f.memory.group = group
+		f.memory.group_size = count
+		fighters.append(f)
+		made.append(f)
+	for f in made:
+		BattleAbilities.on_spawn(self, f, f == made[0])
+	return made
+
+
+## Puts `count` animals of a card on the field at (x, y), as one group (an
+## army's squad: BattleArmy gives them their places).
+func spawn_units(team: int, card_id: String, count: int, x: int, y: int) -> Array:
+	var card := GameData.get_card(card_id)
+	var group := _next_group
+	_next_group += 1
+	var made := []
+	for i in count:
+		var f := _make_unit(team, card, level_of(team, card_id), x, y)
 		f.memory.group = group
 		f.memory.group_size = count
 		fighters.append(f)
@@ -657,6 +688,7 @@ func clear_units() -> void:
 		f.target = null
 	fighters.clear()
 	zones.clear()
+	army = null
 
 
 ## A separate copy of the fight as it stands, to try out what happens next.
@@ -672,6 +704,7 @@ func clone() -> BattleSim:
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
 	copy.zones = zones.duplicate(true)
+	copy.army = army.copy() if army != null else null
 	copy.teams = []
 	for t in teams:
 		copy.teams.append(_copy_fields(t, Team.new()))

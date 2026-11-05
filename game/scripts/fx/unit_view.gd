@@ -9,8 +9,9 @@ extends Node2D
 ##
 ## Only looks: it reads the fighter, never changes it. Where it's drawn
 ## follows the fighter smoothly (easing into and out of a run, nudged apart
-## from animals it would cover, a little loose in a marching row), so the
-## fight's steps never show. It faces where it's going or what it's fighting,
+## from animals it would cover once fighting), so the fight's steps never
+## show. In an army it marches in step and faces the enemy while in its
+## place. It faces where it's going or what it's fighting,
 ## turning at a cartoon pace, and a push never turns it. The node itself
 ## draws the ground shadow and team ring; its Body child draws the sprite
 ## with the unit shader (fake-3D highlight, rim light, colored outline,
@@ -30,6 +31,11 @@ var field: BattleField
 var fighter: BattleSim.Fighter
 var flying := false
 var swarm := false
+## In an army (Draft Duel): it has a place in a formation, marches in step
+## with it and is drawn at its squad's size (size_k: smaller in a squad of
+## several, bigger for an elite Specialist or a Mythic hero).
+var army := false
+var size_k := 1.0
 ## Field position (thousandths of a tile): where the fight has it now.
 var pos := Vector2.ZERO
 ## Where it's drawn (field units) and how fast that's moving: it follows
@@ -133,6 +139,11 @@ var _longest_windup := 1.0
 var _top := 40.0
 var _shown_dir := 0
 var _hop_in_at := -100.0
+## Walking to its place (a new squad marching in while picking, or moving
+## to a new place in the formation): from where, and how far along (0-1).
+var _walk_from := Vector2.ZERO
+var _walk_t := 1.0
+var _walk_seconds := 1.0
 ## Who hit it last (for a smug look when it's knocked out).
 var last_attacker: UnitView
 var face: UnitFace
@@ -212,8 +223,20 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.pos = Vector2(f.x, f.y)
 	v.shown = v.pos
 	v._dir8 = posmod(roundi(v.facing / 45.0), 8)
-	v.walk = randf()
+	v.army = f.memory.has("slot")
+	# In an army, everyone marches in step: one walk timing for all. Small
+	# random differences are kept for standing about (breathing, fidgets,
+	# blinks) only.
+	v.walk = 0.0 if v.army else randf()
 	v.idle_phase = randf() * TAU
+	if v.army:
+		v.swarm = false
+		var army_feel: Dictionary = GameData.feel.get("army", {})
+		v.size_k = float(army_feel.get("squad_scale", {}).get(GameData.class_of(v.id), 1.0))
+		if f.memory.get("hero", false):
+			v.size_k *= BattleArmy.squad_of(v.id).hero_scale
+		elif f.memory.get("elite", false):
+			v.size_k *= float(army_feel.get("elite_scale", 1.12))
 	v.stars = int(f.memory.get("stars", 1))
 	v.cls = GameData.class_of(v.id)
 	# Facts about its sprite sheet, looked up once (a big fight animates
@@ -258,8 +281,8 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	# covering each other on screen.
 	var c := "characters"
 	var drawn := Feel.num(c, "sprite_scale", 1.6) * (Feel.num(c, "swarm_scale", 0.8) if v.swarm else 1.0)
-	v.spread_r = UnitSprites.top(v.id) / v._per_tile * 1000.0 * drawn * Feel.num("movement", "spread_body_share", 0.45)
-	v._follow_k = 1.0 + randf_range(-1.0, 1.0) * Feel.num("movement", "follow_variety", 0.25)
+	v.spread_r = UnitSprites.top(v.id) / v._per_tile * 1000.0 * drawn * v.size_k * Feel.num("movement", "spread_body_share", 0.45)
+	v._follow_k = 1.0 if v.army else 1.0 + randf_range(-1.0, 1.0) * Feel.num("movement", "follow_variety", 0.25)
 	v._last_run = int(f.memory.get("run", 0))
 	v.body = Body.new()
 	if Feel.on("characters", "shader_enabled"):
@@ -318,7 +341,10 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	stars = new_stars
 	var t := _tuning()
 	var jump := at.distance_to(pos)
-	if jump > 900.0 and hop_t >= 1.0:
+	if jump > 900.0 and field.walk_in and army:
+		# A new place in the formation while picking: walk there.
+		walk_to(render_pos(), now)
+	elif jump > 900.0 and hop_t >= 1.0:
 		# Moved to a new spot all at once (placed, laid out again, knocked
 		# back): hop there.
 		hop_from = render_pos()
@@ -353,7 +379,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		follow(goal, goal_v, dt)
 	var speed := shown_v.length()
 	if hop_t >= 1.0 and _intent > 0.0 and speed > float(t.walk_min_speed):
-		if moving <= 0.0 and now >= _trip_ready and randf() < float(t.trip_chance):
+		if moving <= 0.0 and not army and now >= _trip_ready and randf() < float(t.trip_chance):
 			# Now and then, setting off, it trips over its own feet.
 			_trip_at = now
 			_trip_ready = now + float(t.trip_cooldown)
@@ -365,6 +391,9 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		var cycle := _walk_tiles * 1000.0 * float(t.walk_stride) * (float(t.swarm_scale) if swarm else 1.0)
 		var fps := clampf(speed / maxf(cycle, 1.0) * _walk_frames, float(t.walk_min_fps), float(t.walk_max_fps))
 		walk += fps / _walk_frames * dt
+		if in_formation() and field.marching(team):
+			# Marching in formation: the whole army's feet in step.
+			walk = field.march_walk(team)
 	elif moving > 0.0:
 		moving = maxf(0.0, moving - dt)
 		if moving <= 0.0:
@@ -374,8 +403,12 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	# Facing: where it's walking, else what it's fighting. A push never turns it.
 	var sim := field.sim
 	var has_target := f.target != null and f.target.alive
+	var keep_facing := in_formation() and not (has_target and sim.in_range(f, f.target))
 	if attacking(now) and now >= attack_at:
 		_turn(attack_dir, dt)
+	elif keep_facing and not (has_target and moving > 0.0):
+		# In formation: facing the enemy, even while stepping into place.
+		_turn(Vector2(0, -1) if team == 0 else Vector2(0, 1), dt)
 	elif moving > 0.0:
 		_turn(move_dir, dt)
 	elif has_target:
@@ -547,6 +580,25 @@ func is_celebrating(now: float) -> bool:
 ## A hop into place as the fight begins (at `at`, field time).
 func hop_in(at: float) -> void:
 	_hop_in_at = at
+
+
+## Walks from `from` (field units) to its place, at a march.
+func walk_to(from: Vector2, _now: float) -> void:
+	_walk_from = from
+	_walk_t = 0.0
+	var speed := Feel.num("army", "walk_in_tiles_per_second", 2.6) * 1000.0
+	_walk_seconds = clampf(from.distance_to(pos) / maxf(1.0, speed), 0.4, 2.0)
+
+
+## True while walking to its place.
+func walking_in() -> bool:
+	return _walk_t < 1.0
+
+
+## In its place in an army's formation (not charging, not off on its own).
+func in_formation() -> bool:
+	var f := fighter
+	return army and f != null and not f.memory.get("charging", false) and not f.memory.get("free", false)
 
 
 ## When it was last hit (field time), for fading its health bar.
@@ -805,6 +857,13 @@ func animate(dt: float, now: float) -> void:
 	_turn_pinch = maxf(0.0, _turn_pinch - dt / maxf(0.01, float(t.turn_squash_seconds)))
 	if hop_t < 1.0:
 		hop_t = minf(1.0, hop_t + dt / maxf(0.05, hop_seconds))
+	if _walk_t < 1.0:
+		_walk_t = minf(1.0, _walk_t + dt / maxf(0.05, _walk_seconds))
+		moving = 0.15
+		var dir := pos - _walk_from
+		if dir.length() > 1.0:
+			move_dir = dir.normalized()
+		walk = fposmod(walk + dt * Feel.num("army", "walk_in_steps_per_second", 1.8), 1.0)
 	if defeat >= 0.0:
 		var lasts := float(t.fling_seconds) if _defeat_kind == "fling" else float(t.defeat_seconds)
 		defeat = minf(1.0, defeat + dt / maxf(0.05, lasts))
@@ -819,7 +878,7 @@ func animate(dt: float, now: float) -> void:
 	else:
 		bar_trail = move_toward(bar_trail, bar_shown, dt * float(t.health_bar_trail_speed))
 
-	var k := field.sprite_k_per_tile(_per_tile, swarm)
+	var k := field.sprite_k_per_tile(_per_tile, swarm) * size_k
 	body.k = k
 	var f := fighter
 	var stunned := f != null and f.stun > 0
@@ -889,10 +948,12 @@ func animate(dt: float, now: float) -> void:
 		sx -= b * amount * 0.6
 		offset.y -= (b * 0.5 + 0.5) * float(t.bob_pixels)
 	if air and defeat < 0.0:
-		# Fliers bob as they hover and swoop gently as they fly.
-		lift += (sin(now * float(t.air_bob_speed) * pace + idle_phase) * 0.5 + 0.5) * float(t.air_bob_pixels)
+		# Fliers bob as they hover and swoop gently as they fly (in step
+		# with their army while it marches).
+		var bob_phase := 0.0 if anim == "walk" and army else idle_phase
+		lift += (sin(now * float(t.air_bob_speed) * pace + bob_phase) * 0.5 + 0.5) * float(t.air_bob_pixels)
 		if anim == "walk":
-			lift += (sin(now * 1.7 + idle_phase) * 0.5 + 0.5) * float(t.air_swoop_pixels)
+			lift += (sin(now * 1.7 + bob_phase) * 0.5 + 0.5) * float(t.air_swoop_pixels)
 	elif anim == "walk":
 		# Little hops in step with the walk cycle: stretched in the air,
 		# squashed on landing, leaning into the run. Tanks plod low and
@@ -1141,18 +1202,28 @@ func _in_a_scrap() -> bool:
 ## A foot coming down: a Tank's heavy step thumps with a puff of dust; a
 ## Tank Destroyer kicks up dust behind it now and then.
 func _footfall(t: Tune) -> void:
-	if field.fx.crowded and randf() < 0.6:
+	var charging := fighter != null and bool(fighter.memory.get("charging", false))
+	var marching := in_formation() and field.marching(team)
+	if field.fx.crowded and (uid % 3 != 0 if army else randf() < 0.6) and not charging:
 		return
 	var dust := Color("#c9b08a", 0.75)
+	if charging:
+		# A charge kicks up a trail of dust behind it.
+		var back := -Vector2(move_dir.x, move_dir.y * 0.6)
+		field.fx.particle("puff", position + back * 8.0, back * 90.0, 0.5, 5.0, dust, 0.0, 3.0)
+		return
 	match _style:
 		"tank":
 			squash_v += float(t.tank_step_squash) * 20.0
-			var heavy := fighter != null and fighter.radius >= 700
-			field.fx.burst("puff", position + Vector2(randf_range(-6.0, 6.0), 0), 2 if heavy else 1, 40.0, 0.45, 6.0 if heavy else 4.5, [dust], -15.0, 3.0)
+			var heavy := fighter != null and fighter.radius >= 600
+			field.fx.burst("puff", position, 2 if heavy else 1, 40.0, 0.45, 6.0 if heavy else 4.5, [dust], -15.0, 3.0)
 		"tank_destroyer":
-			if randf() < 0.4:
+			if marching or randf() < 0.4:
 				var back := -Vector2(move_dir.x, move_dir.y * 0.6)
 				field.fx.particle("puff", position + back * 6.0, back * 60.0, 0.35, 3.5, dust, 0.0, 3.0)
+		"ranged", "specialist":
+			if marching:
+				field.fx.particle("puff", position, Vector2(0, -12), 0.3, 3.0, Color(dust, 0.5), 0.0, 3.0)
 
 
 ## Which face to draw over its eyes this frame, if any.
@@ -1227,8 +1298,11 @@ static func region_uv(frame: Dictionary) -> Vector4:
 	return Vector4(r.position.x / size.x, r.position.y / size.y, r.size.x / size.x, r.size.y / size.y)
 
 
-## Where it's drawn on the field: mid-hop, between the old spot and the new.
+## Where it's drawn on the field: mid-hop, between the old spot and the new
+## (or walking there).
 func render_pos() -> Vector2:
+	if _walk_t < 1.0:
+		return _walk_from.lerp(shown, Ease.in_out_sine(_walk_t))
 	if hop_t >= 1.0:
 		return shown
 	return hop_from.lerp(shown, Ease.in_out_sine(hop_t))
@@ -1296,7 +1370,13 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, 0.42, Color("#9fd8ff", 0.8))
 		if f.invulnerable > 0:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, 0.42, Color.WHITE)
-		if cls != "":
-			# Its class, as a small badge just under its feet.
+		if army and (f.memory.get("hero", false) or f.memory.get("elite", false)):
+			# An elite Specialist or a Mythic hero: a gold ring, set apart.
+			var gold := Color("#ffd24a", 0.9 * fade)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 5, 0.42, gold)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring + 9, 0.42, Color(gold, 0.5 * fade))
+		if cls != "" and not army:
+			# Its class, as a small badge just under its feet (an army's
+			# squads carry banners instead).
 			var badge := t.class_badge_radius
 			badges.append([cls, at + Vector2(0, ring * 0.42 + badge * 0.9), badge, minf(fade, 0.95)])

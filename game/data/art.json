@@ -260,6 +260,7 @@
     "locked": "lorc/padlock",
     "acorn": "lorc/acorn",
     "whistle": "delapouite/whistle",
+    "war_horn": "lorc/hunting-horn",
     "close": "lorc/cross-mark",
     "info": "delapouite/info",
     "upgrade": "delapouite/upgrade",

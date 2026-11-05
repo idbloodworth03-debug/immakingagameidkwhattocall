@@ -28,14 +28,14 @@ var _rng := RandomNumberGenerator.new()
 var _accumulator := 0.0
 var _bot_wait := 0.0
 var _fast := false
-## A fight's opening beat (the herds hop in, "FIGHT!"), and how fast it's
-## playing: a dragging ending speeds up (feel.json "choreography").
+## A fight's opening beat (the armies stand in formation a moment, then
+## "FIGHT!"), and how fast it's playing: a dragging ending speeds up
+## (feel.json "choreography").
 var _intro_left := 0.0
 var _speed := 1.0
 var _quiet := 0.0
 var _result: Dictionary = {}
 var _selected_tool := -1
-var _rally_selected := false
 var _view := ""
 
 # The score bar.
@@ -56,6 +56,9 @@ var _options_holder: Control
 var _option_cards: Array = []
 var _herd_scroll: ScrollContainer
 var _herd_row: HBoxContainer
+## Your army in formation while you pick (new squads march into place; tap
+## an animal to upgrade it).
+var _army_view: BattleField
 var _fight_button: ChunkyButton
 var _flying := {}
 var _details: Control
@@ -235,9 +238,26 @@ func _build_pick_view() -> VBoxContainer:
 
 	# The options (filled each round).
 	_options_holder = Control.new()
-	_options_holder.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_options_holder.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_options_holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	view.add_child(_options_holder)
+
+	# Your army, standing in formation.
+	_army_view = BattleField.new()
+	_army_view.sim = duel.sim
+	_army_view.frame_team = 0
+	_army_view.walk_in = true
+	_army_view.camera_max_zoom = Feel.num("pick", "army_max_zoom", 10.0)
+	_army_view.camera_min_tiles = Feel.num("pick", "army_min_tiles", 7.0)
+	_army_view.grass = Color(GameData.get_arena(Profile.arena_index()).color)
+	_army_view.arena_id = GameData.get_arena(Profile.arena_index()).id
+	_army_view.custom_minimum_size.y = Feel.num("pick", "army_height", 200.0)
+	_army_view.camera_margin = Feel.num("pick", "army_margin_tiles", 0.8)
+	_army_view.tapped.connect(_on_army_tapped)
+	var army_box := UIStyle.inset(_army_view)
+	# It takes whatever room the options leave.
+	army_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	view.add_child(army_box)
 
 	# Your herd, in a row that scrolls, then your tools.
 	_herd_scroll = ScrollContainer.new()
@@ -427,6 +447,13 @@ func _build_options() -> void:
 		child.queue_free()
 	_option_cards.clear()
 	var step := Feel.num("ui", "stagger_seconds", 0.05)
+	# Just the room the cards need: your army below gets the rest.
+	var gap := float(UIStyle.space("s"))
+	if duel.is_first_round():
+		var card := _size("start_card", Vector2(156, 176))
+		_options_holder.custom_minimum_size.y = ceilf(duel.offers[0].size() / 4.0) * (card.y + gap)
+	else:
+		_options_holder.custom_minimum_size.y = 2.0 * _size("option_card", Vector2(208, 236)).y + gap
 	if duel.is_first_round():
 		var scroll := ScrollContainer.new()
 		scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -625,6 +652,20 @@ func _tap_herd(index: int) -> void:
 		UIFx.stars(from.get_center(), 6)
 		Sound.play("upgrade")
 		_fly_to_slot(String(duel.herds[0][index].id), from, into)
+
+
+## A tap on your army: the animal nearest it gets upgraded (like tapping its
+## card in the row below).
+func _on_army_tapped(at: Vector2i) -> void:
+	var best := -1
+	var best_d := 1 << 40
+	for f: BattleSim.Fighter in duel.sim.units(0):
+		var d := (f.x - at.x) * (f.x - at.x) + (f.y - at.y) * (f.y - at.y)
+		if d < best_d and f.memory.has("view_key"):
+			best_d = d
+			best = int(String(f.memory.view_key).split("/")[1])
+	if best >= 0 and best_d <= 1500 * 1500:
+		_tap_herd(best)
 
 
 ## Tapping your latest pick takes it back.
@@ -902,26 +943,32 @@ func _handle_events(events: Array) -> void:
 		match e.type:
 			"round":
 				_selected_tool = -1
-				_rally_selected = false
 				if _score_bar.visible:
 					_show_view("pick")
 			"fight":
-				Sound.play("horn")
 				_field.end_celebrations()
 				_reset_speed()
 				_show_view("fight")
-				# The opening beat: both herds hop into place, then FIGHT!
-				_intro_left = Feel.num("choreography", "intro_seconds", 1.1)
-				_field.hop_in()
-				_banner("FIGHT!", UIStyle.color("gold"), Feel.count("choreography", "fight_banner_size", 96))
-				get_tree().create_timer(0.6).timeout.connect(func() -> void: _rival_says("start"))
+				# The opening beat: both armies stand in formation a moment,
+				# then FIGHT! and they march.
+				var lineup := Feel.num("army", "lineup_seconds", 1.2)
+				_intro_left = lineup + Feel.num("choreography", "intro_seconds", 0.4)
+				_field.snap_camera()
+				get_tree().create_timer(lineup).timeout.connect(func() -> void:
+					if duel.phase == "fight":
+						Sound.play("horn")
+						_banner("FIGHT!", UIStyle.color("gold"), Feel.count("choreography", "fight_banner_size", 96)))
+				get_tree().create_timer(lineup + 0.6).timeout.connect(func() -> void: _rival_says("start"))
 			"tool":
 				Sound.play("horn" if e.id == "air_horn" else "tool")
 			"rally":
-				Sound.play("alert", -4.0)
+				# The War Horn: the whole army surges.
+				Sound.play("horn", 2.0)
+				Sound.play("boom", -6.0)
+				if int(e.team) == 0:
+					_banner("WAR HORN!", UIStyle.color("gold"), Feel.count("choreography", "war_horn_banner_size", 72))
 			"round_over":
 				_selected_tool = -1
-				_rally_selected = false
 				_field.highlight = ""
 				_reset_speed()
 				# The last knockout in slow motion, then the winners celebrate
@@ -1049,19 +1096,16 @@ func _show_banner(text: String, color: Color, font_size: int) -> void:
 ## The buttons under the field: Rally, then one per tool (each works once a
 ## fight). Tap one, then the field.
 func _refresh_actions() -> void:
-	var key := str([duel.phase, duel.rally_ready[0], duel.tools[0], duel.tools_ready[0], _selected_tool, _rally_selected])
+	var key := str([duel.phase, duel.rally_ready[0], duel.tools[0], duel.tools_ready[0], _selected_tool, _intro_left > 0.0])
 	if key == _actions_key:
 		return
 	_actions_key = key
 	for child in _actions.get_children():
 		_actions.remove_child(child)
 		child.queue_free()
-	var rally := UIStyle.button("Rally", "gold" if _rally_selected else "secondary", "whistle")
-	rally.disabled = not duel.rally_ready[0] or duel.phase != "fight"
-	rally.pressed.connect(func() -> void:
-		_rally_selected = not _rally_selected
-		_selected_tool = -1
-		_field.highlight = "field" if _rally_selected else "")
+	var rally := UIStyle.button("War Horn", "gold" if duel.rally_ready[0] and duel.phase == "fight" else "secondary", "war_horn")
+	rally.disabled = not duel.rally_ready[0] or duel.phase != "fight" or _intro_left > 0.0
+	rally.pressed.connect(_blow_war_horn)
 	_actions.add_child(rally)
 	for i in duel.tools[0].size():
 		var id: String = duel.tools[0][i]
@@ -1078,19 +1122,23 @@ func _refresh_actions() -> void:
 		var index: int = i
 		button.pressed.connect(func() -> void:
 			_selected_tool = -1 if _selected_tool == index else index
-			_rally_selected = false
 			_field.highlight = "field" if _selected_tool >= 0 else "")
 		_actions.add_child(button)
 
 
+## The War Horn, once a fight: your whole army surges at once.
+func _blow_war_horn() -> void:
+	var army: BattleArmy = duel.sim.army
+	var x := duel.sim.width / 2
+	var y: int = army.front[0] if army != null else duel.sim.middle
+	_selected_tool = -1
+	_field.highlight = ""
+	if duel.rally(0, x, y):
+		_field.add_events(duel.sim.take_events())
+
+
 func _on_field_tapped(at: Vector2i) -> void:
 	if duel.phase != "fight":
-		return
-	if _rally_selected:
-		if duel.rally(0, at.x, at.y):
-			_field.add_events(duel.sim.take_events())
-		_rally_selected = false
-		_field.highlight = ""
 		return
 	if _selected_tool >= 0 and duel.use_tool(0, _selected_tool, at.x, at.y):
 		_field.add_events(duel.sim.take_events())

@@ -47,9 +47,13 @@ func test_animals_find_the_nearest_enemy_and_fight() -> void:
 	var far: BattleSim.Fighter = _ready_now(sim.spawn(1, "raccoon", 15 * T, 1 * T))[0]
 	_run(sim, 0.2)
 	check(bear.target == near, "the bear goes for the closer squirrel")
-	_run(sim, 15)
+	var guard := 0
+	while near.alive and bear.alive and guard < 30 * sim.tps:
+		sim.step()
+		guard += 1
 	check(not near.alive, "and beats it")
-	check(bear.target == far or not far.alive, "then goes after the raccoon")
+	sim.step()
+	check(bear.target == far, "then goes after the raccoon")
 
 
 func test_ground_animals_cant_reach_flyers() -> void:

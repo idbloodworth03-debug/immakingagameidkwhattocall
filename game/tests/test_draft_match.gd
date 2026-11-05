@@ -87,14 +87,41 @@ func test_later_rounds_offer_five_animals_and_tools() -> void:
 		check(ids.count(id) == 1, "%s offered once" % id)
 
 
-func test_picking_an_owned_animal_adds_a_star() -> void:
+func test_picking_an_owned_animal_adds_a_squad() -> void:
 	var pool := ["brown_bear", "lion", "gray_squirrel", "net"]
 	var m := _after_starters(3, ["brown_bear", "lion", "gray_squirrel"], ["brown_bear", "lion", "gray_squirrel"], pool)
-	var slot := _slot(m, 0, "brown_bear")
-	check(slot >= 0, "the bear is offered again")
+	var slot := _slot(m, 0, "lion")
+	check(slot >= 0, "the lion is offered again")
 	check(m.pick(0, slot), "picked")
-	check_eq(m.herds[0].size(), 3, "no copy added")
-	check_eq(int(m.herds[0][m.herd_index(0, "brown_bear")].stars), 2, "a star instead")
+	var entry: Dictionary = m.herds[0][m.herd_index(0, "lion")]
+	check_eq(m.herds[0].size(), 3, "still three kinds of animal")
+	check_eq(int(entry.squads), 2, "another squad of lions")
+	check_eq(int(entry.stars), 1, "no star")
+	var lions: Array = m.sim.units(0).filter(func(f): return f.card.id == "lion")
+	check_eq(lions.size(), 2 * DraftMatch.squad_units("lion"), "two squads on the field")
+	check_eq(m.picks_made[0][-1].kind, "squad", "the pick says so")
+
+
+func test_an_upgrade_stars_every_squad() -> void:
+	var m := _after_starters(13, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
+	m.herds[0][1].squads = 2
+	check(m.star(0, 1), "upgraded")
+	m._lay_out_herds()
+	var lions: Array = m.sim.units(0).filter(func(f): return f.card.id == "lion")
+	check_eq(lions.size(), 2 * DraftMatch.squad_units("lion"), "both squads")
+	for f in lions:
+		check_eq(int(f.memory.stars), 2, "every lion has the star")
+
+
+func test_the_army_has_a_size_limit() -> void:
+	var m := _after_starters(14, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
+	var cap := int(GameData.draft_rules.army_max_units)
+	m.herds[0][2].squads = (cap - m.army_units(0) + DraftMatch.squad_units("gray_squirrel")) / DraftMatch.squad_units("gray_squirrel")
+	check(m.army_units(0) <= cap, "at the limit (%d)" % m.army_units(0))
+	m.offers[0] = [{"id": "gray_squirrel", "taken": false}, {"id": "net", "taken": false}]
+	check_eq(m.can_pick(0, 0), "Army full", "no room for another squad")
+	check_eq(m.can_pick(0, 1), "", "a tool still fits")
+	check_eq(m.can_star(0, 0), "", "and upgrades too")
 
 
 func test_stars_from_the_herd_and_the_cap() -> void:
@@ -127,13 +154,14 @@ func test_two_tools_at_most() -> void:
 	check_eq(m.tools[0], ["net", "medkit"], "two tools, the new one in its place")
 
 
-func test_no_limit_on_the_herd() -> void:
+func test_every_kind_lines_up() -> void:
 	var m := DraftMatch.new(7)
 	m.herds[0] = []
 	for id in ["brown_bear", "lion", "gray_squirrel", "giant_panda", "wild_boar", "raccoon", "wolf_pack", "tiger", "hippopotamus", "black_rhino", "asian_elephant", "snapping_turtle"]:
-		m.herds[0].append({"id": id, "stars": 1})
+		m.herds[0].append({"id": id, "stars": 1, "squads": 1})
 	m._lay_out_herds()
-	check_eq(m.groups[0].size(), 12, "twelve animals on the field")
+	check_eq(m.groups[0].size(), 12, "twelve kinds of animal")
+	check_eq(m.sim.units(0).size(), m.army_units(0), "every squad on the field")
 	for f in m.sim.units(0):
 		check(f.y > m.sim.middle and f.y < m.sim.height, "%s stays on its own half" % f.card.id)
 
@@ -151,11 +179,19 @@ func test_classes_take_their_rows() -> void:
 		check(f.y < m.sim.middle, "the other herd lines up on its own half")
 
 
-## A herd of `count` animals of these ids, in turn.
+## A herd of `count` squads of these ids, in turn.
 func _big_herd(count: int, ids: Array) -> Array:
 	var herd := []
 	for i in count:
-		herd.append({"id": ids[i % ids.size()], "stars": 1})
+		var id: String = ids[i % ids.size()]
+		var at := -1
+		for j in herd.size():
+			if herd[j].id == id:
+				at = j
+		if at >= 0:
+			herd[at].squads += 1
+		else:
+			herd.append({"id": id, "stars": 1, "squads": 1})
 	return herd
 
 
@@ -187,19 +223,18 @@ func test_big_herds_line_up_without_overlapping() -> void:
 	var m := DraftMatch.new(33)
 	m.herds = [_big_herd(24, ids), _big_herd(24, ids)]
 	m._lay_out_herds()
-	var spacing := float(GameData.class_rules.rows.spacing) * T
 	for team in 2:
-		var spots := []
-		for f in m.sim.units(team):
-			if String(f.memory.view_key).ends_with("/0"):
-				spots.append(Vector2(f.x, f.y))
-		check_eq(spots.size(), 24, "team %d: everyone on the field" % team)
-		var closest := INF
-		for i in spots.size():
-			for j in range(i + 1, spots.size()):
-				closest = minf(closest, (spots[i] as Vector2).distance_to(spots[j]))
-		check(closest >= spacing * 0.5, "team %d: nobody stands on top of another (closest %.0f)" % [team, closest])
-		for f in m.sim.units(team):
+		var units := m.sim.units(team)
+		check_eq(units.size(), m.army_units(team), "team %d: everyone on the field" % team)
+		var squeezed := 0
+		for i in units.size():
+			for j in range(i + 1, units.size()):
+				var a: BattleSim.Fighter = units[i]
+				var b: BattleSim.Fighter = units[j]
+				if a.is_flying() == b.is_flying() and BattleSim.dist(a, b) < a.radius + b.radius:
+					squeezed += 1
+		check_eq(squeezed, 0, "team %d: nobody stands on top of another" % team)
+		for f in units:
 			check(m.sim.on_own_half(team, f.y), "team %d: %s on its own half" % [team, f.card.id])
 			check(f.x >= 0 and f.x <= m.sim.width, "%s inside the fence" % f.card.id)
 
@@ -213,12 +248,12 @@ func test_rows_stay_in_order_in_big_herds() -> void:
 	var nearest := {}
 	for f in m.sim.units(0):
 		var back: int = f.y - m.sim.middle
-		var band: String = DraftMatch.band_of(f.card.id)
-		deepest[band] = maxi(int(deepest.get(band, -1)), back)
-		nearest[band] = mini(int(nearest.get(band, 1 << 30)), back)
-	check(deepest.front < nearest.middle, "every Tank in front of every Tank Destroyer")
-	check(deepest.middle < nearest.air, "Air behind the middle row")
-	check(deepest.air < nearest.back, "Ranged at the back")
+		var rank: String = f.memory.rank
+		deepest[rank] = maxi(int(deepest.get(rank, -1)), back)
+		nearest[rank] = mini(int(nearest.get(rank, 1 << 30)), back)
+	check(deepest.wall < nearest.td, "every Tank in front of every Tank Destroyer")
+	check(nearest.air > nearest.td, "Air over the Tank Destroyers, behind their first line")
+	check(deepest.td < nearest.ranged and deepest.air < nearest.ranged, "Ranged at the back")
 
 
 func test_tools_work_once_a_fight_and_stay() -> void:

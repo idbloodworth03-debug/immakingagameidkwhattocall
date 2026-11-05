@@ -137,9 +137,10 @@ func _offer_value(id: String) -> float:
 		var herd_bonus := minf(float(duel.herds[team].size()) * float(weights.get("tool_per_animal", 0.25)), 2.0)
 		return float(weights.get("tool", 4.0)) + herd_bonus + _lean("tools") * 4.0 + noise
 	var index := duel.herd_index(team, id)
-	if index >= 0:
-		return _star_value(index) + noise * 0.5
 	var cls := GameData.class_of(id)
+	if index >= 0:
+		# Another squad of one it already has.
+		return float(weights.get("squad", 4.6)) + _power(id) + _class_need(cls) + _lean("stars") * -2.0 + noise
 	var value := float(weights.get("new_animal", 5.0)) + _power(id) + _class_need(cls) + noise
 	if not _class_counts(team).has(cls):
 		value += float(weights.get("new_class", 1.5))
@@ -159,13 +160,16 @@ func _power(id: String) -> float:
 	return (float(GameData.get_card(id).cost) - 4.5) * float(weights.get("power", 0.6)) * lerpf(0.6, 1.0, difficulty)
 
 
-## How much a star on herd animal `index` is worth: about a new animal's
-## worth for its power, more for one that counters the other herd, and more
-## for those who like stars.
+## How much an upgrade (a star for every squad) of herd animal `index` is
+## worth: about a new animal's worth for its power, more the more squads it
+## has, more for one that counters the other herd, and more for those who
+## like stars.
 func _star_value(index: int) -> float:
 	var weights: Dictionary = GameData.draft_rules.get("bot", {})
 	var id: String = duel.herds[team][index].id
+	var squads := int(duel.herds[team][index].get("squads", 1))
 	var value := float(weights.get("star", 4.0)) + _power(id) * 1.5 + maxf(0.0, _class_need(GameData.class_of(id))) * 0.5
+	value += float(weights.get("star_per_squad", 0.6)) * (squads - 1)
 	value += _lean("stars") * 4.0
 	return value + rng.randf() * lerpf(2.0, 0.5, difficulty)
 
@@ -192,14 +196,14 @@ func _class_need(cls: String) -> float:
 	return clampf(need, -2.0, 4.0) * lerpf(0.4, 1.0, difficulty)
 
 
-## How many of each class a herd has: its own as it is now, the other's as
+## How many squads of each class a herd has: its own as it is now, the other's as
 ## it was when this round's picking started (a person can't see the other's
 ## new picks either).
 func _class_counts(side: int) -> Dictionary:
 	var counts := {}
 	for entry in (duel.herds[side] if side == team else duel.herds_seen[side]):
 		var cls := GameData.class_of(entry.id)
-		counts[cls] = int(counts.get(cls, 0)) + 1
+		counts[cls] = int(counts.get(cls, 0)) + int(entry.get("squads", 1))
 	return counts
 
 
@@ -237,12 +241,15 @@ func update() -> void:
 			return
 
 
-## Where its animals are fighting hardest, once at least two are at it.
+## When to blow the War Horn (it rouses the whole army): once at least a
+## third of its army (and two or more) is in the thick of it. Where its
+## animals are fighting hardest, or {} for not yet.
 func _rally_spot() -> Dictionary:
-	var fighting := duel.sim.units(team).filter(func(f): return f.target != null and f.target.is_unit() and duel.sim.in_range(f, f.target))
-	var radius := roundi(float(duel.rules.rally.radius) * T)
-	var best := _best_cluster(fighting, radius, func(_f): return 1.0)
-	return best if float(best.get("value", 0)) >= 2.0 else {}
+	var mine := duel.sim.units(team)
+	var fighting := mine.filter(func(f): return f.target != null and f.target.is_unit() and duel.sim.in_range(f, f.target))
+	if fighting.size() < maxi(2, mine.size() / 3):
+		return {}
+	return _best_cluster(fighting, 3 * T, func(_f): return 1.0)
 
 
 func _reaction() -> int:

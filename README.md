@@ -25,7 +25,7 @@ Everything runs offline on your computer, saved on the device:
 - **Cages:** 6 kinds of cage (our chests), with unlock timers, gem skips and a drop-odds screen
 - **Ranger level:** an account level, plus player banners, icons and emotes to unlock
 - **Shop:** daily animal offers, cages, gold packs and cosmetics
-- **Draft Duel** against named Rival Rangers, best of 7 (first to 4 round wins). Each round you make 3 picks (round 1: 3 starting animals from your collection; then from 5 offered animals and tools, or a star for a herd animal), and the herds fight on their own by class: Tanks in front, Tank Destroyers in the middle, Ranged at the back, Air over the middle, Specialists where their trait works best. Rally once and use each tool once a fight. Each arena's boss guards the way to the next one. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
+- **Draft Duel** against named Rival Rangers, best of 7 (first to 4 round wins). You pick from your deck of 8: each round 3 picks (round 1: 3 starting animals; then from 5 offered animals and tools: a squad of an animal, or an upgrade for one in your army). The armies line up in formation (Tank wall, Tank Destroyers, Air over them, Ranged ranks, elite Specialists on the flanks, Mythic heroes) and fight as armies: march in step, volleys, the clash, the charge. Blow the War Horn once and use each tool once a fight. Each arena's boss guards the way to the next one. See "Draft Duel" in [docs/GAME_DESIGN.md](docs/GAME_DESIGN.md).
 - **Look and feel:**
   - every animal is a 3D render, with fur, real markings and its own walk and attack animations (made by our Blender pipeline in `tools/creatures/`)
   - 12 rendered arenas: an open, fenced field with themed scenery around it
@@ -191,9 +191,10 @@ files in `game/data/`:
 - **New animal:** copy an entry in `animals.json` and change it. Its `unlock_arena` must be an arena id from `arenas.json`, and its tags must exist in `tags.json`. The ability `id` must be one of the types the battle engine knows (listed in `scripts/battle/battle_abilities.gd`).
 - **New tool:** same idea in `tools.json`. The effect ids are listed in `scripts/battle/tool_effects.gd`.
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
-- **Draft Duel tuning** (wins needed, picks, options, tools, stars, Rally, how the field grows for big herds, how the computer weighs its picks): `draft_rules.json`
+- **Draft Duel tuning** (wins needed, picks, deck size, army size, options, tools, stars, the War Horn, how the field grows for big armies, how the computer weighs its picks): `draft_rules.json`
+- **Armies** (squad sizes and each animal's share of a card, the formation): `classes.json`; the march, volleys, clash and charge: `battle_rules.json` ("army"); how armies look (in-step marching, sizes, camera, banners): `feel.json` ("army")
 - **Starting cards** for new players (also their first deck): `progression.json` (`starting_cards`); deck size: `draft_rules.json` (`deck_size`)
-- **Classes** (counters, rows, Specialist traits, swarm size): `classes.json`; each animal's class and trait are in `animals.json`
+- **Classes** (counters, squads, formation, Specialist traits): `classes.json`; each animal's class and trait are in `animals.json`
 - **Habitats** (flavor: names, icons, colors): `habitats.json`
 - **Rival Rangers** (names, lines, portraits, favorite habitats and ways of playing, emotes, bosses, the boss reward, easing after losses): `rivals.json`
 - **Screen style** (colors, text sizes, spacing, corners, panels, buttons, pills and cards): `ui_style.json`. The wood, brass and sign pieces themselves are drawn by `python3 tools/make_ui_art.py`

@@ -36,7 +36,7 @@
   },
 
   "combat": {
-    "_note": "Combat juice. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could, so a herd doesn't swing in step; a hit that comes within strike_grace_seconds of a strike lands on that strike. Health bars show once an animal is hurt and fade away (over health_bar_fade_seconds) when it hasn't been hit for health_bar_hide_after seconds. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
+    "_note": "Combat juice. Every hit shows when it lands: the attacker's wind-up plays first (started then if none was showing) and a shot flies (shot_tiles_per_second, between shot_min_seconds and shot_max_seconds), and only then do the flash, sparks, number and health-bar drop show; a defeat follows its last hit by defeat_after_hit_seconds. Each attack starts up to impact_jitter_seconds later than it could (0: armies strike in unison); a hit that comes within strike_grace_seconds of a strike lands on that strike. Health bars show once an animal is hurt and fade away (over health_bar_fade_seconds) when it hasn't been hit for health_bar_hide_after seconds. Strong hits (at least strong_hit_pct of the target's health, a charge, a pounce or a dive) flash, squash and knock back harder; only big hits (big_hit_pct) and knockouts pause the whole fight for a moment (hit-stop, at most once every hitstop_cooldown) and shake it. Shake is in pixels.",
     "windup_squash": 0.12,
     "windup_pull_pixels": 4.0,
     "strike_stretch": 0.16,
@@ -51,7 +51,7 @@
     "hitstop_seconds": 0.055,
     "hitstop_defeat_seconds": 0.07,
     "hitstop_cooldown": 0.9,
-    "impact_jitter_seconds": 0.08,
+    "impact_jitter_seconds": 0.0,
     "strike_grace_seconds": 0.1,
     "defeat_after_hit_seconds": 0.1,
     "shot_tiles_per_second": 14.0,
@@ -83,10 +83,10 @@
   },
 
   "movement": {
-    "_note": "How animals move on screen. Only the drawing: where an animal is in the fight never changes. It follows its place in the fight like a spring (follow_rate, higher = snappier; each animal's differs by up to follow_variety, so a row doesn't move as one block), easing into and out of a run, and wanders up to march_wobble_tiles while marching (about every march_wobble_seconds). Animals are nudged apart on screen until their pictures are spread_body_share of their height apart (enemies in a scrap spread_enemy_share of that, a flier over an animal on the ground spread_air_share; one straight behind another also steps aside by spread_sideways, so a line staggers), at spread_rate, by at most spread_max_tiles, drifting back at spread_return_rate once there's room. They turn at turn_degrees_per_second toward where they walk or what they fight (a push never turns them), switch to the next of their 8 drawn directions only once turn_hysteresis_degrees past halfway, and pinch a little (turn_squash, for turn_squash_seconds) as they do. They walk only when moving on their own faster than walk_min_speed_tiles a second (for at least walk_hold_seconds); the walk plays as fast as the feet cover the ground (walk_stride_match 1 = exactly), kept between walk_min_fps and walk_max_fps. Stopping gives a small settling bounce (arrive_squash).",
+    "_note": "How animals move on screen. Only the drawing: where an animal is in the fight never changes. It follows its place in the fight like a spring (follow_rate, higher = snappier; each animal's may differ by up to follow_variety, 0 in armies so ranks move as one), easing into and out of a run, and may wander up to march_wobble_tiles while marching (about every march_wobble_seconds; 0: armies march in step). Animals fighting are nudged apart on screen until their pictures are spread_body_share of their height apart (enemies in a scrap spread_enemy_share of that, a flier over an animal on the ground spread_air_share; one straight behind another also steps aside by spread_sideways, so a line staggers), at spread_rate, by at most spread_max_tiles, drifting back at spread_return_rate once there's room. They turn at turn_degrees_per_second toward where they walk or what they fight (a push never turns them), switch to the next of their 8 drawn directions only once turn_hysteresis_degrees past halfway, and pinch a little (turn_squash, for turn_squash_seconds) as they do. They walk only when moving on their own faster than walk_min_speed_tiles a second (for at least walk_hold_seconds); the walk plays as fast as the feet cover the ground (walk_stride_match 1 = exactly), kept between walk_min_fps and walk_max_fps. Stopping gives a small settling bounce (arrive_squash).",
     "follow_rate": 12.0,
-    "follow_variety": 0.25,
-    "march_wobble_tiles": 0.1,
+    "follow_variety": 0.0,
+    "march_wobble_tiles": 0.0,
     "march_wobble_seconds": 2.6,
     "spread_body_share": 0.45,
     "spread_enemy_share": 1.0,
@@ -260,15 +260,19 @@
   },
 
   "pick": {
-    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: option_card for the five options, start_card for round 1's collection grid, herd_card for your herd row; slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Hold a card hold_seconds to see its details. After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
-    "option_card": [214, 262],
+    "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: option_card for the five options, start_card for round 1's collection grid, herd_card for your herd row; army_height: how tall your army in formation is drawn while picking at least (it takes the room the options leave; framed with army_margin_tiles around it, at least army_min_tiles across, zoomed in up to army_max_zoom); slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Hold a card hold_seconds to see its details. After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
+    "option_card": [184, 218],
     "start_card": [156, 176],
-    "herd_card": [104, 120],
+    "herd_card": [92, 106],
     "slot_size": 108,
     "undo_badge": 38,
     "hold_seconds": 0.35,
     "result_seconds": 1.8,
-    "bot_pick_seconds": [0.4, 0.8]
+    "bot_pick_seconds": [0.4, 0.8],
+    "army_height": 200.0,
+    "army_margin_tiles": 0.8,
+    "army_max_zoom": 10.0,
+    "army_min_tiles": 9.0
   },
 
   "grade": {
@@ -295,5 +299,34 @@
     "grass_tufts": 46,
     "grass_sway": 1.0,
     "petals": 7
+  },
+
+  "army": {
+    "_note": "How armies look (Draft Duel). Everyone in a formation marches in step: one walk timing for the whole army, a step every march_stride_tiles of ground it covers, with a thump (stomp_volume_db) and a tiny shake (stomp_shake) on every step; small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Animals in an army are drawn at squad_scale of their size (so a formation reads as many animals in ranks); an elite Specialist elite_scale bigger; a Mythic hero its hero_scale (classes.json) bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
+    "march_stride_tiles": 0.6,
+    "stomp_volume_db": -16.0,
+    "stomp_shake": 0.03,
+    "squad_scale": {"tank": 0.8, "tank_destroyer": 0.7, "ranged": 0.68, "air": 0.74, "specialist": 0.78},
+    "elite_scale": 1.14,
+    "lineup_seconds": 1.2,
+    "camera_margin_tiles": 1.4,
+    "camera_min_tiles": 9.0,
+    "camera_head_room_tiles": 1.2,
+    "camera_max_zoom": 1.7,
+    "camera_seconds": 0.9,
+    "banner_width_pixels": 22.0,
+    "banner_height_pixels": 17.0,
+    "banner_pole_pixels": 22.0,
+    "banner_alpha": 0.92,
+    "volley_tiles_per_second": 9.0,
+    "volley_min_seconds": 0.45,
+    "volley_max_seconds": 0.85,
+    "volley_arc": 1.8,
+    "clash_shake": 0.55,
+    "clash_hitstop_seconds": 0.12,
+    "war_horn_shake": 0.3,
+    "walk_in_tiles": 5.0,
+    "walk_in_tiles_per_second": 2.6,
+    "walk_in_steps_per_second": 1.8
   }
 }

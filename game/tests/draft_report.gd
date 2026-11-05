@@ -17,7 +17,7 @@ func _ready() -> void:
 		matches = maxi(1, args[0].to_int())
 
 	var totals := {"rounds": 0, "fights": 0, "fight_seconds": 0.0, "wipes": 0, "herd": 0, "units": 0,
-		"new": 0, "stars": 0, "tools": 0}
+		"new": 0, "squads": 0, "stars": 0, "tools": 0}
 	var wins := [0, 0, 0]          # draws, team 0, team 1
 	var class_fights := {}         # class -> fights a herd had at least one
 	var class_wins := {}
@@ -41,7 +41,7 @@ func _ready() -> void:
 			for e in m.take_events():
 				match e.type:
 					"pick":
-						var kind: String = {"animal": "new", "star": "stars", "tool": "tools"}[e.kind]
+						var kind: String = {"animal": "new", "squad": "squads", "star": "stars", "tool": "tools"}[e.kind]
 						totals[kind] += 1
 					"round_over":
 						totals.fights += 1
@@ -68,12 +68,11 @@ func _ready() -> void:
 	print("  rounds per match     %.1f" % (float(totals.rounds) / matches))
 	print("  wins                 team 0: %d, team 1: %d, draws: %d" % [wins[1], wins[2], wins[0]])
 	print("  per fight            %.1f s, %d%% ended in a wipe-out" % [totals.fight_seconds / fights, roundi(100.0 * totals.wipes / fights)])
-	print("  herds                %.1f animals each on average; %.1f animals on the field per fight, %d at most" % [
+	print("  armies               %.1f kinds of animal each on average; %.1f animals on the field per fight, %d at most" % [
 		totals.herd / fights / 2.0, totals.units / fights, biggest])
-	print("  picks                %.0f%% new animals, %.0f%% stars, %.0f%% tools" % [
-		100.0 * totals.new / maxf(1.0, totals.new + totals.stars + totals.tools),
-		100.0 * totals.stars / maxf(1.0, totals.new + totals.stars + totals.tools),
-		100.0 * totals.tools / maxf(1.0, totals.new + totals.stars + totals.tools)])
+	var picks := maxf(1.0, totals.new + totals.squads + totals.stars + totals.tools)
+	print("  picks                %.0f%% new animals, %.0f%% more squads, %.0f%% upgrades, %.0f%% tools" % [
+		100.0 * totals.new / picks, 100.0 * totals.squads / picks, 100.0 * totals.stars / picks, 100.0 * totals.tools / picks])
 	print("  classes              (fights a herd had one: its round wins)")
 	for cls in GameData.class_order:
 		print("    %-16s %4d fights, won %d%%" % [cls, int(class_fights.get(cls, 0)), roundi(100.0 * int(class_wins.get(cls, 0)) / maxf(1.0, float(class_fights.get(cls, 0))))])

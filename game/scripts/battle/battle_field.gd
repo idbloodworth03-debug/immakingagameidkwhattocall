@@ -99,6 +99,24 @@ var _pressed := false
 var _clouds: Array = []
 var _tufts: Array = []
 var _ambient_size := Vector2.ZERO
+## The battle-line camera (armies only): how far it's zoomed in from the
+## whole field, and the point of the field in the middle of the screen.
+var _zoom := 1.0
+var _cam := Vector2(-1, -1)
+## Which army the camera frames: -1 both (a fight), 0 or 1 just that one
+## (the army shown while picking); only that army is drawn then.
+var frame_team := -1
+## New animals walk into their places instead of popping in, and animals
+## moved to new places walk there instead of hopping (the army shown while
+## picking).
+var walk_in := false
+## The camera's limits here, if not feel.json's (the army shown while
+## picking is a short, wide strip: it needs to zoom in much further).
+var camera_max_zoom := -1.0
+var camera_min_tiles := -1.0
+var camera_margin := -1.0
+var _banners: Node2D
+var _last_steps := [-1, -1]
 
 
 func _ready() -> void:
@@ -122,6 +140,8 @@ func _ready() -> void:
 	_units = Node2D.new()
 	_units.y_sort_enabled = true
 	_world.add_child(_units)
+	_banners = _Painter.new(_draw_banners)
+	_world.add_child(_banners)
 	fx = FxLayer.new(self)
 	_world.add_child(fx)
 	resized.connect(_arena.queue_redraw)
@@ -142,6 +162,11 @@ class _Painter:
 # --- Coordinates -----------------------------------------------------------
 
 func _scale() -> float:
+	return _base_scale() * _zoom
+
+
+## The scale that shows the whole field.
+func _base_scale() -> float:
 	return minf(size.x / ((BattleSim.WIDTH + 2.0 * MARGIN) * _view_k), size.y / ((BattleSim.HEIGHT + 2.0 * MARGIN) * _view_k))
 
 
@@ -159,9 +184,11 @@ func _field_k() -> float:
 	return _field_size().x / BattleSim.WIDTH
 
 
-## The field sits in the middle, with the arena's scenery around it.
+## The field sits in the middle, with the arena's scenery around it (or,
+## with the battle-line camera, the point it looks at does).
 func _origin() -> Vector2:
-	return (size - _field_size() * _scale()) / 2.0
+	var look := _cam if _cam.x >= 0.0 else _field_size() / 2.0
+	return size / 2.0 - look * _scale()
 
 
 func to_screen(x: float, y: float) -> Vector2:
@@ -174,10 +201,76 @@ func to_field(point: Vector2) -> Vector2i:
 	return Vector2i(clampi(roundi(p.x), 0, int(field.x)), clampi(roundi(p.y), 0, int(field.y)))
 
 
-## Shows the whole field right away, without the zoom (e.g. a new match).
+## Shows the whole field right away, without the zoom (e.g. a new match),
+## or the armies, framed.
 func snap_camera() -> void:
 	_view_k = _field_k()
+	_frame_armies(0.0, true)
 	_arena.queue_redraw()
+
+
+## The battle-line camera: frames every animal still standing (or one
+## army's, frame_team), with some room around them (feel.json "army"),
+## never closer than camera_min_tiles across and never beyond the arena.
+## Eases there over camera_seconds; `snap` goes at once.
+func _frame_armies(delta: float, snap := false) -> void:
+	if sim == null or sim.army == null or size.x <= 0.0:
+		if _zoom != 1.0 or _cam.x >= 0.0:
+			_zoom = 1.0
+			_cam = Vector2(-1, -1)
+			_arena.queue_redraw()
+		return
+	var a := "army"
+	var box := Rect2()
+	var first := true
+	for f: BattleSim.Fighter in sim.fighters:
+		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
+			continue
+		var p := Vector2(f.x, f.y)
+		if first:
+			box = Rect2(p, Vector2.ZERO)
+			first = false
+		else:
+			box = box.expand(p)
+	if first:
+		return
+	var margin := (camera_margin if camera_margin >= 0.0 else Feel.num(a, "camera_margin_tiles", 2.2)) * 1000.0
+	box = box.grow(margin)
+	# Room above for the animals' heads and banners.
+	box = box.grow_individual(0, margin * 0.6 + Feel.num(a, "camera_head_room_tiles", 1.2) * 1000.0, 0, 0)
+	var base := _base_scale()
+	var least := (camera_min_tiles if camera_min_tiles > 0.0 else Feel.num(a, "camera_min_tiles", 10.0)) * 1000.0
+	var w := maxf(box.size.x, least)
+	var h := maxf(box.size.y, least * size.y / maxf(1.0, size.x))
+	var zoom := clampf(minf(size.x / (w * base), size.y / (h * base)), 1.0, camera_max_zoom if camera_max_zoom > 0.0 else Feel.num(a, "camera_max_zoom", 1.7))
+	var look := box.get_center()
+	# Keep the view on the arena.
+	var half := size / (2.0 * base * zoom)
+	var field := _field_size()
+	look.x = clampf(look.x, half.x - MARGIN, field.x + MARGIN - half.x) if half.x * 2.0 < field.x + 2.0 * MARGIN else field.x / 2.0
+	look.y = clampf(look.y, half.y - MARGIN, field.y + MARGIN - half.y) if half.y * 2.0 < field.y + 2.0 * MARGIN else field.y / 2.0
+	if snap or _cam.x < 0.0:
+		_zoom = zoom
+		_cam = look
+	else:
+		var k := 1.0 - exp(-delta * 3.0 / maxf(0.05, Feel.num(a, "camera_seconds", 0.9)))
+		_zoom = lerpf(_zoom, zoom, k)
+		_cam = _cam.lerp(look, k)
+	_arena.queue_redraw()
+
+
+## True while `team`'s army is marching forward this tick.
+func marching(team: int) -> bool:
+	return sim != null and sim.army != null and int(sim.army.moved_now[team]) > 0
+
+
+## Where in its walk cycle (0-1) a marching army's feet are: one timing for
+## the whole army, keeping pace with the ground it covers.
+func march_walk(team: int) -> float:
+	if sim == null or sim.army == null:
+		return 0.0
+	var marched := float(sim.army.marched[team]) - float(sim.army.moved_now[team]) * (1.0 - blend)
+	return fposmod(marched / maxf(1.0, Feel.num("army", "march_stride_tiles", 0.6) * 1000.0), 1.0)
 
 
 ## A crowded field (feel.json "crowd"): simpler effects, so it stays readable
@@ -403,6 +496,8 @@ func _process(delta: float) -> void:
 	_world.scale = Vector2(zoom, zoom)
 	_world.position = pan + shake_offset
 	_follow_field(delta)
+	_frame_armies(delta)
+	_stomp()
 	_check_crowd()
 	UnitView.refresh_tuning()
 	if sim != null:
@@ -421,14 +516,29 @@ func _process(delta: float) -> void:
 	_remove_finished()
 	_decor.queue_redraw()
 	_ground.queue_redraw()
+	_banners.queue_redraw()
 	fx.queue_redraw()
+
+
+## A marching army stomps in step: one thump (and a tiny shake) for every
+## step the whole army takes.
+func _stomp() -> void:
+	for team in 2:
+		if not marching(team) or (frame_team >= 0 and team != frame_team):
+			_last_steps[team] = -1
+			continue
+		var steps := floori(march_walk(team) * 2.0)
+		if _last_steps[team] >= 0 and steps != _last_steps[team]:
+			Sound.play("land", Feel.num("army", "stomp_volume_db", -16.0), 0.05)
+			shake(Feel.num("army", "stomp_shake", 0.03))
+		_last_steps[team] = steps
 
 
 func _sync_views(dt: float) -> void:
 	var seen := {}
 	_by_uid.clear()
 	for f: BattleSim.Fighter in sim.fighters:
-		if not f.alive or not f.is_unit():
+		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
 			continue
 		var key: Variant = f.memory.get("view_key", f.uid)
 		var v: UnitView = _views.get(key, null)
@@ -445,7 +555,12 @@ func _sync_views(dt: float) -> void:
 			_views[key] = v
 			_units.add_child(v)
 			v.position = to_screen(at.x, at.y)
-			fx.burst_spawn(v.position)
+			if walk_in and v.army:
+				# A new squad marches in from behind its army.
+				var back := 1.0 if f.team == 0 else -1.0
+				v.walk_to(at + Vector2(0, back * Feel.num("army", "walk_in_tiles", 5.0) * 1000.0), _time)
+			else:
+				fx.burst_spawn(v.position)
 		v.sync(f, at, dt, _time)
 		seen[key] = true
 		_by_uid[f.uid] = v
@@ -475,8 +590,13 @@ func _spread_views(dt: float) -> void:
 	var cell := 2500.0
 	var list: Array[UnitView] = []
 	var grid := {}
+	var settle := Feel.num(m, "spread_return_rate", 1.0) * 1000.0 * dt
 	for v: UnitView in _views.values():
 		if v.defeat >= 0.0 or v.doomed or v.fighter == null or v.fighter.memory.get("burrowing", false) or v.hop_t < 1.0:
+			continue
+		if v.army and (v.walking_in() or (v.in_formation() and not v._in_a_scrap())):
+			# In its place in the formation: lines stay clean, no nudging.
+			v.spread = v.spread.move_toward(Vector2.ZERO, settle)
 			continue
 		var c := v.pos + v.spread
 		var gk := (floori(c.x / cell) + 64) * 4096 + floori(c.y / cell) + 64
@@ -707,6 +827,41 @@ func _show(e: Dictionary) -> void:
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
 			fx.burst("sparkle", at, 5, 50.0, 1.0, 7.0, [EFFECT_COLORS.tranq_dart, Color.WHITE], -70.0, 2.0)
+		"clash":
+			# The walls meet: a big thump, dust thrown up all along the line.
+			var a := "army"
+			var at := to_screen(e.x, e.y)
+			var dust := Color("#c9b08a")
+			fx.effect("ring", at, 2600 * s, Color("#f3e3c0"), 0.55, "", true)
+			fx.effect("dust", at, 2000 * s, dust, 0.7)
+			for i in 7:
+				var along := Vector2((i - 3) * 700.0 * s, 0)
+				fx.burst("puff", at + along, 3, 130.0, 0.6, 10.0, [dust, Color("#e6d3b0")], -60.0, 2.5)
+			fx.burst("spark", at, 12, 320.0, 0.35, 7.0, [Color("#fff6b0"), Color.WHITE], 0.0, 6.0)
+			shake(Feel.num(a, "clash_shake", 0.55))
+			hit_stop(Feel.num(a, "clash_hitstop_seconds", 0.12))
+			Sound.play("boom", -2.0)
+		"volley":
+			# Every Ranged animal lets fly at once.
+			Sound.play("whoosh", -3.0, 0.05)
+		"charge":
+			var at := to_screen(e.x, e.y)
+			fx.burst("puff", at, 10, 160.0, 0.6, 9.0, [Color("#c9b08a"), Color("#e6d3b0")], -40.0, 2.5)
+			Sound.play("alert", -4.0)
+		"war_horn":
+			# The whole army surges: a ring of its color sweeping out and
+			# every animal springing forward.
+			var color := OWN_COLOR if int(e.team) == 0 else ENEMY_COLOR
+			var middle := Vector2.ZERO
+			var count := 0
+			for v: UnitView in _views.values():
+				if v.team == int(e.team) and v.defeat < 0.0 and not v.doomed:
+					v.hop_in(_time)
+					middle += v.position
+					count += 1
+			if count > 0:
+				fx.effect("ring", middle / count, 5200 * s, color.lightened(0.3), 0.8, "", true)
+			shake(Feel.num("army", "war_horn_shake", 0.3))
 
 
 ## A hit the fight just dealt: the attacker's strike plays (its wind-up
@@ -726,7 +881,13 @@ func _schedule_hit(e: Dictionary) -> Dictionary:
 			var c := "combat"
 			var tiles := toward.length() / 1000.0
 			var flight := clampf(tiles / maxf(0.1, Feel.num(c, "shot_tiles_per_second", 14.0)), Feel.num(c, "shot_min_seconds", 0.12), Feel.num(c, "shot_max_seconds", 0.32))
-			flight = fx.shoot(attacker, target, Vector2(e.x, e.y), delay, flight)
+			var arc := 1.0
+			if e.has("volley"):
+				# A volley: higher, slower arcs, so the shots fly as a flock.
+				var a := "army"
+				flight = clampf(tiles / maxf(0.1, Feel.num(a, "volley_tiles_per_second", 9.0)), Feel.num(a, "volley_min_seconds", 0.45), Feel.num(a, "volley_max_seconds", 0.85))
+				arc = Feel.num(a, "volley_arc", 1.8)
+			flight = fx.shoot(attacker, target, Vector2(e.x, e.y), delay, flight, arc)
 			delay += flight
 		hit.at = _time + delay
 	if target != null and target.fighter != null:
@@ -820,7 +981,7 @@ func _land(hit: Dictionary) -> void:
 	for after in hit.after:
 		_show(after)
 	if log_impacts:
-		impact_log.append({"time": _time, "team": attacker.team if attacker != null else -1, "read": bool(hit.get("read", false)), "late": _time - float(hit.sim_at)})
+		impact_log.append({"time": _time, "team": attacker.team if attacker != null else -1, "read": bool(hit.get("read", false)), "late": _time - float(hit.sim_at), "volley": int(e.get("volley", -1))})
 
 
 ## A hit effect that fits how the attacker fights.
@@ -927,6 +1088,50 @@ func _draw_unit_ground(canvas: CanvasItem) -> void:
 			if b[0] == cls:
 				var side := float(b[2]) * 1.3
 				canvas.draw_texture_rect(texture, Rect2(b[1] - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(1, 1, 1, float(b[3])))
+
+
+## Each squad's banner, over its animals: a flag on a pole in its team's
+## color with its class's icon. Elite Specialists and Mythic heroes get a
+## gold one.
+func _draw_banners(canvas: CanvasItem) -> void:
+	if sim == null or sim.army == null:
+		return
+	var a := "army"
+	var squads := {}
+	for v: UnitView in _views.values():
+		if not v.army or v.defeat >= 0.0 or v.doomed or v.fighter == null or v.fighter.memory.get("burrowing", false):
+			continue
+		var g := int(v.fighter.memory.get("group", -1))
+		var top := v.position + v.head()
+		if not squads.has(g):
+			squads[g] = {"x": 0.0, "n": 0, "top": top.y, "team": v.team, "cls": v.cls,
+				"gold": v.fighter.memory.get("hero", false) or v.fighter.memory.get("elite", false)}
+		var sq: Dictionary = squads[g]
+		sq.x += top.x
+		sq.n += 1
+		sq.top = minf(float(sq.top), top.y)
+	var pole := Feel.num(a, "banner_pole_pixels", 22.0)
+	var w := Feel.num(a, "banner_width_pixels", 22.0)
+	var h := Feel.num(a, "banner_height_pixels", 17.0)
+	var alpha := Feel.num(a, "banner_alpha", 0.92)
+	var ink := Color(UIKit.INK, alpha)
+	for sq: Dictionary in squads.values():
+		var base := Vector2(float(sq.x) / int(sq.n), float(sq.top) - 4.0)
+		var tip := base - Vector2(0, pole + h)
+		canvas.draw_line(base, tip, ink, 2.5)
+		var color: Color = (OWN_COLOR if int(sq.team) == 0 else ENEMY_COLOR)
+		if sq.gold:
+			color = Color("#ffc53d")
+		# The flag flies toward the enemy's side of the screen's top or
+		# bottom... simply to the right, with a little wave.
+		var wave := sin(_time * 5.0 + base.x * 0.05) * 2.0
+		var flag := PackedVector2Array([tip, tip + Vector2(w, wave * 0.5), tip + Vector2(w * 0.86, h * 0.5 + wave), tip + Vector2(w, h + wave * 0.5), tip + Vector2(0, h)])
+		canvas.draw_colored_polygon(flag, Color(color, alpha))
+		canvas.draw_polyline(flag + PackedVector2Array([tip]), ink, 2.0)
+		var icon := UIKit.icon(GameData.ui_icon(String(GameData.class_info(String(sq.cls)).get("icon", ""))))
+		if icon != null:
+			var side := h * 0.8
+			canvas.draw_texture_rect(icon, Rect2(tip + Vector2(w * 0.42 - side / 2.0, h / 2.0 - side / 2.0 + wave * 0.4), Vector2(side, side)), false, Color(1, 1, 1, alpha))
 
 
 ## Over the ground, under the animals: the highlight, bait and ground effects.

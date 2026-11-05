@@ -129,8 +129,11 @@ func allow_sparks(amount: int) -> bool:
 ## `delay` seconds) and flies `flight` seconds (or so: some looks fly
 ## slower, data/shots.json) to `target`, following it, or to `to` (field
 ## units) if it has no view. Gives the real flight time.
-func shoot(attacker: UnitView, target: UnitView, to: Vector2, delay: float, flight: float) -> float:
+func shoot(attacker: UnitView, target: UnitView, to: Vector2, delay: float, flight: float, arc := 1.0) -> float:
 	var look := ShotLooks.look_for(GameData.cards.get(attacker.id, {}))
+	if arc != 1.0:
+		look = look.duplicate()
+		look.arc = float(look.get("arc", 0.3)) * arc
 	flight *= ShotLooks.flight_scale(look)
 	projectiles.append({"attacker": attacker, "target": target, "to": to, "from": Vector2.ZERO,
 		"launch": time + delay, "land": time + delay + flight, "trail": [], "look": look})

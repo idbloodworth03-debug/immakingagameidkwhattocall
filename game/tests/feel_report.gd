@@ -7,8 +7,13 @@ extends Node
 ## the fight. From the repository root:
 ##   godot --headless --fixed-fps 60 --path game res://tests/feel_report.tscn -- small 3
 ## (herd size: "small" = 4 a side, "big" = 22 a side; then how many fights).
-## HERD_A=id,id and HERD_B=id,id fight those herds instead of random ones;
-## OUT=file saves the report.
+## HERD_A=id,id and HERD_B=id,id fight those herds instead of random ones
+## ("id*2": two squads of it); OUT=file saves the report.
+##
+## Army checks (Draft Duel's formations): how far animals are from their
+## places while their army marches, how straight each line is, whether the
+## whole army's feet are in step, whether the Ranged fire together and their
+## shots land together, and when the volleys, the clash and the charge come.
 
 const SIZE := Vector2(720, 1080)
 
@@ -68,8 +73,9 @@ func _next_fight() -> void:
 			herd.append({"id": _pick(), "stars": 1})
 		if given != "":
 			herd = []
-			for id in given.split(","):
-				herd.append({"id": id, "stars": 1})
+			for spec in given.split(","):
+				var parts := spec.split("*")
+				herd.append({"id": parts[0], "stars": 1, "squads": int(parts[1]) if parts.size() > 1 else 1})
 		duel.herds[team] = herd
 		duel.picks_left[team] = 0
 		duel.picks_made[team] = []
@@ -79,6 +85,8 @@ func _next_fight() -> void:
 	field.snap_camera()
 	accumulator = 0.0
 	started = now
+	_volley_lands.clear()
+	_charged = false
 	last.clear()
 	targets.clear()
 	still.clear()
@@ -97,7 +105,14 @@ func _reset_stats() -> void:
 		"covered_frames": 0, "covered_by_team": 0, "lockstep_hits": 0, "was_frozen": false, "spread": 0.0,
 		"blips": {},
 		"impacts": 0, "impacts_unread": 0, "impact_late": 0.0, "impacts_together": 0,
+		"march_frames": 0, "march_off": 0.0, "march_close": 0, "line_spread": 0.0, "lines": 0,
+		"step_frames": 0, "in_step": 0, "battle_frames": 0, "battle_off": 0.0,
+		"ranged_shots": 0, "volley_shots": 0, "volleys": 0, "volley_land_spread": 0.0,
+		"first_volley": 0.0, "clash": 0.0, "charge": 0.0, "with_volley": 0, "with_clash": 0, "with_charge": 0,
+		"volley_first": 0, "charge_after_clash": 0,
 	}
+var _volley_lands := {}
+var _charged := false
 
 
 func _process(delta: float) -> void:
@@ -129,6 +144,7 @@ func _process(delta: float) -> void:
 	if duel.phase == "fight":
 		field.blend = clampf(accumulator / tick_length, 0.0, 1.0)
 	_watch_views(delta)
+	_watch_army()
 
 
 func _before_step() -> void:
@@ -176,6 +192,32 @@ func _check_hits(events: Array) -> void:
 	for k in rhythm:
 		if int(rhythm[k]) > 1:
 			stats.lockstep_hits += int(rhythm[k])
+	var army: BattleArmy = duel.sim.army
+	var at := float(duel.fight_tick) / duel.sim.tps
+	for e in events:
+		match e.type:
+			"volley":
+				if int(e.team) == 0 and army != null and army.volleys[0].size() == 1:
+					stats.first_volley += at
+					stats.with_volley += 1
+			"clash":
+				stats.clash += at
+				stats.with_clash += 1
+				if army != null and (not army.volleys[0].is_empty() or not army.volleys[1].is_empty()):
+					stats.volley_first += 1
+			"charge":
+				if not _charged:
+					_charged = true
+					stats.charge += at
+					stats.with_charge += 1
+					if army != null and army.clash_tick >= 0:
+						stats.charge_after_clash += 1
+		if e.type == "hit" and bool(e.get("ranged", false)):
+			for f in duel.sim.fighters:
+				if f.uid == int(e.from) and f.cls == "ranged":
+					stats.ranged_shots += 1
+					if e.has("volley"):
+						stats.volley_shots += 1
 	for e in events:
 		if e.type != "hit":
 			continue
@@ -200,6 +242,11 @@ func _watch_views(_delta: float) -> void:
 	# the fight dealt them, and did a teammate's land on the same frame?
 	var landed := {}
 	for hit in field.impact_log:
+		if int(hit.get("volley", -1)) >= 0:
+			# A volley's shots, as they land: how far apart.
+			var vk := "%d/%d" % [hit.team, hit.volley]
+			var span: Array = _volley_lands.get(vk, [hit.time, hit.time])
+			_volley_lands[vk] = [minf(span[0], hit.time), maxf(span[1], hit.time)]
 		stats.impacts += 1
 		if not hit.read:
 			stats.impacts_unread += 1
@@ -295,8 +342,59 @@ func _watch_views(_delta: float) -> void:
 				stats.overlap_pairs += 1
 
 
+## The army checks for this frame: animals in their places while their army
+## marches (how far off, lines straight, feet in step) and once the fight
+## is on (how far from their places).
+func _watch_army() -> void:
+	var army: BattleArmy = duel.sim.army
+	if army == null:
+		return
+	var lines := {}
+	for v: UnitView in field.views():
+		if v.defeat >= 0.0 or v.fighter == null or not v.in_formation() or v.fighter.memory.get("burrowing", false):
+			continue
+		var f := v.fighter
+		var place := army.place_of(f)
+		var off := Vector2(f.x - place.x, f.y - place.y).length() / 1000.0
+		var fighting := f.target != null and f.target.alive and duel.sim.in_range(f, f.target)
+		if field.marching(f.team) and not fighting:
+			stats.march_frames += 1
+			stats.march_off += off
+			if off <= 0.25:
+				stats.march_close += 1
+			var key := "%d/%s/%d" % [f.team, f.memory.rank, int(f.memory.slot.y)]
+			if not lines.has(key):
+				lines[key] = []
+			lines[key].append(v.render_pos().y)
+			if v._frame_key.begins_with("walk"):
+				stats.step_frames += 1
+				var d := absf(fposmod(v.walk - field.march_walk(f.team) + 0.5, 1.0) - 0.5)
+				if d <= 0.03:
+					stats.in_step += 1
+		elif army.clash_tick >= 0:
+			stats.battle_frames += 1
+			stats.battle_off += off
+	for key in lines:
+		var ys: Array = lines[key]
+		if ys.size() < 2:
+			continue
+		var mean := 0.0
+		for y in ys:
+			mean += float(y)
+		mean /= ys.size()
+		var dev := 0.0
+		for y in ys:
+			dev = maxf(dev, absf(float(y) - mean))
+		stats.line_spread += dev / 1000.0
+		stats.lines += 1
+
+
 func _finish_fight() -> void:
 	stats.fights += 1
+	for vk in _volley_lands:
+		var span: Array = _volley_lands[vk]
+		stats.volleys += 1
+		stats.volley_land_spread += float(span[1]) - float(span[0])
 	var seconds := float(duel.fight_tick) / duel.sim.tps
 	stats.fight_seconds += seconds
 	if duel.wiped_at[0] < 0 and duel.wiped_at[1] < 0:
@@ -326,6 +424,15 @@ func _report() -> void:
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
 	]
+	lines.append_array([
+		"Army checks",
+		"  in place on the march %.2f tiles from its place on average; %.0f%% within a quarter tile" % [stats.march_off / maxf(1, stats.march_frames), 100.0 * stats.march_close / maxf(1, stats.march_frames)],
+		"  straight lines        %.2f tiles: the furthest any animal is drawn out of its line while marching, on average" % [stats.line_spread / maxf(1, stats.lines)],
+		"  in step               %.0f%% of marching walk frames on the army's own step" % [100.0 * stats.in_step / maxf(1, stats.step_frames)],
+		"  holding the line      %.2f tiles from its place on average once the fight is on" % [stats.battle_off / maxf(1, stats.battle_frames)],
+		"  volleys               %.0f%% of Ranged shots fired in a volley; %d volleys, each one's shots land within %.2f s of each other on average" % [100.0 * stats.volley_shots / maxf(1, stats.ranged_shots), stats.volleys, stats.volley_land_spread / maxf(1, stats.volleys)],
+		"  the sequence          first volley at %.1f s (%d of %d fights), clash at %.1f s (%d), charge at %.1f s (%d); the volley came before the clash in %d, the charge after it in %d" % [stats.first_volley / maxf(1, stats.with_volley), stats.with_volley, stats.fights, stats.clash / maxf(1, stats.with_clash), stats.with_clash, stats.charge / maxf(1, stats.with_charge), stats.with_charge, stats.volley_first, stats.charge_after_clash],
+	])
 	var blips: Array = stats.blips.keys()
 	blips.sort_custom(func(x, y): return int(stats.blips[x]) > int(stats.blips[y]))
 	var top := []

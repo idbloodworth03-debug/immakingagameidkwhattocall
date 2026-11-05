@@ -10,7 +10,7 @@ itself (speeds, timing, luck) in `game/data/battle_rules.json`.
 An animal battler built around one mode, **Draft Duel**: a best-of-7 duel.
 Each round you make 3 picks from your collection (new animals, tools, or
 stars for animals you have), then watch your herd fight on its own while you
-make a few well-timed calls: a Rally and your tools. Every animal has a
+make a few well-timed calls: the War Horn and your tools. Every animal has a
 class (Tank, Tank Destroyer, Ranged, Air or Specialist) that sets its row
 and what it beats. First to 4 round wins takes the match.
 
@@ -25,53 +25,85 @@ its own deck of 8 now.)
 
 ## Draft Duel
 
-The goal: a simple, clear game. Herds fight on their own; your choices are
-what to pick, and when to Rally or use a tool. **Best of 7**: the first player
+The goal: a simple, clear game that feels like commanding an army. Armies
+fight on their own in formation; your choices are what to pick, and when to
+blow the War Horn or use a tool. **Best of 7**: the first player
 to win 4 rounds wins (at most 7 rounds; then the most wins, or a draw). The
 score is always big at the top: "2 - 1", with 4 pips each.
 
 **Each round: Pick, then Fight, then a quick result.**
 
 **Pick 3.** Every round you make exactly 3 picks:
-- **Round 1:** 3 starting animals from your collection (any you own,
-  Legendaries included).
-- **After that:** 5 options from your collection, a mix of animals and tools
-  (rarer ones come up less often). Each pick is one of:
-  - an offered animal (one you already have gets a **star** instead of a copy),
+- **Round 1:** 3 starting animals from your deck of 8.
+- **After that:** 5 options from your deck's animals and your tools (rarer
+  ones come up less often). Each pick is one of:
+  - an offered animal: a **squad** of it joins your army (another squad if
+    it's there already),
   - an offered tool (2 at most; a third replaces one you choose),
-  - a star for an animal already in your herd (tap it in the herd row).
+  - an **upgrade**: a star for every squad of an animal in your army (tap
+    it in your army, or its card in the row below).
 - Stars go up to 3; each star after the first adds 60% health and bite.
-- **No limit on the herd**: it grows every round, so fights get bigger.
+- The army grows every round, up to 40 animals (`army_max_units`); after
+  that an offered animal says "Army full" (tools and upgrades still work).
+- While you pick, your army stands in formation under the options; new
+  squads march into their places.
 - Tap your latest pick to take it back. **Fight!** lights up once all 3
   picks are made. Hold any card for its name and one short line.
 - No money, no shop, no hearts: there are no Acorns any more.
 
-**Classes** (`game/data/classes.json`): every animal has one, shown as an
-icon on its card and under it on the field. Animals take their places
-automatically by class:
+**Squads** (`squads` in `game/data/classes.json`): a card brings a squad,
+each animal with its share of the card's health and bite: Tanks 1 (big),
+Tank Destroyers 2, Ranged 3, Air 2, Specialists 1 (an elite: stronger,
+drawn bigger, with a gold ring and banner), a Mythic 1 (a large hero). Each
+squad carries a banner in its team's color with its class's icon.
 
-| Class | Row | What it does |
+**Classes** (`game/data/classes.json`): every animal has one, shown as an
+icon on its card and on its squad's banner. The army lines up in formation
+by class (`formation`):
+
+| Class | Place | What it does |
 |---|---|---|
-| Tank | Front | Tough. Holds the front line |
-| Tank Destroyer | Middle | +150% damage to Tanks, and goes for them first |
-| Ranged | Back | Reaches at least 5 tiles; +50% damage to Air, and goes for it first |
-| Air | Over the middle | Flies: only Ranged and Air can hit it |
-| Specialist | By trait | One trait: Burrow, Splash, Stun or Slow |
+| Tank | The wall in front, shoulder to shoulder (a second line if it's long) | Tough. Holds the front line |
+| Tank Destroyer | The line behind the wall | +150% damage to Tanks; charges them after the clash |
+| Ranged | The back ranks, every other line shifted half a place | Reaches at least 7 tiles; +50% damage to Air; fires in volleys |
+| Air | Hovering over the Tank Destroyers | Flies: only Ranged and Air can hit it |
+| Specialist | On the flanks (Burrowers the wall's, the rest the Tank Destroyers') | One trait: Burrow, Splash, Stun or Slow |
 
 Counters: Tank Destroyers beat Tanks, Tanks protect Ranged, Ranged beat Air,
 Air beats Tank Destroyers (they can't hit back), and Specialists disrupt.
 
-Specialist traits: **Burrow** (starts in front, travels underground and pops
-up behind the enemy's last row), **Splash** (back row; every hit also hits
-the group around the target for 60%), **Stun** (middle; every third hit
-freezes the target for 1 second), **Slow** (middle; hits slow the target 40%
-for 2 seconds). Swarms bring 2 animals at most.
+Specialist traits: **Burrow** (lines up on the wall's flank, digs in as the
+march starts, travels underground and pops up behind the enemy's last row),
+**Splash** (every hit also hits the group around the target for 60%),
+**Stun** (every third hit freezes the target for 1 second), **Slow** (hits
+slow the target 40% for 2 seconds).
 
-**Fight.** The herds fight on their own. You can **Rally** once (tap Rally,
-then the field: your animals there bite harder and move faster for a few
-seconds) and use **each tool once a fight**; tools stay in your belt for the
-next fight. The herd that outlasts the other wins the round; at the bell
-(40 seconds), the one with more of itself left.
+**Fight** (`scripts/battle/battle_army.gd`, numbers in `battle_rules.json`
+"army"). The armies fight on their own, as armies:
+1. **Lineup:** both armies stand in formation a moment, then FIGHT!
+2. **March:** each army moves up as one, at one pace, every animal in its
+   place and the whole army in step (with dust and a stomp on every step).
+3. **Volleys:** Ranged ranks stop to shoot once an enemy is in reach and
+   all fire together every 2 seconds, their shots arcing over as a flock.
+4. **Clash:** the walls meet with a big thump and a ring of dust. The front
+   holds while it fights; the lines never pass through each other.
+5. **Charge:** a moment later the Tank Destroyers leave their line and go
+   around the end of their own wall for the enemy Tanks (back to their line
+   once there are none left).
+6. **Battle:** everyone fights what's in front of its own place and stays
+   near its line (a leash); an animal with nothing in reach for a while may
+   stray a little further.
+7. **Collapse:** when animals fall, the ranks close up and the ones behind
+   step up; with nothing left to fight, the front marches on.
+
+You can blow the **War Horn** once (one tap: the whole army surges, biting
+harder, attacking faster and moving faster for a few seconds, with a horn
+and a banner) and use **each tool once a fight**; tools stay in your belt
+for the next fight. The camera frames the whole battle line, easing in as
+the armies close. The army that outlasts the other wins the round; at the
+bell (40 seconds), the one with more of itself left. Everyone marches,
+shoots and charges in unison; small random differences are kept only for
+standing about (breathing, fidgets, blinks, faces).
 
 **Big moments:** reaching 3 stars ("3 STARS!", stars and confetti), a
 flawless round ("FLAWLESS!"), and winning a match after being 2 rounds down
@@ -129,7 +161,7 @@ animals if it still needs more. Deck size is `deck_size` in
 `game/data/draft_rules.json`.
 
 **Tuning** is in `game/data/draft_rules.json` (wins needed, picks, options,
-tools, stars) and `game/data/classes.json` (counters, rows, traits, swarm
+tools, stars, army size) and `game/data/classes.json` (counters, squads, formation, traits, swarm
 size). `tests/draft_report.tscn` plays bot-vs-bot matches and prints match
 length, fight length, herd sizes, what the bots pick and how each class does.
 A run of 240 matches: about 5 rounds a match, fights about 21 seconds, 88%
@@ -180,7 +212,7 @@ Moonlit Cages and as a rare extra in big cages (see Cages).
 Each animal has:
 
 - **A class** (and a trait for Specialists): see Draft Duel. This decides its row and what it beats.
-- **Stats** at its starting level: hitpoints, damage, hit speed, speed and range. Its **count** says how many come in a pack (2 at most on the field).
+- **Stats** at its starting level: hitpoints, damage, hit speed, speed and range (a squad's animals each get their class's share: see Squads).
 - **A habitat** (flavor: the color of its card window) and **tags** like Canine or Big Cat.
 - A **power** number (2 to 8, the old shop cost) the computer opponent uses to judge it. The old ability names stay in the data for flavor; they don't do anything in a fight.
 
@@ -395,8 +427,8 @@ check (`crowd` in `feel.json`). From 24 animals on the field:
 - Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
 
-**On screen** there's only the score, the herds (with a class icon under
-each animal and health bars on hurt ones), Rally and the tool buttons; no
+**On screen** there's only the score, the armies (a banner with its class
+icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no
 words float up over the field. After a fight the new score pops up big over
 the field and flies into the score bar.
 

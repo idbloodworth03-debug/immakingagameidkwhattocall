@@ -36,7 +36,10 @@ mane grows with its face).
    or already rendered, a looping victory. The death pose is kept for
    previews (`python strip.py <id> death`) but isn't in the sheets: the
    game's knockouts are a cartoon poof.
-5. **Render** (`sprites.py`): Cycles with Freestyle outlines (one deep,
+5. **Render** (`sprites.py`): the card portraits and the sprite sheets (the
+   game shows its animals as 3D models now, from step 8; the sheets are its
+   fallback, its timing data and the source of the crowd strips). Cycles
+   with Freestyle outlines (one deep,
    crisp line; the game's shader no longer adds a second), an orthographic
    camera at the game's 50-degree angle, five directions (the game mirrors
    the other three). How it looks is all in `look.json`: Blender's

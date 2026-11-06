@@ -135,9 +135,10 @@ var camera_margin := -1.0
 var _banners: Node2D
 var _last_steps := [-1, -1]
 var _life: ArenaLife
-## Show the animals as real 3D models (ModelStage) instead of sprites
-## (feel.json "models" "enabled"; set before the field is added).
-var use_models := false
+## Show the animals as real 3D models (ModelStage) instead of sprites:
+## feel.json "models" "enabled" unless a screen says otherwise before adding
+## the field.
+var use_models := Feel.on("models", "enabled", false)
 var _stage: ModelStage
 
 
@@ -161,8 +162,7 @@ func _ready() -> void:
 	_world.add_child(_decor)
 	_ground = _Painter.new(_draw_unit_ground)
 	_world.add_child(_ground)
-	if use_models or Feel.on("models", "enabled", false):
-		use_models = true
+	if use_models:
 		_stage = ModelStage.make(self)
 		_world.add_child(_stage)
 	_units = Node2D.new()

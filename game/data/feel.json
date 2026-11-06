@@ -204,8 +204,8 @@
   },
 
   "models": {
-    "_note": "The animals as real 3D models in battle (scripts/fx/model_stage.gd, art/models/battle/) instead of sprites. enabled: on everywhere (off: only Developer tools > Big army test (3D)). render_scale_max: at most this many real pixels per layout pixel; msaa: antialiasing (0, 2 or 4); outline_px: the dark outline's width at one real pixel per layout pixel. Shading is the 3D viewer's (viewer.json \"look\").",
-    "enabled": false,
+    "_note": "The animals as real 3D models in battle (scripts/fx/model_stage.gd, art/models/battle/) instead of sprites. enabled: on everywhere: fights, the army while picking, the arena previews (off: the older sprites; Developer tools > Big army test (sprites) compares). render_scale_max: at most this many real pixels per layout pixel; msaa: antialiasing (0, 2 or 4); outline_px: the dark outline's width at one real pixel per layout pixel. Shading is the 3D viewer's (viewer.json \"look\").",
+    "enabled": true,
     "render_scale_max": 2.0,
     "msaa": 2,
     "outline_px": 1.3

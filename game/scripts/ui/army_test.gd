@@ -1,7 +1,7 @@
 class_name ArmyTest
 extends Control
-## For testing (Profile > Developer tools > Big army test, and Big army
-## test (3D) with the animals as real 3D models, ModelStage): the biggest
+## For testing (Profile > Developer tools > Big army test, with the animals
+## as 3D models (ModelStage), and Big army test (sprites)): the biggest
 ## armies there can be (40 animals a side: every class, elites, Mythic
 ## heroes, 3-star squads) fight over and over on the real battle field, with
 ## the frame rate on screen. After each fight a line sums it up: frames a
@@ -14,8 +14,9 @@ extends Control
 ## ARMY_TEST_MODELS=1 (or 0) picks 3D models (or sprites).
 
 const MENU_SCENE := "res://scenes/main.tscn"
-## The next test shows the animals as 3D models (set by the Developer tools).
-static var use_models := false
+## The next test shows the animals as 3D models (the game's way), or as the
+## older sprites, for comparing (set by the Developer tools).
+static var use_models := true
 const ARMIES := [
 	[["brown_bear", 3, 3], ["black_rhino", 1, 2], ["yeti", 1, 1], ["wild_boar", 3, 2], ["tiger", 2, 3],
 		["gray_squirrel", 3, 3], ["wild_bactrian_camel", 1, 1], ["peregrine_falcon", 2, 2], ["california_condor", 1, 1],

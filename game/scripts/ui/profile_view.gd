@@ -195,10 +195,10 @@ func _dev_tools() -> Control:
 		["Reset profile", _confirm_reset],
 		["Animation preview", func() -> void: Transition.go("res://scenes/anim_preview.tscn")],
 		["Big army test", func() -> void:
-			ArmyTest.use_models = false
-			Transition.go("res://scenes/army_test.tscn")],
-		["Big army test (3D)", func() -> void:
 			ArmyTest.use_models = true
+			Transition.go("res://scenes/army_test.tscn")],
+		["Big army test (sprites)", func() -> void:
+			ArmyTest.use_models = false
 			Transition.go("res://scenes/army_test.tscn")],
 		["Attack styles", func() -> void: Transition.go("res://scenes/style_showcase.tscn")],
 	]

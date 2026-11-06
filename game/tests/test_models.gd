@@ -86,3 +86,36 @@ func test_a_model_plays_its_views_animation() -> void:
 		check_eq(String(m.player.current_animation), "attack", "%s plays the attack" % v.id)
 		check(absf(m.player.current_animation_position - 0.5 * float(m.lengths.attack)) < 0.02, "%s halfway through it" % v.id)
 		break
+
+
+func test_3d_is_on_everywhere_by_default() -> void:
+	check(Feel.on("models", "enabled", false), "feel.json turns the 3D models on")
+	var field := BattleField.new()
+	_made.append(field)
+	check(field.use_models, "a battle field shows 3D models unless a screen says otherwise")
+
+
+func test_a_stunned_animal_looks_dizzy() -> void:
+	var field := _fight()
+	var stage := field._stage
+	for key in stage._models:
+		var v: UnitView = field._views[key]
+		v.fighter.stun = 30
+		v.animate(0.016, field.now())
+		check_eq(v.m_face, "dizzy", "a stunned %s's face is dizzy" % v.id)
+		stage.sync(field._views, field.now())
+		var m: ModelStage.Model = stage._models[key]
+		check_eq(m.face, "dizzy", "and so are its model's eyes")
+		break
+
+
+func test_the_arena_preview_shows_models() -> void:
+	var preview := ArenaPreview.new()
+	preview.animate = true
+	preview.size = Vector2(600, 300)
+	_made.append(preview)
+	_host().add_child(preview)
+	preview.arena_id = "rescue_center"
+	check(preview._viewport != null, "the preview has its 3D view")
+	check_eq(preview._models.size(), preview._cast.size(), "a model for each animal in it")
+	check(preview._bodies.is_empty(), "and no sprites")

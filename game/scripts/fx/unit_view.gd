@@ -213,6 +213,7 @@ var m_flash := 0.0
 var m_gold := 0.0
 var m_tint := Color.WHITE
 var m_visible := true
+var m_face := ""
 var _frames_of := {}
 
 
@@ -1223,7 +1224,9 @@ func animate(dt: float, now: float) -> void:
 	offset.y -= float(style_pose.lift)
 	rot += float(style_pose.rot)
 	look.position = offset
-	if face.radius > 0.0 and (face.visible or now >= _blink_next or defeat >= 0.0 or stunned or slowed or celebrating
+	if modeled:
+		m_face = _face_mode(t, anim, now, since, windup, celebrating, stunned, slowed)
+	elif face.radius > 0.0 and (face.visible or now >= _blink_next or defeat >= 0.0 or stunned or slowed or celebrating
 			or now - _hurt_at < t.wide_seconds or now < _smug_until or (since >= 0.0 and since < windup)):
 		_update_face(t, anim, frame, now, since, windup, celebrating, stunned, slowed, k)
 	_comic_touches(t, dt, slowed, k)
@@ -1341,28 +1344,34 @@ func _footfall(t: Tune) -> void:
 
 
 ## Which face to draw over its eyes this frame, if any.
-func _update_face(t: Tune, anim: String, frame: int, now: float, since: float, windup: float, celebrating: bool, stunned: bool, slowed: bool, k: float) -> void:
-	if face.radius <= 0.0:
-		return
+## Its cartoon face now: "", "blink", "squint", "wide", "dizzy", "drowsy",
+## "happy" or "smug" (and it blinks now and then).
+func _face_mode(t: Tune, anim: String, now: float, since: float, windup: float, celebrating: bool, stunned: bool, slowed: bool) -> String:
 	if now >= _blink_next:
 		var every := t.blink_every
 		_blink_at = now
 		_blink_next = now + randf_range(every.x, every.y)
-	var mode := ""
 	if defeat >= 0.0 or stunned:
-		mode = "dizzy"
-	elif celebrating:
-		mode = "happy"
-	elif now - _hurt_at < float(t.wide_seconds):
-		mode = "wide"
-	elif anim in ATTACK_ANIMS and since >= 0.0 and since < windup:
-		mode = "drowsy" if _trait == "slow" else "squint"
-	elif now < _smug_until:
-		mode = "smug"
-	elif slowed:
-		mode = "drowsy"
-	elif now - _blink_at < float(t.blink_seconds):
-		mode = "blink"
+		return "dizzy"
+	if celebrating:
+		return "happy"
+	if now - _hurt_at < float(t.wide_seconds):
+		return "wide"
+	if anim in ATTACK_ANIMS and since >= 0.0 and since < windup:
+		return "drowsy" if _trait == "slow" else "squint"
+	if now < _smug_until:
+		return "smug"
+	if slowed:
+		return "drowsy"
+	if now - _blink_at < float(t.blink_seconds):
+		return "blink"
+	return ""
+
+
+func _update_face(t: Tune, anim: String, frame: int, now: float, since: float, windup: float, celebrating: bool, stunned: bool, slowed: bool, k: float) -> void:
+	if face.radius <= 0.0:
+		return
+	var mode := _face_mode(t, anim, now, since, windup, celebrating, stunned, slowed)
 	if mode == "":
 		face.visible = false
 		_face_key = ""

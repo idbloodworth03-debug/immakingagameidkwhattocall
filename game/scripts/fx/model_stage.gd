@@ -20,6 +20,12 @@ const SKIN_SHADER := preload("res://scripts/fx/model_skin.gdshader")
 const OUTLINE_SHADER := preload("res://scripts/fx/model_outline.gdshader")
 const DIR := "res://art/models/battle/"
 const ATTACKS := ["attack", "attack2", "special"]
+## Each cartoon face as the eye shader's [blink, lid, pupil size, happy, dizzy].
+const FACES := {
+	"": [0.0, 0.0, 1.0, 0.0, 0.0], "blink": [1.0, 0.0, 1.0, 0.0, 0.0], "squint": [0.0, 0.48, 1.0, 0.0, 0.0],
+	"drowsy": [0.0, 0.62, 1.0, 0.0, 0.0], "smug": [0.0, 0.5, 1.0, 0.0, 0.0], "wide": [0.0, 0.0, 0.68, 0.0, 0.0],
+	"happy": [0.0, 0.0, 1.0, 1.0, 0.0], "dizzy": [0.0, 0.0, 1.0, 0.0, 1.0],
+}
 ## The camera's 50-degree look down (as the sprites and arenas were rendered).
 const SIN := 0.76604444
 const COS := 0.64278761
@@ -35,7 +41,6 @@ var _models := {}
 ## Models of animals that left the field, kept to reuse (building one is the
 ## slow part), by animal id.
 var _pool := {}
-var _look: Dictionary = {}
 var _settings: Dictionary = {}
 var _drawn_size := Vector2.ZERO
 
@@ -53,8 +58,7 @@ class Model:
 	var anim := ""
 	var lengths := {}
 	var size := 1.0
-	var blink_at := -10.0
-	var blink_next := 0.0
+	var face := "-"
 	var shown := {}
 	var id := ""
 
@@ -91,7 +95,6 @@ static func tile_scale(id: String) -> float:
 
 func _ready() -> void:
 	_settings = GameData.feel.get("models", {})
-	_look = GameData.viewer.get("look", {})
 	viewport = SubViewport.new()
 	viewport.transparent_bg = true
 	viewport.own_world_3d = true
@@ -135,11 +138,8 @@ func sync(views: Dictionary, now: float) -> void:
 	if ppu <= 0.0:
 		return
 	# The camera: the screen's middle over the field point under it.
-	var middle := field.screen_to_field(field.size / 2.0)
+	aim(camera, field.screen_to_field(field.size / 2.0), ppu, field.size.y)
 	var forward := Vector3(0.0, -SIN, -COS)
-	camera.size = field.size.y / ppu
-	camera.basis = Basis.looking_at(forward, Vector3.UP)
-	camera.position = Vector3(middle.x / 1000.0, 0.0, middle.y / 1000.0 / SIN) - forward * 80.0
 
 	var right := Vector3(1, 0, 0)
 	var up := Vector3(0, COS, -SIN)
@@ -170,39 +170,15 @@ func _make_model(v: UnitView) -> Model:
 	if not spare.is_empty():
 		var reused: Model = spare.pop_back()
 		_fit(reused, v)
-		_apply_look(reused, v)
+		reused.outline.set_shader_parameter("width_px", outline_px(render_scale))
 		reused.anim = ""
+		reused.face = "-"
 		reused.pivot.visible = true
 		return reused
-	var scene := _scene(v.id)
-	if scene == null:
+	var m := new_model(v.id, outline_px(render_scale), true)
+	if m == null:
 		return null
-	var m := Model.new()
-	m.id = v.id
-	m.pivot = Node3D.new()
-	m.turn = Node3D.new()
-	m.pivot.add_child(m.turn)
-	m.body = scene.instantiate() as Node3D
-	m.turn.add_child(m.body)
 	_fit(m, v)
-	m.skin = ShaderMaterial.new()
-	m.skin.shader = SKIN_SHADER
-	m.outline = ShaderMaterial.new()
-	m.outline.shader = OUTLINE_SHADER
-	_apply_look(m, v)
-	m.skin.next_pass = m.outline
-	for mesh in m.body.find_children("*", "MeshInstance3D", true, false):
-		var instance := mesh as MeshInstance3D
-		instance.material_override = m.skin
-		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	var players := m.body.find_children("*", "AnimationPlayer", true, false)
-	if not players.is_empty():
-		m.player = players[0]
-		# Posed by hand every frame, to the view's timing.
-		m.player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
-		for anim in m.player.get_animation_list():
-			m.lengths[String(anim)] = m.player.get_animation(anim).length
-	m.blink_next = randf_range(0.5, 4.0)
 	viewport.add_child(m.pivot)
 	return m
 
@@ -215,18 +191,79 @@ func _fit(m: Model, v: UnitView) -> void:
 	m.body.scale = Vector3.ONE * m.size
 
 
-func _apply_look(m: Model, v: UnitView) -> void:
-	var key_dir: Array = _look.get("key_dir", [-0.45, 0.72, 0.55])
+## The outline's width in the viewport's real pixels.
+static func outline_px(scale: float) -> float:
+	return Feel.num("models", "outline_px", 1.5) * scale
+
+
+## A new model of an animal in the cartoon shading (viewer.json "look"), for
+## any 3D layer: a pivot (at its feet), turned to face its way, holding the
+## model. `manual`: its animation is posed by hand (seek), not played.
+static func new_model(id: String, outline_width: float, manual := false) -> Model:
+	var scene := _scene(id)
+	if scene == null:
+		return null
+	var m := Model.new()
+	m.id = id
+	m.pivot = Node3D.new()
+	m.turn = Node3D.new()
+	m.pivot.add_child(m.turn)
+	m.body = scene.instantiate() as Node3D
+	m.turn.add_child(m.body)
+	m.skin = ShaderMaterial.new()
+	m.skin.shader = SKIN_SHADER
+	m.outline = ShaderMaterial.new()
+	m.outline.shader = OUTLINE_SHADER
+	var look: Dictionary = GameData.viewer.get("look", {})
+	var key_dir: Array = look.get("key_dir", [-0.45, 0.72, 0.55])
 	m.skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
 	for key in ["key_color", "shade_color", "rim_color"]:
-		if _look.has(key):
-			m.skin.set_shader_parameter(key, Color(String(_look[key])))
+		if look.has(key):
+			m.skin.set_shader_parameter(key, Color(String(look[key])))
 	for key in ["soft", "rim", "rim_width", "highlight", "vibrance"]:
-		if _look.has(key):
-			m.skin.set_shader_parameter(key, float(_look[key]))
-	m.skin.set_shader_parameter("lid_color", UnitSprites.lid_color(v.id))
-	m.outline.set_shader_parameter("width_px", float(_settings.get("outline_px", 1.5)) * render_scale)
-	m.outline.set_shader_parameter("color", Color(String(_look.get("outline_color", "#140c09"))))
+		if look.has(key):
+			m.skin.set_shader_parameter(key, float(look[key]))
+	m.skin.set_shader_parameter("lid_color", UnitSprites.lid_color(id))
+	m.outline.set_shader_parameter("width_px", outline_width)
+	m.outline.set_shader_parameter("color", Color(String(look.get("outline_color", "#140c09"))))
+	m.skin.next_pass = m.outline
+	for mesh in m.body.find_children("*", "MeshInstance3D", true, false):
+		var instance := mesh as MeshInstance3D
+		instance.material_override = m.skin
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	var players := m.body.find_children("*", "AnimationPlayer", true, false)
+	if not players.is_empty():
+		m.player = players[0]
+		if manual:
+			m.player.callback_mode_process = AnimationMixer.ANIMATION_CALLBACK_MODE_PROCESS_MANUAL
+		for anim in m.player.get_animation_list():
+			m.lengths[String(anim)] = m.player.get_animation(anim).length
+	return m
+
+
+## Points an orthographic camera down at the sprites' 50 degrees so that
+## field point `middle` (field units) is the view's middle, at `ppu` screen
+## pixels a tile, `view_height` pixels tall.
+static func aim(cam: Camera3D, middle: Vector2, ppu: float, view_height: float) -> void:
+	var forward := Vector3(0.0, -SIN, -COS)
+	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+	cam.keep_aspect = Camera3D.KEEP_HEIGHT
+	cam.size = view_height / ppu
+	cam.basis = Basis.looking_at(forward, Vector3.UP)
+	cam.position = Vector3(middle.x / 1000.0, 0.0, middle.y / 1000.0 / SIN) - forward * 80.0
+
+
+## A field point (field units) in the 3D layer, on the ground.
+static func ground(at: Vector2) -> Vector3:
+	return Vector3(at.x / 1000.0, 0.0, at.y / 1000.0 / SIN)
+
+
+## Turns the model to face `degrees` (clockwise from up on screen), on the
+## stretched ground.
+static func face_toward(m: Model, degrees: float) -> void:
+	var f := deg_to_rad(degrees)
+	var dir := Vector2(sin(f), -cos(f) / SIN)
+	m.turn.rotation.y = atan2(-dir.x, -dir.y)
 
 
 func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Vector3, forward: Vector3) -> void:
@@ -235,8 +272,7 @@ func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Ve
 	if not showing:
 		return
 	# Where: its feet on the field, then the sprite's offset in the camera's plane.
-	var feet := v.render_pos()
-	var at := Vector3(feet.x / 1000.0, 0.0, feet.y / 1000.0 / SIN)
+	var at := ground(v.render_pos())
 	at += right * (v.m_offset.x / ppu) + up * (-v.m_offset.y / ppu)
 	m.pivot.position = at
 	# Squash, stretch and lean, as the sprite has them on screen.
@@ -244,9 +280,7 @@ func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Ve
 	var squash := camera_frame * Basis.from_scale(Vector3(v.m_scale.x, v.m_scale.y, v.m_scale.x)) * camera_frame.inverse()
 	m.pivot.basis = Basis(forward, deg_to_rad(v.m_rot)) * squash
 	# Which way it faces (on the stretched ground).
-	var f := deg_to_rad(v.m_facing)
-	var dir := Vector2(sin(f), -cos(f) / SIN)
-	m.turn.rotation.y = atan2(-dir.x, -dir.y)
+	face_toward(m, v.m_facing)
 	# Its animation, at the view's point in it.
 	if m.player != null:
 		var anim := v.m_anim
@@ -257,12 +291,17 @@ func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Ve
 				m.anim = anim
 				m.player.current_animation = anim
 			m.player.seek(v.m_phase * float(m.lengths[anim]), true)
-	# Blinks now and then.
-	if now >= m.blink_next:
-		m.blink_at = now
-		m.blink_next = now + randf_range(2.0, 5.0)
-	var blink := clampf(1.0 - absf((now - m.blink_at) / 0.07 - 1.0), 0.0, 1.0)
-	_param(m, m.skin, "blink", snappedf(blink, 0.05))
+	# Its cartoon face (UnitView chooses it, as for the sprite).
+	if v.m_face != m.face:
+		m.face = v.m_face
+		var face: Array = FACES.get(m.face, FACES[""])
+		_param(m, m.skin, "blink", float(face[0]))
+		_param(m, m.skin, "lid", float(face[1]))
+		_param(m, m.skin, "pupil_size", float(face[2]))
+		_param(m, m.skin, "happy", float(face[3]))
+		_param(m, m.skin, "dizzy", float(face[4]))
+	if m.face == "dizzy":
+		_param(m, m.skin, "spin", snappedf(fposmod(now * 7.0, TAU), 0.05))
 	_param(m, m.skin, "flash", snappedf(v.m_flash, 0.02))
 	_param(m, m.skin, "gold", snappedf(v.m_gold, 0.02))
 	_param(m, m.outline, "gold", snappedf(v.m_gold, 0.02))

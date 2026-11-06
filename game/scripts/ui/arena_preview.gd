@@ -29,6 +29,11 @@ var animate := false
 var _cast: Array = []
 var _bodies: Array = []
 var _time := 0.0
+## The animals as 3D models (as in a fight, feel.json "models"): a small 3D
+## view over the picture. Still thumbnails (animate off) are rendered once.
+var _viewport: SubViewport
+var _camera: Camera3D
+var _models: Array = []
 
 
 func _init() -> void:
@@ -72,6 +77,13 @@ func _make_bodies() -> void:
 	for body in _bodies:
 		body.queue_free()
 	_bodies.clear()
+	if _viewport != null:
+		_viewport.queue_free()
+		_viewport = null
+	_models.clear()
+	if Feel.on("models", "enabled", false) and _cast.all(func(id: String) -> bool: return ModelStage.has_model(id)):
+		_make_models()
+		return
 	for i in _cast.size():
 		var body := UnitView.Body.new()
 		var id: String = _cast[i]
@@ -88,6 +100,61 @@ func _make_bodies() -> void:
 	_place_bodies()
 
 
+func _make_models() -> void:
+	_viewport = SubViewport.new()
+	_viewport.transparent_bg = true
+	_viewport.own_world_3d = true
+	_viewport.msaa_3d = Viewport.MSAA_2X
+	_viewport.render_target_update_mode = SubViewport.UPDATE_ALWAYS if animate else SubViewport.UPDATE_ONCE
+	add_child(_viewport)
+	var environment := Environment.new()
+	environment.background_mode = Environment.BG_CLEAR_COLOR
+	environment.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	var world := WorldEnvironment.new()
+	world.environment = environment
+	_viewport.add_child(world)
+	_camera = Camera3D.new()
+	_camera.near = 0.5
+	_camera.far = 400.0
+	_viewport.add_child(_camera)
+	for i in _cast.size():
+		var id: String = _cast[i]
+		var m := ModelStage.new_model(id, ModelStage.outline_px(_render_scale()), not animate)
+		if m == null:
+			continue
+		m.body.scale = Vector3.ONE * ModelStage.tile_scale(id) * SPRITE_SCALE
+		var spot: Vector2 = SPOTS[i]
+		m.pivot.position = ModelStage.ground(spot * BattleSim.TILE)
+		ModelStage.face_toward(m, FACING[i])
+		_viewport.add_child(m.pivot)
+		if m.player != null and m.lengths.has("idle"):
+			if animate:
+				# Breathing and looking about, each in its own time.
+				m.player.get_animation("idle").loop_mode = Animation.LOOP_LINEAR
+				m.player.play("idle")
+				m.player.seek(randf() * float(m.lengths.idle), true)
+			else:
+				m.player.current_animation = "idle"
+				m.player.seek(0.0, true)
+		_models.append(m)
+	_place_models()
+
+
+func _render_scale() -> float:
+	var stretch := get_viewport().get_final_transform().get_scale().x if is_inside_tree() else 1.0
+	return clampf(stretch, 1.0, Feel.num("models", "render_scale_max", 2.0))
+
+
+func _place_models() -> void:
+	if _viewport == null or size.x <= 0.0:
+		return
+	_viewport.size = Vector2i((size * _render_scale()).round())
+	ModelStage.aim(_camera, VIEW.get_center() * BattleSim.TILE, _px(), size.y)
+	if not animate:
+		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	queue_redraw()
+
+
 ## How big a tile is on screen, and where the view's center sits.
 func _px() -> float:
 	return maxf(size.x / VIEW.size.x, size.y / VIEW.size.y)
@@ -98,6 +165,7 @@ func _tile_to_screen(tx: float, ty: float) -> Vector2:
 
 
 func _place_bodies() -> void:
+	_place_models()
 	var px := _px()
 	for i in _bodies.size():
 		var body: UnitView.Body = _bodies[i]
@@ -130,3 +198,5 @@ func _draw() -> void:
 		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color.darkened(0.45), 5.0 / 0.42)
 		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color, 3.0 / 0.42)
 		draw_set_transform(Vector2.ZERO)
+	if _viewport != null:
+		draw_texture_rect(_viewport.get_texture(), Rect2(Vector2.ZERO, size), false)

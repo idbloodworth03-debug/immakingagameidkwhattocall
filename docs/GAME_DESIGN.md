@@ -622,15 +622,19 @@ when the viewer opens and is freed when it closes
 `tools/creatures/export_gltf.py`; settings in data/viewer.json, journal in
 data/journal.json).
 
-**3D animals in battle (testing):** the animals can be shown in a fight
-as real 3D models instead of sprites: light models (about 3,000 triangles
-each, every animation a fight plays) in one 3D layer whose camera looks
-down at the sprites' 50 degrees and follows the field's camera, so each
-model stands exactly where its sprite would; the arena, rings, banners,
-effects and health bars stay as they are, and the animals' choreography
-(timing, squash, hops, flashes, knockouts) is the sprites' own. Off for
-now while it's measured on phones: Profile > Developer tools > Big army
-test (3D) runs it (`scripts/fx/model_stage.gd`; feel.json "models").
+**3D animals:** the animals are real 3D models everywhere they move: in
+fights, the army while picking, and the arena previews on the home screen
+and Trophy Road. Light models (about 3,000 triangles each, every animation a
+fight plays) stand in one 3D layer whose camera looks down at the same 50
+degrees as the old sprites and follows the field's camera, so each stands
+exactly where its sprite would; the arena, rings, banners, effects and
+health bars are unchanged, and the animals' choreography (timing, squash,
+hops, flashes, knockouts) is the same. Their cartoon faces (a blink, a
+squint on the wind-up, wide eyes when hit, dizzy swirls when stunned or
+knocked out, drowsy, happy, smug) are drawn on the models' own eyes. The
+older sprites remain as a fallback (feel.json "models" "enabled": false;
+Developer tools > Big army test (sprites) compares). Cards keep their
+rendered portraits (`scripts/fx/model_stage.gd`).
 
 **Arena life:** every arena has life outside its fence, drawn under the
 animals so it never covers them. The camera frames the armies, so the strip

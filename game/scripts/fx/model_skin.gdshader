@@ -30,6 +30,15 @@ uniform float gold = 0.0;
 uniform vec3 gold_color : source_color = vec3(1.0, 0.82, 0.25);
 uniform float blink = 0.0;
 uniform vec3 lid_color : source_color = vec3(0.45, 0.3, 0.2);
+// Cartoon faces (as UnitFace draws over sprites): eyelids over the top
+// `lid` of the eye (a squint, drowsy or smug look; 1 is a blink, shown as a
+// closed-eye line), wide eyes (a smaller pupil), happy ^ ^ eyes and dizzy
+// swirls.
+uniform float lid = 0.0;
+uniform float pupil_size = 1.0;
+uniform float happy = 0.0;
+uniform float dizzy = 0.0;
+uniform float spin = 0.0;
 
 varying vec3 v_color;
 varying vec3 v_eye;
@@ -52,11 +61,35 @@ void fragment() {
 	vec3 base = v_color;
 	if (v_is_eye > 0.5) {
 		float front = smoothstep(-0.03, 0.03, v_eye.z);
-		float pupil = disc(v_eye.xy, vec2(0.0, -0.04), 0.5) * front;
-		float shine = disc(v_eye.xy, vec2(0.17, 0.2), 0.16) * front;
+		float pupil = disc(v_eye.xy, vec2(0.0, -0.04), 0.5 * pupil_size) * front * (1.0 - dizzy);
+		float shine = disc(v_eye.xy, vec2(0.17, 0.2), 0.16 * mix(1.0, pupil_size, 0.5)) * front * (1.0 - dizzy);
 		base = mix(mix(eye_white, pupil_color, pupil), vec3(1.0), shine);
-		// The lid comes down from the top.
-		base = mix(base, lid_color, step(1.0 - blink * 2.2, v_eye.y) * front);
+		vec2 e = v_eye.xy;
+		if (dizzy > 0.5) {
+			// A swirl spiraling in.
+			float r = length(e);
+			float a = atan(e.y, e.x);
+			float band = fract((a + spin) / 6.2832 + r * 1.7);
+			float w = fwidth(band) * 1.5 + 0.02;
+			float ink = (smoothstep(0.0, w, band) - smoothstep(0.2, 0.2 + w, band)) * step(r, 0.92) * front;
+			base = mix(base, pupil_color, ink);
+		}
+		// Eyelids: closed (a blink, or happy), or partly down from the top.
+		float closed = max(max(blink, happy), step(0.99, lid));
+		float cover = max(lid, closed);
+		float edge = 1.0 - cover * 2.0;
+		base = mix(base, lid_color, step(edge, e.y) * front);
+		float lw = 0.09;
+		float fw = fwidth(e.y) * 1.2;
+		if (closed > 0.5) {
+			// A closed eye's line: a smile (u) when blinking, ^ when happy.
+			float curve = happy > 0.5 ? (0.12 - 0.5 * e.x * e.x) : (-0.12 + 0.35 * e.x * e.x);
+			float line = 1.0 - smoothstep(lw, lw + fw, abs(e.y - curve));
+			base = mix(base, pupil_color, line * step(abs(e.x), 0.72) * front);
+		} else if (cover > 0.01) {
+			float line = 1.0 - smoothstep(lw * 0.8, lw * 0.8 + fw, abs(e.y - edge));
+			base = mix(base, pupil_color, line * front);
+		}
 	}
 	vec3 n = normalize(NORMAL);
 	vec3 l = normalize(key_dir);

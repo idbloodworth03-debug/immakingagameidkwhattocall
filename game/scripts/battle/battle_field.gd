@@ -940,6 +940,17 @@ func _show(e: Dictionary) -> void:
 			hit_stop(Feel.num(a, "clash_hitstop_seconds", 0.12))
 			Sound.play("boom", -2.0)
 			_cheer(Vector2(e.x, e.y), 1.0)
+		"alert":
+			# The targeting rules' threat response: it turns on whoever's
+			# biting it, with a cartoon "!" over its head.
+			var v := view_for_uid(int(e.uid))
+			if v != null and v.defeat < 0.0:
+				var look := "readability"
+				var pop := fx.effect("alert", v.position + v.head(), Feel.num(look, "alert_size", 30.0),
+					Feel.color(look, "alert_color", Color("#ffd23f")), Feel.num(look, "alert_seconds", 0.85))
+				pop.follow = v
+				pop.pop = Feel.num(look, "alert_pop", 3.0)
+				Sound.play("pop", -9.0, 0.3)
 		"volley":
 			# Every Ranged animal lets fly at once.
 			Sound.play("whoosh", -3.0, 0.05)

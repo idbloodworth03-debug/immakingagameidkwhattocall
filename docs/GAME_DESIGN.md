@@ -463,14 +463,32 @@ check (`crowd` in `feel.json`). From 24 animals on the field:
 - the animals use a plain look that draws faster.
 
 **How animals behave:**
-- Tank Destroyers go for a Tank within 7 tiles first, Ranged for Air within 6;
-  otherwise everyone goes for the nearest enemy it can reach (Food Bait close
-  by comes first). An animal on its way to a target that's still fine looks
-  around for a better one 4 times a second (`retarget_seconds`), which keeps
-  big fights cheap on a phone, and only switches for one that's clearly
-  better: Food Bait, the class it goes after, an enemy already in reach, or
-  one at least a tile closer (`retarget_margin_tiles`), so animals don't
-  dither between two enemies.
+- **Targeting rules** (the same in every fight: `targeting` in
+  `battle_rules.json`, `scripts/battle/targeting.gd`). Every animal goes
+  for the closest enemy it can attack, unless its ability or class says
+  otherwise: Tank Destroyers go for a Tank within 7 tiles first, Ranged for
+  Air within 7; the Wild Boar's nearest Tank, the Honey Badger's biggest
+  enemy, the Komodo Dragon's next unpoisoned enemy, the Barn Owl's and the
+  Red Fox's enemy Ranged, the Raccoon's back ranks (Food Bait close by
+  comes first). With none of those about, it takes the closest. Once it
+  has a target it commits to it, and only switches when:
+  1. its target falls, can't be attacked any more (burrowed, hidden, flown
+     off for a ground fighter) or can't be reached;
+  2. **threat response**: an enemy attacks it, or a teammate right next to
+     it, from up close (1.2 tiles) while it's busy with something further
+     off: after a 1 s reaction delay it turns on the attacker, with a
+     cartoon "!" over its head. The delay gives a Fox popping up in the
+     backline a moment to do its damage before the backline fights back;
+  3. while it's still on its way to its target (not hitting it yet): an
+     enemy at least 40% closer, or one its ability or class prefers, once
+     it has kept its target for 2 s.
+
+  After any switch it keeps its new target for 2 s (unless that one
+  falls), and it looks around twice a second (animals take turns), not
+  every frame. An animal already hitting its target keeps on with it; only
+  a threat up close turns it. The King Cobra has no back-rank rule of its
+  own: its long reach (10 tiles) lets it hit the back ranks from the
+  closest-target rule.
 - Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
 

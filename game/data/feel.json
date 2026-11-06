@@ -411,6 +411,15 @@
     "walk_in_tiles_per_second": 2.6,
     "walk_in_steps_per_second": 1.8
   },
+
+  "readability": {
+    "_note": "Telling who's doing what in a fight. When an animal turns on an enemy biting it up close (the targeting rules' threat response, battle_rules.json \"targeting\"), a cartoon \"!\" pops over its head for alert_seconds: alert_size pixels tall, alert_color, popping in with alert_pop overshoot. Not shown for ordinary target changes.",
+    "alert_seconds": 0.85,
+    "alert_size": 30.0,
+    "alert_color": "#ffd23f",
+    "alert_pop": 3.0
+  },
+
   "info": {
     "_note": "Holding a card anywhere (picking, offers, army row, deck, bans, collection), or an animal on the battlefield, shows its info popup near the finger (scripts/autoload/hold_info.gd, scripts/ui/info_pop.gd) for as long as it's held; the fight never pauses. hold_seconds: how long a hold takes; move_pixels: moving further than this is a drag (scrolling), not a hold. size: the popup's [width, height] in game pixels; gap: how far it sits from the finger. pop_seconds: its quick pop. The four bars compare the animal with the strongest in the game (at its level): Health and Damage are its whole squad's (on a square-root scale, so everyday animals don't look empty beside a Mythic hero); Speed: speed_bars for each speed; Range: its reach in tiles over range_full_tiles.",
     "hold_seconds": 0.35,

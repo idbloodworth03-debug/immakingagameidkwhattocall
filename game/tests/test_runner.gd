@@ -3,6 +3,7 @@ extends Node
 ##
 ## From the repository root:
 ##   godot --headless --path game res://tests/test_runner.tscn
+## (TESTS=test_army,test_targeting in front for just those files.)
 
 const TEST_DIR := "res://tests/"
 
@@ -25,8 +26,12 @@ func _ready() -> void:
 	var failed := 0
 	var error_counter := ErrorCounter.new()
 	OS.add_logger(error_counter)
+	# TESTS=test_army,test_targeting runs just those files.
+	var only := OS.get_environment("TESTS").split(",", false)
 	for file_name in DirAccess.get_files_at(TEST_DIR):
 		if not (file_name.begins_with("test_") and file_name.ends_with(".gd")) or file_name == "test_runner.gd" or file_name == "test_case.gd":
+			continue
+		if not only.is_empty() and not only.has(file_name.get_basename()):
 			continue
 		var script: GDScript = load(TEST_DIR + file_name)
 		if script == null or not script.can_instantiate():

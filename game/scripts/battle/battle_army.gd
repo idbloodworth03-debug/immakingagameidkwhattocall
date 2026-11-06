@@ -86,7 +86,6 @@ var avoid_margin := 150
 var crowd_cost := 600
 var full_cost := 6000
 var spot_ticks := 3
-var switch_margin := 800
 var detour_ticks := 8
 ## Reach (field units) from which an animal counts as a shooter: it needs no
 ## spot of its own next to its target.
@@ -115,7 +114,6 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	crowd_cost = roundi(float(w.get("crowd_cost", 0.6)) * T)
 	full_cost = roundi(float(w.get("full_cost", 6.0)) * T)
 	spot_ticks = maxi(1, roundi(float(w.get("spot_seconds", 0.15)) * tps))
-	switch_margin = roundi(float(w.get("switch_margin", 0.8)) * T)
 	detour_ticks = maxi(1, roundi(float(w.get("detour_seconds", 0.4)) * tps))
 	shooter_reach = roundi(float(w.get("shooter_reach", 1.5)) * T)
 	bite_pct = int(a.get("damage_pct", 100))
@@ -543,6 +541,7 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 				f.memory.full_until = sim.tick + spot_ticks * 4
 				var other := _find(sim, f, place, leash, true, charging)
 				_count(f, other)
+				Targeting.lock(sim, f, other, "no_room")
 				f.target = other
 				if other == null:
 					return
@@ -587,31 +586,27 @@ func fell(sim: BattleSim, f: BattleSim.Fighter) -> void:
 
 # --- Targets -----------------------------------------------------------------
 
-## Keeps a good target, or finds one: food bait close by first; when
-## charging, the nearest enemy Tank; otherwise what's in front of its own
-## place within its leash (enemies off to the side count as further away),
-## the class it goes after first.
+## Who `f` fights, by the targeting rules (targeting.gd): it keeps its
+## target while it's still good (one it can attack and, before the war,
+## reach without leaving its leash; for a charging Tank Destroyer, a Tank),
+## and finds one with _find: food bait close by first; when charging, the
+## nearest enemy Tank; otherwise what's in front of its own place within
+## its leash (enemies off to the side count as further away), the class it
+## goes after or its ability's pick first.
 func _choose_target(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, free: bool, charging: bool) -> void:
 	var t := f.target
-	var turn := (sim.tick + f.uid) % sim.retarget_ticks == 0
-	var keep := false
-	if t != null and sim.can_target(f, t) and (free or _reachable(f, t, place, leash)):
-		if sim.in_range(f, t) or not turn:
-			if not (charging and t.cls != "tank"):
-				return
-		keep = not (charging and t.cls != "tank")
-	elif t == null and not turn:
+	if t == null and not charging and (sim.tick + f.uid) % sim.targeting.recheck_ticks != 0:
 		# Nothing to fight: it looks around now and then (animals take
 		# turns), which keeps big armies cheap on phones. One whose target
 		# has just fallen looks at once.
 		return
-	var found := _find(sim, f, place, leash, free, charging)
-	if keep and at_war() and found != null and found != t and t.is_unit() and found.kind != "bait":
-		# In the war, only for one clearly better (so nobody dithers).
-		if not sim.in_range(f, found) and _score(sim, f, found, place, free) + switch_margin >= _score(sim, f, t, place, free):
-			return
-	_count(f, found)
-	f.target = found
+	var ok := t != null and sim.can_target(f, t) and (free or _reachable(f, t, place, leash)) and not (charging and t.cls != "tank")
+	var find := func() -> BattleSim.Fighter: return _find(sim, f, place, leash, free, charging)
+	var reach := -1 if at_war() and not charging else 1 << 30
+	var found := sim.targeting.decide(sim, f, ok, find, sim.prefers_of(f, "tank" if charging else "", reach))
+	if found != t:
+		_count(f, found)
+		f.target = found
 
 
 ## Keeps the count of who's going for whom up to date as `f` picks `t`

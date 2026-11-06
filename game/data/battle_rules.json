@@ -1,7 +1,14 @@
 {
-  "_note": "Fight tuning. The field is 16 tiles wide and 20 long (bigger for big herds: draft_rules.json \"field\"). Times are in seconds, distances in tiles, speeds in tiles per minute. An animal heading for a target that's still fine looks around for a better one every retarget_seconds (keeps big fights cheap on phones), and only switches to one that's clearly better: food bait, the class it goes after, an enemy already in reach, or one at least retarget_margin_tiles closer (so animals don't dither between two enemies).",
-  "retarget_seconds": 0.25,
-  "retarget_margin_tiles": 1.0,
+  "_note": "Fight tuning. The field is 16 tiles wide and 20 long (bigger for big herds: draft_rules.json \"field\"). Times are in seconds, distances in tiles, speeds in tiles per minute. Who each animal goes for: targeting, below.",
+  "targeting": {
+    "_note": "Who an animal fights (scripts/battle/targeting.gd), the same in every fight. It goes for the closest enemy it can attack unless its ability or class says otherwise (styles.json, classes.json \"prefer\"), and commits to it. It only switches when its target falls or can't be attacked or reached any more; when an enemy hits it from within threat_tiles (edge to edge) while it's busy with something further off, after reaction_seconds (with a cartoon \"!\" over its head); or for one at least closer_pct % closer (or one its ability or class prefers) once it has kept its target for commit_seconds. After any switch it keeps its new target for commit_seconds unless that one falls. It looks around every recheck_seconds (animals take turns), not every tick. A threat that hasn't hit it for threat_forget_seconds is forgotten.",
+    "recheck_seconds": 0.5,
+    "commit_seconds": 2.0,
+    "reaction_seconds": 1.0,
+    "closer_pct": 40,
+    "threat_tiles": 1.2,
+    "threat_forget_seconds": 2.0
+  },
   "ticks_per_second": 20,
   "deploy_seconds": 1.0,
   "melee_range": 0.7,
@@ -28,7 +35,7 @@
     "contact_gap": 1.6,
     "damage_pct": 200,
     "war": {
-      "_note": "All-out war (battle_army.gd): from the clash, or once a front has been held up by a fight for after_hold_seconds, nobody keeps its place or waits. Every animal goes for an enemy anywhere on the field. A fighter (reach under shooter_reach tiles) takes an open spot next to its target, checked every spot_seconds; each teammate already on that enemy makes it count crowd_cost tiles further away, and full_cost more once there's no room left around it, so attackers spread along the whole enemy line. Walking there, it looks look_ahead tiles ahead and passes anyone in its way (teammates, and enemies it isn't after) with pass_margin tiles to spare, on round the same side to the end of a line; once it steps aside, it keeps on to the spot beside them for up to detour_seconds (rather than turning straight back into them). It only switches to another enemy (not yet in reach) at least switch_margin tiles nearer. Shooters close in until they're in reach; nothing blocks their shots.",
+      "_note": "All-out war (battle_army.gd): from the clash, or once a front has been held up by a fight for after_hold_seconds, nobody keeps its place or waits. Every animal goes for an enemy anywhere on the field. A fighter (reach under shooter_reach tiles) takes an open spot next to its target, checked every spot_seconds; each teammate already on that enemy makes it count crowd_cost tiles further away, and full_cost more once there's no room left around it, so attackers spread along the whole enemy line. Walking there, it looks look_ahead tiles ahead and passes anyone in its way (teammates, and enemies it isn't after) with pass_margin tiles to spare, on round the same side to the end of a line; once it steps aside, it keeps on to the spot beside them for up to detour_seconds (rather than turning straight back into them). Shooters close in until they're in reach; nothing blocks their shots.",
       "after_hold_seconds": 1.0,
       "shooter_reach": 1.5,
       "spot_seconds": 0.15,
@@ -36,7 +43,6 @@
       "full_cost": 6.0,
       "look_ahead": 1.2,
       "pass_margin": 0.15,
-      "switch_margin": 0.8,
       "detour_seconds": 0.4
     }
   }

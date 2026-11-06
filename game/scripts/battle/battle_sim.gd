@@ -122,8 +122,9 @@ var rng := RandomNumberGenerator.new()
 
 var deploy_ticks := 0
 var melee := 0
-var retarget_ticks := 1
-var retarget_margin := 0
+## Who each animal fights and when it may switch (battle_rules.json
+## "targeting").
+var targeting: Targeting
 ## The field's size this fight, and the line between the two halves.
 var width := WIDTH
 var height := HEIGHT
@@ -143,8 +144,7 @@ func _init(levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> voi
 	tps = int(rules.ticks_per_second)
 	deploy_ticks = roundi(float(rules.deploy_seconds) * tps)
 	melee = roundi(float(rules.melee_range) * TILE)
-	retarget_ticks = maxi(1, roundi(float(rules.get("retarget_seconds", 0.0)) * tps))
-	retarget_margin = roundi(float(rules.get("retarget_margin_tiles", 0.0)) * TILE)
+	targeting = Targeting.new(rules, tps)
 	for team_index in 2:
 		var team := Team.new()
 		team.levels = levels[team_index]
@@ -320,37 +320,31 @@ func can_target(f: Fighter, t: Fighter) -> bool:
 	return not t.memory.get("burrowing", false)
 
 
+## Who `f` fights: the targeting rules (targeting.gd) on the open field,
+## where every enemy it can attack is in reach of its feet.
 func _choose_target(f: Fighter) -> void:
-	if f.target != null and can_target(f, f.target):
-		if in_range(f, f.target):
-			return
-		# Still a fine target: look around for a better one only now and then
-		# (animals take turns), which keeps big fights cheap.
-		if (tick + f.uid) % retarget_ticks != 0:
-			return
-		# And only leave it for one clearly better, so animals don't dither
-		# between two enemies.
-		var found := _find_target(f)
-		if found != null and _clearly_better(f, found, f.target):
-			f.target = found
-		return
-	f.target = _find_target(f)
+	var t := f.target
+	var ok := t != null and can_target(f, t)
+	f.target = targeting.decide(self, f, ok, func() -> Fighter: return _find_target(f), prefers_of(f))
 
 
-## Whether `found` (what _find_target picked) is worth leaving `current`
-## for: food bait, the class it goes after, an enemy already in reach, or
-## one at least retarget_margin_tiles closer.
-func _clearly_better(f: Fighter, found: Fighter, current: Fighter) -> bool:
-	if found == current:
-		return false
-	if found.kind == "bait" or current.kind == "bait":
-		return true
-	var wanted := String(GameData.class_rules.get("prefer", {}).get(f.cls, {}).get("class", ""))
-	if wanted != "" and found.cls == wanted and current.cls != wanted:
-		return true
-	if in_range(f, found):
-		return true
-	return edge_distance(f, found) + retarget_margin < edge_distance(f, current)
+## Whether `f` likes `t` better than the closest enemy, as a Callable for
+## the targeting rules: its ability's pick (BattleStyles.prefers), or the
+## class its class goes after within that class's reach (classes.json
+## "prefer").
+func prefers_of(f: Fighter, wanted := "", reach := -1) -> Callable:
+	var prefer: Dictionary = GameData.class_rules.get("prefer", {}).get(f.cls, {})
+	if wanted == "":
+		wanted = String(prefer.get("class", ""))
+	if reach < 0:
+		reach = roundi(float(prefer.get("tiles", 0)) * TILE)
+	var memo := {}
+	return func(t: Fighter) -> bool:
+		if t.kind == "bait":
+			return true
+		if wanted != "" and t.cls == wanted and edge_distance(f, t) <= reach:
+			return true
+		return BattleStyles.prefers(self, f, t, memo)
 
 
 ## Food bait close by first; then what its class goes after (Tank Destroyers
@@ -529,6 +523,7 @@ func attack(f: Fighter, t: Fighter, pct := 100) -> void:
 	f.stealthed = false
 	f.memory.attacked = true
 	f.memory.last_combat = tick
+	targeting.struck(self, f, t)
 	var hit := {
 		"type": "hit", "from": f.uid, "from_kind": f.kind, "to": t.uid, "to_kind": t.kind,
 		"x": t.x, "y": t.y, "fx": f.x, "fy": f.y, "amount": amount, "ranged": f.attack_range > 1500,
@@ -600,10 +595,11 @@ func _defeat(t: Fighter, source: Fighter) -> void:
 			army.fell(self, t)
 
 
+## Stuns `t` for `ticks`. It keeps its target (a stun is no reason to
+## switch: the targeting rules) and carries on with it after.
 func stun(t: Fighter, ticks: int) -> void:
 	if t.alive and not BattleAbilities.is_fearless(t):
 		t.stun = maxi(t.stun, ticks)
-		t.target = null
 
 
 func slow_down(t: Fighter, pct: int, ticks: int, ignore_fearless := false) -> void:

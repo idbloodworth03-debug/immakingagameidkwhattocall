@@ -398,6 +398,44 @@ static func prefer_target(sim: BattleSim, f: BattleSim.Fighter) -> BattleSim.Fig
 	return null
 
 
+## Whether `f`'s style would pick `t` over the closest enemy: prefer_target
+## as a yes or no, for the targeting rules (targeting.gd), so an animal on
+## a stand-in target moves on to the kind it's after once one turns up, and
+## isn't drawn off the kind it's after by a closer one. `memo` keeps a pick
+## worked out once per look around.
+static func prefers(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, memo: Dictionary) -> bool:
+	if not t.is_unit():
+		return false
+	var d := BattleSim.edge_distance(f, t)
+	match f.style_kind:
+		"rush":
+			var slammed: Array = f.memory.get("slammed", [])
+			return not f.memory.has("slot") and t.cls == "tank" and not slammed.has(t.uid) and d <= tiles(f.sp("reach", 8.0))
+		"fearless":
+			if not memo.has("pick"):
+				memo.pick = prefer_target(sim, f)
+			var pick: BattleSim.Fighter = memo.pick
+			return pick != null and t.max_hp >= pick.max_hp and d <= tiles(f.sp("reach", 4.0))
+		"venom":
+			return t.poison <= 0 and d <= tiles(f.sp("reach", 5.0))
+		"hunt":
+			return t.cls == "ranged" and d <= tiles(f.sp("reach", 12.0))
+		"dig":
+			return t.cls == "ranged" and d <= tiles(f.sp("reach", 3.0))
+		"lob":
+			# Near enough the back of those in reach (a tile's leeway, so it
+			# doesn't swap between two at the back).
+			if not memo.has("pick"):
+				memo.pick = prefer_target(sim, f)
+			var pick: BattleSim.Fighter = memo.pick
+			if pick == null or not sim.in_range(f, t):
+				return false
+			var back := -t.y if f.team == 0 else t.y
+			var pick_back := -pick.y if f.team == 0 else pick.y
+			return back >= pick_back - BattleSim.TILE
+	return false
+
+
 ## The nearest enemy `f` can hit within `reach` (edge to edge) that `ok`
 ## says yes to, or null.
 static func _nearest(sim: BattleSim, f: BattleSim.Fighter, reach: int, ok: Callable) -> BattleSim.Fighter:
@@ -645,6 +683,7 @@ static func on_emerge(sim: BattleSim, f: BattleSim.Fighter) -> void:
 			tank.memory.flipped_until = sim.tick + stun
 			tank.memory.flipped_for = stun
 			sim.events.append({"type": "stun", "uid": tank.uid, "x": tank.x, "y": tank.y})
+			Targeting.lock(sim, f, tank)
 			f.target = tank
 
 
@@ -876,7 +915,6 @@ static func _grab(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) ->
 	f.memory.grab_ready = sim.tick + ticks(sim, f.sp("every", 6.0))
 	t.memory.carried_by = f.uid
 	t.stun = maxi(t.stun, 2)
-	t.target = null
 	sim.events.append({"type": "grab", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
 
 
@@ -1070,8 +1108,11 @@ static func _venom(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -
 	t.poison = maxi(t.poison, ticks(sim, f.sp("seconds", 4.0)))
 	t.poison_dps = maxi(t.poison_dps, f.damage * int(f.sp("dps_pct", 35)) / 100)
 	sim.events.append({"type": "venom", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
+	# Only once it has kept this one for the commit time (targeting.gd);
+	# until then the targeting rules move it on when the time's up.
 	var next := prefer_target(sim, f)
-	if next != null and next != t:
+	if next != null and next != t and sim.targeting.settled(sim, f):
+		Targeting.lock(sim, f, next, "ability")
 		f.target = next
 
 

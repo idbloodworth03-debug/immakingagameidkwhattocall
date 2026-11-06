@@ -261,6 +261,12 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 	var t: float = fx.age / fx.life
 	var color: Color = fx.color
 	var r: float = fx.radius
+	# One that rides along over an animal's head.
+	var rider: Variant = fx.get("follow")
+	if rider != null and is_instance_valid(rider):
+		var v := rider as UnitView
+		if v != null:
+			p = v.position + v.head()
 	match fx.kind:
 		"ring":
 			var rr := r * (0.5 + 0.5 * Ease.out_cubic(t))
@@ -465,6 +471,34 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			canvas.draw_colored_polygon(PackedVector2Array([tip, at + Vector2(-r * 0.7, -r * 0.2), at + Vector2(r * 0.7, -r * 0.2)]), Color(color, a))
 			canvas.draw_circle(at, r * 0.72, Color(color, a))
 			canvas.draw_circle(at + Vector2(-r * 0.25, -r * 0.2), r * 0.22, Color(1, 1, 1, a * 0.9))
+		"alert":
+			# A cartoon "!" popping up over an animal that's just noticed
+			# someone biting it: a spiky yellow burst with a fat "!",
+			# springing in, wobbling, then shrinking away.
+			var pop := Ease.out_back(minf(1.0, t * 5.0), float(fx.get("pop", 3.0)))
+			var gone := Ease.in_cubic(clampf((t - 0.75) / 0.25, 0.0, 1.0))
+			var size := r * pop * (1.0 - gone)
+			if size <= 1.0:
+				return
+			var at := p + Vector2(0, -size * 0.7 - 6.0)
+			var tilt := sin(t * 18.0) * 0.12 * (1.0 - t)
+			canvas.draw_set_transform(at, tilt, Vector2.ONE)
+			var spikes := PackedVector2Array()
+			for i in 20:
+				var ang := TAU * i / 20.0 - PI / 2.0
+				var reach := size * (0.62 if i % 2 == 0 else 0.46)
+				spikes.append(Vector2(cos(ang) * reach * 0.86, sin(ang) * reach))
+			var ink := Color(UIKit.INK, 1.0 - gone)
+			var outline := spikes.duplicate()
+			outline.append(spikes[0])
+			canvas.draw_colored_polygon(spikes, Color(color, 1.0 - gone))
+			canvas.draw_polyline(outline, ink, maxf(2.0, size * 0.07), true)
+			# The "!": a tapering bar and a dot.
+			var w := size * 0.13
+			canvas.draw_colored_polygon(PackedVector2Array([Vector2(-w, -size * 0.36), Vector2(w, -size * 0.36),
+				Vector2(w * 0.55, size * 0.1), Vector2(-w * 0.55, size * 0.1)]), ink)
+			canvas.draw_circle(Vector2(0, size * 0.26), w * 0.85, ink)
+			canvas.draw_set_transform(Vector2.ZERO)
 		"zzz":
 			# Sleepy Zzz drifting up and away.
 			for i in 3:

@@ -196,24 +196,7 @@ func test_ranged_go_for_air() -> void:
 	check(squirrel.target == falcon, "Air in reach comes first")
 
 
-func test_animals_stick_to_their_target() -> void:
-	var sim := _sim()
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
-	# The enemies hold still (a whole squad each), so only the bear's choice
-	# changes.
-	for f in _ready_now(sim.spawn(1, "raccoon", 8 * T, 7 * T)):
-		sim.stun(f, 200)
-	_run(sim, 0.1)
-	check(bear.target != null and bear.target.card.id == "raccoon", "the bear heads for the raccoons")
-	var first := bear.target
-	for f in _ready_now(sim.spawn(1, "gray_squirrel", 11 * T, 8 * T)):
-		sim.stun(f, 200)
-	_run(sim, 0.5)
-	check(bear.target == first, "it doesn't switch for one only a little closer")
-	for f in _ready_now(sim.spawn(1, "wild_boar", 8 * T, 11 * T)):
-		sim.stun(f, 200)
-	_run(sim, 0.5)
-	check(bear.target != null and bear.target.card.id == "wild_boar", "it does for one much closer")
+# Who animals go for, and when they switch: tests/test_targeting.gd.
 
 
 func test_burrowers_pop_up_behind_the_enemy() -> void:

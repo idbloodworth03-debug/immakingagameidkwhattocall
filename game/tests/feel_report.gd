@@ -16,6 +16,21 @@ extends Node
 ## (moved less than a quarter of what it could in the last half second). Animals stunned, still arriving
 ## or underground don't count. Should be close to zero: everyone fights.
 ##
+## Readability checks (the mosh pit): overlap is the share of animals whose
+## body overlaps another's (same height, by more than a fifth of the smaller
+## one's radius), every tick; pile-ups the most melee attackers fighting one
+## enemy at once (in reach of it), the worst moment and on average over the
+## ticks with a fight; spread how the fighting (melee pairs in reach, and
+## shots) is shared across the field's three lanes, left, center and right,
+## with an evenness score (1 = perfectly even, 0 = all in one lane). Target
+## switches (the targeting rules, scripts/battle/targeting.gd): per animal
+## per minute, in each third of the fights (steady or bunched?), why (its
+## target fell, slipped away, was out of reach, had no way in to it, a
+## threat up close, a much closer enemy, its ability's pick), and those by
+## choice (away from a target still standing): how many come within two
+## seconds of the last and how many go back to one it left within three
+## (flip-flopping); and the threat reactions (the "!") per fight.
+##
 ## Army checks (Draft Duel's formations): how far animals are from their
 ## places while their army marches, how straight each line is, whether the
 ## whole army's feet are in step, whether the Ranged fire together and their
@@ -37,6 +52,10 @@ var targets := {}   # per fighter uid: last target uid
 var still := {}     # per fighter uid: [time, position] when last seen moving
 var trail := {}     # per fighter uid: its positions over the last IDLE_WINDOW ticks
 var fought := {}    # per fighter uid: the last tick it had a target in reach
+var switched_at := {}  # per fighter uid: the tick it last switched targets
+var left_at := {}      # per fighter uid: {target uid it left: tick}
+var fight_alive: Array = []     # this fight: animals standing, each tick
+var fight_switches: Array = []  # this fight: the tick of every switch
 ## How many ticks back the idle check looks to see if an animal got anywhere.
 const IDLE_WINDOW := 10
 var rng := RandomNumberGenerator.new()
@@ -99,6 +118,10 @@ func _next_fight() -> void:
 	_charged = false
 	last.clear()
 	targets.clear()
+	switched_at.clear()
+	left_at.clear()
+	fight_alive.clear()
+	fight_switches.clear()
 	still.clear()
 	trail.clear()
 	fought.clear()
@@ -124,7 +147,11 @@ func _reset_stats() -> void:
 		"volley_first": 0, "charge_after_clash": 0,
 		"war_ticks": 0, "idle_ticks": 0, "fighting_ticks": 0, "idle_no_target": 0,
 		"war_by_class": {}, "idle_by_class": {}, "idle_why": {},
+		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0,
+		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
+		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 	}
+	switched_at.clear()
 var _volley_lands := {}
 var _charged := false
 
@@ -152,6 +179,9 @@ func _process(delta: float) -> void:
 		duel.step()
 		var events := duel.sim.take_events()
 		_check_hits(events)
+		for e in events:
+			if e.type == "alert":
+				stats.alerts += 1
 		field.add_events(events)
 		accumulator -= tick_length
 		steps += 1
@@ -170,11 +200,33 @@ func _before_step() -> void:
 			var new_uid: int = f.target.uid if f.target != null else -1
 			if old != new_uid and old != -1 and new_uid != -1:
 				stats.switches += 1
-				# Switched away from a target that's still standing.
+				fight_switches.append(duel.sim.tick)
+				var since_last: int = duel.sim.tick - int(switched_at.get(f.uid, -1000))
+				if since_last < 2 * duel.sim.tps:
+					stats.quick_switches += 1
+				switched_at[f.uid] = duel.sim.tick
+				# Switched away from a target that's still standing, and why.
+				var why := "fell"
 				for g in duel.sim.fighters:
 					if g.uid == old and g.alive:
 						stats.switches_alive += 1
+						why = "slipped away" if not duel.sim.can_target(f, g) else "other"
+						if int(f.memory.get("locked", -1)) == duel.sim.tick:
+							why = String(f.memory.get("locked_why", "other"))
+							if why == "lost":
+								why = "out of reach"
 						break
+				stats.switch_why[why] = int(stats.switch_why.get(why, 0)) + 1
+				if why != "fell" and since_last < 2 * duel.sim.tps:
+					stats.quick_choice += 1
+				# Back and forth: back to one it left within the last 3 s.
+				var left: Dictionary = left_at.get(f.uid, {})
+				if duel.sim.tick - int(left.get(new_uid, -1000)) < 3 * duel.sim.tps:
+					stats.back_and_forth += 1
+					var key := "%s %s" % [f.cls, why]
+					stats.bnf_why[key] = int(stats.bnf_why.get(key, 0)) + 1
+				left[old] = duel.sim.tick
+				left_at[f.uid] = left
 			targets[f.uid] = new_uid
 			# Stuck: has a target out of reach and hasn't moved for a second.
 			if f.target != null and not duel.sim.in_range(f, f.target) and f.deploy_ticks <= 0 and f.stun <= 0:
@@ -188,9 +240,45 @@ func _before_step() -> void:
 					still[f.uid] = seen
 			else:
 				still[f.uid] = [now, Vector2(f.x, f.y)]
+	fight_alive.append(alive)
 	if alive <= 4:
 		stats.end_seconds += 1.0 / duel.sim.tps
 	_watch_idle()
+	_watch_crowding()
+
+
+## Readability, every tick: overlapping bodies, pile-ups on one enemy, and
+## which lanes the fighting is in.
+func _watch_crowding() -> void:
+	var sim := duel.sim
+	var units: Array = sim.fighters.filter(func(f): return f.alive and f.is_unit() and not f.memory.get("burrowing", false))
+	var on: Dictionary = {}
+	var lane_w := float(sim.width) / 3.0
+	for f in units:
+		stats.unit_ticks += 1
+		for g in units:
+			if g == f or g.is_flying() != f.is_flying():
+				continue
+			var dx: int = g.x - f.x
+			var dy: int = g.y - f.y
+			var need: int = f.radius + g.radius - mini(f.radius, g.radius) / 5
+			if dx * dx + dy * dy < need * need:
+				stats.overlap_units += 1
+				break
+		var t: BattleSim.Fighter = f.target
+		if t == null or not t.alive or not sim.in_range(f, t):
+			continue
+		var lane := clampi(int(float(t.x) / lane_w), 0, 2)
+		stats.lane_fights[lane] += 1
+		if f.attack_range < 1500:
+			on[t.uid] = int(on.get(t.uid, 0)) + 1
+	if not on.is_empty():
+		var most := 0
+		for k in on:
+			most = maxi(most, int(on[k]))
+		stats.pile_max = maxi(stats.pile_max, most)
+		stats.pile_sum += most
+		stats.pile_ticks += 1
 
 
 ## The idle check, every tick: is each animal fighting, on its way
@@ -472,6 +560,13 @@ func _finish_fight() -> void:
 		stats.volley_land_spread += float(span[1]) - float(span[0])
 	var seconds := float(duel.fight_tick) / duel.sim.tps
 	stats.fight_seconds += seconds
+	# Switching by thirds of the fight (steady, or bunched at one point?).
+	var n := maxi(1, fight_alive.size())
+	for i in fight_alive.size():
+		stats.third_ticks[mini(2, i * 3 / n)] += int(fight_alive[i])
+	var first := duel.sim.tick - fight_alive.size()
+	for k in fight_switches:
+		stats.third_switches[clampi((int(k) - first) * 3 / n, 0, 2)] += 1
 	if duel.wiped_at[0] < 0 and duel.wiped_at[1] < 0:
 		stats.timeouts += 1
 	fights_left -= 1
@@ -480,6 +575,38 @@ func _finish_fight() -> void:
 		return
 	_report()
 	get_tree().quit()
+
+
+## Why animals switched targets: its target fell, slipped away (burrowed,
+## hid, flew off), was out of its reach, had no way in to it (no_room), a
+## threat up close, a much closer enemy, one its ability or class prefers,
+## or something else (a charge, a stun...).
+func _switch_whys() -> String:
+	var parts := []
+	var whys: Array = stats.switch_why.keys()
+	whys.sort_custom(func(a, b): return int(stats.switch_why[a]) > int(stats.switch_why[b]))
+	for why in whys:
+		parts.append("%s %.0f%%" % [why, 100.0 * int(stats.switch_why[why]) / maxf(1, stats.switches)])
+	return ", ".join(parts)
+
+
+## The biggest few of a {name: count} tally, as "name count, ...".
+func _top(tally: Dictionary, most: int) -> String:
+	var keys: Array = tally.keys()
+	keys.sort_custom(func(a, b): return int(tally[a]) > int(tally[b]))
+	var parts := []
+	for k in keys.slice(0, most):
+		parts.append("%s %d" % [k, int(tally[k])])
+	return ", ".join(parts)
+
+
+## Target switches per animal per minute in each third of the fights.
+func _thirds() -> String:
+	var parts := []
+	for i in 3:
+		var minutes := float(stats.third_ticks[i]) / duel.sim.tps / 60.0
+		parts.append("%.1f" % (stats.third_switches[i] / maxf(0.001, minutes)))
+	return " / ".join(parts)
 
 
 func _idle_by_class() -> String:
@@ -507,11 +634,26 @@ func _report() -> void:
 		"  hit-stop              the whole fight is frozen %.0f%% of the time, %.1f freezes per second" % [100.0 * stats.frozen_frames / maxf(1, stats.frames), stats.freezes / maxf(0.1, stats.frames / 60.0)],
 		"  clutter               %.0f%% of animal-frames flashing white, %.1f damage numbers on screen on average, %.0f%% of animal-frames show a health bar" % [100.0 * stats.flash_frames / uf, float(stats.number_frames) / maxf(1, stats.frames), 100.0 * stats.bar_frames / uf],
 		"  hits                  %d; %.0f%% land on screen without a visible wind-up, %.2f s after the fight deals them on average; %.0f%% land on the same frame as a teammate's (%.0f%% dealt in step with a teammate of the same rhythm, max %d in one tick)" % [stats.hits, 100.0 * stats.impacts_unread / maxf(1, stats.impacts), stats.impact_late / maxf(1, stats.impacts), 100.0 * stats.impacts_together / maxf(1, stats.impacts), 100.0 * stats.lockstep_hits / maxf(1, stats.hits), stats.max_hits_tick],
-		"  target switches       %.2f per animal-second; %.0f%% leave a target that's still standing" % [stats.switches / secs, 100.0 * stats.switches_alive / maxf(1, stats.switches)],
+		"  target switches       %.1f per animal per minute (start / middle / end of the fight: %s); %.0f%% leave a target that's still standing; %.0f%% within 2 s of the last switch (flip-flops); %.1f threat reactions (\"!\") per fight" % [stats.switches / secs * 60.0, _thirds(), 100.0 * stats.switches_alive / maxf(1, stats.switches), 100.0 * stats.quick_switches / maxf(1, stats.switches), float(stats.alerts) / maxf(1, stats.fights)],
+		"  why they switched     %s" % [_switch_whys()],
+		"  by choice             %.1f switches per animal per minute away from a target still standing; %.1f of those within 2 s of its last switch; %.2f back and forth (back to one it left within 3 s: %s)" % [stats.switches_alive / secs * 60.0, stats.quick_choice / secs * 60.0, stats.back_and_forth / secs * 60.0, _top(stats.bnf_why, 5)],
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
 		"  IDLE                  %.1f%% of animal-time while enemies are alive spent standing about with an enemy it could fight (%.1f%% more with nothing it can hit: a ground fighter with only flyers left); %.0f%% fighting; %s" % [100.0 * (stats.idle_ticks - stats.idle_no_target) / maxf(1, stats.war_ticks), 100.0 * stats.idle_no_target / maxf(1, stats.war_ticks), 100.0 * stats.fighting_ticks / maxf(1, stats.war_ticks), _idle_by_class()],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
 	]
+	var lanes: Array = stats.lane_fights
+	var lane_total := maxf(1.0, float(lanes[0] + lanes[1] + lanes[2]))
+	var entropy := 0.0
+	for n in lanes:
+		var p := float(n) / lane_total
+		if p > 0.0:
+			entropy -= p * log(p)
+	lines.append_array([
+		"Readability",
+		"  overlap               %.1f%% of animals overlap another one" % [100.0 * stats.overlap_units / maxf(1, stats.unit_ticks)],
+		"  pile-ups              at most %d melee attackers on one enemy at once; %.1f on average (the busiest enemy, each tick with a fight)" % [stats.pile_max, float(stats.pile_sum) / maxf(1, stats.pile_ticks)],
+		"  spread                left %.0f%% / center %.0f%% / right %.0f%% of the fighting; evenness %.2f" % [100.0 * lanes[0] / lane_total, 100.0 * lanes[1] / lane_total, 100.0 * lanes[2] / lane_total, entropy / log(3.0)],
+	])
 	lines.append_array([
 		"Army checks",
 		"  in place on the march %.2f tiles from its place on average; %.0f%% within a quarter tile" % [stats.march_off / maxf(1, stats.march_frames), 100.0 * stats.march_close / maxf(1, stats.march_frames)],

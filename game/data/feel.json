@@ -204,8 +204,10 @@
   },
 
   "camera": {
-    "_note": "The fight's camera. When the field grows for bigger herds (draft_rules.json \"field\"), the camera zooms out to it over about zoom_seconds.",
-    "zoom_seconds": 0.8
+    "_note": "The fight's camera. When the field grows for bigger herds (draft_rules.json \"field\"), the camera zooms out to it over about zoom_seconds. When the view already reaches the far fence (the line-up, a fight at the back), it eases on past it by up to scenery_back_tiles so the crowd behind the fence shows (data/arena_life.json); from scenery_reach_tiles away it doesn't.",
+    "zoom_seconds": 0.8,
+    "scenery_back_tiles": 2.2,
+    "scenery_reach_tiles": 3.0
   },
 
   "celebrations": {

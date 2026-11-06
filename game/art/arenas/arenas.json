@@ -1,5 +1,5 @@
 {
- "pixels_per_tile": 48,
+ "pixels_per_tile": 64,
  "x": [
   -6.0,
   22.0
@@ -7,5 +7,19 @@
  "y": [
   -4.5,
   24.0
- ]
+ ],
+ "pixels_per_arena": {
+  "rescue_center": 64,
+  "frozen_tundra": 64,
+  "city_park": 48,
+  "prairie_fields": 48,
+  "whispering_woods": 48,
+  "misty_marsh": 48,
+  "sunbaked_savanna": 48,
+  "red_rock_canyon": 48,
+  "emerald_jungle": 48,
+  "cloudpeak_mountains": 48,
+  "coral_coast": 48,
+  "last_sanctuary": 48
+ }
 }

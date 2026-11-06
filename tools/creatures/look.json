@@ -69,7 +69,8 @@
       "mipmaps": true
     },
     "arenas": {
-      "mode": "lossless",
+      "mode": "lossy",
+      "quality": 0.9,
       "mipmaps": true
     },
     "uastc_level": 2,
@@ -80,7 +81,12 @@
       "create_shadow_meshes": false,
       "light_baking": 0
     },
-    "_models_note": "The 3D viewer's models (art/models/*.glb): no tangents (no normal maps), no LODs or shadow meshes (one animal, close up, no real lights), no light baking. Less to download and to keep in memory."
+    "_models_note": "The 3D viewer's models (art/models/*.glb): no tangents (no normal maps), no LODs or shadow meshes (one animal, close up, no real lights), no light baking. Less to download and to keep in memory.",
+    "crowd": {
+      "mode": "lossless",
+      "mipmaps": true
+    },
+    "_arenas_note": "Arena pictures are rendered lossless and compressed once here (lossy WebP). An older picture saved lossy is kept lossless instead, so it isn't compressed twice (set_import.py checks)."
   },
   "model": {
     "_note": "The real-3D models for the animal viewer (export_gltf.py): about `triangles` triangles for the body, animations sampled at keys_per_second, and which animations (the viewer idles and plays the others when tapped).",

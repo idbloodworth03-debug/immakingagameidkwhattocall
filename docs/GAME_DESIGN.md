@@ -622,6 +622,22 @@ when the viewer opens and is freed when it closes
 `tools/creatures/export_gltf.py`; settings in data/viewer.json, journal in
 data/journal.json).
 
+**Arena life:** every arena has life outside its fence, drawn under the
+animals so it never covers them. The camera frames the armies, so the strip
+just behind the far fence is what's on screen: a crowd of the arena's
+animals watches from there (penguins and seals on the Tundra, raccoons, a
+fox and a bear at the Rescue Center), with the arena's sign on the fence,
+flags fluttering, a ranger waving, a squirrel scurrying along the rail, a
+fox pouncing in the snow, northern lights and twinkles on the ice. When the
+view already reaches the far fence (the line-up, a fight at the back) the
+camera eases a little further past it so the crowd shows; mid-field fights
+are framed as before. Big moments (the clash, a knockout, a strong hit, the
+War Horn) make the crowd hop and cheer in a wave from where it happened,
+flags whip and the lights flare. Bigger set pieces (a ranger station and a
+jeep, an igloo and snowbanks) are built into the arena's picture
+(`scripts/fx/arena_life.gd`; data/arena_life.json; camera in feel.json
+"camera").
+
 **Colors** are bold and solid everywhere: no full-screen tint or darkened
 edges, arenas in their full painted colors, panels, bars and badges solid.
 States are shown without see-through dimming: cards in your deck stay

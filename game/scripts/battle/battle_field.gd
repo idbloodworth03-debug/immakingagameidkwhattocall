@@ -6,6 +6,7 @@ extends Control
 ## It's built in layers, all inside a "world" node that shakes as one:
 ##   arena   the rendered arena picture, toned down a little (ground shader)
 ##   decor   the highlight, food bait, ground effects and ambient motion
+##   life    the crowd, flags and the rest outside the fence (ArenaLife)
 ##   ground  every animal's shadow, team ring and class badge
 ##   units   one UnitView per animal, sorted by depth (scripts/fx/unit_view.gd)
 ##   fx      particles, damage numbers, health bars, projectiles (fx_layer.gd)
@@ -131,6 +132,7 @@ var camera_min_tiles := -1.0
 var camera_margin := -1.0
 var _banners: Node2D
 var _last_steps := [-1, -1]
+var _life: ArenaLife
 
 
 func _ready() -> void:
@@ -188,6 +190,30 @@ func _base_scale() -> float:
 
 func field_scale() -> float:
 	return _scale()
+
+
+## How much bigger than its smallest size the field is this fight (the
+## arena picture and its life grow with it).
+func field_k_now() -> float:
+	return _field_k()
+
+
+## The arena's life (ArenaLife), made for the arena shown, under the animals.
+func _keep_life() -> void:
+	if _life != null and _life.arena_id == arena_id:
+		return
+	if _life != null:
+		_life.queue_free()
+	_life = ArenaLife.make(self, arena_id)
+	_world.add_child(_life)
+	# Over the arena and its grass tufts, under the animals' shadows.
+	_world.move_child(_life, _decor.get_index() + 1)
+
+
+## A big moment at field point `at`: the crowd cheers.
+func _cheer(at: Vector2, power: float) -> void:
+	if _life != null:
+		_life.cheer(at.x / (1000.0 * _field_k()), power)
 
 
 ## The field's size this fight, in field units.
@@ -254,6 +280,15 @@ func _frame_armies(delta: float, snap := false) -> void:
 	box = box.grow(margin)
 	# Room above for the animals' heads and banners.
 	box = box.grow_individual(0, margin * 0.6 + Feel.num(a, "camera_head_room_tiles", 1.2) * 1000.0, 0, 0)
+	# Near the far fence, the camera eases on past it to show the crowd
+	# (ArenaLife): all of scenery_back_tiles when the view already reaches
+	# the fence, none from scenery_reach_tiles away.
+	var back := Feel.num("camera", "scenery_back_tiles", 1.7) * 1000.0 * _field_k()
+	var reach := Feel.num("camera", "scenery_reach_tiles", 3.0) * 1000.0 * _field_k()
+	if box.position.y < reach and back > 0.0:
+		var near := clampf((reach - box.position.y) / reach, 0.0, 1.0)
+		var top := minf(box.position.y, lerpf(box.position.y, -back, near))
+		box = box.grow_individual(0, box.position.y - top, 0, 0)
 	var base := _base_scale()
 	var least := (camera_min_tiles if camera_min_tiles > 0.0 else Feel.num(a, "camera_min_tiles", 10.0)) * 1000.0
 	var w := maxf(box.size.x, least)
@@ -264,7 +299,8 @@ func _frame_armies(delta: float, snap := false) -> void:
 	var half := size / (2.0 * base * zoom)
 	var field := _field_size()
 	look.x = clampf(look.x, half.x - MARGIN, field.x + MARGIN - half.x) if half.x * 2.0 < field.x + 2.0 * MARGIN else field.x / 2.0
-	look.y = clampf(look.y, half.y - MARGIN, field.y + MARGIN - half.y) if half.y * 2.0 < field.y + 2.0 * MARGIN else field.y / 2.0
+	var above := maxf(MARGIN, back)
+	look.y = clampf(look.y, half.y - above, field.y + MARGIN - half.y) if half.y * 2.0 < field.y + MARGIN + above else (field.y + MARGIN - above) / 2.0
 	if snap or _cam.x < 0.0:
 		_zoom = zoom
 		_cam = look
@@ -533,6 +569,7 @@ func _process(delta: float) -> void:
 	_world.position = pan + shake_offset
 	_follow_field(delta)
 	_frame_armies(delta)
+	_keep_life()
 	_stomp()
 	_check_crowd()
 	UnitView.refresh_tuning()
@@ -884,6 +921,7 @@ func _show(e: Dictionary) -> void:
 			shake(Feel.num(a, "clash_shake", 0.55))
 			hit_stop(Feel.num(a, "clash_hitstop_seconds", 0.12))
 			Sound.play("boom", -2.0)
+			_cheer(Vector2(e.x, e.y), 1.0)
 		"volley":
 			# Every Ranged animal lets fly at once.
 			Sound.play("whoosh", -3.0, 0.05)
@@ -905,6 +943,7 @@ func _show(e: Dictionary) -> void:
 			if count > 0:
 				fx.effect("ring", middle / count, 5200 * s, color.lightened(0.3), 0.8, "", true)
 			shake(Feel.num("army", "war_horn_shake", 0.3))
+			_cheer(Vector2(_field_size().x / 2.0, 0.0), 1.0)
 
 
 ## The moments of the animals' attack styles (BattleStyles): a swipe across
@@ -1258,6 +1297,8 @@ func _defeat_view(v: UnitView) -> void:
 	if is_instance_valid(winner) and winner.defeat < 0.0 and not winner.doomed:
 		winner.gloat(_time)
 	Sound.play("death", -6.0, 0.15)
+	if not v.swarm:
+		_cheer((v.render_pos()), 0.75)
 	# A pack animal's knockout is small news; anyone else's gets a beat.
 	if not v.swarm:
 		hit_stop(Feel.num("combat", "hitstop_defeat_seconds", 0.07))
@@ -1313,6 +1354,7 @@ func _land(hit: Dictionary) -> void:
 		shake(Feel.num(c, "shake_strong_hit", 0.12))
 	if strong and attacker != null:
 		strong_hit.emit(attacker.team)
+		_cheer(Vector2(e.x, e.y), 0.5)
 	for after in hit.after:
 		_show(after)
 	if log_impacts:

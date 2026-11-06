@@ -60,7 +60,16 @@ mane grows with its face).
    (grass, tile stripes, the halfway line and center ring, flowers) are
    painted with numpy; Blender adds the fence and themed scenery, into
    `game/art/arenas/`. Each arena's look is a theme at the top of the file.
-7. **3D models** (`export_gltf.py`), for the game's 3D animal viewer: the
+7. **Crowd strips** (`crowd.py`), for the life round the arenas
+   (`game/data/arena_life.json`): a few animations of each animal the
+   arenas use, one direction each (idle and a cheer facing the field, a
+   side-on run for runners), cut from its sprite sheet and shrunk to 64
+   pixels a tile, into `game/art/arenas/crowd/`. Plain Python, seconds;
+   run it again after re-rendering an animal. The arenas' set pieces (a
+   ranger station, a jeep, an igloo...) are in the same data file and
+   `arena.py` builds them into the picture, keeping the crowd's strip
+   behind the far fence clear.
+8. **3D models** (`export_gltf.py`), for the game's 3D animal viewer: the
    same cartoon animal as one smooth mesh (the body cut down to about
    16,000 triangles, ears, eyes, nose and claws joined on), its vertex
    colors (sRGB-encoded: the game keeps them in 8 bits), its skeleton, and
@@ -69,7 +78,7 @@ mane grows with its face).
    their UVs, so the game draws the pupils crisply at any zoom. About 0.9 MB
    and 10-20 seconds per animal, into `game/art/models/<id>.glb`. Settings:
    `look.json` "model".
-8. **Dens** (`treehouse.py`, not used by the game any more): side and main
+9. **Dens** (`treehouse.py`, not used by the game any more): side and main
    treehouses in each team's color and their ruins. It writes into
    `game/art/towers/`, which the game no longer has.
 
@@ -101,14 +110,16 @@ Then, from this folder:
 python preview.py red_fox fox.png        # four views, to check the shape
 python strip.py red_fox walk walk.png    # one animation as a filmstrip
 python sprites.py red_fox                # writes game/art/units/red_fox/
+python crowd.py                          # the arenas' crowd strips
 python export_gltf.py red_fox            # writes game/art/models/red_fox.glb
 python export_gltf.py --all              # every animal in data/animals.json
 python set_import.py                     # after Godot imports the new files
 ```
 
 `python sprites.py red_fox --style real` renders the real-proportioned
-animal with fur instead. `python arena.py` renders the arenas (about 5
-minutes each; `--only <arena>` for one).
+animal with fur instead. `python arena.py` renders the arenas at 64
+pixels a tile, saved lossless (about 6-12 minutes each; `--only <arena>`
+for one).
 
 A full animal takes about 12-30 minutes on four CPU cores at 84 pixels a
 tile (the Red Fox: 15 minutes; big animals and ones with more animations

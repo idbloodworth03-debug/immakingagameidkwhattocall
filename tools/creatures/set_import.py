@@ -30,10 +30,22 @@ def settings(text, rule):
     return text
 
 
+def _lossless(webp):
+    """True if a WebP file is stored lossless (its image chunk is VP8L)."""
+    with open(webp, "rb") as f:
+        head = f.read(64)
+    return b"VP8L" in head
+
+
 for path in (glob.glob(os.path.join(ROOT, "units", "*", "*.webp.import"))
-             + glob.glob(os.path.join(ROOT, "arenas", "*.webp.import"))):
+             + glob.glob(os.path.join(ROOT, "arenas", "*.webp.import"))
+             + glob.glob(os.path.join(ROOT, "arenas", "crowd", "*.webp.import"))):
     name = os.path.basename(path)
-    rule = LOOK["arenas"] if "arenas" in path else LOOK["sheets"] if name.startswith("sheet") else LOOK["portraits"]
+    rule = LOOK["crowd"] if "crowd" in path else LOOK["arenas"] if "arenas" in path \
+        else LOOK["sheets"] if name.startswith("sheet") else LOOK["portraits"]
+    if rule is LOOK["arenas"] and not _lossless(path[:-len(".import")]):
+        # Already compressed once when it was saved: keep it as it is.
+        rule = dict(rule, mode="lossless")
     text = open(path).read()
     new = settings(text, rule)
     if new != text:

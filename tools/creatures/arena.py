@@ -37,7 +37,7 @@ from scipy import ndimage
 import scene as S
 from sdf import cone, ellipsoid
 from sprites import ELEVATION
-from treehouse import _mat, _shade, box, cylinder, organic
+from treehouse import _mat, _shade, box, cylinder, organic, roof
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(ROOT, "game", "art", "arenas")
@@ -53,6 +53,14 @@ T0, T1 = -4.5, 24.0
 # The ground mesh and its color texture reach a bit past the picture.
 GX0, GX1, GT0, GT1 = X0 - 2.0, X1 + 2.0, T0 - 4.0, T1 + 2.0
 TEX_PPT = 32
+# Life round the arenas (data/arena_life.json): its set pieces are built
+# into the picture here, and a strip behind the far fence is kept clear for
+# the crowd that watches from there.
+LIFE = json.load(open(os.path.join(ROOT, "game", "data", "arena_life.json")))
+CROWD_STRIP = (-0.6, 16.6, -1.7, -0.3)
+# Set-piece names that are an existing kind of scenery at a size.
+ALIASES = {"snowbank": ("snow_mound", 1.0), "snow_hill": ("snow_mound", 2.6), "ice_block": ("ice_rock", 1.0),
+           "ice_post": ("ice_rock", 0.6)}
 
 
 def wy(t):
@@ -462,6 +470,50 @@ class Library:
                                                  segments=10, ring_count=6)
             bpy.context.object.data.materials.append(_mat(f"petal{i}", c, roughness=0.5))
 
+    # Set pieces (arena_life.json "pieces"): the front faces the field (-Y).
+
+    def ranger_station(self, rng):
+        wall = _mat("cabin", "#a8743f", roughness=0.85, bands=("Z", 9), seam=0.62)
+        box((0, 0, 0.55), (2.1, 1.4, 1.1), wall, bevel=0.04)
+        roof((0, 0, 1.1), 2.5, 1.8, 0.75, _mat("roof", "#3f8a4a", roughness=0.7, bands=("Z", 7), seam=0.7))
+        trim = _mat("trim", "#f2e6c8", roughness=0.6)
+        box((-0.45, -0.71, 0.42), (0.42, 0.04, 0.78), _mat("door", "#6b4424", roughness=0.7, bands=("X", 10), seam=0.7))
+        for x in (0.35, 0.8):
+            box((x, -0.71, 0.66), (0.34, 0.04, 0.3), _mat("window", "#9fdcff", roughness=0.2, emission=0.3))
+            box((x, -0.73, 0.66), (0.4, 0.02, 0.06), trim)
+        # A porch and a sign over the door.
+        box((0, -0.95, 0.05), (2.3, 0.5, 0.1), _mat("porch", "#8a5a33", roughness=0.85, bands=("X", 10), seam=0.65))
+        for x in (-1.05, 1.05):
+            cylinder((x, -1.15, 0.5), 0.05, 0.9, trim, vertices=10)
+        box((0, -0.74, 1.0), (1.1, 0.04, 0.22), _mat("plaque", "#2f8f4a", roughness=0.5))
+
+    def jeep(self, rng):
+        paint = _mat("jeep", "#6f8a3a", roughness=0.45)
+        dark = _mat("tire", "#2a2a2e", roughness=0.8)
+        box((0, 0, 0.46), (1.6, 0.86, 0.34), paint, bevel=0.07)
+        box((0.3, 0, 0.74), (0.85, 0.82, 0.22), paint, bevel=0.05)
+        box((-0.2, 0, 0.86), (0.05, 0.8, 0.3), _mat("glass", "#bfe8ff", roughness=0.15), bevel=0.01)
+        for x in (-0.5, 0.52):
+            for y in (-0.44, 0.44):
+                cylinder((x, y, 0.24), 0.24, 0.18, dark, rot=(math.pi / 2, 0, 0), vertices=20)
+                cylinder((x, y * 1.06, 0.24), 0.11, 0.04, _mat("hub", "#d8d8d0", roughness=0.4), rot=(math.pi / 2, 0, 0),
+                         vertices=14)
+        cylinder((0.85, 0, 0.56), 0.22, 0.14, dark, rot=(0, math.pi / 2, 0), vertices=20)
+        for y in (-0.38, 0.38):
+            cylinder((0.62, y, 1.0), 0.03, 0.55, dark, vertices=8)
+        box((0.62, 0, 1.27), (0.05, 0.8, 0.05), dark)
+        for y in (-0.28, 0.28):
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=0.07, location=(-0.81, y, 0.52), segments=12, ring_count=6)
+            bpy.context.object.data.materials.append(_mat("headlight", "#fff6c0", emission=1.5))
+
+    def igloo(self, rng):
+        organic("igloo", [ellipsoid((0, 0, 0), (0.95, 0.95, 0.8), "snow", "t", blend=0.05),
+                          ellipsoid((0, -0.9, 0.0), (0.38, 0.45, 0.42), "snow", "t", blend=0.08)],
+                lambda m: _shade(m, "#ffffff", "#9cc4e4"), voxel=0.03)[0].data.materials.append(
+            _mat("igloo", "#ffffff", roughness=0.6, bands=("Z", 4), seam=0.82, use_vertex_color=True))
+        organic("door", [ellipsoid((0, -1.32, 0.1), (0.22, 0.06, 0.26), "door", "t", blend=0.01)],
+                lambda m: _shade(m, "#2a3e6a", "#18243e"), voxel=0.02)[0].data.materials.append(self._vc("door", 0.7))
+
     def lamp(self, rng):
         iron = _mat("iron", "#3a3f4a", roughness=0.4, metallic=0.6)
         cylinder((0, 0, 0.6), 0.05, 1.2, iron, vertices=12)
@@ -473,9 +525,11 @@ class Library:
         return _mat(name, "#ffffff", roughness=roughness, use_vertex_color=True)
 
 
-def scatter(lib, theme, rng):
+def scatter(lib, theme, rng, pieces=(), keep_clear=False):
     """Scenery in the margins outside the fence. Tall pieces stay out of
-    the near end, where they would stand in front of the player's herd."""
+    the near end, where they would stand in front of the player's herd;
+    nothing goes where a set piece stands or (keep_clear) in the crowd's
+    strip behind the far fence."""
     kinds = list(theme["props"].keys())
     weights = np.array([theme["props"][k] for k in kinds], float)
     weights /= weights.sum()
@@ -489,6 +543,10 @@ def scatter(lib, theme, rng):
         side = x < -0.9 or x > FIELD_W + 0.9
         beyond = t < -0.8 or t > FIELD_H + 0.8
         if not (side or beyond):
+            continue
+        if keep_clear and CROWD_STRIP[0] < x < CROWD_STRIP[1] and CROWD_STRIP[2] < t < CROWD_STRIP[3]:
+            continue
+        if any((x - float(p[1])) ** 2 + (t - float(p[2])) ** 2 < (1.3 * float(p[3]) + 0.4) ** 2 for p in pieces):
             continue
         kind = kinds[rng.choice(len(kinds), p=weights)]
         tall = kind in TALL
@@ -544,7 +602,12 @@ def render_arena(arena_id, ppt, samples, out_dir):
     keep_flat.objects.link(ground)
 
     lib = Library(theme, rng)
-    scatter(lib, theme, rng)
+    life = LIFE.get(arena_id, {})
+    pieces = life.get("pieces", [])
+    for kind, x, t, size, turn in pieces:
+        base, k = ALIASES.get(kind, (kind, 1.0))
+        _place(lib.copy(base), float(x), float(t), scale=float(size) * k, turn=math.radians(float(turn)))
+    scatter(lib, theme, rng, pieces, keep_clear=bool(life.get("actors")))
     fence(theme)
     lib.hidden.hide_render = True
 
@@ -560,7 +623,8 @@ def render_arena(arena_id, ppt, samples, out_dir):
     im = Image.open(tmp).convert("RGB")
     os.remove(tmp)
     path = os.path.join(out_dir, f"{arena_id}.webp")
-    im.save(path, "WEBP", quality=82, method=6)
+    # Lossless: the game compresses it once, on import (set_import.py).
+    im.save(path, "WEBP", lossless=True, quality=100, method=4)
     return path
 
 
@@ -568,7 +632,7 @@ def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
     parser = argparse.ArgumentParser()
     parser.add_argument("--only", nargs="*")
-    parser.add_argument("--ppt", type=int, default=56)
+    parser.add_argument("--ppt", type=int, default=64)
     parser.add_argument("--samples", type=int, default=32)
     parser.add_argument("--out", default=OUT)
     args = parser.parse_args(argv)
@@ -576,7 +640,14 @@ def main():
     for arena_id in args.only or list(THEMES):
         path = render_arena(arena_id, args.ppt, args.samples, args.out)
         print("arena", arena_id, path, os.path.getsize(path) // 1024, "KB", flush=True)
-    meta = {"pixels_per_tile": args.ppt, "x": [X0, X1], "y": [T0, T1]}
+    # What part of the field every picture covers (the same for all), and
+    # each one's resolution.
+    old = os.path.join(args.out, "arenas.json")
+    meta = json.load(open(old)) if os.path.exists(old) else {}
+    sizes = meta.get("pixels_per_arena", {})
+    for arena_id in args.only or list(THEMES):
+        sizes[arena_id] = args.ppt
+    meta = {"pixels_per_tile": args.ppt, "x": [X0, X1], "y": [T0, T1], "pixels_per_arena": sizes}
     with open(os.path.join(args.out, "arenas.json"), "w") as f:
         json.dump(meta, f, indent=1)
 

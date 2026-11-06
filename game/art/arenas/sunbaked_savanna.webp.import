@@ -17,7 +17,7 @@ dest_files=["res://.godot/imported/sunbaked_savanna.webp-33d0dd870ca7a65ee1d5bc4
 
 compress/mode=0
 compress/high_quality=false
-compress/lossy_quality=0.85
+compress/lossy_quality=0.9
 compress/uastc_level=2
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

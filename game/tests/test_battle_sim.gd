@@ -98,7 +98,7 @@ func test_herd_value_counts_health_left() -> void:
 	var cost := int(GameData.get_card("brown_bear").cost)
 	check_eq(sim.herd_value(0), cost * 1000, "a fresh bear counts its whole cost")
 	bear.hp = bear.max_hp / 2
-	check_eq(sim.herd_value(0), cost * 500, "half its health, half its value")
+	check(absi(sim.herd_value(0) - cost * 500) <= cost * 5, "half its health, half its value (%d of %d, give or take rounding)" % [sim.herd_value(0), cost * 500])
 	check_eq(sim.herd_value(1), 0, "an empty herd is worth nothing")
 
 

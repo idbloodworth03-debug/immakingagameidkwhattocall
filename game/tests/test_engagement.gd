@@ -36,8 +36,10 @@ func test_slots_from_the_data() -> void:
 	check_eq(int(rules.slots_by_class.tank), 3, "3 for a Tank")
 
 
-## Plays a fight, checking every tick that no enemy has more fighters in
-## reach of it, going for it, than its slots; returns the most seen.
+## Plays a fight, checking every tick that no enemy has more fighters
+## attacking it (in reach, holding one of its slots: only those may strike)
+## than its slots, and that no more hold its slots than it has; returns the
+## most attackers seen on one.
 func _never_over(m: DraftMatch, seconds: float) -> int:
 	var sim := m.sim
 	var army: BattleArmy = sim.army
@@ -51,8 +53,15 @@ func _never_over(m: DraftMatch, seconds: float) -> int:
 		var on := {}
 		for f: BattleSim.Fighter in sim.fighters:
 			var t := f.target
-			if f.alive and f.is_unit() and f.attack_range < army.shooter_reach and t != null and t.alive and sim.in_range(f, t):
+			if f.alive and f.is_unit() and f.attack_range < army.shooter_reach and t != null and t.alive and sim.in_range(f, t) and army.has_slot(f, t):
 				on[t] = int(on.get(t, 0)) + 1
+		for e: BattleSim.Fighter in sim.fighters:
+			var held := 0
+			for f: BattleSim.Fighter in sim.fighters:
+				if f.alive and f.team != e.team and int(f.memory.get("engage_on", -1)) == e.uid and f.target == e:
+					held += 1
+			if held > army.cap_of(e):
+				over += 1
 		for t in on:
 			most = maxi(most, int(on[t]))
 			if int(on[t]) > army.cap_of(t):

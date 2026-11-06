@@ -15,8 +15,8 @@
   ],
   "shot": "trash",
   "stats": {
-   "hp": 450,
-   "damage": 95,
+   "hp": 436,
+   "damage": 92,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -47,8 +47,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 316,
-   "damage": 97,
+   "hp": 302,
+   "damage": 92,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 5,
@@ -81,8 +81,8 @@
    "urban"
   ],
   "stats": {
-   "hp": 976,
-   "damage": 260,
+   "hp": 923,
+   "damage": 246,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -114,8 +114,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 423,
-   "damage": 194,
+   "hp": 360,
+   "damage": 165,
    "hit_speed": 1.3,
    "speed": "very_fast",
    "range": 1,
@@ -144,8 +144,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 786,
-   "damage": 166,
+   "hp": 897,
+   "damage": 189,
    "hit_speed": 1.5,
    "speed": "fast",
    "range": 1,
@@ -178,8 +178,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 797,
-   "damage": 219,
+   "hp": 817,
+   "damage": 224,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -212,8 +212,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1764,
-   "damage": 215,
+   "hp": 1734,
+   "damage": 212,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -245,8 +245,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 1831,
-   "damage": 228,
+   "hp": 1787,
+   "damage": 223,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -278,8 +278,8 @@
    "big_cat"
   ],
   "stats": {
-   "hp": 1049,
-   "damage": 231,
+   "hp": 1076,
+   "damage": 237,
    "hit_speed": 1.2,
    "speed": "fast",
    "range": 1,
@@ -312,8 +312,8 @@
    "big_cat"
   ],
   "stats": {
-   "hp": 1081,
-   "damage": 244,
+   "hp": 1245,
+   "damage": 281,
    "hit_speed": 1.2,
    "speed": "fast",
    "range": 1,
@@ -345,8 +345,8 @@
    "herd"
   ],
   "stats": {
-   "hp": 3035,
-   "damage": 240,
+   "hp": 2917,
+   "damage": 231,
    "hit_speed": 1.8,
    "speed": "slow",
    "range": 1,
@@ -377,8 +377,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 1643,
-   "damage": 340,
+   "hp": 1735,
+   "damage": 359,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -410,8 +410,8 @@
    "armored"
   ],
   "stats": {
-   "hp": 3771,
-   "damage": 490,
+   "hp": 3046,
+   "damage": 396,
    "hit_speed": 1.8,
    "speed": "medium",
    "range": 1,
@@ -444,8 +444,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 1507,
-   "damage": 238,
+   "hp": 1649,
+   "damage": 260,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,
@@ -478,8 +478,8 @@
    "nocturnal"
   ],
   "stats": {
-   "hp": 519,
-   "damage": 103,
+   "hp": 558,
+   "damage": 111,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -504,8 +504,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 598,
-   "damage": 225,
+   "hp": 636,
+   "damage": 239,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -527,8 +527,8 @@
    "venomous"
   ],
   "stats": {
-   "hp": 370,
-   "damage": 83,
+   "hp": 400,
+   "damage": 90,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 2,
@@ -551,8 +551,8 @@
    "primate"
   ],
   "stats": {
-   "hp": 1164,
-   "damage": 128,
+   "hp": 1100,
+   "damage": 121,
    "hit_speed": 1.4,
    "speed": "medium",
    "range": 1,
@@ -577,8 +577,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 707,
-   "damage": 225,
+   "hp": 743,
+   "damage": 236,
    "hit_speed": 1.4,
    "speed": "fast",
    "range": 1,
@@ -601,8 +601,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 711,
-   "damage": 201,
+   "hp": 669,
+   "damage": 189,
    "hit_speed": 1.1,
    "speed": "fast",
    "range": 1,
@@ -625,8 +625,8 @@
    "desert"
   ],
   "stats": {
-   "hp": 1084,
-   "damage": 131,
+   "hp": 1002,
+   "damage": 121,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 5,
@@ -670,8 +670,8 @@
    "herd"
   ],
   "stats": {
-   "hp": 1040,
-   "damage": 205,
+   "hp": 905,
+   "damage": 178,
    "hit_speed": 1.4,
    "speed": "fast",
    "range": 5,
@@ -696,8 +696,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 1490,
-   "damage": 232,
+   "hp": 1482,
+   "damage": 231,
    "hit_speed": 1.5,
    "speed": "slow",
    "range": 1,
@@ -718,8 +718,8 @@
    "savanna"
   ],
   "stats": {
-   "hp": 974,
-   "damage": 224,
+   "hp": 903,
+   "damage": 207,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -742,8 +742,8 @@
    "aquatic"
   ],
   "stats": {
-   "hp": 1101,
-   "damage": 183,
+   "hp": 1202,
+   "damage": 200,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -765,8 +765,8 @@
    "forest"
   ],
   "stats": {
-   "hp": 2258,
-   "damage": 229,
+   "hp": 1946,
+   "damage": 197,
    "hit_speed": 1.4,
    "speed": "slow",
    "range": 1,
@@ -790,8 +790,8 @@
    "primate"
   ],
   "stats": {
-   "hp": 2102,
-   "damage": 242,
+   "hp": 2188,
+   "damage": 252,
    "hit_speed": 1.5,
    "speed": "medium",
    "range": 1,
@@ -814,8 +814,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1614,
-   "damage": 212,
+   "hp": 1754,
+   "damage": 230,
    "hit_speed": 1.3,
    "speed": "medium",
    "range": 1,
@@ -839,8 +839,8 @@
    "shelled"
   ],
   "stats": {
-   "hp": 4872,
-   "damage": 488,
+   "hp": 5750,
+   "damage": 576,
    "hit_speed": 1.1,
    "speed": "medium",
    "range": 1,
@@ -864,8 +864,8 @@
    "wetland"
   ],
   "stats": {
-   "hp": 886,
-   "damage": 211,
+   "hp": 1068,
+   "damage": 255,
    "hit_speed": 1.2,
    "speed": "medium",
    "range": 1,
@@ -889,8 +889,8 @@
    "jungle"
   ],
   "stats": {
-   "hp": 3170,
-   "damage": 317,
+   "hp": 3639,
+   "damage": 364,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,
@@ -911,8 +911,8 @@
    "mountain"
   ],
   "stats": {
-   "hp": 3658,
-   "damage": 316,
+   "hp": 3285,
+   "damage": 284,
    "hit_speed": 1.6,
    "speed": "medium",
    "range": 1,
@@ -935,8 +935,8 @@
    "predator"
   ],
   "stats": {
-   "hp": 1733,
-   "damage": 301,
+   "hp": 1648,
+   "damage": 286,
    "hit_speed": 1.0,
    "speed": "fast",
    "range": 1,
@@ -958,8 +958,8 @@
    "marine"
   ],
   "stats": {
-   "hp": 4416,
-   "damage": 406,
+   "hp": 4120,
+   "damage": 379,
    "hit_speed": 1.6,
    "speed": "slow",
    "range": 1,

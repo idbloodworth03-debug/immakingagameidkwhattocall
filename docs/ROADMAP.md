@@ -21,6 +21,7 @@
 - [x] Deeper placement after destroying a side den
 - [x] Segmented energy bar, and hand cards that fill up as energy comes in
 - [x] Balance report: hundreds of bot-vs-bot battles, win rate and play rate per card
+- [x] Readable battles: targeting rules (closest first, commit, threat response with a "!"), engagement slots and personal space, three lanes and a battle line, team-colored outlines and shot trails, tap a squad to see its targets, less noise in busy spots; then a balance retune over all 35 (1,000 bot-vs-bot fights each: every animal within 0.03 of its rarity's target)
 - [x] First balance pass from bot-vs-bot battles (see "Computer opponent" in [GAME_DESIGN.md](GAME_DESIGN.md))
 
 ## Phase 1b: Draft Duel (first version done)

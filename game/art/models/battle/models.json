@@ -1,0 +1,107 @@
+{
+ "asian_elephant": {
+  "tile_scale": 1.01121
+ },
+ "barn_owl": {
+  "tile_scale": 1.1784
+ },
+ "black_rhino": {
+  "tile_scale": 1.0889
+ },
+ "brown_bear": {
+  "tile_scale": 1.25925
+ },
+ "california_condor": {
+  "tile_scale": 0.67057
+ },
+ "cerberus": {
+  "tile_scale": 1.4786
+ },
+ "dragon": {
+  "tile_scale": 1.14531
+ },
+ "electric_eel": {
+  "tile_scale": 1.88537
+ },
+ "giant_panda": {
+  "tile_scale": 1.16508
+ },
+ "gray_squirrel": {
+  "tile_scale": 3.96968
+ },
+ "harbor_seal": {
+  "tile_scale": 1.33321
+ },
+ "harpy_eagle": {
+  "tile_scale": 0.93897
+ },
+ "hippopotamus": {
+  "tile_scale": 0.91447
+ },
+ "honey_badger": {
+  "tile_scale": 1.90498
+ },
+ "hyacinth_macaw": {
+  "tile_scale": 1.16071
+ },
+ "king_cobra": {
+  "tile_scale": 2.29549
+ },
+ "komodo_dragon": {
+  "tile_scale": 1.26321
+ },
+ "kraken": {
+  "tile_scale": 2.07855
+ },
+ "lion": {
+  "tile_scale": 1.1987
+ },
+ "mountain_gorilla": {
+  "tile_scale": 2.09345
+ },
+ "peregrine_falcon": {
+  "tile_scale": 1.26005
+ },
+ "pygmy_three_toed_sloth": {
+  "tile_scale": 2.92424
+ },
+ "raccoon": {
+  "tile_scale": 1.81245
+ },
+ "red_fox": {
+  "tile_scale": 1.73773
+ },
+ "red_panda": {
+  "tile_scale": 1.6219
+ },
+ "snapping_turtle": {
+  "tile_scale": 1.87018
+ },
+ "striped_skunk": {
+  "tile_scale": 1.85635
+ },
+ "sumatran_orangutan": {
+  "tile_scale": 2.82903
+ },
+ "sunda_pangolin": {
+  "tile_scale": 2.00064
+ },
+ "tiger": {
+  "tile_scale": 1.24045
+ },
+ "unicorn": {
+  "tile_scale": 1.74607
+ },
+ "wild_bactrian_camel": {
+  "tile_scale": 1.84991
+ },
+ "wild_boar": {
+  "tile_scale": 1.26695
+ },
+ "wolf_pack": {
+  "tile_scale": 1.05944
+ },
+ "yeti": {
+  "tile_scale": 2.33974
+ }
+}

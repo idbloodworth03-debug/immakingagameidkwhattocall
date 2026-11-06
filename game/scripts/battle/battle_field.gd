@@ -8,7 +8,9 @@ extends Control
 ##   decor   the highlight, food bait, ground effects and ambient motion
 ##   life    the crowd, flags and the rest outside the fence (ArenaLife)
 ##   ground  every animal's shadow, team ring and class badge
-##   units   one UnitView per animal, sorted by depth (scripts/fx/unit_view.gd)
+##   models  the animals as real 3D models, when use_models (ModelStage)
+##   units   one UnitView per animal, sorted by depth (scripts/fx/unit_view.gd):
+##           its sprite, or (use_models) only its style props over its model
 ##   fx      particles, damage numbers, health bars, projectiles (fx_layer.gd)
 ##
 ## A hit shows when it lands, not when the fight deals it: the attacker's
@@ -133,6 +135,10 @@ var camera_margin := -1.0
 var _banners: Node2D
 var _last_steps := [-1, -1]
 var _life: ArenaLife
+## Show the animals as real 3D models (ModelStage) instead of sprites
+## (feel.json "models" "enabled"; set before the field is added).
+var use_models := false
+var _stage: ModelStage
 
 
 func _ready() -> void:
@@ -155,6 +161,10 @@ func _ready() -> void:
 	_world.add_child(_decor)
 	_ground = _Painter.new(_draw_unit_ground)
 	_world.add_child(_ground)
+	if use_models or Feel.on("models", "enabled", false):
+		use_models = true
+		_stage = ModelStage.make(self)
+		_world.add_child(_stage)
 	_units = Node2D.new()
 	_units.y_sort_enabled = true
 	_world.add_child(_units)
@@ -235,6 +245,11 @@ func _origin() -> Vector2:
 
 func to_screen(x: float, y: float) -> Vector2:
 	return _origin() + Vector2(x, y) * _scale()
+
+
+## A screen point as a field position (field units, not clamped).
+func screen_to_field(point: Vector2) -> Vector2:
+	return (point - _origin()) / _scale()
 
 
 func to_field(point: Vector2) -> Vector2i:
@@ -586,6 +601,8 @@ func _process(delta: float) -> void:
 	for v in _views.values():
 		v.animate(dt, _time)
 		v.position = to_screen(v.render_pos().x, v.render_pos().y)
+	if _stage != null:
+		_stage.sync(_views, _time)
 	_remove_finished()
 	_decor.queue_redraw()
 	_ground.queue_redraw()
@@ -624,6 +641,7 @@ func _sync_views(dt: float) -> void:
 			if not UnitSprites.has(f.card.id):
 				continue
 			v = UnitView.make(self, f, key)
+			v.modeled = use_models and ModelStage.has_model(v.id)
 			v.set_shaded(not _plain)
 			_views[key] = v
 			_units.add_child(v)

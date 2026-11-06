@@ -54,7 +54,7 @@ for path in (glob.glob(os.path.join(ROOT, "units", "*", "*.webp.import"))
 
 
 MODEL = LOOK.get("models", {})
-for path in glob.glob(os.path.join(ROOT, "models", "*.glb.import")):
+for path in glob.glob(os.path.join(ROOT, "models", "*.glb.import")) + glob.glob(os.path.join(ROOT, "models", "battle", "*.glb.import")):
     text = open(path).read()
     new = text
     for key, value in MODEL.items():

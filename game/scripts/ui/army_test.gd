@@ -1,5 +1,7 @@
+class_name ArmyTest
 extends Control
-## For testing (Profile > Developer tools > Big army test): the biggest
+## For testing (Profile > Developer tools > Big army test, and Big army
+## test (3D) with the animals as real 3D models, ModelStage): the biggest
 ## armies there can be (40 animals a side: every class, elites, Mythic
 ## heroes, 3-star squads) fight over and over on the real battle field, with
 ## the frame rate on screen. After each fight a line sums it up: frames a
@@ -8,9 +10,12 @@ extends Control
 ## drawing). Both sides blow their War Horn as the computer would.
 ##
 ## ARMY_TEST_LOG=file (an environment variable, on a computer) writes the
-## summaries to that file and quits after ARMY_TEST_FIGHTS fights.
+## summaries to that file and quits after ARMY_TEST_FIGHTS fights;
+## ARMY_TEST_MODELS=1 (or 0) picks 3D models (or sprites).
 
 const MENU_SCENE := "res://scenes/main.tscn"
+## The next test shows the animals as 3D models (set by the Developer tools).
+static var use_models := false
 const ARMIES := [
 	[["brown_bear", 3, 3], ["black_rhino", 1, 2], ["yeti", 1, 1], ["wild_boar", 3, 2], ["tiger", 2, 3],
 		["gray_squirrel", 3, 3], ["wild_bactrian_camel", 1, 1], ["peregrine_falcon", 2, 2], ["california_condor", 1, 1],
@@ -63,6 +68,8 @@ func _ready() -> void:
 	_log = OS.get_environment("ARMY_TEST_LOG")
 	if OS.get_environment("ARMY_TEST_FIGHTS") != "":
 		_fights_wanted = int(OS.get_environment("ARMY_TEST_FIGHTS"))
+	if OS.get_environment("ARMY_TEST_MODELS") != "":
+		use_models = OS.get_environment("ARMY_TEST_MODELS") == "1"
 	var safe := UIStyle.safe_margins(get_viewport())
 	var column := UIStyle.vbox("s")
 	column.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -80,6 +87,7 @@ func _ready() -> void:
 	top.add_child(_stats)
 	column.add_child(top)
 	field = BattleField.new()
+	field.use_models = use_models
 	field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var arena := GameData.get_arena(Profile.arena_index())
 	field.arena_id = arena.id
@@ -156,7 +164,7 @@ func _process(delta: float) -> void:
 	var code := (Time.get_ticks_usec() - _frame_start) / 1000.0
 	_code.append(code)
 	_script_ms += code
-	_stats.text = "%d fps   %d animals   fight %d   code %.1f ms" % [Engine.get_frames_per_second(), on_field, _fight, code]
+	_stats.text = "%s%d fps   %d animals   fight %d   code %.1f ms" % ["3D  " if field.use_models else "", Engine.get_frames_per_second(), on_field, _fight, code]
 	if duel.phase != "fight":
 		_finish()
 
@@ -179,7 +187,7 @@ func _finish() -> void:
 	var codes := _code.duplicate()
 	codes.sort()
 	var code_worst: float = codes[clampi(int(codes.size() * 0.99), 0, codes.size() - 1)] if not codes.is_empty() else 0.0
-	var line := "Fight %d: %.0f fps on average, slowest 1%% of frames %.0f fps, %.1f%% of frames missed 60 fps; game code %.1f ms a frame (%.1f in the slowest 1%%), fight %.2f ms a step (%.1f at worst)" % [
+	var line := ("3D models. " if field.use_models else "Sprites. ") + "Fight %d: %.0f fps on average, slowest 1%% of frames %.0f fps, %.1f%% of frames missed 60 fps; game code %.1f ms a frame (%.1f in the slowest 1%%), fight %.2f ms a step (%.1f at worst)" % [
 		_fight, count / total, 1.0 / maxf(worst, 0.001), 100.0 * missed / count, _script_ms / maxf(1, _code.size()), code_worst,
 		_sim_ms / maxf(1.0, duel.fight_tick), _sim_worst]
 	_lines.append(line)

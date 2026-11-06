@@ -6,6 +6,7 @@ attack and a victory dance) the viewer plays when you tap the animal.
     python export_gltf.py red_fox            # -> game/art/models/red_fox.glb
     python export_gltf.py red_fox wolf_pack
     python export_gltf.py --all             # every animal in data/animals.json
+    python export_gltf.py --all --lod battle   # the light battle models
 
 What goes into it (look.json "model"):
   * the body and every piece stuck to it (ears, eyes, nose, claws, horns),
@@ -41,6 +42,15 @@ import scene as S
 MODEL = S.LOOK.get("model", {})
 OUT = os.path.join(HERE, "..", "..", "game", "art", "models")
 ANIMS = MODEL.get("animations", ["idle", "fidget", "attack", "victory"])
+# The battle's lighter models (look.json "model" "battle"): far fewer
+# triangles (an animal is a few dozen pixels tall in a fight), every
+# animation the battle plays, and their size in field tiles.
+LODS = {"viewer": {}, "battle": MODEL.get("battle", {})}
+LOD = dict(LODS["viewer"])
+
+
+def _setting(key, fallback):
+    return LOD.get(key, MODEL.get(key, fallback))
 
 
 def _rest(arm):
@@ -179,7 +189,8 @@ def assemble(creature):
         bpy.data.objects.remove(facing)
     _rest(arm)
 
-    target = int(MODEL.get("triangles", 16000))
+    target = int(_setting("triangles", 16000))
+    piece_cap = int(_setting("piece_triangles", 0))
     pieces = []
     for obj in list(bpy.data.objects):
         if obj.type != "MESH" or obj == body:
@@ -200,7 +211,9 @@ def assemble(creature):
     # Ears and other finely meshed parts get cut down too, a share each.
     for obj in pieces:
         tris = sum(len(p.vertices) - 2 for p in obj.data.polygons)
-        if tris > 3000:
+        if piece_cap > 0 and tris > piece_cap * 1.3:
+            _decimate(obj, piece_cap)
+        elif tris > 3000:
             _decimate(obj, max(800, int(target * 0.06)))
 
     body_tris = _decimate(body, target)
@@ -244,7 +257,7 @@ def assemble(creature):
 def bake(creature, arm):
     """Samples each animation into its own action. Root offsets (root_loc,
     root_rot) go onto the bones without a parent."""
-    rate = float(MODEL.get("keys_per_second", 30))
+    rate = float(_setting("keys_per_second", 30))
     sc = bpy.context.scene
     sc.render.fps = int(rate)
     roots = [pb for pb in arm.pose.bones if pb.parent is None]
@@ -252,7 +265,7 @@ def bake(creature, arm):
         pb.rotation_mode = "QUATERNION"
     arm.animation_data_create()
     have = motion.animations_for(creature, ["victory"])
-    for name in ANIMS:
+    for name in _setting("animations", ANIMS):
         if name not in motion.ANIMATIONS:
             continue
         if name in ("attack2", "special") and name not in have:
@@ -291,10 +304,16 @@ def bake(creature, arm):
         pb.rotation_quaternion = (1, 0, 0, 0)
 
 
-def export(species, out_dir=OUT):
+def export(species, out_dir=OUT, index=None):
     creature = cartoon.load(species, style="cartoon")
     arm, body, mesh = assemble(creature)
     bake(creature, arm)
+    if index is not None:
+        # Its size in field tiles, as the sprites have it: its longest side
+        # (nose to tail, or a wingspan) is tiles_long tiles.
+        lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
+        length = float(max(hi[0] - lo[0], hi[1] - lo[1]))
+        index[species] = {"tile_scale": round(float(creature.tiles_long) / length, 5)}
     os.makedirs(out_dir, exist_ok=True)
     path = os.path.join(out_dir, species + ".glb")
     bpy.ops.object.select_all(action="DESELECT")
@@ -317,16 +336,29 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("species", nargs="*")
     parser.add_argument("--all", action="store_true")
-    parser.add_argument("--out", default=OUT)
+    parser.add_argument("--out", default=None)
+    parser.add_argument("--lod", choices=list(LODS), default="viewer",
+                        help="viewer (the 3D viewer's detailed model) or battle (light, for fights)")
     args = parser.parse_args(argv)
+    LOD.clear()
+    LOD.update(LODS[args.lod])
+    out = args.out or (os.path.join(OUT, "battle") if args.lod == "battle" else OUT)
     ids = args.species
     if args.all:
         # The animals in the game (data/animals.json).
         import json
         with open(os.path.join(HERE, "..", "..", "game", "data", "animals.json")) as f:
             ids = [a["id"] for a in json.load(f)]
+    import json
+    index_path = os.path.join(out, "models.json")
+    index = None
+    if args.lod == "battle":
+        index = json.load(open(index_path)) if os.path.exists(index_path) else {}
     for sid in ids:
-        export(sid, args.out)
+        export(sid, out, index)
+        if index is not None:
+            with open(index_path, "w") as f:
+                json.dump(dict(sorted(index.items())), f, indent=1)
 
 
 if __name__ == "__main__":

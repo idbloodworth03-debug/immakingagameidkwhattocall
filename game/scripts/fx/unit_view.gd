@@ -195,6 +195,26 @@ var body: Body
 ## Its attack style's poses and props (StyleLook), drawn over its body.
 var look: StyleLook
 
+## Shown as a real 3D model (ModelStage) instead of its sprite: the sprite
+## isn't drawn (or its pictures loaded), and each frame these say what the
+## model does, the same choreography as the sprite: the animation and how
+## far through it (0-1), which way it faces (degrees clockwise from up),
+## and the sprite's offset (pixels), stretch, lean (degrees), fade, flash,
+## golden glow and tint.
+var modeled := false
+var m_anim := "idle"
+var m_phase := 0.0
+var m_facing := 0.0
+var m_offset := Vector2.ZERO
+var m_scale := Vector2.ONE
+var m_rot := 0.0
+var m_opacity := 1.0
+var m_flash := 0.0
+var m_gold := 0.0
+var m_tint := Color.WHITE
+var m_visible := true
+var _frames_of := {}
+
 
 ## Draws the sprite; positioned and scaled by the view for squash and hops.
 class Body:
@@ -283,6 +303,8 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 		v._fidget_len = UnitSprites.duration(v.id, "fidget")
 		v._fidget_fps = float(UnitSprites.animation(v.id, "fidget").get("fps", 10))
 	v._victory_fps = float(UnitSprites.animation(v.id, "victory").get("fps", 10))
+	for anim in ["idle", "walk", "attack", "attack2", "special", "fidget", "victory"]:
+		v._frames_of[anim] = maxf(1.0, float(UnitSprites.animation(v.id, anim).get("frames", 8)))
 	v._anim_speed = 1.0 + randf_range(-1.0, 1.0) * Feel.num(a, "pace_variety", 0.08)
 	var now := owner_field.now()
 	v._blink_next = now + randf_range(0.5, 4.0)
@@ -974,7 +996,8 @@ func animate(dt: float, now: float) -> void:
 		_f_n = frame
 		_f_dir = _shown_dir
 		_frame_key = "%s%d/%d" % [anim, frame, _shown_dir]
-		body.frame = UnitSprites.frame(id, anim, _shown_dir * 45.0, frame)
+		if not modeled:
+			body.frame = UnitSprites.frame(id, anim, _shown_dir * 45.0, frame)
 
 	# Build this frame's offset, stretch and lean.
 	var offset := Vector2.ZERO
@@ -1240,7 +1263,48 @@ func animate(dt: float, now: float) -> void:
 		tint = tint.lerp(Color(2.0, 2.0, 2.0), flash * 0.6)
 		tint.a = opacity
 	body.self_modulate = tint * style_pose.tint
+	if modeled:
+		body.visible = false
+		face.visible = false
+		m_anim = anim
+		m_phase = _phase_of(anim, frame, now, pace, since, defeat >= 0.0 or stunned)
+		m_facing = _shown_dir * 45.0 if celebrating and anim != "victory" else facing
+		m_offset = offset
+		m_scale = Vector2(maxf(sx, 0.01), maxf(sy, 0.01))
+		m_rot = rot
+		m_opacity = opacity
+		m_flash = flash
+		m_gold = float(t.gold_glow) * (0.8 + 0.2 * sin(now * 3.0 + idle_phase)) if golden else 0.0
+		m_tint = (tint if m != null else Color.WHITE) * style_pose.tint
+		m_visible = not burrowed
+		return
 	body.redraw_if_changed()
+
+
+## How far through its animation (0-1) it is, for the 3D model: the same
+## timing as the sprite's frames, but smooth.
+func _phase_of(anim: String, frame: int, now: float, pace: float, since: float, still: bool) -> float:
+	var frames := float(_frames_of.get(anim, 8.0))
+	if still:
+		return 0.0
+	match anim:
+		"idle":
+			return fposmod((now * pace + uid * 0.37) * _idle_fps / frames, 1.0)
+		"walk":
+			return fposmod(walk, 1.0)
+		"victory":
+			return fposmod((now - _victory_at) * _victory_fps * pace / frames, 1.0)
+		"fidget":
+			return clampf((now - _fidget_at) * _fidget_fps / frames, 0.0, 0.999)
+	if anim in ATTACK_ANIMS:
+		var info: Dictionary = _attacks.get(_attack_anim, {})
+		if info.is_empty():
+			return clampf(since * _attack_fps / frames, 0.0, 0.999)
+		var windup := windup_seconds()
+		var f := since / maxf(windup, 0.01) * float(info.hit_frame) if since < windup \
+			else float(info.hit_frame) + (since - windup) * float(info.fps)
+		return clampf(f / float(info.frames), 0.0, 0.999)
+	return clampf(float(frame) / frames, 0.0, 0.999)
 
 
 ## In reach of what it's fighting (no fidgeting then).

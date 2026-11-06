@@ -56,6 +56,7 @@
 - [x] Big herds: the field grows and the camera zooms out, rows spread out without overlapping, effects are capped (biggest hits first), and the fight was made cheaper (draw calls in the biggest fight down from about 600 to under 200)
 - [x] The computer picks by counters and what its herd lacks (all five classes and tools get picked) and can't see your picks before the fight
 - [ ] Polish pass: smooth characters (new render pipeline, every animal re-rendered at 1.5x, lossless), bold solid colors (done), hold for info everywhere (done), a 3D animal viewer (done), arenas full of life (done)
+- [ ] 3D animals in battle: real 3D models instead of sprites (test fight built: Developer tools > Big army test (3D); next, measure on iPhone, then roll out)
 - [ ] Painted portraits for the Rival Rangers (they're drawn in code for now)
 - [ ] Playtest with real people: is it fun? Too long, too random, too predictable?
 - [ ] A balance pass for the open field, from real play

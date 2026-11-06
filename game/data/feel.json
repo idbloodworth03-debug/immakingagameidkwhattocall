@@ -203,6 +203,14 @@
     "hitstop_cooldown_when_crowded": 2.0
   },
 
+  "models": {
+    "_note": "The animals as real 3D models in battle (scripts/fx/model_stage.gd, art/models/battle/) instead of sprites. enabled: on everywhere (off: only Developer tools > Big army test (3D)). render_scale_max: at most this many real pixels per layout pixel; msaa: antialiasing (0, 2 or 4); outline_px: the dark outline's width at one real pixel per layout pixel. Shading is the 3D viewer's (viewer.json \"look\").",
+    "enabled": false,
+    "render_scale_max": 2.0,
+    "msaa": 2,
+    "outline_px": 1.3
+  },
+
   "camera": {
     "_note": "The fight's camera. When the field grows for bigger herds (draft_rules.json \"field\"), the camera zooms out to it over about zoom_seconds. When the view already reaches the far fence (the line-up, a fight at the back), it eases on past it by up to scenery_back_tiles so the crowd behind the fence shows (data/arena_life.json); from scenery_reach_tiles away it doesn't.",
     "zoom_seconds": 0.8,

@@ -20,7 +20,16 @@ uniform vec3 eye_white : source_color = vec3(0.95, 0.95, 0.93);
 uniform vec3 pupil_color : source_color = vec3(0.04, 0.035, 0.035);
 uniform float silhouette = 0.0;     // 1: a solid shape (an animal not found yet)
 uniform vec3 silhouette_color : source_color = vec3(0.1, 0.16, 0.32);
-uniform float flash = 0.0;          // a quick brightening when tapped
+uniform float flash = 0.0;          // a quick brightening when tapped (or hit)
+// In battle: a tint (stunned, a style's pose), a fade (a knockout, a hidden
+// animal) by screen-door dithering so it stays in the fast opaque pass, a
+// 3-star animal's golden glow, and a blink (eyelids of lid_color).
+uniform vec3 tint : source_color = vec3(1.0);
+uniform float opacity = 1.0;
+uniform float gold = 0.0;
+uniform vec3 gold_color : source_color = vec3(1.0, 0.82, 0.25);
+uniform float blink = 0.0;
+uniform vec3 lid_color : source_color = vec3(0.45, 0.3, 0.2);
 
 varying vec3 v_color;
 varying vec3 v_eye;
@@ -46,6 +55,8 @@ void fragment() {
 		float pupil = disc(v_eye.xy, vec2(0.0, -0.04), 0.5) * front;
 		float shine = disc(v_eye.xy, vec2(0.17, 0.2), 0.16) * front;
 		base = mix(mix(eye_white, pupil_color, pupil), vec3(1.0), shine);
+		// The lid comes down from the top.
+		base = mix(base, lid_color, step(1.0 - blink * 2.2, v_eye.y) * front);
 	}
 	vec3 n = normalize(NORMAL);
 	vec3 l = normalize(key_dir);
@@ -59,7 +70,18 @@ void fragment() {
 	// A little more color, the same hues.
 	float grey = dot(col, vec3(0.299, 0.587, 0.114));
 	col = mix(vec3(grey), col, 1.0 + vibrance);
+	col *= tint;
+	col += gold_color * gold * (0.25 + 0.75 * smoothstep(0.4, 1.0, edge));
 	col = mix(col, silhouette_color, silhouette);
 	col = mix(col, vec3(1.0), flash);
 	ALBEDO = max(col, vec3(0.0));
+	if (opacity < 0.999) {
+		// A 4x4 ordered dither: fades without leaving the opaque pass.
+		ivec2 p = ivec2(FRAGCOORD.xy) % 4;
+		int index = p.x + p.y * 4;
+		float limits[16] = float[](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+		if (opacity * 16.0 <= limits[index] + 0.5) {
+			discard;
+		}
+	}
 }

@@ -36,6 +36,7 @@ func _build() -> void:
 	var header := UIKit.hbox(18)
 	add_child(header)
 	var card := AnimalCard.create(animal_id)
+	card.full_show = true
 	card.info = AnimalCard.Info.NONE
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	header.add_child(card)

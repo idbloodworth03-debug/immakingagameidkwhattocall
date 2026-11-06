@@ -5,7 +5,8 @@ extends Control
 ## its habitat color, its class badge in the top-left corner (a tool badge
 ## for tools), stars along the bottom, an upgrade arrow when a pick would
 ## add a star and, if there's room, the name. No other text. With no card
-## id it's an empty slot.
+## id it's an empty slot. The rarer it is, the more it shows off (CardShow:
+## the full show, or the lighter one for cards in a row of many, `light`).
 ##
 ## The frame, window, glow, coin and stars are regions of a few shared
 ## textures (tools/make_ui_art.py), so cards batch well. Tap handling is up
@@ -49,7 +50,13 @@ var flash := 0.0:
 		flash = value
 		queue_redraw()
 
+## The lighter rarity show (your army row): fewer sparkles, redrawn less.
+var light := false
+
 var _time := 0.0
+var _since_draw := 0.0
+## Something on it pulses or bobs (a star preview, the upgrade arrow).
+var _pulse := false
 var _frame := SkinBox.make("card")
 var _window := SkinBox.make("window")
 var _glow := SkinBox.make("glow")
@@ -70,20 +77,41 @@ static func make(id: String, card_size: Vector2) -> GameCard:
 func _ready() -> void:
 	resized.connect(func() -> void: pivot_offset = size / 2.0)
 	pivot_offset = size / 2.0
-	set_process(false)
+	_update_process()
 
 
-## Lets the star preview pulse (only while it's on screen).
+## Lets the star preview pulse and the arrow bob (only while it's on screen).
 func animate(on: bool) -> void:
-	set_process(on)
+	_pulse = on
+	_update_process()
+
+
+func _rarity() -> String:
+	return String(GameData.get_card(card_id).get("rarity", "common")) if card_id != "" else ""
+
+
+func _update_process() -> void:
+	set_process(_pulse or CardShow.moves(_rarity()))
 
 
 func _process(delta: float) -> void:
 	_time += delta
-	queue_redraw()
+	_since_draw += delta
+	# Only while on screen; the lighter show only grid_fps times a second.
+	if light and not _pulse and _since_draw < 1.0 / CardShow.grid_fps():
+		return
+	if CardShow.on_screen(self):
+		_since_draw = 0.0
+		queue_redraw()
+
+
+## How many times cards have been drawn (tests/card_report.gd: the cost of
+## a screen full of cards).
+static var draws := 0
 
 
 func _draw() -> void:
+	draws += 1
 	var w := size.x
 	var h := size.y
 	var rect := Rect2(Vector2.ZERO, size)
@@ -98,13 +126,24 @@ func _draw() -> void:
 	var card := GameData.get_card(card_id)
 	var is_tool := GameData.is_tool(card_id)
 
+	var rarity := String(card.get("rarity", "common"))
+	var moving := is_processing()
+	var radius := UIStyle.radius("card")
+	var rarity_color := UIStyle.rarity_color(rarity)
+	if rarity == "mythic":
+		rarity_color = CardShow.rim_color(rarity_color, _time)
 	if selected:
 		_glow.tint = Color(UIStyle.color("selected"), 0.95)
 		draw_style_box(_glow, rect.grow(18.0))
-	_frame.tint = UIStyle.rarity_color(String(card.get("rarity", "common")))
+	else:
+		CardShow.draw_glow(self, rect, radius, rarity, rarity_color, _time, not light and moving)
+	_frame.tint = rarity_color
 	if selected:
 		_frame.tint = _frame.tint.lerp(UIStyle.color("selected"), 0.25)
 	draw_style_box(_frame, rect)
+	var border_w := UIStyle.num("card", "border", 4)
+	# A Rare and up: a soft shine on the frame (a Common is plain).
+	CardShow.draw_shine(self, rect.grow(-border_w), radius - int(border_w), rarity)
 
 	# The art window: sunken, lit in the habitat's color.
 	var border := UIStyle.num("card", "border", 4)
@@ -114,7 +153,10 @@ func _draw() -> void:
 	var art := Rect2(inset, inset, w - inset * 2.0, h - inset * 2.0 - lip - name_h)
 	_window.tint = UIStyle.color("tool") if is_tool else _habitat_color(card).lightened(0.15)
 	draw_style_box(_window, art)
+	# A Mythic's light rays, behind the animal; Epic and up, a sweep of light.
+	CardShow.draw_rays(self, art, rarity, _time, not light)
 	_draw_art(card, art, is_tool)
+	CardShow.draw_sweep(self, art, rarity, _time, moving)
 
 	if show_name:
 		UIStyle.draw_text(self, String(card.get("name", "?")), Rect2(inset * 0.5, art.end.y + 1.0, w - inset, name_h), "small")
@@ -161,6 +203,12 @@ func _draw() -> void:
 			var side := corner * 1.0
 			draw_texture_rect(arrow, Rect2(at + Vector2(0, bob) - Vector2(side, side) / 2.0, Vector2(side, side)), false)
 
+	# A Rare and up: a glint on top of the frame.
+	CardShow.draw_glint(self, rect.grow(-border_w), rarity)
+	# The frame's show (sparkles start above the stars and the name).
+	if moving:
+		var clear_y := art.end.y - (clampf(w * 0.085, 12.0, 20.0) * 1.5 if stars > 0 else 0.0)
+		CardShow.draw_frame(self, rect, rect.grow(-border_w), inset - border_w, clear_y, rarity, _time, not light)
 	if flash > 0.0:
 		_glow.tint = Color(1, 1, 0.85, flash * 0.9)
 		draw_style_box(_glow, rect.grow(6.0))

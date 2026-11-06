@@ -311,11 +311,30 @@ animal returns. Each animal is modeled, painted and animated (see
 animal with its class, row, rarity, arena and power, and the archived ones.
 
 **Mythic** is the rarity above Legendary, for creatures from myth and
-legend: they start at level 11, have a rose-pink card with an animated frame
-(a pulsing glow, a slowly shifting rainbow tint, a spark running round the
-rim and twinkling sparkles; `frame` in rarities.json), and a Ranger Journal
-on their card that tells the real animal behind the legend. They come from
-Moonlit Cages and as a rare extra in big cages (see Cages).
+legend: they start at level 11, have a rose-pink card with the biggest show
+of all (see Card show below), and a Ranger Journal on their card that tells
+the real animal behind the legend. They come from Moonlit Cages and as a
+rare extra in big cages (see Cages).
+
+### Card show
+
+The rarer a card, the more it shows off (`scripts/ui/card_show.gd`, numbers
+in `feel.json` "card_show", colors in `ui_style.json` "show_*"), on every
+card: Your Deck, the bans, the Animals tab, the shop, Pick 3 and cage
+openings.
+
+- **Common:** plain.
+- **Rare:** a soft shine on the frame and a little glint in its corner.
+- **Epic:** a band of light sweeping across the picture now and then, and a soft glow.
+- **Legendary:** a glowing edge that pulses, and sparkles drifting off the top and sides of the frame.
+- **Mythic:** the rose pink frame with its rainbow sheen, a shimmering rainbow border running round it, a spark of light chasing round the rim, lots of sparkles, and light rays turning slowly behind the animal. When a Mythic is offered or picked in a match, or freed from a cage: a white flash, a burst of pink, gold and white sparkles and stars, a pop and a sound.
+
+In big grids (Your Deck, the bans, the Animals tab, a match's army row)
+cards get a lighter version: fewer sparkles and rays, a steady glow, and
+they redraw only 20 times a second. Offers, picks, cage openings, the shop
+and single cards get the full show. Only cards on screen move (a card
+scrolled out of view costs nothing), Common and Rare cards never redraw,
+and nothing is ever drawn over a card's name or level.
 
 Each animal has:
 

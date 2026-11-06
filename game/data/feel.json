@@ -440,6 +440,19 @@
     "squad_marker_px": 15.0
   },
 
+  "card_show": {
+    "_note": "How much a card shows off, by rarity (scripts/ui/card_show.gd; its colors are in ui_style.json, show_*). Common: plain. Rare: a soft shine on the frame, a bright line round its inside edge and a glint on top (glint: its size in card-widths), all still, so it costs nothing. Epic: a band of light sweeping across the picture every sweep_seconds (sweep_share of the time, sweep_alpha strong), and a soft glow. Legendary: a glowing edge pulsing every pulse_seconds, and sparkles drifting off the top and sides of the frame (each lives sparkle_seconds and drifts drift card-widths). Mythic: the rose pink frame with its rainbow sheen (rainbow: how far the rim's color drifts toward a turning rainbow, rainbow_seconds per turn), a shimmering border (shimmer_bands bands of rainbow light running round the frame every shimmer_seconds), a spark running round the rim, lots of sparkles, and light rays turning slowly behind the animal (rays of them, ray_seconds a turn). Counts ending in _grid are the lighter version on cards in a big grid (Your Deck, the bans, the Animals tab, a match's army row), which also redraw only grid_fps times a second; everywhere else (offers, picks, cage openings, single cards) gets the full show. Cards only move while on screen. moment: when a Mythic is offered or picked, or freed from a cage: a white flash over the card (flash_alpha, fading over flash_seconds) with a pink ring bursting out to ring times the card's size (ring_width thick), a burst of sparkles and stars, a pop to pop_scale and a sound.",
+    "grid_fps": 20,
+    "rare": {"shine": 0.42, "shine_height": 0.42, "rim_line": 2, "glint": 0.1},
+    "epic": {"glow": 0.45, "glow_size": 8, "sweep_seconds": 4.2, "sweep_share": 0.3, "sweep_alpha": 0.32, "sweep_width": 0.24},
+    "legendary": {"glow": 0.75, "glow_size": 12, "pulse_seconds": 2.0, "sparkles": 8, "sparkles_grid": 3, "sparkle_seconds": 1.8, "sparkle_size": 0.065, "drift": 0.22},
+    "mythic": {"glow": 0.8, "glow_size": 14, "pulse_seconds": 2.4, "rainbow": 0.18, "rainbow_saturation": 0.85, "rainbow_seconds": 9.0,
+      "shimmer_seconds": 2.6, "shimmer_bands": 2, "shimmer_width": 0.16, "shimmer_alpha": 0.9, "shimmer_points": 64,
+      "spark_seconds": 3.2, "spark_size": 0.05,
+      "sparkles": 16, "sparkles_grid": 6, "sparkle_seconds": 1.6, "sparkle_size": 0.07, "drift": 0.16,
+      "rays": 12, "rays_grid": 7, "ray_seconds": 14.0, "ray_alpha": 0.34, "ray_width": 0.42,
+      "moment": {"flash_alpha": 0.95, "flash_seconds": 0.6, "ring": 1.7, "ring_width": 12.0, "sparkles": 40, "stars": 18, "speed": 420.0, "life": 0.9, "size": 14.0, "pop_scale": 1.15, "pop_seconds": 0.36, "sound": "star3", "volume_db": 0.0, "delay": 0.25}}
+  },
   "info": {
     "_note": "Holding a card anywhere (picking, offers, army row, deck, bans, collection), or an animal on the battlefield, shows its info popup near the finger (scripts/autoload/hold_info.gd, scripts/ui/info_pop.gd) for as long as it's held; the fight never pauses. hold_seconds: how long a hold takes; move_pixels: moving further than this is a drag (scrolling), not a hold. size: the popup's [width, height] in game pixels; gap: how far it sits from the finger. pop_seconds: its quick pop. The four bars compare the animal with the strongest in the game (at its level): Health and Damage are its whole squad's (on a square-root scale, so everyday animals don't look empty beside a Mythic hero); Speed: speed_bars for each speed; Range: its reach in tiles over range_full_tiles.",
     "hold_seconds": 0.35,

@@ -62,6 +62,8 @@ func _add_daily_offers() -> void:
 		var column := UIKit.vbox(8)
 		cell.add_child(column)
 		var card := AnimalCard.create(offer.animal)
+		# An offer, on its own: the full rarity show.
+		card.full_show = true
 		card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		UIKit.on_tap(card, func() -> void: Modal.open(AnimalDetail.create(offer.animal), ""))
 		column.add_child(card)

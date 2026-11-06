@@ -27,21 +27,6 @@
     "id": "mythic",
     "name": "Mythic",
     "start_level": 11,
-    "conservation": "Mythical creature",
-    "frame": {
-      "_note": "The animated Mythic card frame: a pulsing glow, the rim's color drifting through a bold rainbow (rainbow_saturation: how saturated its colors are), a spark of light running round the rim and a few twinkling sparkles. Seconds are per cycle; strengths 0-1.",
-      "glow": 0.55,
-      "glow_size": 10,
-      "pulse_seconds": 2.4,
-      "rainbow": 0.35,
-      "rainbow_saturation": 0.85,
-      "rainbow_seconds": 9.0,
-      "spark_seconds": 3.2,
-      "spark_size": 0.05,
-      "sparkles": 5,
-      "sparkle_seconds": 1.6,
-      "sparkle_size": 0.07,
-      "sparkle_color": "#fff4fb"
-    }
+    "conservation": "Mythical creature"
   }
 ]

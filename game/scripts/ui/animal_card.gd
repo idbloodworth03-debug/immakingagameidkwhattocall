@@ -3,9 +3,9 @@ extends Control
 ## One collectible card, drawn in code so it stays crisp at any size: a
 ## glossy rim in the rarity's color, the animal's portrait standing in a
 ## spotlight of its habitat color, a name plate, its class badge, and the
-## level with copies toward the next upgrade. Epic and Legendary
-## cards shine now and then; Mythic cards have an animated frame
-## (MythicFrame). Tap it to call `on_tap`.
+## level with copies toward the next upgrade. The rarer it is, the more it
+## shows off (CardShow: a Rare's shine up to a Mythic's full show; the
+## lighter version unless `full_show`). Tap it to call `on_tap`.
 
 const SIZE_NORMAL := Vector2(158, 214)
 const SIZE_SMALL := Vector2(120, 160)
@@ -33,6 +33,11 @@ var checked := false:
 		checked = value
 		queue_redraw()
 
+## The whole rarity show (CardShow): a card on its own, offered or freed
+## from a cage. Off for cards in a big grid (Your Deck, the bans, the
+## Animals tab), which get the lighter version.
+var full_show := false
+
 var _owned := false
 var _level := 1
 var _copies := 0
@@ -41,6 +46,7 @@ var _upgradable := false
 var _new := false
 var _reachable := false
 var _time := 0.0
+var _since_draw := 0.0
 
 static var _spot: GradientTexture2D
 
@@ -73,10 +79,14 @@ func refresh() -> void:
 	queue_redraw()
 
 
-## Only rare-enough cards you own move (a sweep of light, the Mythic frame);
-## the rest are drawn once.
+## Only rare-enough cards you own move (CardShow: Epic and up); the rest
+## are drawn once.
 func _animates() -> bool:
-	return _owned and String(GameData.get_card(animal_id).get("rarity", "common")) in ["epic", "legendary", "mythic"]
+	return _owned and CardShow.moves(_rarity())
+
+
+func _rarity() -> String:
+	return String(GameData.get_card(animal_id).get("rarity", "common"))
 
 
 func _ready() -> void:
@@ -88,7 +98,12 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_time += delta
-	if is_visible_in_tree():
+	_since_draw += delta
+	# Only while on screen; in a grid, only grid_fps times a second.
+	if not full_show and _since_draw < 1.0 / CardShow.grid_fps():
+		return
+	if CardShow.on_screen(self):
+		_since_draw = 0.0
 		queue_redraw()
 
 
@@ -97,7 +112,13 @@ func _notification(what: int) -> void:
 		queue_redraw()
 
 
+## How many times cards have been drawn (tests/card_report.gd: the cost of
+## a screen full of cards).
+static var draws := 0
+
+
 func _draw() -> void:
+	draws += 1
 	var animal := GameData.get_card(animal_id)
 	var w := size.x
 	var h := size.y
@@ -106,8 +127,11 @@ func _draw() -> void:
 	var rarity_color := GameData.rarity_color(animal.get("rarity", "common"))
 	var dim := info == Info.COLLECTION and not _owned
 	var mythic: bool = animal.get("rarity", "") == "mythic" and not dim
+	# The show this card puts on (none while it's still to find).
+	var show := "" if dim else _rarity()
+	var moving := is_processing()
 	if mythic:
-		rarity_color = MythicFrame.rim_color(rarity_color, _time)
+		rarity_color = CardShow.rim_color(rarity_color, _time)
 	# Not found yet: a solid gray rim (not a darkened, washed-out one).
 	var rim := UIStyle.color("disabled") if dim else rarity_color
 	var margin := w * 0.055
@@ -118,25 +142,16 @@ func _draw() -> void:
 		glow.shadow_color = Color(UIKit.YELLOW, 0.85)
 		glow.shadow_size = 12
 		draw_style_box(glow, rect.grow(2))
-	elif mythic:
-		MythicFrame.draw_glow(self, rect, radius, rarity_color, _time)
-	elif not dim and animal.get("rarity", "") in ["epic", "legendary"]:
-		var aura := UIKit.box(Color(rarity_color, 0.0), radius + 2)
-		aura.shadow_color = Color(rarity_color, 0.45)
-		aura.shadow_size = 8
-		draw_style_box(aura, rect)
+	else:
+		CardShow.draw_glow(self, rect, radius, show, rarity_color, _time, full_show and moving)
 	draw_style_box(UIKit.box(Color(UIKit.INK, 0.4), radius + 2), Rect2(rect.position + Vector2(0, 3), rect.size))
 
 	# The rim: dark edge, rarity color, gloss along the top.
 	draw_style_box(UIKit.box(UIKit.YELLOW if highlighted else rim.darkened(0.5).lerp(UIKit.INK, 0.3), radius + 2), rect)
 	var inner := rect.grow(-3.0)
 	draw_style_box(UIKit.box(rim, radius), inner)
-	var gloss := UIKit.box(Color(1, 1, 1, 0.22), radius)
-	gloss.corner_radius_bottom_left = 4
-	gloss.corner_radius_bottom_right = 4
-	draw_style_box(gloss, Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.35)))
-	if mythic:
-		MythicFrame.draw_spark(self, inner.grow(-1.5), _time)
+	# A Rare and up: a soft shine on the frame (a Common is plain).
+	CardShow.draw_shine(self, inner, radius, show)
 
 	# The art window with a spotlight in the habitat's color.
 	var art := Rect2(margin, margin, w - margin * 2, h * (0.66 if info != Info.NONE else 0.76) - margin)
@@ -145,6 +160,8 @@ func _draw() -> void:
 		habitat = Color(0.2, 0.23, 0.31)
 	var art_radius := int(radius * 0.75)
 	draw_style_box(UIKit.box(habitat.darkened(0.3), art_radius), art)
+	# A Mythic's light rays, behind the animal.
+	CardShow.draw_rays(self, art, show, _time, full_show)
 	var spot_side := art.size.x
 	var spot_center := art.get_center() - Vector2(0, art.size.y * 0.08)
 	draw_texture_rect(_spot_texture(), Rect2(spot_center - Vector2(spot_side, spot_side) / 2.0, Vector2(spot_side, spot_side)),
@@ -159,8 +176,8 @@ func _draw() -> void:
 	frame.set_border_width_all(2)
 	frame.border_color = UIKit.INK
 	draw_style_box(frame, art)
-	if not dim:
-		_draw_sheen(art)
+	# Epic and up: a band of light sweeps across the picture now and then.
+	CardShow.draw_sweep(self, art, show, _time, moving)
 
 	# Name plate across the bottom of the art.
 	var font := get_theme_default_font()
@@ -191,12 +208,16 @@ func _draw() -> void:
 		tag_style.border_color = UIKit.INK
 		draw_style_box(tag_style, tag)
 		_text(font, "NEW", tag, int(tag.size.y * 0.62), Color.WHITE)
+	# A Rare and up: a glint on top of the frame.
+	CardShow.draw_glint(self, inner, show)
+	# The frame's show: a Mythic's shimmering border and spark, the
+	# Legendary's and Mythic's sparkles (all above the name plate).
+	if moving:
+		CardShow.draw_frame(self, rect, inner, margin, plate.position.y, show, _time, full_show)
 	if stamp != "":
 		_draw_stamp(font, rect)
 	if checked:
 		_draw_check(Vector2(w * 0.5, h * 0.03), w * 0.15)
-	if mythic:
-		MythicFrame.draw_sparkles(self, rect, _time)
 
 
 func _draw_animal(animal: Dictionary, art: Rect2, dim: bool) -> void:
@@ -249,22 +270,6 @@ func _draw_stamp(font: Font, rect: Rect2) -> void:
 	draw_string_outline(font, Vector2(-width / 2.0, font_size * 0.36), stamp, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 4, UIKit.INK)
 	draw_string(font, Vector2(-width / 2.0, font_size * 0.36), stamp, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, Color.WHITE)
 	draw_set_transform(Vector2.ZERO)
-
-
-## Now and then a band of light sweeps across rare cards.
-func _draw_sheen(art: Rect2) -> void:
-	if not is_processing():
-		return
-	var phase := fmod(_time, 3.6) / 3.6
-	if phase > 0.3:
-		return
-	var x := lerpf(art.position.x - art.size.x * 0.6, art.end.x + art.size.x * 0.2, phase / 0.3)
-	var band := PackedVector2Array([
-		Vector2(x, art.end.y), Vector2(x + art.size.x * 0.22, art.end.y),
-		Vector2(x + art.size.x * 0.62, art.position.y), Vector2(x + art.size.x * 0.4, art.position.y)])
-	var window := PackedVector2Array([art.position, Vector2(art.end.x, art.position.y), art.end, Vector2(art.position.x, art.end.y)])
-	for piece in Geometry2D.intersect_polygons(band, window):
-		draw_colored_polygon(piece, Color(1, 1, 1, 0.22))
 
 
 func _draw_info(font: Font, area: Rect2, rarity_color: Color) -> void:

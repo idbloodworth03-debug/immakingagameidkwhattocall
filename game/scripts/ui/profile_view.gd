@@ -204,6 +204,7 @@ func _dev_tools() -> Control:
 			ArmyTest.use_models = false
 			Transition.go("res://scenes/army_test.tscn")],
 		["Attack styles", func() -> void: Transition.go("res://scenes/style_showcase.tscn")],
+		["Card show", func() -> void: Transition.go("res://scenes/card_show.tscn")],
 	]
 	for action in actions:
 		var b := UIKit.button(action[0], UIKit.GREY.darkened(0.1), 21, Vector2(0, 62))

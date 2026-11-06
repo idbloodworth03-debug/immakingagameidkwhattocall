@@ -151,6 +151,9 @@ func _card_reward(stack: Dictionary) -> Control:
 	box.add_child(glow)
 	var card := AnimalCard.create(stack.animal)
 	card.info = AnimalCard.Info.NONE
+	card.full_show = true
+	if String(animal.get("rarity", "")) == "mythic":
+		card.tree_entered.connect(func() -> void: CardShow.moment(card), CONNECT_ONE_SHOT)
 	card.custom_minimum_size = AnimalCard.SIZE_NORMAL * 1.6
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	glow.add_child(card)

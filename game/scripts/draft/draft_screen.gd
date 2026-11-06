@@ -530,6 +530,7 @@ func _build_options(pop := true) -> void:
 				grid.add_child(card)
 				if pop:
 					_pop_after(card, step * order)
+					_mythic_moment(card, step * order)
 				order += 1
 		return
 	var rows := UIStyle.vbox("s")
@@ -553,6 +554,7 @@ func _build_options(pop := true) -> void:
 			var card := _option_card(slot, _size("offer_card", Vector2(156, 184)))
 			row.add_child(card)
 			_pop_after(card, step * slot)
+			_mythic_moment(card, step * slot)
 
 
 func _option_card(slot: int, card_size: Vector2) -> GameCard:
@@ -598,6 +600,13 @@ func _add_group_line(card: Control, group: Dictionary, first: bool, run: int, h_
 		var tag := AnimalSort.tag(group, not AnimalSort.label_fits(group, width - 8.0))
 		tag.position = Vector2(4, (gap - tag.custom_minimum_size.y) / 2.0)
 		line.add_child(tag)
+
+
+## A Mythic offered or picked: its moment (CardShow: a flash, a burst and a
+## sound), after `delay` seconds and its pop-in.
+func _mythic_moment(card: GameCard, delay: float) -> void:
+	if String(GameData.get_card(card.card_id).get("rarity", "")) == "mythic":
+		CardShow.moment(card, delay + float(CardShow.cfg("mythic").get("moment", {}).get("delay", 0.25)))
 
 
 ## Brings the pick view up to date: the title, every card's state, the
@@ -662,6 +671,9 @@ func _refresh_slots() -> void:
 				slot.add_child(card)
 				UIKit.pop_in(slot, 0.6, 0.3)
 				Sound.play("pop")
+				# A Mythic picked: its moment, as it lands.
+				if picks[i].kind == "animal":
+					_mythic_moment(card, 0.0)
 		slot.modulate = Color.WHITE
 		# The latest pick can be taken back: a little back arrow in its corner.
 		# (On the card: the slot is a container and would stretch it.)
@@ -718,6 +730,8 @@ func _refresh_herd_row() -> void:
 				continue
 			var id := key.substr(2)
 			var card := GameCard.make(id, card_size)
+			# A row of many: the lighter rarity show.
+			card.light = true
 			card.set_meta("key", key)
 			if key.begins_with("a:"):
 				# Which herd animal it is is looked up at the tap: the row's

@@ -49,6 +49,7 @@ func close() -> void:
 func _build(content: Control, title: String, width: float) -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	add_to_group(HoldInfo.COVER_GROUP)
 
 	var dim := ColorRect.new()
 	dim.color = Color(UIKit.INK, 0.7)

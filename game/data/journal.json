@@ -1,0 +1,296 @@
+{
+  "_note": "The Ranger Journal in the 3D animal viewer: where each animal lives (home), a few true facts (facts), and how to help (help, optional). For Mythics, the legend and the real-world clue behind it (animals.json \"legend\" shows below). Short and friendly: read by kids.",
+  "entries": {
+    "raccoon": {
+      "home": "Forests, marshes and cities across North America.",
+      "facts": [
+        "A raccoon's front paws are super sensitive. It feels its food all over before eating, and wet paws feel even better, which is why it seems to wash its food.",
+        "The black mask round its eyes may help cut down glare, like a football player's eye black."
+      ],
+      "help": "Keep trash cans closed so raccoons find real food, not junk."
+    },
+    "gray_squirrel": {
+      "home": "Woods and parks in eastern North America.",
+      "facts": [
+        "A gray squirrel buries thousands of nuts each fall. It forgets some of them, and those grow into new trees.",
+        "It can turn its back feet right round, so it can run down a tree head first."
+      ],
+      "help": "Leave some old trees standing: squirrels nest in their hollows."
+    },
+    "red_fox": {
+      "home": "Forests, fields and towns across the northern half of the world.",
+      "facts": [
+        "No other wild meat-eater lives across so much of the world.",
+        "A fox can hear a mouse moving under the snow, then leap high and dive in nose first to catch it.",
+        "On cold nights it curls its bushy tail round itself like a blanket."
+      ]
+    },
+    "peregrine_falcon": {
+      "home": "Cliffs and skyscrapers on every continent except Antarctica.",
+      "facts": [
+        "The fastest animal on Earth: diving after prey, a peregrine can top 320 km/h (200 mph).",
+        "Peregrines nearly vanished because of a pesticide called DDT. Once it was banned, they came back, and many now nest on tall city buildings."
+      ]
+    },
+    "wild_boar": {
+      "home": "Forests across Europe and Asia.",
+      "facts": [
+        "Wild boars are the wild relatives of farm pigs.",
+        "Their strong snouts dig up roots, nuts and bugs, turning over the forest floor.",
+        "Baby boars have stripes, like a watermelon, to hide among the leaves."
+      ]
+    },
+    "wolf_pack": {
+      "home": "Forests, mountains and Arctic tundra across the north.",
+      "facts": [
+        "A wolf pack is a family: two parents and their pups of different ages.",
+        "A howl can carry for about 10 km (6 miles), calling the pack together.",
+        "Wolves came back to Yellowstone Park in 1995, and scientists think they helped trees grow back along its rivers."
+      ]
+    },
+    "brown_bear": {
+      "home": "Forests and mountains of North America, Europe and Asia.",
+      "facts": [
+        "Grizzly bears are brown bears. Their sense of smell is one of the best of any animal.",
+        "They eat berries, roots, grass and salmon, then sleep through the winter in a den.",
+        "Cubs are born in the winter den, tiny and blind, while their mother sleeps."
+      ]
+    },
+    "hippopotamus": {
+      "home": "Rivers and lakes in Africa.",
+      "facts": [
+        "Hippos spend the hot day in the water and come out at night to graze on grass.",
+        "Their skin makes a reddish oily liquid that works like sunscreen.",
+        "Hippos can't really swim: they walk and bounce along the bottom."
+      ],
+      "help": "Hippos are Vulnerable. Protecting rivers protects them."
+    },
+    "lion": {
+      "home": "Grasslands and open woods in Africa, plus one forest in India.",
+      "facts": [
+        "Lions are the only cats that live in big family groups, called prides.",
+        "A lion's roar can be heard about 8 km (5 miles) away.",
+        "The lionesses do most of the hunting, working as a team."
+      ],
+      "help": "Lions are Vulnerable: they've lost most of the land they once lived on."
+    },
+    "tiger": {
+      "home": "Forests and grasslands in Asia.",
+      "facts": [
+        "The biggest cat in the world.",
+        "No two tigers have the same stripes, and the stripes are on their skin too, not just their fur.",
+        "Unlike most cats, tigers love water and are strong swimmers."
+      ],
+      "help": "Tigers are Endangered, but in India and Nepal their numbers are growing again thanks to rangers."
+    },
+    "asian_elephant": {
+      "home": "Forests and grasslands in India and Southeast Asia.",
+      "facts": [
+        "An elephant's trunk has tens of thousands of muscles. It can pick up a single peanut or a whole log.",
+        "Asian elephants have smaller ears than African elephants.",
+        "An adult eats about 150 kg (330 pounds) of plants a day."
+      ],
+      "help": "Asian elephants are Endangered. Forest corridors let herds travel safely."
+    },
+    "red_panda": {
+      "home": "Misty bamboo forests high in the Himalaya mountains.",
+      "facts": [
+        "Red pandas eat mostly bamboo, like giant pandas, but they aren't close relatives.",
+        "A long wrist bone works like an extra thumb for gripping bamboo.",
+        "In cold weather it wraps its fluffy striped tail round itself like a scarf."
+      ],
+      "help": "Red pandas are Endangered because their forests are being cut down."
+    },
+    "black_rhino": {
+      "home": "Grasslands and bush in eastern and southern Africa.",
+      "facts": [
+        "A black rhino has a pointed, hooked upper lip for grabbing leaves and twigs.",
+        "Its horn is made of keratin, the same stuff as your fingernails.",
+        "In 1995 only about 2,400 were left. Rangers have helped them more than double since."
+      ],
+      "help": "Black rhinos are Critically Endangered. Rangers guard them day and night."
+    },
+    "california_condor": {
+      "home": "Mountains and canyons of California, Arizona and Mexico.",
+      "facts": [
+        "The biggest flying land bird in North America: its wings stretch almost 3 m (9.5 feet).",
+        "In 1987 only 27 were left, and all were brought in to be bred safely. Today there are more than 500, and over half fly free.",
+        "It can soar for hours on warm air without flapping."
+      ],
+      "help": "Condors are Critically Endangered. Lead-free hunting ammunition keeps them from being poisoned."
+    },
+    "striped_skunk": {
+      "home": "Fields, woods and towns across North America.",
+      "facts": [
+        "Before spraying, a skunk warns you: it stamps its feet, hisses and raises its tail.",
+        "Its spray can hit a target about 3 m (10 feet) away.",
+        "Skunks eat lots of grubs and insects, which helps gardens."
+      ]
+    },
+    "barn_owl": {
+      "home": "Farms, fields and old barns on every continent except Antarctica.",
+      "facts": [
+        "Its heart-shaped face works like a satellite dish, steering sounds into its ears.",
+        "A barn owl can catch a mouse in total darkness, just by listening.",
+        "Soft, fringed feathers make its flight almost silent."
+      ]
+    },
+    "king_cobra": {
+      "home": "Rainforests and swamps in South and Southeast Asia.",
+      "facts": [
+        "The longest venomous snake in the world: it can grow over 5 m (18 feet).",
+        "It can rear up a third of its body off the ground and still move forward.",
+        "It's the only snake that builds a nest for its eggs."
+      ],
+      "help": "King cobras are Vulnerable as their forests shrink."
+    },
+    "sumatran_orangutan": {
+      "home": "Rainforests on the island of Sumatra, in Indonesia.",
+      "facts": [
+        "\"Orangutan\" means \"person of the forest\" in Malay.",
+        "Orangutans spend nearly all their lives in the trees, and build a fresh leafy nest to sleep in every night.",
+        "A baby stays with its mother for about 8 years, learning which fruits to eat."
+      ],
+      "help": "Critically Endangered. Look for products made with sustainable palm oil."
+    },
+    "harpy_eagle": {
+      "home": "Rainforests of Central and South America.",
+      "facts": [
+        "Its back talons are about as long as a grizzly bear's claws.",
+        "It hunts sloths and monkeys high in the treetops.",
+        "When it's excited, the feathers on its head stand up like a crown."
+      ],
+      "help": "Harpy eagles are Vulnerable: they need big, old rainforest trees to nest in."
+    },
+    "hyacinth_macaw": {
+      "home": "Palm groves and wetlands in central South America.",
+      "facts": [
+        "The biggest flying parrot in the world, about 1 m (3 feet) from beak to tail.",
+        "Its huge beak can crack palm nuts so hard that people need a hammer for them.",
+        "The bright yellow skin round its eyes and beak makes it look like it's smiling."
+      ],
+      "help": "Hyacinth macaws are Vulnerable. Never buy wild-caught parrots."
+    },
+    "wild_bactrian_camel": {
+      "home": "The Gobi Desert, in China and Mongolia.",
+      "facts": [
+        "Its two humps store fat, not water, to live on when food is scarce.",
+        "It can drink salty water that most animals can't.",
+        "Fewer than about 1,000 are left in the wild."
+      ],
+      "help": "One of the rarest large mammals on Earth. Protected desert reserves keep them safe."
+    },
+    "snapping_turtle": {
+      "home": "Ponds, rivers and marshes of North America.",
+      "facts": [
+        "Its shell is too small to hide in, so it defends itself with a fast, strong bite.",
+        "In winter it can stay underwater under the ice for months.",
+        "Snapping turtles can live for more than 40 years."
+      ]
+    },
+    "honey_badger": {
+      "home": "Savannas, deserts and forests in Africa, the Middle East and India.",
+      "facts": [
+        "Often called the most fearless animal in the world.",
+        "Its skin is thick and loose, so if something grabs it, it can twist round and bite back.",
+        "It breaks into beehives to eat the honey and the baby bees."
+      ]
+    },
+    "harbor_seal": {
+      "home": "Cool northern coasts of the Atlantic and Pacific oceans.",
+      "facts": [
+        "Every harbor seal has its own pattern of spots.",
+        "Its whiskers can feel the trail of water left by a swimming fish, even in the dark.",
+        "It can stay underwater for up to about half an hour."
+      ],
+      "help": "Give seals resting on the beach plenty of space."
+    },
+    "giant_panda": {
+      "home": "Bamboo forests in the mountains of central China.",
+      "facts": [
+        "A giant panda spends up to 14 hours a day eating bamboo.",
+        "A newborn panda weighs only about 100 g, about as much as a stick of butter.",
+        "In 2016, pandas went from Endangered to Vulnerable thanks to new bamboo forest reserves."
+      ]
+    },
+    "mountain_gorilla": {
+      "home": "Misty mountain forests in Rwanda, Uganda and the Democratic Republic of the Congo.",
+      "facts": [
+        "A big male, called a silverback, beats his chest to show off and talk to others.",
+        "Every gorilla's nose has its own shape, like a fingerprint.",
+        "Only about 1,000 are left, but rangers have helped their numbers grow."
+      ],
+      "help": "Mountain gorillas are Endangered. Old phones can be recycled so less coltan is mined in their forests."
+    },
+    "komodo_dragon": {
+      "home": "A few islands in Indonesia, including Komodo.",
+      "facts": [
+        "The biggest lizard in the world, up to 3 m (10 feet) long.",
+        "It smells with its forked tongue, tasting the air for food a long way off.",
+        "A female can lay eggs that hatch without a father."
+      ],
+      "help": "Komodo dragons are Endangered as rising seas shrink their islands."
+    },
+    "sunda_pangolin": {
+      "home": "Forests in Southeast Asia.",
+      "facts": [
+        "Pangolins are the only mammals covered in scales, made of keratin like your fingernails.",
+        "When scared, it rolls into a tight, armored ball.",
+        "It eats ants and termites with a long, sticky tongue."
+      ],
+      "help": "Critically Endangered: pangolins are the most trafficked mammals in the world. Never buy pangolin products."
+    },
+    "electric_eel": {
+      "home": "Rivers and swamps of the Amazon in South America.",
+      "facts": [
+        "It isn't really an eel: it's a kind of knifefish.",
+        "One species can make a shock of up to 860 volts, the strongest of any animal.",
+        "It breathes air, coming up to the surface every few minutes."
+      ]
+    },
+    "pygmy_three_toed_sloth": {
+      "home": "The mangroves of one tiny island off Panama, Isla Escudo de Veraguas.",
+      "facts": [
+        "The smallest sloth in the world, and one of the rarest mammals.",
+        "Sloths move so slowly that tiny green algae grow in their fur, helping them hide.",
+        "Slow on land, sloths are surprisingly good swimmers."
+      ],
+      "help": "Critically Endangered. Protecting its island's mangroves is the only way to save it."
+    },
+    "dragon": {
+      "home": "Legends all over the world.",
+      "facts": [
+        "In European stories, dragons breathe fire and guard heaps of treasure.",
+        "In China, dragons are wise and lucky, and bring the rain."
+      ]
+    },
+    "unicorn": {
+      "home": "Old stories from Europe and Asia.",
+      "facts": [
+        "Stories of a horse with one horn go back more than 2,000 years.",
+        "The unicorn is Scotland's national animal."
+      ]
+    },
+    "yeti": {
+      "home": "Stories from the snowy Himalaya mountains of Nepal and Tibet.",
+      "facts": [
+        "Mountaineers have photographed giant footprints in the snow and blamed the Yeti.",
+        "Local people tell many Yeti stories, and climbers have hunted for it for over 100 years."
+      ]
+    },
+    "cerberus": {
+      "home": "Greek myths.",
+      "facts": [
+        "In Greek myth, Cerberus guarded the gates of the underworld.",
+        "The hero Heracles had to capture him as the last of his twelve great labors."
+      ]
+    },
+    "kraken": {
+      "home": "Old sailors' stories from the seas off Norway.",
+      "facts": [
+        "Sailors told of a sea monster big enough to pull ships under.",
+        "Real giant squid can grow as long as a bus, with eyes the size of dinner plates. One was first filmed alive in the deep sea in 2012."
+      ]
+    }
+  }
+}

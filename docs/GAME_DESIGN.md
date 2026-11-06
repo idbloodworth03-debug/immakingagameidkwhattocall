@@ -607,6 +607,21 @@ line, and bars for Health, Damage, Speed and Range. It never pauses the
 fight (`scripts/autoload/hold_info.gd`, `scripts/ui/info_pop.gd`; timing in
 feel.json "info").
 
+**3D animal viewer:** tapping an animal in the Animals tab opens it as a
+real 3D model in a little scene of its habitat (a round stage with cartoon
+trees, rocks, ice, reeds or city things behind it, water for Ocean and
+Wetlands animals, snow, pollen, leaves, bubbles or fireflies drifting by).
+Drag to spin it, pinch to zoom, tap it to make it react (a fidget, its
+attack, a victory dance, a Stun animal's big wind-up, in turn); it idles and
+fidgets on its own. Below it: the same info as the hold popup, its level
+and the Upgrade button, and its Ranger Journal entry (where it lives, true
+facts, how to help; for a Mythic, the legend and the real clue behind it).
+An animal you haven't found shows as a dark silhouette. The model loads
+when the viewer opens and is freed when it closes
+(`scripts/ui/animal_viewer.gd`, `habitat_stage.gd`; models from
+`tools/creatures/export_gltf.py`; settings in data/viewer.json, journal in
+data/journal.json).
+
 **Colors** are bold and solid everywhere: no full-screen tint or darkened
 edges, arenas in their full painted colors, panels, bars and badges solid.
 States are shown without see-through dimming: cards in your deck stay

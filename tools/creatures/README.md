@@ -60,7 +60,16 @@ mane grows with its face).
    (grass, tile stripes, the halfway line and center ring, flowers) are
    painted with numpy; Blender adds the fence and themed scenery, into
    `game/art/arenas/`. Each arena's look is a theme at the top of the file.
-7. **Dens** (`treehouse.py`, not used by the game any more): side and main
+7. **3D models** (`export_gltf.py`), for the game's 3D animal viewer: the
+   same cartoon animal as one smooth mesh (the body cut down to about
+   16,000 triangles, ears, eyes, nose and claws joined on), its vertex
+   colors (sRGB-encoded: the game keeps them in 8 bits), its skeleton, and
+   idle, fidget, attack, victory (and a Stun animal's special) baked at 30
+   keys a second. The big cartoon eyes carry their eyeball coordinates in
+   their UVs, so the game draws the pupils crisply at any zoom. About 0.9 MB
+   and 10-20 seconds per animal, into `game/art/models/<id>.glb`. Settings:
+   `look.json` "model".
+8. **Dens** (`treehouse.py`, not used by the game any more): side and main
    treehouses in each team's color and their ruins. It writes into
    `game/art/towers/`, which the game no longer has.
 
@@ -92,6 +101,8 @@ Then, from this folder:
 python preview.py red_fox fox.png        # four views, to check the shape
 python strip.py red_fox walk walk.png    # one animation as a filmstrip
 python sprites.py red_fox                # writes game/art/units/red_fox/
+python export_gltf.py red_fox            # writes game/art/models/red_fox.glb
+python export_gltf.py --all              # every animal in data/animals.json
 python set_import.py                     # after Godot imports the new files
 ```
 

@@ -9,6 +9,9 @@ extends CanvasLayer
 
 const GROUP := "hold_info"
 const FIELD_GROUP := "hold_info_field"
+## Full-screen popups (Modal, the 3D animal viewer): under one, only what's
+## inside it counts, not the cards it covers.
+const COVER_GROUP := "hold_info_cover"
 
 var _down := false
 var _at := Vector2.ZERO
@@ -52,9 +55,12 @@ func just_held() -> bool:
 func target_at(point: Vector2) -> Dictionary:
 	var found := {}
 	var best_area := INF
+	var cover := _cover_at(point)
 	for node in get_tree().get_nodes_in_group(GROUP):
 		var card := node as Control
 		if card == null or not card.is_visible_in_tree() or not card.get_global_rect().has_point(point):
+			continue
+		if cover != null and not cover.is_ancestor_of(card):
 			continue
 		var id := String(card.get("animal_id") if card.get("animal_id") != null else card.get("card_id"))
 		if id == "" or not GameData.cards.has(id):
@@ -71,10 +77,24 @@ func target_at(point: Vector2) -> Dictionary:
 		var field := node as BattleField
 		if field == null or not field.is_visible_in_tree() or not field.get_global_rect().has_point(point):
 			continue
+		if cover != null and not cover.is_ancestor_of(field):
+			continue
 		var view := field.view_at(point)
 		if view != null and view.fighter != null:
 			return {"id": view.id, "stars": view.stars, "level": view.fighter.level}
 	return {}
+
+
+## The topmost full-screen popup under the point, if any.
+func _cover_at(point: Vector2) -> Control:
+	var top: Control = null
+	for node in get_tree().get_nodes_in_group(COVER_GROUP):
+		var cover := node as Control
+		if cover == null or not cover.is_visible_in_tree() or not cover.get_global_rect().has_point(point):
+			continue
+		if top == null or cover.is_greater_than(top):
+			top = cover
+	return top
 
 
 func _show_at(point: Vector2) -> void:

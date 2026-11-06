@@ -40,6 +40,8 @@ var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
 var shots: Dictionary = {}           # how Ranged animals' shots look (shots.json)
 var styles: Dictionary = {}          # each animal's attack style (styles.json)
+var viewer: Dictionary = {}          # the 3D animal viewer (viewer.json)
+var journal: Dictionary = {}         # Ranger Journal entries by animal id (journal.json)
 var testing: Dictionary = {}         # testing switches (testing.json)
 var habitats: Dictionary = {}        # habitat id -> name, icon, color (habitats.json; flavor)
 var habitat_order: Array = []        # habitat ids, in habitats.json order
@@ -98,6 +100,8 @@ func reload() -> void:
 	feel = _load("feel.json")
 	shots = _load("shots.json")
 	styles = _load("styles.json")
+	viewer = _load("viewer.json")
+	journal = _load("journal.json").get("entries", {})
 	testing = _load("testing.json")
 	var habitat_data: Dictionary = _load("habitats.json")
 	habitats.clear()

@@ -1,7 +1,7 @@
-"""Sets how Godot stores the animal sprite sheets, portraits and arena
-pictures (look.json "import"): sprite sheets GPU-compressed with Basis
-Universal (UASTC) or a single lossy WebP pass, from lossless sources, with
-mipmaps so zoomed-out animals stay smooth.
+"""Sets how Godot stores the animal sprite sheets, portraits, arena
+pictures and 3D viewer models (look.json "import"): each picture lossless,
+one lossy WebP pass or GPU-compressed Basis Universal, with or without
+mipmaps; the models without the extras a close-up, unlit animal doesn't use.
 
 Run after Godot has imported new art once, then import again:
     python tools/creatures/set_import.py
@@ -39,3 +39,15 @@ for path in (glob.glob(os.path.join(ROOT, "units", "*", "*.webp.import"))
     if new != text:
         open(path, "w").write(new)
         print(rule["mode"] + ":", os.path.relpath(path, ROOT))
+
+
+MODEL = LOOK.get("models", {})
+for path in glob.glob(os.path.join(ROOT, "models", "*.glb.import")):
+    text = open(path).read()
+    new = text
+    for key, value in MODEL.items():
+        shown = ("true" if value else "false") if isinstance(value, bool) else str(value)
+        new = re.sub(r"meshes/%s=\w+" % key, "meshes/%s=%s" % (key, shown), new)
+    if new != text:
+        open(path, "w").write(new)
+        print("model:", os.path.relpath(path, ROOT))

@@ -98,5 +98,9 @@ func _sorted_animals() -> Array:
 	return ids
 
 
+## An animal opens the 3D viewer; a Ranger tool, its details.
 func _show_detail(id: String) -> void:
-	Modal.open(AnimalDetail.create(id), "")
+	if GameData.is_tool(id):
+		Modal.open(AnimalDetail.create(id), "")
+	else:
+		AnimalViewer.open(id)

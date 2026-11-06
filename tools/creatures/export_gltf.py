@@ -1,0 +1,333 @@
+"""Exports a creature as a small real-3D model for the game's 3D animal
+viewer (the Animals tab): one smooth mesh painted with the same vertex colors
+as the sprites, a skeleton, and a few baked animations (idle, a fidget, the
+attack and a victory dance) the viewer plays when you tap the animal.
+
+    python export_gltf.py red_fox            # -> game/art/models/red_fox.glb
+    python export_gltf.py red_fox wolf_pack
+    python export_gltf.py --all             # every animal in data/animals.json
+
+What goes into it (look.json "model"):
+  * the body and every piece stuck to it (ears, eyes, nose, claws, horns),
+    joined into one mesh with one skin, so the game draws one thing;
+  * the body cut down to about `triangles` triangles (the sprites use the
+    full marching-cubes mesh, far finer than a phone needs);
+  * vertex colors (COLOR_0) for the skin, sRGB-encoded (the game keeps them
+    in 8 bits); the big cartoon eyes carry their eyeball coordinates in UV
+    (x, y) and UV2 (z, 1) (UV2.y is 1 on an eye, 0 elsewhere) so the game's
+    shader can draw a crisp pupil and shine at any zoom;
+  * animations sampled at `keys_per_second`; the whole-body offsets the
+    sprites put on the armature object (a hop, a roll) go onto the root
+    bones instead, so every animation is bone animation.
+
+"""
+import argparse
+import math
+import os
+import sys
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+sys.path.insert(0, os.path.join(HERE, "species"))
+
+import bpy
+import numpy as np
+from mathutils import Euler, Matrix
+
+import cartoon
+import motion
+import scene as S
+
+MODEL = S.LOOK.get("model", {})
+OUT = os.path.join(HERE, "..", "..", "game", "art", "models")
+ANIMS = MODEL.get("animations", ["idle", "fidget", "attack", "victory"])
+
+
+def _rest(arm):
+    motion.apply(arm, {})
+    for pb in arm.pose.bones:
+        pb.rotation_mode = "XYZ"
+        pb.rotation_euler = (0, 0, 0)
+        pb.location = (0, 0, 0)
+    bpy.context.view_layer.update()
+
+
+def _colors_of(obj):
+    attr = obj.data.color_attributes.get("Col")
+    if attr is None:
+        return None
+    out = np.empty(len(obj.data.vertices) * 4)
+    attr.data.foreach_get("color", out)
+    return out.reshape(-1, 4)
+
+
+def _material_color(obj):
+    """An extra's flat color, from its material (or the eye's white)."""
+    mat = obj.data.materials[0] if obj.data.materials else None
+    if mat is None or not mat.use_nodes:
+        return (0.5, 0.5, 0.5)
+    if mat.name.startswith("cartoon_eye"):
+        return (0.9, 0.9, 0.87)
+    bsdf = mat.node_tree.nodes.get("Principled BSDF")
+    return tuple(bsdf.inputs["Base Color"].default_value[:3]) if bsdf else (0.5, 0.5, 0.5)
+
+
+def _paint(obj, rgb, eye=False):
+    """Gives a flat-colored extra the skin's color attribute."""
+    n = len(obj.data.vertices)
+    me = obj.data
+    for name in ("Col", "HairCol"):
+        if me.color_attributes.get(name):
+            me.color_attributes.remove(me.color_attributes[name])
+    rgba = np.ones((n, 4))
+    rgba[:, :3] = rgb
+    me.color_attributes.new("Col", "FLOAT_COLOR", "POINT").data.foreach_set("color", rgba.ravel())
+
+
+def _eye_uv(obj):
+    """The cartoon eye's pupil is drawn from its own sphere coordinates
+    (local +Z faces out, +Y up), like the render's eye material."""
+    me = obj.data
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    co = co.reshape(-1, 3)
+    # Unit sphere coordinates (the eyes are UV spheres scaled by the object).
+    r = np.linalg.norm(co, axis=1, keepdims=True)
+    unit = co / np.maximum(r, 1e-9)
+    loops = np.empty(len(me.loops), int)
+    me.loops.foreach_get("vertex_index", loops)
+    for name in list(me.uv_layers.keys()):
+        me.uv_layers.remove(me.uv_layers[name])
+    # glTF flips V (v -> 1 - v); flipped here so the game reads them as is.
+    xy = unit[loops][:, :2].copy()
+    xy[:, 1] = 1.0 - xy[:, 1]
+    me.uv_layers.new(name="UVMap").data.foreach_set("uv", xy.ravel())
+    zz = np.zeros((len(loops), 2))
+    zz[:, 0] = unit[loops][:, 2]
+    me.uv_layers.new(name="UV2").data.foreach_set("uv", zz.ravel())
+
+
+def _plain_uv(obj):
+    me = obj.data
+    for name in list(me.uv_layers.keys()):
+        me.uv_layers.remove(me.uv_layers[name])
+    # All (0, 0) in the game (a new UV layer starts with every face mapped
+    # to a square, which would split the mesh at every corner). glTF flips V.
+    zero = np.tile([0.0, 1.0], len(me.loops))
+    me.uv_layers.new(name="UVMap").data.foreach_set("uv", zero)
+    me.uv_layers.new(name="UV2").data.foreach_set("uv", zero)
+
+
+def _to_srgb(obj):
+    """The game keeps vertex colors in 8 bits, so they go out sRGB-encoded
+    (linear 8-bit colors band in the dark fur); its shader decodes them."""
+    attr = obj.data.color_attributes["Col"]
+    c = np.empty(len(attr.data) * 4)
+    attr.data.foreach_get("color", c)
+    c = c.reshape(-1, 4)
+    rgb = np.clip(c[:, :3], 0.0, 1.0)
+    c[:, :3] = np.where(rgb <= 0.0031308, rgb * 12.92, 1.055 * rgb ** (1 / 2.4) - 0.055)
+    attr.data.foreach_set("color", c.ravel())
+
+
+def _into_armature_space(obj, arm, bone):
+    """Moves a piece stuck to a bone into the armature's own space, weighted
+    fully to that bone, so it joins the body's skin."""
+    m = arm.matrix_world.inverted() @ obj.matrix_world
+    obj.parent = None
+    obj.data.transform(m)
+    obj.matrix_world = arm.matrix_world.copy()
+    for vg in list(obj.vertex_groups):
+        obj.vertex_groups.remove(vg)
+    vg = obj.vertex_groups.new(name=bone)
+    vg.add(list(range(len(obj.data.vertices))), 1.0, "REPLACE")
+
+
+def _decimate(obj, triangles):
+    count = sum(len(p.vertices) - 2 for p in obj.data.polygons)
+    if count <= triangles:
+        return count
+    mod = obj.modifiers.new("cut", "DECIMATE")
+    mod.decimate_type = "COLLAPSE"
+    mod.ratio = triangles / count
+    mod.use_collapse_triangulate = True
+    bpy.context.view_layer.objects.active = obj
+    # The armature modifier would be applied with it; apply only the cut.
+    rig = [m for m in obj.modifiers if m.type == "ARMATURE"]
+    for m in rig:
+        obj.modifiers.remove(m)
+    with bpy.context.temp_override(object=obj, active_object=obj):
+        bpy.ops.object.modifier_apply(modifier="cut")
+    return sum(len(p.vertices) - 2 for p in obj.data.polygons)
+
+
+def _skin_material():
+    mat = bpy.data.materials.get("skin") or bpy.data.materials.new("skin")
+    return mat
+
+
+def assemble(creature):
+    """Builds the creature and joins everything into one skinned mesh."""
+    S.reset()
+    arm, body, mesh = S.build(creature, with_fur=False)
+    facing = bpy.data.objects.get("facing")
+    # The armature stands on its own (the facing empty is only for sprites).
+    world = arm.matrix_world.copy()
+    arm.parent = None
+    arm.matrix_world = world
+    if facing is not None:
+        bpy.data.objects.remove(facing)
+    _rest(arm)
+
+    target = int(MODEL.get("triangles", 16000))
+    pieces = []
+    for obj in list(bpy.data.objects):
+        if obj.type != "MESH" or obj == body:
+            continue
+        if obj.parent == arm and obj.parent_type == "BONE":
+            bone = obj.parent_bone
+        else:
+            continue
+        eye = bool(obj.data.materials) and obj.data.materials[0].name.startswith("cartoon_eye")
+        if _colors_of(obj) is None or eye:
+            _paint(obj, _material_color(obj), eye)
+        if eye:
+            _eye_uv(obj)
+        else:
+            _plain_uv(obj)
+        _into_armature_space(obj, arm, bone)
+        pieces.append(obj)
+    # Ears and other finely meshed parts get cut down too, a share each.
+    for obj in pieces:
+        tris = sum(len(p.vertices) - 2 for p in obj.data.polygons)
+        if tris > 3000:
+            _decimate(obj, max(800, int(target * 0.06)))
+
+    body_tris = _decimate(body, target)
+    # The body's own extra color layer (fur strands) isn't needed.
+    if body.data.color_attributes.get("HairCol"):
+        body.data.color_attributes.remove(body.data.color_attributes["HairCol"])
+    _plain_uv(body)
+    for obj in pieces:
+        if obj.data.color_attributes.get("HairCol"):
+            obj.data.color_attributes.remove(obj.data.color_attributes["HairCol"])
+
+    # One mesh, one material slot (the game draws it with its own shader).
+    for obj in [body] + pieces:
+        obj.data.materials.clear()
+        obj.data.materials.append(_skin_material())
+        for attr in [a.name for a in obj.data.attributes if a.domain == "POINT" and a.data_type == "FLOAT"
+                     and not a.name.startswith(".")]:
+            if attr not in ("position",):
+                obj.data.attributes.remove(obj.data.attributes[attr])
+    bpy.ops.object.select_all(action="DESELECT")
+    for obj in [body] + pieces:
+        obj.select_set(True)
+    bpy.context.view_layer.objects.active = body
+    with bpy.context.temp_override(active_object=body, selected_editable_objects=[body] + pieces,
+                                   selected_objects=[body] + pieces):
+        bpy.ops.object.join()
+    _to_srgb(body)
+    body.data.color_attributes.active_color = body.data.color_attributes["Col"]
+    body.data.color_attributes.render_color_index = list(body.data.color_attributes.keys()).index("Col")
+    if not any(m.type == "ARMATURE" for m in body.modifiers):
+        mod = body.modifiers.new("rig", "ARMATURE")
+        mod.object = arm
+    body.parent = arm
+    body.matrix_parent_inverse = Matrix.Identity(4)
+    body.matrix_basis = Matrix.Identity(4)
+    tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
+    print(f"[model] {creature.name}: body {body_tris} triangles, {tris} in all, {len(body.data.vertices)} vertices")
+    return arm, body, mesh
+
+
+def bake(creature, arm):
+    """Samples each animation into its own action. Root offsets (root_loc,
+    root_rot) go onto the bones without a parent."""
+    rate = float(MODEL.get("keys_per_second", 30))
+    sc = bpy.context.scene
+    sc.render.fps = int(rate)
+    roots = [pb for pb in arm.pose.bones if pb.parent is None]
+    for pb in roots:
+        pb.rotation_mode = "QUATERNION"
+    arm.animation_data_create()
+    have = motion.animations_for(creature, ["victory"])
+    for name in ANIMS:
+        if name not in motion.ANIMATIONS:
+            continue
+        if name in ("attack2", "special") and name not in have:
+            continue
+        fn, frames, fps, loops = motion.ANIMATIONS[name]
+        seconds = frames / float(fps) * float(MODEL.get("slow", {}).get(name, 1.0))
+        keys = max(2, int(round(seconds * rate)))
+        action = bpy.data.actions.new(name)
+        action.use_fake_user = True
+        arm.animation_data.action = action
+        prev = {}
+        for i in range(keys + 1):
+            t = i / keys
+            pose = fn(creature, 0.0 if (loops and i == keys) else t)
+            motion.apply(arm, pose)
+            arm.location = arm["rest_offset"]
+            arm.rotation_euler = (0, 0, 0)
+            m = Matrix.Translation(pose.get("root_loc", (0, 0, 0))) @ Euler(pose.get("root_rot", (0, 0, 0))).to_matrix().to_4x4()
+            for pb in roots:
+                rest = pb.bone.matrix_local
+                basis = Euler(pose.get(pb.name, (0, 0, 0))).to_matrix().to_4x4()
+                loc, rot, _ = (rest.inverted() @ m @ rest @ basis).decompose()
+                if pb.name in prev:
+                    rot.make_compatible(prev[pb.name])
+                prev[pb.name] = rot.copy()
+                pb.location = loc
+                pb.rotation_quaternion = rot
+                pb.keyframe_insert("location", frame=i)
+                pb.keyframe_insert("rotation_quaternion", frame=i)
+            for pb in arm.pose.bones:
+                if pb.parent is not None:
+                    pb.keyframe_insert("rotation_euler", frame=i)
+    arm.animation_data.action = None
+    _rest(arm)
+    for pb in roots:
+        pb.rotation_quaternion = (1, 0, 0, 0)
+
+
+def export(species, out_dir=OUT):
+    creature = cartoon.load(species, style="cartoon")
+    arm, body, mesh = assemble(creature)
+    bake(creature, arm)
+    os.makedirs(out_dir, exist_ok=True)
+    path = os.path.join(out_dir, species + ".glb")
+    bpy.ops.object.select_all(action="DESELECT")
+    arm.select_set(True)
+    body.select_set(True)
+    bpy.ops.export_scene.gltf(
+        filepath=path, export_format="GLB", use_selection=True,
+        export_vertex_color="ACTIVE", export_all_vertex_colors=True,
+        export_normals=True, export_texcoords=True, export_materials="PLACEHOLDER",
+        export_skins=True, export_def_bones=True, export_animations=True,
+        export_animation_mode="ACTIONS", export_force_sampling=True,
+        export_optimize_animation_size=True, export_yup=True, export_apply=False,
+        export_extras=False, export_cameras=False, export_lights=False)
+    print(f"[model] wrote {path} ({os.path.getsize(path) / 1024:.0f} KB)")
+    return path
+
+
+def main():
+    argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else sys.argv[1:]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("species", nargs="*")
+    parser.add_argument("--all", action="store_true")
+    parser.add_argument("--out", default=OUT)
+    args = parser.parse_args(argv)
+    ids = args.species
+    if args.all:
+        # The animals in the game (data/animals.json).
+        import json
+        with open(os.path.join(HERE, "..", "..", "game", "data", "animals.json")) as f:
+            ids = [a["id"] for a in json.load(f)]
+    for sid in ids:
+        export(sid, args.out)
+
+
+if __name__ == "__main__":
+    main()

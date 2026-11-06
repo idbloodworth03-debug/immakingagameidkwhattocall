@@ -73,6 +73,25 @@
       "mipmaps": true
     },
     "uastc_level": 2,
-    "rdo_quality_loss": 0.0
+    "rdo_quality_loss": 0.0,
+    "models": {
+      "ensure_tangents": false,
+      "generate_lods": false,
+      "create_shadow_meshes": false,
+      "light_baking": 0
+    },
+    "_models_note": "The 3D viewer's models (art/models/*.glb): no tangents (no normal maps), no LODs or shadow meshes (one animal, close up, no real lights), no light baking. Less to download and to keep in memory."
+  },
+  "model": {
+    "_note": "The real-3D models for the animal viewer (export_gltf.py): about `triangles` triangles for the body, animations sampled at keys_per_second, and which animations (the viewer idles and plays the others when tapped).",
+    "triangles": 16000,
+    "keys_per_second": 30,
+    "animations": [
+      "idle",
+      "fidget",
+      "attack",
+      "victory",
+      "special"
+    ]
   }
 }

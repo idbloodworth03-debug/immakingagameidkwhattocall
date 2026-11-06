@@ -44,7 +44,7 @@ const STAGES := {
 	"crack": {"units": [[0, "self", 8, 13], [0, "brown_bear", 6.6, 11.2], [1, "asian_elephant", 8, 9.4]]},
 	"feast": {"units": [[0, "self", 8, 13], [0, "wild_boar", 5.5, 11.4], [0, "wild_boar", 10.5, 11.4], [1, "gray_squirrel", 5.5, 9.8], [1, "gray_squirrel", 10.5, 9.8], [1, "gray_squirrel", 8, 9]]},
 	"strafe": {"units": [[0, "self", 3, 12.5], [1, "wild_boar", 6, 10], [1, "wild_boar", 7.15, 9.04], [1, "wild_boar", 8.3, 8.08], [1, "wild_boar", 9.45, 7.12]]},
-	"dig": {"units": [[0, "self", 8, 12.5], [1, "brown_bear", 8, 10.5], [1, "gray_squirrel", 5.2, 8], [1, "gray_squirrel", 6.4, 8.3], [1, "gray_squirrel", 10.4, 8], [1, "gray_squirrel", 11.6, 8.2]], "seconds": 11.0},
+	"dig": {"units": [[0, "self", 8, 13], [0, "snapping_turtle", 8, 10.8], [1, "brown_bear", 8, 9.4], [1, "gray_squirrel", 5.2, 7], [1, "gray_squirrel", 6.4, 7.3], [1, "gray_squirrel", 10.4, 7], [1, "gray_squirrel", 11.6, 7.2]], "seconds": 11.0},
 	"flip": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 10.5], [1, "gray_squirrel", 6.5, 7.5], [1, "gray_squirrel", 9.5, 7.5]]},
 	"slide": {"units": [[0, "self", 4.4, 11], [1, "raccoon", 6.2, 11], [1, "raccoon", 7.3, 11.2], [1, "raccoon", 8.4, 10.9], [1, "raccoon", 7, 7.6]]},
 	"tentacles": {"units": [[0, "self", 8, 12.5], [1, "wild_boar", 6.3, 11], [1, "wild_boar", 8, 10.5], [1, "wild_boar", 9.7, 11]]},

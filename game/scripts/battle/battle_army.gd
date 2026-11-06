@@ -288,7 +288,7 @@ static func plan(units: Array, lane_w: int = BattleSim.WIDTH / 3, side_first := 
 		var rank := String(u.rank)
 		var key := "%s/%s" % [rank, u.get("group", "u%d" % i)]
 		if not squad_at.has(key):
-			var squad := {"members": [], "hero": bool(u.hero), "lane": u.get("lane")}
+			var squad := {"members": [], "hero": bool(u.hero), "flank": bool(u.flank), "lane": u.get("lane")}
 			squad_at[key] = squad
 			(squads_of.get_or_add(rank, []) as Array).append(squad)
 		squad_at[key].members.append(i)
@@ -330,7 +330,11 @@ static func plan(units: Array, lane_w: int = BattleSim.WIDTH / 3, side_first := 
 		# Its squads over the lanes: the emptiest for this rank, the middle
 		# first, then the side with fewer animals so far.
 		var rank_load := {-1: 0, 0: 0, 1: 0}
-		for sq in squads:
+		# The rank's own squads take their lanes first; Specialists on its
+		# flanks join after (a Fox listed first doesn't push the Tank off
+		# the middle).
+		var in_order: Array = squads.filter(func(sq): return not sq.flank) + squads.filter(func(sq): return sq.flank)
+		for sq in in_order:
 			var lane := 0
 			if sq.lane != null:
 				lane = int(sq.lane)
@@ -578,6 +582,11 @@ func before_tick(sim: BattleSim) -> void:
 		if moved > 0 and not by_team[1 - team].is_empty():
 			var room: int = (int(front[team]) - int(front[1 - team])) * -dir - contact
 			moved = clampi(room, 0, moved)
+			if room <= 0:
+				# The fronts have met, even if their animals are in other
+				# lanes and nobody's in reach yet: that holds it up too (so
+				# the war starts after_hold_seconds on).
+				holding[team] = true
 		front[team] = clampi(front[team] + moved * dir, 0, sim.height)
 		marched[team] += moved
 		moved_now[team] = moved

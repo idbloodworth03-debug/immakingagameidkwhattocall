@@ -121,7 +121,10 @@ is three lanes: left, middle and right. Each rank's squads are spread over
 them, the middle one first, so an army with one squad of a class stays a
 single column in the middle, and a big army lines up in three columns, each
 with its own Tanks in front, Tank Destroyers, Air and Ranged behind. A
-squad keeps its lane all fight. Fighters go for an enemy in their own lane
+squad keeps its lane all fight (a rank's own squads take lanes before the
+Specialists on its flanks, so a Fox listed first never pushes the Tank off
+the middle). The all-out war starts once the two fronts have met even if
+their animals are in different lanes and nobody is in reach yet. Fighters go for an enemy in their own lane
 and only move into the next lane when theirs has nobody they can take on;
 shooters mostly shoot in their lane. A Tank Destroyer's charge goes for the
 Tanks in its lane. In each lane the **battle line** sits halfway between

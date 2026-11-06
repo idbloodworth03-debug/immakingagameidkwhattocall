@@ -160,3 +160,35 @@ func test_flankers_roam() -> void:
 	check(army._score(sim, lion, bear, place, true) - BattleSim.edge_distance(lion, bear) >= 2 * army.fighter_lane_cost, "for the lion, an enemy two lanes over counts much further")
 	check_eq(army._score(sim, tiger, bear, place, true), BattleSim.edge_distance(tiger, bear), "for the tiger, it's just as far as it is")
 	check(army.crosses(tiger) and army.crosses(sim.units(1)[0]) == false, "the tiger may cross the line; the bear not")
+
+
+func test_the_war_starts_even_with_the_fronts_in_other_lanes() -> void:
+	# A Fox listed before the Bear: the Bear still takes the middle lane,
+	# and even if the two fronts end up in different lanes, the war starts
+	# once they've marched as close as they can.
+	var m := _armies(["brown_bear", "lion", "gray_squirrel"], ["red_fox", "brown_bear", "raccoon"], 5)
+	var army: BattleArmy = m.sim.army
+	for f: BattleSim.Fighter in m.sim.units(1):
+		if f.card.id == "brown_bear":
+			check_eq(int(f.memory.lane), 0, "the Bear holds the middle lane, not the Fox")
+	var seconds := 0.0
+	while m.phase == "fight" and seconds < 40.0:
+		m.step()
+		m.sim.take_events()
+		seconds += 1.0 / m.sim.tps
+	check(army.war_tick >= 0 and army.war_tick < 10 * m.sim.tps, "the war starts soon (at %.1f s)" % (army.war_tick / float(m.sim.tps)))
+	check(seconds < 30.0, "and the fight's done well before the time limit (%.1f s)" % seconds)
+	# Fronts in different lanes from the start: a lone enemy Tank on a side.
+	var m2 := _armies(["brown_bear", "gray_squirrel"], ["brown_bear*2", "raccoon"], 6)
+	for f: BattleSim.Fighter in m2.sim.units(0):
+		f.memory.lane = 1
+		f.x = m2.sim.width * 5 / 6
+	m2.sim.army.layout(m2.sim, 0, true)
+	var t := 0
+	while m2.phase == "fight" and t < 40 * m2.sim.tps:
+		m2.step()
+		m2.sim.take_events()
+		t += 1
+	var army2: BattleArmy = m2.sim.army
+	check(army2.war_tick >= 0 and army2.war_tick < 12 * m2.sim.tps, "with the armies in different lanes, the war still starts (at %.1f s)" % (army2.war_tick / float(m2.sim.tps)))
+

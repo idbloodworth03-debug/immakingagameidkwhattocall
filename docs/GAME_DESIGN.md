@@ -624,19 +624,29 @@ data/journal.json).
 
 **Arena life:** every arena has life outside its fence, drawn under the
 animals so it never covers them. The camera frames the armies, so the strip
-just behind the far fence is what's on screen: a crowd of the arena's
-animals watches from there (penguins and seals on the Tundra, raccoons, a
-fox and a bear at the Rescue Center), with the arena's sign on the fence,
-flags fluttering, a ranger waving, a squirrel scurrying along the rail, a
-fox pouncing in the snow, northern lights and twinkles on the ice. When the
-view already reaches the far fence (the line-up, a fight at the back) the
-camera eases a little further past it so the crowd shows; mid-field fights
-are framed as before. Big moments (the clash, a knockout, a strong hit, the
-War Horn) make the crowd hop and cheer in a wave from where it happened,
-flags whip and the lights flare. Bigger set pieces (a ranger station and a
-jeep, an igloo and snowbanks) are built into the arena's picture
-(`scripts/fx/arena_life.gd`; data/arena_life.json; camera in feel.json
-"camera").
+just behind the far fence is what's on screen: a crowd of the arena's own
+kind of animals watches from there, and each arena has its own touches:
+Rescue Center (its sign, flags, a ranger waving, a squirrel on the rail),
+City Park (pigeons pecking that scatter at big moments, a kite, park
+lights), Prairie Fields (prairie dogs popping out of burrows, a tumbleweed,
+a hot air balloon), Whispering Woods (a campfire, glowing mushrooms,
+fireflies, an owl blinking in a tree), Misty Marsh (a river with fish
+jumping, mist, egrets), Sunbaked Savanna (meerkats on lookout, an elephant
+walking far off, birds flying over), Red Rock Canyon (condors circling, a
+dust devil, a trail sign), Frozen Tundra (penguins and seals, northern
+lights, a fox pouncing in the snow), Emerald Jungle (a monkey swinging, a
+waterfall, butterflies), Cloudpeak Mountains (prayer flags, goats, clouds
+drifting, an eagle), Coral Coast (the sea with a sailboat, dolphins
+jumping, crabs and gulls) and the Last Sanctuary (gold banners, string
+lights, fireworks). When the view already reaches the far fence (the
+line-up, a fight at the back) the camera eases a little further past it so
+the crowd shows; mid-field fights are framed as before. Big moments (the
+clash, a knockout, a strong hit, the War Horn) make the crowd hop and cheer
+in a wave from where it happened, flags whip, lights flare, birds scatter,
+critters pop up and the Sanctuary sets off fireworks. Bigger set pieces
+(benches, logs, a fountain, a ranger station and a jeep, an igloo) are
+built into the arena's picture (`scripts/fx/arena_life.gd`;
+data/arena_life.json; camera in feel.json "camera").
 
 **Colors** are bold and solid everywhere: no full-screen tint or darkened
 edges, arenas in their full painted colors, panels, bars and badges solid.

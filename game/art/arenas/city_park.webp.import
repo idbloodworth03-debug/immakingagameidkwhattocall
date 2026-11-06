@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/city_park.webp-02c97d7343d695f7017a6891876213
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.9
 compress/uastc_level=2

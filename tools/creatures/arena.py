@@ -506,6 +506,23 @@ class Library:
             bpy.ops.mesh.primitive_uv_sphere_add(radius=0.07, location=(-0.81, y, 0.52), segments=12, ring_count=6)
             bpy.context.object.data.materials.append(_mat("headlight", "#fff6c0", emission=1.5))
 
+    def bench(self, rng):
+        wood = _mat("bench", "#b0783f", roughness=0.8, bands=("X", 12), seam=0.7)
+        iron = _mat("bench_iron", "#3a3f4a", roughness=0.4, metallic=0.5)
+        box((0, 0, 0.26), (0.9, 0.3, 0.05), wood, bevel=0.015)
+        box((0, 0.14, 0.45), (0.9, 0.05, 0.22), wood, bevel=0.015)
+        for x in (-0.38, 0.38):
+            box((x, 0, 0.13), (0.05, 0.28, 0.26), iron, bevel=0.01)
+
+    def fountain(self, rng):
+        stone = _mat("fountain", "#c8c4bc", roughness=0.7)
+        cylinder((0, 0, 0.15), 0.9, 0.3, stone, vertices=32)
+        cylinder((0, 0, 0.29), 0.78, 0.04, _mat("pool", "#5ab4f0", roughness=0.1, emission=0.2), vertices=32)
+        cylinder((0, 0, 0.55), 0.12, 0.6, stone, vertices=16)
+        cylinder((0, 0, 0.82), 0.35, 0.08, stone, vertices=24)
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.12, location=(0, 0, 0.98), segments=14, ring_count=8)
+        bpy.context.object.data.materials.append(_mat("spout", "#bfe8ff", roughness=0.1, emission=0.4))
+
     def igloo(self, rng):
         organic("igloo", [ellipsoid((0, 0, 0), (0.95, 0.95, 0.8), "snow", "t", blend=0.05),
                           ellipsoid((0, -0.9, 0.0), (0.38, 0.45, 0.42), "snow", "t", blend=0.08)],

@@ -109,7 +109,8 @@ def needed():
             animal = actor.get("animal")
             if not animal:
                 continue
-            kinds = {"spectator": ["idle", "cheer"], "runner": ["run"], "pouncer": ["idle", "pounce"]}
+            kinds = {"spectator": ["idle", "cheer"], "runner": ["run"], "pouncer": ["idle", "pounce"],
+                     "walker": ["run"], "swinger": ["idle"]}
             want.setdefault(animal, set()).update(kinds.get(actor["kind"], ["idle"]))
     order = list(STRIP)
     return {a: sorted(s, key=order.index) for a, s in want.items()}

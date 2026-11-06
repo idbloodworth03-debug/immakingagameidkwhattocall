@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/last_sanctuary.webp-56e5ca955dcb44f8128358a72
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.9
 compress/uastc_level=2

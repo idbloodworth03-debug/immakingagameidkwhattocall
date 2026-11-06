@@ -34,8 +34,17 @@ func test_everything_stands_outside_the_fence() -> void:
 			if actor.has("path"):
 				for p in actor.path:
 					check(_outside(float(p[0]), float(p[1])) or absf(float(p[1]) + 0.3) < 0.01, "%s: the runner keeps to the fence or beyond" % arena)
-			if String(actor.kind) == "aurora":
-				check(float(actor.from) < 0.0 and float(actor.to) < 0.0, "%s: the lights are behind the far fence" % arena)
+			check(ArenaLife.KINDS.has(String(actor.kind)), "%s: %s is a kind of life the game knows" % [arena, actor.kind])
+			if String(actor.kind) in ["aurora", "water"]:
+				check(float(actor.from) < 0.0 and float(actor.to) < 0.0, "%s: the %s is behind the far fence" % [arena, actor.kind])
+			for key in ["holes", "spots"]:
+				for p in actor.get(key, []):
+					check(_outside(float(p[0]), float(p[1])), "%s: the %s's %s are outside the fence" % [arena, actor.kind, key])
+			for key in ["from", "to"]:
+				if actor.get(key) is Array:
+					check(_outside(float(actor[key][0]), float(actor[key][1])), "%s: the %s hangs outside the fence" % [arena, actor.kind])
+			if actor.has("t"):
+				check(float(actor.t) < -0.25, "%s: the %s moves behind the far fence" % [arena, actor.kind])
 		for piece in specs[arena].get("pieces", []):
 			check(_outside(float(piece[1]), float(piece[2])), "%s: the %s is outside the fence" % [arena, piece[0]])
 
@@ -81,6 +90,28 @@ func test_life_is_drawn_under_the_animals_and_cheers() -> void:
 			if absf(float(actor.at[0]) - 8.0) > 5.0:
 				far = maxf(far, delay)
 	check(far > near, "in a wave from where it happened")
+
+
+func test_every_arena_has_life() -> void:
+	var specs := ArenaLife.all_specs()
+	for arena in GameData.arenas:
+		var id := String(arena.id)
+		check(specs.has(id) and not (specs[id].get("actors", []) as Array).is_empty(), "%s has life round it" % id)
+
+
+func test_every_kind_draws() -> void:
+	# Each arena's life, drawn once at a moment of cheering, without errors.
+	for arena in GameData.arenas:
+		var field := BattleField.new()
+		field.arena_id = String(arena.id)
+		field.size = Vector2(720, 1300)
+		_made.append(field)
+		_host().add_child(field)
+		field._keep_life()
+		field._life.cheer(8.0, 1.0)
+		field._life._process(0.5)
+		field._life._process(0.5)
+		check(field._life.has_life(), "%s draws its life" % arena.id)
 
 
 func test_a_tundra_and_a_plain_arena() -> void:

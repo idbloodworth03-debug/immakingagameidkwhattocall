@@ -15,7 +15,7 @@ dest_files=["res://.godot/imported/misty_marsh.webp-0010bf196c67234ce1660421ef33
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
 compress/lossy_quality=0.9
 compress/uastc_level=2

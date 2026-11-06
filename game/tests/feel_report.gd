@@ -57,6 +57,8 @@ var fought := {}    # per fighter uid: the last tick it had a target in reach
 var switched_at := {}  # per fighter uid: the tick it last switched targets
 var left_at := {}      # per fighter uid: {target uid it left: tick}
 var fight_alive: Array = []     # this fight: animals standing, each tick
+var _seen_numbers: Array = []   # last frame's damage numbers
+var _seen_sparks: Array = []    # last frame's spark bursts
 var fight_switches: Array = []  # this fight: the tick of every switch
 ## How many ticks back the idle check looks to see if an animal got anywhere.
 const IDLE_WINDOW := 10
@@ -151,7 +153,7 @@ func _reset_stats() -> void:
 		"war_by_class": {}, "idle_by_class": {}, "idle_why": {}, "idle_waiting": 0,
 		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0, "ranged_ticks": 0, "ranged_past": 0, "lane_checks": 0, "own_lane": 0,
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
-		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
+		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 	}
 	switched_at.clear()
 var _volley_lands := {}
@@ -310,6 +312,25 @@ func _watch_crowding() -> void:
 		stats.pile_ticks += 1
 
 
+## How many animals stand around a field point (as BattleField.crowd_near:
+## read here so older fights can be measured the same way).
+func _crowd_near(at: Vector2) -> int:
+	var cell := Feel.num("crowd", "busy_cell_tiles", 1.5) * BattleSim.TILE
+	var n := 0
+	for f in duel.sim.fighters:
+		if f.alive and f.is_unit() and absf(f.x - at.x) < cell * 1.5 and absf(f.y - at.y) < cell * 1.5:
+			n += 1
+	return n
+
+
+## Hits that landed in busy spots, and how many kept quiet there.
+func _noise_line() -> String:
+	if not ("noise" in field):
+		return "(not in this version)"
+	var nz: Dictionary = field.noise
+	return "%.0f%% of hits land where at least %d animals stand round; %.0f%% of those are small and keep quiet (no sparks, no new number); strong and big hits and knockouts always show" % [100.0 * int(nz.busy) / maxf(1, int(nz.hits)), Feel.count("crowd", "busy_from_units", 8), 100.0 * int(nz.quieted) / maxf(1, int(nz.busy))]
+
+
 ## How many fighters may attack `t` at once (battle_rules.json
 ## "engagement"; read here so older fights can be measured the same way).
 func _slots_of(t: BattleSim.Fighter) -> int:
@@ -445,6 +466,24 @@ func _check_hits(events: Array) -> void:
 
 func _watch_views(_delta: float) -> void:
 	stats.number_frames += field.fx.numbers.size()
+	# Effects in busy spots: numbers and spark bursts drawn where at least
+	# busy_from_units animals stand round them.
+	var busy_from := Feel.count("crowd", "busy_from_units", 8)
+	for n in field.fx.numbers:
+		var at := field.screen_to_field(n.at)
+		var busy := _crowd_near(at) >= busy_from
+		if busy:
+			stats.busy_numbers += 1
+		# A number that's new this frame (popping up now).
+		if not _seen_numbers.any(func(m): return is_same(m, n)):
+			stats["new_numbers_busy" if busy else "new_numbers_calm"] += 1
+	_seen_numbers = field.fx.numbers.duplicate()
+	var sparks: Array = field.fx._sparks.filter(func(sp): return float(sp.until) > field.fx.time)
+	stats.spark_frames += sparks.size()
+	for sp in field.fx._sparks:
+		if not _seen_sparks.any(func(m): return is_same(m, sp)):
+			stats.new_sparks += 1
+	_seen_sparks = field.fx._sparks.duplicate()
 	# Hits as they land on screen: did a wind-up show first, how long after
 	# the fight dealt them, and did a teammate's land on the same frame?
 	var landed := {}
@@ -680,7 +719,9 @@ func _report() -> void:
 		"  walking               %.0f%% of frames; %.0f%% of those sideways/backwards (sliding), %.0f%% while in range (pushed)" % [100.0 * stats.walk_frames / uf, 100.0 * stats.strafe_frames / maxf(1, stats.walk_frames), 100.0 * stats.pushed_walk / maxf(1, stats.walk_frames)],
 		"  overlaps              %.1f%% of pairs overlap as circles; %.0f%% of animal-frames have their picture mostly covered by a teammate, %.0f%% only by an enemy it's fighting (screen nudge %.2f tiles on average)" % [100.0 * stats.overlap_pairs / maxf(1, stats.pair_checks), 100.0 * stats.covered_by_team / uf, 100.0 * stats.covered_frames / uf, stats.spread / uf / 1000.0],
 		"  hit-stop              the whole fight is frozen %.0f%% of the time, %.1f freezes per second" % [100.0 * stats.frozen_frames / maxf(1, stats.frames), stats.freezes / maxf(0.1, stats.frames / 60.0)],
-		"  clutter               %.0f%% of animal-frames flashing white, %.1f damage numbers on screen on average, %.0f%% of animal-frames show a health bar" % [100.0 * stats.flash_frames / uf, float(stats.number_frames) / maxf(1, stats.frames), 100.0 * stats.bar_frames / uf],
+		"  clutter               %.0f%% of animal-frames flashing white, %.1f damage numbers on screen on average (%.1f in busy spots), %.1f spark bursts, %.0f%% of animal-frames show a health bar" % [100.0 * stats.flash_frames / uf, float(stats.number_frames) / maxf(1, stats.frames), float(stats.busy_numbers) / maxf(1, stats.frames), float(stats.spark_frames) / maxf(1, stats.frames), 100.0 * stats.bar_frames / uf],
+		"  new effects           %.1f damage numbers a second pop up in busy spots, %.1f elsewhere; %.1f spark bursts a second" % [stats.new_numbers_busy / maxf(0.1, stats.fight_seconds), stats.new_numbers_calm / maxf(0.1, stats.fight_seconds), stats.new_sparks / maxf(0.1, stats.fight_seconds)],
+		"  busy spots            %s" % [_noise_line()],
 		"  hits                  %d; %.0f%% land on screen without a visible wind-up, %.2f s after the fight deals them on average; %.0f%% land on the same frame as a teammate's (%.0f%% dealt in step with a teammate of the same rhythm, max %d in one tick)" % [stats.hits, 100.0 * stats.impacts_unread / maxf(1, stats.impacts), stats.impact_late / maxf(1, stats.impacts), 100.0 * stats.impacts_together / maxf(1, stats.impacts), 100.0 * stats.lockstep_hits / maxf(1, stats.hits), stats.max_hits_tick],
 		"  target switches       %.1f per animal per minute (start / middle / end of the fight: %s); %.0f%% leave a target that's still standing; %.0f%% within 2 s of the last switch (flip-flops); %.1f threat reactions (\"!\") per fight" % [stats.switches / secs * 60.0, _thirds(), 100.0 * stats.switches_alive / maxf(1, stats.switches), 100.0 * stats.quick_switches / maxf(1, stats.switches), float(stats.alerts) / maxf(1, stats.fights)],
 		"  why they switched     %s" % [_switch_whys()],

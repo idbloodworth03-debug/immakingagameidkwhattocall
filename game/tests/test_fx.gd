@@ -39,6 +39,19 @@ func test_numbers_are_capped_and_favor_big_hits() -> void:
 	check(not fx.numbers.any(func(n): return int(n.amount) == 100), "in place of the smallest")
 
 
+func test_a_quiet_hit_adds_to_a_number_but_never_makes_one() -> void:
+	fx.crowded = false
+	fx.numbers.clear()
+	fx.number(Vector2.ZERO, 40, "hurt_enemy", false, "bear", true)
+	check_eq(fx.numbers.size(), 0, "no new number from a quiet hit")
+	fx.number(Vector2.ZERO, 300, "hurt_enemy", true, "bear")
+	fx.numbers[0].age = 0.2
+	fx.number(Vector2.ZERO, 40, "hurt_enemy", false, "bear", true)
+	check_eq(fx.numbers.size(), 1, "still one number")
+	check_eq(int(fx.numbers[0].amount), 340, "the quiet hit is counted in it")
+	check_eq(float(fx.numbers[0].age), 0.2, "without making it pop again or stay longer")
+
+
 func test_crowded_fights_use_fewer_particles() -> void:
 	fx.density = 0.5
 	fx.particles.clear()

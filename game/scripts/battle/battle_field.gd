@@ -119,6 +119,12 @@ var _press_ms := 0
 var picked_group := -1
 var picked_team := 0
 var _picked_at := -100.0
+## Busy spots (feel.json "crowd" busy_*): how many animals stand in each
+## square of a coarse grid, made once a frame; and what happened to the
+## hits that landed (for reports).
+var _busy_grid := {}
+var _busy_stamp := []
+var noise := {"hits": 0, "busy": 0, "quieted": 0}
 ## Ambient life: cloud shadows drifting over, grass tufts swaying.
 var _clouds: Array = []
 var _tufts: Array = []
@@ -473,6 +479,55 @@ func picked_targets() -> Array:
 			if tv != null and tv.defeat < 0.0:
 				out.append([v, tv])
 	return out
+
+
+## How many animals stand around a field point (field units): in its square
+## of a grid busy_cell_tiles across and the eight round it.
+func crowd_near(at: Vector2) -> int:
+	var cell := maxf(100.0, Feel.num("crowd", "busy_cell_tiles", 1.5) * BattleSim.TILE)
+	var stamp := [Engine.get_process_frames(), _time, _views.size()]
+	if stamp != _busy_stamp:
+		_busy_stamp = stamp
+		_busy_grid.clear()
+		for v: UnitView in _views.values():
+			if v.defeat < 0.0 and not v.doomed and v.fighter != null:
+				var k := Vector2i(floori(v.fighter.x / cell), floori(v.fighter.y / cell))
+				_busy_grid[k] = int(_busy_grid.get(k, 0)) + 1
+	var c := Vector2i(floori(at.x / cell), floori(at.y / cell))
+	var n := 0
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			n += int(_busy_grid.get(c + Vector2i(dx, dy), 0))
+	return n
+
+
+## Whether a hit at `at` (field units) keeps quiet: where at least
+## busy_from_units animals stand round it, only big hits and knockouts
+## always show; a strong hit shows while fewer than busy_numbers_max numbers
+## are up in that spot; anything smaller keeps quiet. A quiet hit still
+## lands (the flash, the health bar); only its sparks and a new damage
+## number are left out.
+func quiet_hit(at: Vector2, strong: bool, big: bool, knockout: bool) -> bool:
+	noise.hits += 1
+	if crowd_near(at) < Feel.count("crowd", "busy_from_units", 8):
+		return false
+	noise.busy += 1
+	if big or knockout or (strong and numbers_near(at) < Feel.count("crowd", "busy_numbers_max", 1)):
+		return false
+	noise.quieted += 1
+	return true
+
+
+## How many damage numbers show round a field point (the busy spot's
+## size).
+func numbers_near(at: Vector2) -> int:
+	var reach := Feel.num("crowd", "busy_cell_tiles", 1.5) * BattleSim.TILE * 1.5
+	var n := 0
+	for num in fx.numbers:
+		var p := screen_to_field(num.at)
+		if absf(p.x - at.x) < reach and absf(p.y - at.y) < reach:
+			n += 1
+	return n
 
 
 ## The field's own clock (seconds; stops during hit-stop, slows in a close-up).
@@ -1441,13 +1496,17 @@ func _land(hit: Dictionary) -> void:
 	if attacker != null and attacker.trait_name() == "splash":
 		# A belly flop lands with a splash ring on the ground.
 		fx.effect("ring", to_screen(e.x, e.y), 650 * s, EFFECT_COLORS.splash, 0.4, "", true)
+	# In a busy spot a small hit keeps quiet (no sparks, no new number), so
+	# who's fighting whom, the big hits and the knockouts stay clear.
+	var knockout: bool = (target != null and target.doomed) or hit.after.any(func(a): return String(a.get("type", "")) == "death")
+	var quiet := quiet_hit(Vector2(e.x, e.y), strong, big, knockout)
 	# Busy fights keep the biggest hits' sparks and marks (fx.allow_sparks).
-	if fx.allow_sparks(amount) or strong:
+	if not quiet and (fx.allow_sparks(amount) or strong):
 		if strong or not fx.crowded:
 			_impact(style, at, dir, s, big)
 		fx.burst_hit(at, strong, Vector2(dir.x, dir.y * 0.6))
 	var kind := "hurt_enemy" if target == null or target.team == 1 else "hurt_own"
-	fx.number(at + Vector2(0, -10), amount, kind, strong, target.key if target != null else null)
+	fx.number(at + Vector2(0, -10), amount, kind, strong, target.key if target != null else null, quiet)
 	Sound.play("hit", -7.0, 0.2)
 	if big:
 		hit_stop(Feel.num(c, "hitstop_seconds", 0.055))

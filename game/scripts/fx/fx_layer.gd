@@ -65,8 +65,10 @@ func effect(kind: String, at: Vector2, radius: float, color: Color, life: float,
 
 ## A number popping up off a hit. `kind`: "hurt_enemy", "hurt_own" or "heal".
 ## Quick hits on the same animal (`source`) add up into one number that
-## pops again, instead of a pile of numbers.
-func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant = null) -> void:
+## pops again, instead of a pile of numbers. `only_add`: a quiet hit (a busy
+## spot): it adds to a number already showing on that animal (without
+## making it pop again or stay longer), but never makes a new one.
+func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant = null, only_add := false) -> void:
 	if not Feel.on("combat", "numbers") or amount <= 0:
 		return
 	var window := Feel.num("combat", "number_merge_seconds", 0.35)
@@ -75,12 +77,16 @@ func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant =
 			if n.source == source and n.kind == kind and float(n.age) < window:
 				n.amount = int(n.amount) + amount
 				n.text = ("+%d" if kind == "heal" else "%d") % int(n.amount)
+				if only_add:
+					return  # counted, but it doesn't pop again or linger
 				n.age = 0.0
 				n.big = bool(n.big) or big
 				n.at = at
 				if n.big and kind == "hurt_enemy":
 					n.color = Color("#ffe14d")
 				return
+	if only_add:
+		return
 	# Too many on screen: a bigger hit takes the place of the smallest number
 	# (a smaller one isn't shown).
 	var most := Feel.count("crowd", "numbers_when_crowded", 6) if crowded else Feel.count("combat", "number_max_on_screen", 12)

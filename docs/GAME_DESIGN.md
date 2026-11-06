@@ -149,6 +149,15 @@ for, with a target ring on each. Tap it again, or tap anywhere else, to let
 go. The fight never pauses or slows for it; a hold still shows the
 animal's info, and while a tool is being aimed a tap is the tool's.
 
+**Less noise where the fighting is thick** (`crowd` in `feel.json`): where
+6 or more animals stand close together (within about 2 tiles), only big
+hits and knockouts always show their sparks and damage number; a strong
+hit shows while no other number is up in that spot; smaller hits there
+keep quiet (no sparks, no new number; they still add to a number already
+showing, and still flash the animal and drop its health bar). So who's
+fighting whom, the big hits and the defeats stay easy to see. Everywhere
+else hits show as ever.
+
 **The King Cobra** stands at the very back of its army's Ranged: an animal
 whose reach is at least 8 tiles (`back_reach` in `classes.json`
 "formation") gets a line of its own behind every other Ranged, so its

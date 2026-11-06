@@ -288,6 +288,36 @@ func test_a_squad_by_its_banner_and_letting_go() -> void:
 	field.highlight = ""
 
 
+func test_busy_spots_keep_small_hits_quiet() -> void:
+	# Ten animals packed together and one alone: in the pack only big hits
+	# and knockouts always show, a strong one while no other number is up
+	# there, the rest keep quiet; alone, every hit shows.
+	var field := BattleField.new()
+	field.use_models = false
+	field.size = Vector2(720, 1300)
+	_made.append(field)
+	_host().add_child(field)
+	var sim := BattleSim.new([{}, {}], 3)
+	sim.army = BattleArmy.new(sim.rules, sim.tps)
+	for i in 10:
+		sim.spawn_units(i % 2, "wild_boar", 1, 8000 + (i % 4) * 400, 9000 + (i / 4) * 400)[0].deploy_ticks = 0
+	sim.spawn_units(0, "brown_bear", 1, 2000, 17000)[0].deploy_ticks = 0
+	field.sim = sim
+	field.snap_camera()
+	field._sync_views(0.0)
+	var pack := Vector2(8600, 9400)
+	var alone := Vector2(2000, 17000)
+	check(field.crowd_near(pack) >= Feel.count("crowd", "busy_from_units", 8), "the pack is a busy spot (%d)" % field.crowd_near(pack))
+	check(field.crowd_near(alone) < Feel.count("crowd", "busy_from_units", 8), "the lone bear isn't")
+	check(field.quiet_hit(pack, false, false, false), "a small hit in the pack keeps quiet")
+	check(not field.quiet_hit(pack, true, true, false), "a big hit there shows")
+	check(not field.quiet_hit(pack, false, false, true), "so does a knockout")
+	check(not field.quiet_hit(pack, true, false, false), "a strong hit shows while no number is up there")
+	field.fx.number(field.to_screen(pack.x, pack.y), 300, "hurt_enemy", true, "x")
+	check(field.quiet_hit(pack, true, false, false), "but not once one is")
+	check(not field.quiet_hit(alone, false, false, false), "away from the crowd, a small hit shows as ever")
+
+
 func test_the_arena_preview_shows_models() -> void:
 	var preview := ArenaPreview.new()
 	preview.animate = true

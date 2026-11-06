@@ -193,7 +193,7 @@
   },
 
   "crowd": {
-    "_note": "Keeping big fights readable and smooth. A fight is crowded from crowded_from_units animals on the field: bursts use particles_when_crowded of their particles, ordinary hits lose their claw and bite marks, fewer sparks and numbers show, and (plain_animals_when_crowded) the animals skip their shader so many of a kind draw together; that look is chosen as the herds come on, not mid-fight. Hit sparks: at most hit_sparks_max bursts at once (hit_sparks_when_crowded when crowded), each counting for spark_seconds; when that many are showing, a bigger hit takes the place of the smallest. Damage numbers work the same way (combat number_max_on_screen; numbers_when_crowded when crowded). Hit-stop pauses come at most once every hitstop_cooldown_when_crowded (a crowded fight has a knockout every moment).",
+    "_note": "Keeping big fights readable and smooth. A fight is crowded from crowded_from_units animals on the field: bursts use particles_when_crowded of their particles, ordinary hits lose their claw and bite marks, fewer sparks and numbers show, and (plain_animals_when_crowded) the animals skip their shader so many of a kind draw together; that look is chosen as the herds come on, not mid-fight. Hit sparks: at most hit_sparks_max bursts at once (hit_sparks_when_crowded when crowded), each counting for spark_seconds; when that many are showing, a bigger hit takes the place of the smallest. Damage numbers work the same way (combat number_max_on_screen; numbers_when_crowded when crowded). Hit-stop pauses come at most once every hitstop_cooldown_when_crowded (a crowded fight has a knockout every moment). Busy spots, in any fight: where at least busy_from_units animals stand within a square busy_cell_tiles across and the eight round it, only big hits (combat big_hit_pct) and knockouts always show their sparks and number; a strong hit (strong_hit_pct) shows while fewer than busy_numbers_max numbers are up in that spot; anything smaller keeps quiet: no sparks or claw marks, and no new damage number (it adds to one already showing on that animal, without making it pop again). A quiet hit still flashes and drops the health bar; the defeat poofs, shots and everything else show as ever.",
     "crowded_from_units": 24,
     "plain_animals_when_crowded": true,
     "particles_when_crowded": 0.5,
@@ -201,7 +201,10 @@
     "hit_sparks_when_crowded": 6,
     "spark_seconds": 0.25,
     "numbers_when_crowded": 6,
-    "hitstop_cooldown_when_crowded": 2.0
+    "hitstop_cooldown_when_crowded": 2.0,
+    "busy_cell_tiles": 1.5,
+    "busy_from_units": 6,
+    "busy_numbers_max": 1
   },
 
   "models": {

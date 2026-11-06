@@ -2,7 +2,7 @@
   "_note": "How the game LOOKS and FEELS: animation, hit effects, particles, UI motion and backgrounds. Nothing here changes the rules or balance. Times are in seconds, sizes in screen pixels unless they say tiles. Set a strength to 0 to switch an effect off.",
 
   "characters": {
-    "_note": "The animals. class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a soft warm highlight on the edge facing the light (top-left), a soft cool rim light on the far edge (both edge_width texels wide at 56 pixels a tile, following the smooth edge so they stay smooth at any zoom), a little extra color punch, and gentle volume (gradient). The outline is the render's own single deep line; shader_line_tint above 0 tints it toward a dark shade (line_darkness) of the body color.",
+    "_note": "The animals. class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a soft warm highlight on the edge facing the light (top-left), a soft cool rim light on the far edge (both edge_width texels wide at 56 pixels a tile, following the smooth edge so they stay smooth at any zoom), a little extra color punch, and gentle volume (gradient). The outline is the render's own single deep line; shader_line_tint above 0 tints it toward a dark shade (line_darkness) of the body color. In battle, team_outline_texels: a bold band in the team's color (blue yours, red the enemy's) round each sprite, this many texels wide (0: none; 3D models: \"models\" team_outline_px).",
     "class_badge_radius": 9.0,
     "shader_enabled": true,
     "sprite_scale": 1.6,
@@ -32,7 +32,8 @@
     "shadow_alpha": 0.34,
     "shadow_width": 1.25,
     "team_ring_alpha": 1.0,
-    "team_ring_width": 3.0
+    "team_ring_width": 3.0,
+    "team_outline_texels": 3.0
   },
 
   "combat": {
@@ -204,11 +205,13 @@
   },
 
   "models": {
-    "_note": "The animals as real 3D models in battle (scripts/fx/model_stage.gd, art/models/battle/) instead of sprites. enabled: on everywhere: fights, the army while picking, the arena previews (off: the older sprites; Developer tools > Big army test (sprites) compares). render_scale_max: at most this many real pixels per layout pixel; msaa: antialiasing (0, 2 or 4); outline_px: the dark outline's width at one real pixel per layout pixel. Shading is the 3D viewer's (viewer.json \"look\").",
+    "_note": "The animals as real 3D models in battle (scripts/fx/model_stage.gd, art/models/battle/) instead of sprites. enabled: on everywhere: fights, the army while picking, the arena previews (off: the older sprites; Developer tools > Big army test (sprites) compares). render_scale_max: at most this many real pixels per layout pixel; msaa: antialiasing (0, 2 or 4); outline_px: the dark outline's width at one real pixel per layout pixel. In battle, a bold band in the team's color (blue yours, red the enemy's) team_outline_px wide sits outside the dark outline, so sides read at a glance even packed close (0: none); it's a second hull pushed team_outline_depth tiles back so the dark line stays on top. Shading is the 3D viewer's (viewer.json \"look\").",
     "enabled": true,
     "render_scale_max": 2.0,
     "msaa": 2,
-    "outline_px": 1.3
+    "outline_px": 1.3,
+    "team_outline_px": 3.0,
+    "team_outline_depth": 0.06
   },
 
   "camera": {
@@ -413,11 +416,16 @@
   },
 
   "readability": {
-    "_note": "Telling who's doing what in a fight. When an animal turns on an enemy biting it up close (the targeting rules' threat response, battle_rules.json \"targeting\"), a cartoon \"!\" pops over its head for alert_seconds: alert_size pixels tall, alert_color, popping in with alert_pop overshoot. Not shown for ordinary target changes.",
+    "_note": "Telling who's doing what in a fight. When an animal turns on an enemy biting it up close (the targeting rules' threat response, battle_rules.json \"targeting\"), a cartoon \"!\" pops over its head for alert_seconds: alert_size pixels tall, alert_color, popping in with alert_pop overshoot. Not shown for ordinary target changes. Who's shooting at whom: every shot trails a streak in the shooter's team color (blue yours, red the enemy's) over the last shot_trail_seconds of its flight, up to shot_trail_width pixels wide and shot_trail_alpha strong, with a ring of it shot_ring_scale times the shot's size (shot_ring_px wide) round the shot, and its landing sparks take the team color too. The animals' own team bands: \"models\" team_outline_px (3D) and \"characters\" team_outline_texels (sprites).",
     "alert_seconds": 0.85,
     "alert_size": 30.0,
     "alert_color": "#ffd23f",
-    "alert_pop": 3.0
+    "alert_pop": 3.0,
+    "shot_trail_seconds": 0.12,
+    "shot_trail_width": 4.0,
+    "shot_trail_alpha": 0.75,
+    "shot_ring_scale": 1.5,
+    "shot_ring_px": 2.5
   },
 
   "info": {

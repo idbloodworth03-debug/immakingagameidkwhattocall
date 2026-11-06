@@ -145,6 +145,70 @@ func test_a_new_fight_gets_its_own_models() -> void:
 	check(checked >= 3, "checked every animal (%d)" % checked)
 
 
+func test_sides_read_at_a_glance() -> void:
+	# Every animal in battle has a bold band in its team's color (blue yours,
+	# red the enemy's) outside its dark outline, behind it in depth.
+	var field := _fight()
+	var stage := field._stage
+	var teams := {}
+	for key in stage._models:
+		var v: UnitView = field._views[key]
+		var m: ModelStage.Model = stage._models[key]
+		check(m.team_line != null, "the %s has a team band" % v.id)
+		if m.team_line == null:
+			continue
+		teams[v.team] = true
+		check_eq(m.team_line.get_shader_parameter("color"), BattleField.team_color(v.team), "in its team's color (%s)" % v.id)
+		check(float(m.team_line.get_shader_parameter("width_px")) > float(m.outline.get_shader_parameter("width_px")) + 1.0, "wider than the dark outline")
+		check(float(m.team_line.get_shader_parameter("depth_push")) > 0.0, "and behind it, so the dark line stays on top")
+		check(m.outline.next_pass == m.team_line, "drawn with the model")
+	check_eq(teams.size(), 2, "both sides checked")
+	check(BattleField.team_color(0) != BattleField.team_color(1), "two different colors")
+	# A model handed on to an animal of the other side changes color.
+	var m: ModelStage.Model = stage._models.values()[0]
+	stage._set_team(m, 1 - m.team)
+	check_eq(m.team_line.get_shader_parameter("color"), BattleField.team_color(m.team), "a reused model takes its new side's color")
+
+
+func test_sprites_have_the_team_band_too() -> void:
+	var field := BattleField.new()
+	field.use_models = false
+	field.size = Vector2(720, 1300)
+	_made.append(field)
+	_host().add_child(field)
+	field.sim = _little_fight([[0, "brown_bear"], [1, "wild_boar"]], 4)
+	field.snap_camera()
+	field._sync_views(0.0)
+	for v: UnitView in field._views.values():
+		var material := v._material
+		check(material != null, "the %s has its shader" % v.id)
+		if material != null:
+			check_eq(material.get_shader_parameter("team_color"), BattleField.team_color(v.team), "with its team's band color (%s)" % v.id)
+
+
+func test_shots_trail_their_team_color() -> void:
+	var field := _fight()
+	var shooter: UnitView = null
+	var target: UnitView = null
+	for v: UnitView in field._views.values():
+		if v.team == 0 and shooter == null:
+			shooter = v
+		if v.team == 1 and target == null:
+			target = v
+	field.fx.shoot(shooter, target, Vector2(target.fighter.x, target.fighter.y), 0.0, 0.5)
+	var pr: Dictionary = field.fx.projectiles[-1]
+	check_eq(int(pr.team), 0, "a shot knows whose it is")
+	pr.from = shooter.middle()
+	var look: Dictionary = pr.look
+	for i in 20:
+		field.fx.time += 0.02
+		field.fx.trail_step(pr, look, target.middle(), i / 20.0)
+	var trail: Array = pr.team_trail
+	check(trail.size() >= 2, "it leaves a streak (%d points)" % trail.size())
+	var keep := Feel.num("readability", "shot_trail_seconds", 0.12)
+	check(field.fx.time - float(trail[1][1]) <= keep + 0.001, "only the last %.2f s of it" % keep)
+
+
 func test_the_arena_preview_shows_models() -> void:
 	var preview := ArenaPreview.new()
 	preview.animate = true

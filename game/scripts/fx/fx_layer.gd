@@ -139,7 +139,8 @@ func shoot(attacker: UnitView, target: UnitView, to: Vector2, delay: float, flig
 		look.size = float(look.get("size", 0.2)) * scale
 	flight *= ShotLooks.flight_scale(look)
 	projectiles.append({"attacker": attacker, "target": target, "to": to, "from": Vector2.ZERO, "origin": origin,
-		"launch": time + delay, "land": time + delay + flight, "trail": [], "look": look})
+		"launch": time + delay, "land": time + delay + flight, "trail": [], "look": look,
+		"team": attacker.team if is_instance_valid(attacker) else -1, "team_trail": []})
 	return flight
 
 
@@ -247,11 +248,49 @@ func _draw_projectile(pr: Dictionary) -> void:
 	var target: UnitView = pr.target if is_instance_valid(pr.target) else null
 	var to: Vector2 = target.middle() if target != null else field.to_screen(pr.to.x, pr.to.y) + Vector2(0, -10.0)
 	var look: Dictionary = pr.get("look", {})
+	var team := int(pr.get("team", -1))
+	if team >= 0:
+		_team_trail(pr, look, to, t, BattleField.team_color(team))
 	ShotLooks.draw(self, look, pr.from, to, t, pr.trail, field.field_scale(), time)
 	if t >= 0.97 and not pr.get("burst", false):
 		pr.burst = true
 		var color := Color(String(look.get("burst_color", "#fff6b0")))
-		burst(String(look.get("burst", "spark")), to, 5, 200.0, 0.25, 6.0, [color, Color.WHITE], 0.0, 6.0)
+		var second := BattleField.team_color(team).lightened(0.25) if team >= 0 else Color.WHITE
+		burst(String(look.get("burst", "spark")), to, 5, 200.0, 0.25, 6.0, [color, second], 0.0, 6.0)
+
+
+## Who's shooting at whom: a streak in the shooter's team color (blue yours,
+## red the enemy's) behind every shot, and a ring of it round the shot
+## (feel.json "readability" shot_*).
+func _team_trail(pr: Dictionary, look: Dictionary, to: Vector2, t: float, color: Color) -> void:
+	var r := "readability"
+	var size := maxf(3.0, float(look.get("size", 0.2)) * float(BattleSim.TILE) * field.field_scale())
+	var head := trail_step(pr, look, to, t)
+	var trail: Array = pr.team_trail
+	var width := Feel.num(r, "shot_trail_width", 4.0)
+	var alpha := Feel.num(r, "shot_trail_alpha", 0.75)
+	for i in range(1, trail.size()):
+		var k := float(i) / float(trail.size() - 1)
+		draw_line(trail[i - 1][0], trail[i][0], Color(color, alpha * k), maxf(1.0, width * k), true)
+	draw_arc(head, size * Feel.num(r, "shot_ring_scale", 1.5), 0.0, TAU, 18, Color(color, alpha), Feel.num(r, "shot_ring_px", 2.5), true)
+
+
+## Where a shot is now (at `t` of its flight to `to`), noted in its streak,
+## which keeps only the last shot_trail_seconds (the same at any frame rate).
+func trail_step(pr: Dictionary, look: Dictionary, to: Vector2, t: float) -> Vector2:
+	var head: Vector2
+	match String(look.get("style", "ball")):
+		"ball", "volley", "wave":
+			head = ShotLooks._arc_point(look, pr.from, to, t)
+		_:
+			head = (pr.from as Vector2).lerp(to, t)
+	var trail: Array = pr.team_trail
+	if trail.is_empty() or (trail[-1][0] as Vector2).distance_to(head) > 0.5:
+		trail.append([head, time])
+	var keep := Feel.num("readability", "shot_trail_seconds", 0.12)
+	while trail.size() > 2 and time - float(trail[1][1]) > keep:
+		trail.pop_front()
+	return head
 
 
 static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:

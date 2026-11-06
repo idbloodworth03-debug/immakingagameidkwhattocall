@@ -133,6 +133,14 @@ lanes and the line: the Tiger, Red Fox, Barn Owl, Harbor Seal and Sunda
 Pangolin (the list is in the data). Air flies over the line but keeps to
 its lane.
 
+**Team colors you can read at a glance** (`feel.json`): every animal in
+battle has a bold band in its team's color round its dark outline, blue
+for yours and red for the enemy's, so sides read even packed close
+together (3D models: a second, wider outline drawn behind the dark one;
+sprites: a band round the picture). Every shot trails a short streak in
+the shooter's team color with a ring of it round the shot, and its landing
+sparks take the color too, so you can see who's shooting at whom.
+
 **The King Cobra** stands at the very back of its army's Ranged: an animal
 whose reach is at least 8 tiles (`back_reach` in `classes.json`
 "formation") gets a line of its own behind every other Ranged, so its

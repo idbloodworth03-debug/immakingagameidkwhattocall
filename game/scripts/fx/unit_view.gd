@@ -324,6 +324,11 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 		material.shader = SHADER
 		_apply_look(material)
 		material.set_shader_parameter("gold_color", Color(1.0, 0.82, 0.25))
+		# Its team's band round the outside (blue yours, red the enemy's).
+		var band := Feel.num("characters", "team_outline_texels", 3.0)
+		if band > 0.0:
+			material.set_shader_parameter("team_color", BattleField.team_color(v.team))
+			material.set_shader_parameter("team_width", band)
 		# Edge widths are set for 56 pixels a tile; a sharper sheet has more.
 		material.set_shader_parameter("texel_scale", v._per_tile / 56.0)
 		v._material = material

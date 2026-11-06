@@ -1,6 +1,9 @@
 // The dark cartoon outline round a 3D model: the back faces pushed out along
 // their normals by the same number of screen pixels everywhere (an "inverted
 // hull"), drawn as a second pass. Values: data/viewer.json "look".
+// In battle a second, wider hull in the team's color sits behind it (pushed
+// back depth_push, so the dark line always stays on top where they overlap):
+// a bold blue or red band round every animal (feel.json "models").
 shader_type spatial;
 render_mode unshaded, cull_front, depth_draw_opaque;
 
@@ -13,9 +16,11 @@ uniform vec3 silhouette_color : source_color = vec3(0.04, 0.07, 0.16);
 uniform float gold = 0.0;
 uniform vec3 gold_color : source_color = vec3(1.0, 0.82, 0.25);
 uniform float opacity = 1.0;
+uniform float depth_push = 0.0;
 
 void vertex() {
 	vec4 view_pos = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
+	view_pos.z -= depth_push;
 	vec3 view_normal = normalize(MODELVIEW_NORMAL_MATRIX * NORMAL);
 	vec4 clip = PROJECTION_MATRIX * view_pos;
 	vec2 dir = (PROJECTION_MATRIX * vec4(view_normal, 0.0)).xy;

@@ -3,7 +3,9 @@
 //  - a soft warm highlight along the edge facing the light (top-left),
 //  - a soft cool rim light along the far edge (bottom-right),
 //  - a little extra color punch (vibrance, contrast) and gentle volume,
-//  - a white flash when it's hit.
+//  - a white flash when it's hit,
+//  - in battle, a bold band in its team's color round the outside (blue
+//    yours, red the enemy's), so sides read at a glance.
 // The outline is the render's own single deep line; the shader leaves it be
 // (line_tint > 0 tints it toward a dark shade of the body's color instead).
 // Everything follows the sprite's smooth (filtered) alpha, never a hard
@@ -41,6 +43,10 @@ uniform vec4 region = vec4(0.0, 0.0, 1.0, 1.0);
 // A 3-star animal's golden glow: gold rim (0 = none).
 uniform float gold = 0.0;
 uniform vec4 gold_color : source_color = vec4(1.0, 0.82, 0.25, 1.0);
+// The team band: its color (alpha 0: none) and width in texels (times
+// texel_scale).
+uniform vec4 team_color : source_color = vec4(0.0);
+uniform float team_width = 3.0;
 
 float luma(vec3 c) {
 	return dot(c, vec3(0.299, 0.587, 0.114));
@@ -94,5 +100,20 @@ void fragment() {
 	c.rgb = mix(c.rgb, mix(rim_color.rgb, gold_color.rgb, gold), back * (rim + gold * 0.3) * 0.55);
 
 	c.rgb = mix(c.rgb, flash_color.rgb, clamp(flash, 0.0, 1.0));
-	COLOR = vec4(clamp(c.rgb, 0.0, 1.0), a * opacity);
+	// The team band: just outside the body (sampled round it, within its
+	// own frame so neighbors on the sheet never bleed in).
+	float band = 0.0;
+	if (team_color.a > 0.0) {
+		vec2 reach = px * team_width;
+		vec2 lo = region.xy;
+		vec2 hi = region.xy + region.zw;
+		for (int i = 0; i < 8; i++) {
+			float ang = float(i) * 0.785398;
+			vec2 at = clamp(UV + vec2(cos(ang), sin(ang)) * reach, lo, hi);
+			band = max(band, solid(texture(TEXTURE, at).a));
+		}
+		band *= (1.0 - me) * team_color.a;
+	}
+	c.rgb = mix(c.rgb, team_color.rgb, band);
+	COLOR = vec4(clamp(c.rgb, 0.0, 1.0), max(a, band) * opacity);
 }

@@ -55,6 +55,9 @@ class Model:
 	var player: AnimationPlayer
 	var skin: ShaderMaterial
 	var outline: ShaderMaterial
+	## The team's colored band outside the dark outline (battle only).
+	var team_line: ShaderMaterial
+	var team := -1
 	var anim := ""
 	var lengths := {}
 	var size := 1.0
@@ -182,6 +185,7 @@ func _make_model(v: UnitView) -> Model:
 		var reused: Model = spare.pop_back()
 		_fit(reused, v)
 		reused.outline.set_shader_parameter("width_px", outline_px(render_scale))
+		_set_team(reused, v.team)
 		reused.anim = ""
 		reused.face = "-"
 		reused.pivot.visible = true
@@ -190,8 +194,27 @@ func _make_model(v: UnitView) -> Model:
 	if m == null:
 		return null
 	_fit(m, v)
+	_set_team(m, v.team)
 	viewport.add_child(m.pivot)
 	return m
+
+
+## The bold band in `team`'s color (blue yours, red the enemy's) round the
+## dark outline, so sides read at a glance even packed close (feel.json
+## "models" team_outline_px; drawn by a second, wider hull pushed back
+## team_outline_depth so the dark line stays on top).
+func _set_team(m: Model, team: int) -> void:
+	var px := Feel.num("models", "team_outline_px", 2.0)
+	if px <= 0.0 or team < 0:
+		return
+	if m.team_line == null:
+		m.team_line = ShaderMaterial.new()
+		m.team_line.shader = OUTLINE_SHADER
+		m.team_line.set_shader_parameter("depth_push", Feel.num("models", "team_outline_depth", 0.06))
+		m.outline.next_pass = m.team_line
+	m.team = team
+	m.team_line.set_shader_parameter("color", BattleField.team_color(team))
+	m.team_line.set_shader_parameter("width_px", outline_px(render_scale) + px * render_scale)
 
 
 ## Its size on the field (as the sprite's: its squad's, an elite's or a
@@ -318,6 +341,8 @@ func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Ve
 	_param(m, m.outline, "gold", snappedf(v.m_gold, 0.02))
 	_param(m, m.skin, "opacity", snappedf(v.m_opacity, 0.02))
 	_param(m, m.outline, "opacity", snappedf(v.m_opacity, 0.02))
+	if m.team_line != null:
+		_param(m, m.team_line, "opacity", snappedf(v.m_opacity, 0.02))
 	_param(m, m.skin, "tint", v.m_tint)
 
 

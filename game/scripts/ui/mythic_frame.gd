@@ -23,7 +23,7 @@ static func draw_glow(canvas: CanvasItem, rect: Rect2, radius: int, color: Color
 static func rim_color(color: Color, t: float) -> Color:
 	var s := settings()
 	var hue := fmod(t / maxf(0.1, float(s.get("rainbow_seconds", 9.0))), 1.0)
-	return color.lerp(Color.from_hsv(hue, 0.45, 1.0), float(s.get("rainbow", 0.35)))
+	return color.lerp(Color.from_hsv(hue, float(s.get("rainbow_saturation", 0.85)), 1.0), float(s.get("rainbow", 0.35)))
 
 
 ## A spark of light running round the rim.

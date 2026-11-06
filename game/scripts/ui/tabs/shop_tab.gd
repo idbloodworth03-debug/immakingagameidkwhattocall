@@ -102,7 +102,7 @@ func _add_cages() -> void:
 		info.add_child(UIKit.paragraph(CageInfo.summary(cage_id, arena), 19))
 		var buttons := UIKit.vbox(8)
 		row.add_child(buttons)
-		var odds := UIKit.button("Odds", UIKit.GREY, 20, Vector2(160, 52))
+		var odds := UIKit.button("Odds", UIKit.BLUE, 20, Vector2(160, 52))
 		odds.pressed.connect(func() -> void: CageInfo.show_odds(cage_id, arena))
 		buttons.add_child(odds)
 		var buy := UIKit.price_button(UIKit.format_number(price), "gems", UIKit.GREEN, 22, Vector2(160, 62))

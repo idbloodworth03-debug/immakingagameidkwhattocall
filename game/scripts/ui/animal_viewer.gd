@@ -506,15 +506,15 @@ func _build_info() -> void:
 	column.add_child(heading)
 	var status := "Mythical creature" if String(card.get("rarity", "")) == "mythic" \
 		else "Real-world status: %s" % GameData.status_name(card.get("status", ""))
-	column.add_child(UIKit.label(status, 21, Color("#9fe0ff")))
+	column.add_child(UIKit.label(status, 21, UIStyle.color("journal_status")))
 	if entry.has("home"):
-		column.add_child(_journal_line("Home", String(entry.home), Color("#7fe07f")))
+		column.add_child(_journal_line("Home", String(entry.home), UIStyle.color("journal_home")))
 	for fact in entry.get("facts", []):
 		column.add_child(_journal_line("•", String(fact), UIKit.YELLOW))
 	if entry.has("help"):
-		column.add_child(_journal_line("Help", String(entry.help), Color("#ff9f6a")))
+		column.add_child(_journal_line("Help", String(entry.help), UIStyle.color("journal_help")))
 	if String(card.get("legend", "")) != "":
-		column.add_child(_journal_line("Real clue", String(card.legend), Color("#c9a6ff")))
+		column.add_child(_journal_line("Real clue", String(card.legend), UIStyle.color("journal_clue")))
 		var link := String(card.get("legend_card", ""))
 		if link != "" and GameData.cards.has(link):
 			var meet := UIKit.button("Meet the " + String(GameData.get_card(link).name), UIKit.BLUE, 22, Vector2(0, 64))

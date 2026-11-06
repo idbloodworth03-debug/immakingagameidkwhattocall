@@ -8,50 +8,57 @@ extends RefCounted
 ## raised panels with a light rim and a soft shadow, sunken panels for lists,
 ## and bold outlined text with a drop shadow.
 
-const BG_TOP := Color("#2f7fe0")
-const BG_BOTTOM := Color("#142f6e")
-const PANEL := Color("#1f4f9c")
-const PANEL_DARK := Color("#15397a")
-const PANEL_LIGHT := Color("#3a74cc")
+## The palette lives in data/ui_style.json ("kit_*"), like every color.
+## The home screen backdrop, top and bottom.
+static var BG_TOP: Color:
+	get: return UIStyle.color("kit_bg_top")
+static var BG_BOTTOM: Color:
+	get: return UIStyle.color("kit_bg_bottom")
+## Panels: deep saturated blue with a bright rim (raised()), darker wells, lighter highlights.
+static var PANEL: Color:
+	get: return UIStyle.color("kit_panel")
+static var PANEL_DARK: Color:
+	get: return UIStyle.color("kit_panel_dark")
+static var PANEL_LIGHT: Color:
+	get: return UIStyle.color("kit_panel_light")
 ## The deep navy used for outlines and shadows instead of plain black.
-const INK := Color("#0a1938")
-const TEXT := Color("#ffffff")
-## Secondary text: a solid, warm cream that reads clearly on the blues (not
-## a pale, see-through-looking blue).
-const TEXT_DIM := Color("#fff0d2")
-## A solid deep navy for tracks, pills, fields and bars (instead of
-## see-through dark ink over the background).
-const DEEP := Color("#0e2654")
-const GOLD := Color("#ffd23f")
-const GEMS := Color("#4be38b")
-const ENERGY := Color("#d44fe0")
-const YELLOW := Color("#ffc62e")
-const GREEN := Color("#45c35a")
-const BLUE := Color("#3b8ff0")
-const RED := Color("#ec4b52")
-const GREY := Color("#7f8ba0")
-const TROPHY := Color("#ffb51f")
-const ACORN := Color("#c98b4a")
-const HEART := Color("#ff4f6d")
+static var INK: Color:
+	get: return UIStyle.color("kit_ink")
+static var TEXT: Color:
+	get: return UIStyle.color("kit_text")
+## Secondary text: a solid, warm cream that reads clearly on the blues.
+static var TEXT_DIM: Color:
+	get: return UIStyle.color("kit_text_dim")
+## A solid deep navy for tracks, pills, fields and bars.
+static var DEEP: Color:
+	get: return UIStyle.color("kit_deep")
+static var GOLD: Color:
+	get: return UIStyle.color("kit_gold")
+static var GEMS: Color:
+	get: return UIStyle.color("kit_gems")
+static var ENERGY: Color:
+	get: return UIStyle.color("kit_energy")
+static var YELLOW: Color:
+	get: return UIStyle.color("kit_yellow")
+static var GREEN: Color:
+	get: return UIStyle.color("kit_green")
+static var BLUE: Color:
+	get: return UIStyle.color("kit_blue")
+static var RED: Color:
+	get: return UIStyle.color("kit_red")
+## Solid muted gray: disabled, bought, owned, off.
+static var GREY: Color:
+	get: return UIStyle.color("kit_grey")
+static var TROPHY: Color:
+	get: return UIStyle.color("kit_trophy")
+static var ACORN: Color:
+	get: return UIStyle.color("kit_acorn")
+static var HEART: Color:
+	get: return UIStyle.color("kit_heart")
 
 const DISPLAY_FONT := preload("res://art/fonts/LilitaOne-Regular.ttf")
 const BODY_FONT := preload("res://art/fonts/Nunito.ttf")
 
-## Background color behind each card's icon, by habitat.
-const HABITAT_COLORS := {
-	"urban": Color("#7a8494"),
-	"forest": Color("#3d7a3a"),
-	"prairie": Color("#b5a24a"),
-	"wetland": Color("#3a7a6f"),
-	"savanna": Color("#c9a14a"),
-	"desert": Color("#c5703f"),
-	"tundra": Color("#8fb6d1"),
-	"jungle": Color("#2e8b57"),
-	"mountain": Color("#7f88a0"),
-	"marine": Color("#2f6fb5"),
-	"island": Color("#3fa7a0"),
-	"tool": Color("#a0703a"),
-}
 
 
 static var _icons := {}
@@ -125,14 +132,15 @@ static func box(color: Color, radius := 16, padding := 0) -> StyleBoxFlat:
 ## A raised panel: a lighter rim (brightest along the top) and a soft shadow
 ## underneath, like a card lifted off the table.
 static func raised(color: Color, radius := 18, padding := 14) -> StyleBoxFlat:
+	var look: Dictionary = UIStyle.data().get("kit", {})
 	var style := box(color, radius, padding)
-	style.set_border_width_all(2)
-	style.border_width_top = 3
-	style.border_color = color.lightened(0.16)
+	style.set_border_width_all(int(look.get("rim", 3)))
+	style.border_width_top = int(look.get("rim_top", 4))
+	style.border_color = color.lightened(float(look.get("rim_light", 0.34)))
 	style.border_blend = false
-	style.shadow_color = Color(INK, 0.35)
-	style.shadow_size = 6
-	style.shadow_offset = Vector2(0, 4)
+	style.shadow_color = Color(INK, float(look.get("shadow_alpha", 0.45)))
+	style.shadow_size = int(look.get("shadow_size", 6))
+	style.shadow_offset = Vector2(0, float(look.get("shadow_offset", 4)))
 	return style
 
 
@@ -470,7 +478,7 @@ static func draw_habitat_badge(canvas: CanvasItem, center: Vector2, radius: floa
 	var info: Dictionary = GameData.habitats.get(habitat, {})
 	if info.is_empty():
 		return
-	var color := Color(String(info.get("color", "#ffffff")))
+	var color := UIStyle.habitat_color(habitat)
 	# The disc is a cell of the particle sheet: one batched draw, not five.
 	UIStyle.draw_particle(canvas, "badge", center, radius + 1.5, Color(color, alpha))
 	var texture := icon(GameData.ui_icon(String(info.get("icon", ""))))
@@ -528,11 +536,12 @@ static func initials(name: String) -> String:
 	return (words[0].left(1) + words[words.size() - 1].left(1)).to_upper()
 
 
+## The color behind a card's picture: its habitat's (ui_style.json
+## "habitat_*"); a tool's, the tool color.
 static func habitat_color(animal: Dictionary) -> Color:
-	for tag in animal.get("tags", []):
-		if HABITAT_COLORS.has(tag):
-			return HABITAT_COLORS[tag]
-	return GREY
+	if String(animal.get("kind", "")) == "tool":
+		return UIStyle.color("tool")
+	return UIStyle.habitat_color(String(animal.get("habitat", "")))
 
 
 static func format_number(value: int) -> String:

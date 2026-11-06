@@ -981,6 +981,8 @@ func _first_match_tip() -> void:
 			return
 		tip.reset_size()
 		var rect := anchor.get_global_rect()
+		# The pick view is still sliding up into place: where it'll be.
+		rect.position.y -= _pick_view.position.y
 		# Just above what to tap, in the gap; it stays until you pick.
 		tip.position = Vector2((get_viewport_rect().size.x - tip.size.x) / 2.0, rect.position.y - tip.size.y - UIStyle.space("xs"))
 		if key == "pick":

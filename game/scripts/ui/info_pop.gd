@@ -6,7 +6,6 @@ extends Control
 ## than numbers. A Ranger tool shows its name, rarity and what it does.
 ## Sizes and colors: feel.json "info".
 
-const BAR_COLORS := {"health": Color("#ff4f6d"), "damage": Color("#ffa21f"), "speed": Color("#3fcf74"), "range": Color("#3b9bff")}
 const BAR_ICONS := {"health": "stat_health", "damage": "stat_damage", "speed": "stat_speed", "range": "stat_range"}
 
 var card_id := ""
@@ -125,7 +124,7 @@ func _draw() -> void:
 	if not is_tool:
 		# Class icon, stars, squad size.
 		var cls := GameData.class_info(GameData.class_of(card_id))
-		var class_color := Color(String(cls.get("color", "#ffffff")))
+		var class_color := UIStyle.class_color(GameData.class_of(card_id))
 		var icon := UIKit.icon(GameData.ui_icon(String(cls.get("icon", ""))))
 		draw_circle(Vector2(x + 20, 92), 21, UIKit.INK)
 		draw_circle(Vector2(x + 20, 92), 18, class_color)
@@ -158,13 +157,13 @@ func _draw() -> void:
 		var bar_w := (w - 28) / 2.0 - 52
 		var icon := UIKit.icon(GameData.ui_icon(BAR_ICONS[key]))
 		if icon != null:
-			draw_texture_rect(icon, Rect2(at, Vector2(28, 28)), false, BAR_COLORS[key].lightened(0.25))
+			draw_texture_rect(icon, Rect2(at, Vector2(28, 28)), false, UIStyle.color("stat_" + key).lightened(0.25))
 		var track := Rect2(at + Vector2(36, 7), Vector2(bar_w, 15))
 		draw_style_box(_box(UIKit.INK, 8), track.grow(2))
-		draw_style_box(_box(Color("#081430"), 7), track)
+		draw_style_box(_box(UIStyle.color("stat_track"), 7), track)
 		var fill := Rect2(track.position, Vector2(track.size.x * float(_bars.get(key, 0.0)), track.size.y))
-		draw_style_box(_box(BAR_COLORS[key], 7), fill)
-		draw_style_box(_box(BAR_COLORS[key].lightened(0.35), 4), Rect2(fill.position + Vector2(3, 2), Vector2(maxf(0.0, fill.size.x - 6), 4)))
+		draw_style_box(_box(UIStyle.color("stat_" + key), 7), fill)
+		draw_style_box(_box(UIStyle.color("stat_" + key).lightened(0.35), 4), Rect2(fill.position + Vector2(3, 2), Vector2(maxf(0.0, fill.size.x - 6), 4)))
 
 
 func _box(color: Color, radius: int) -> StyleBoxFlat:

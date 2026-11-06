@@ -70,6 +70,9 @@ func _thumbnail(arena: Dictionary, reached: bool) -> Control:
 		preview.arena_id = arena.id
 		window.add_child(preview)
 	if not reached:
+		# Not reached yet: the picture in solid, muted tones (not faded).
+		for child in window.get_children():
+			(child as CanvasItem).modulate = UIStyle.color("locked_tint")
 		var lock := UIKit.icon_rect(GameData.ui_icon("locked"), Color.WHITE, 44)
 		lock.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		lock.size_flags_vertical = Control.SIZE_SHRINK_CENTER

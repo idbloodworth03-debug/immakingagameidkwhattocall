@@ -40,7 +40,7 @@ static func details(cage_id: String, arena_index: int) -> VBoxContainer:
 	if mythic > 0.0:
 		box.add_child(UIKit.paragraph("%s%% chance of a Mythic creature too" % _percent(mythic), 21, GameData.rarity_color("mythic")))
 	box.add_child(UIKit.paragraph("Unlock time: " + UIKit.format_duration(float(cage.unlock_seconds)), 21))
-	var odds_button := UIKit.button("See odds", UIKit.GREY, 22, Vector2(200, 60))
+	var odds_button := UIKit.button("See odds", UIKit.BLUE, 22, Vector2(200, 60))
 	odds_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	odds_button.pressed.connect(func() -> void: show_odds(cage_id, arena_index))
 	box.add_child(odds_button)

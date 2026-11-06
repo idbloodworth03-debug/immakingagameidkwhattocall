@@ -124,6 +124,18 @@ func reload() -> void:
 	ui_style = _load("ui_style.json")
 	art = _load("art.json")
 	sorting = _load("sorting.json")
+	_paint()
+
+
+## Every color lives in ui_style.json: rarities, classes and habitats get
+## theirs from there ("rarity_*", "class_*", "habitat_*"), as their "color".
+func _paint() -> void:
+	UIStyle.forget_colors()
+	var colors: Dictionary = ui_style.get("colors", {})
+	for group in [["rarity_", rarities], ["class_", classes], ["habitat_", habitats]]:
+		var table: Dictionary = group[1]
+		for id in table:
+			table[id]["color"] = String(colors.get(String(group[0]) + String(id), "#ff00ff"))
 
 
 func _load(file_name: String) -> Variant:
@@ -171,7 +183,7 @@ func rarity_name(rarity_id: String) -> String:
 
 
 func rarity_color(rarity_id: String) -> Color:
-	return Color(rarities.get(rarity_id, {}).get("color", "#ffffff"))
+	return UIStyle.rarity_color(rarity_id)
 
 
 func start_level(rarity_id: String) -> int:
@@ -311,6 +323,13 @@ func _later_ids() -> Dictionary:
 
 func validate() -> Array:
 	var problems := []
+
+	# Every rarity, class and habitat has its color in ui_style.json.
+	var colors: Dictionary = ui_style.get("colors", {})
+	for group in [["rarity_", rarity_order], ["class_", class_order], ["habitat_", habitat_order]]:
+		for id in group[1]:
+			if not colors.has(String(group[0]) + String(id)):
+				problems.append("ui_style.json: no color %s%s" % [group[0], id])
 
 	# New players own the starting cards, and draft from them: enough to fill
 	# the options, with enough animals for the first round's picks.

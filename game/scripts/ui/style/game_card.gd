@@ -197,5 +197,4 @@ func _draw_art(card: Dictionary, art: Rect2, is_tool: bool) -> void:
 
 
 static func _habitat_color(card: Dictionary) -> Color:
-	var info: Dictionary = GameData.habitats.get(String(card.get("habitat", "")), {})
-	return Color(String(info.get("color", "#6fae5a")))
+	return UIStyle.habitat_color(String(card.get("habitat", "")))

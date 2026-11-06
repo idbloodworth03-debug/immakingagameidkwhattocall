@@ -69,9 +69,21 @@ func refresh() -> void:
 	_needed = int(cost.get("copies", 0))
 	_copies = Profile.card_copies(animal_id) if _owned else 0
 	_upgradable = _owned and Profile.has_copies_for_upgrade(animal_id)
-	var rarity: String = animal.get("rarity", "common")
-	set_process(_owned and rarity in ["epic", "legendary", "mythic"])
+	set_process(_animates())
 	queue_redraw()
+
+
+## Only rare-enough cards you own move (a sweep of light, the Mythic frame);
+## the rest are drawn once.
+func _animates() -> bool:
+	return _owned and String(GameData.get_card(animal_id).get("rarity", "common")) in ["epic", "legendary", "mythic"]
+
+
+func _ready() -> void:
+	# Godot starts every node with a _process processing: only the cards
+	# that move keep it (a still one would freeze mid-sweep, a pale stripe
+	# across its picture).
+	set_process(_animates())
 
 
 func _process(delta: float) -> void:

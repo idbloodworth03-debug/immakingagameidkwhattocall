@@ -454,9 +454,9 @@ class _Coin:
 		var center := size / 2.0
 		var r := minf(size.x, size.y) / 2.0 - 2.0
 		draw_set_transform(center, 0.0, Vector2(maxf(0.08, squeeze), 1.0))
-		draw_circle(Vector2.ZERO, r, Color("#b8860b"))
-		draw_circle(Vector2.ZERO, r - 4.0, Color("#ffd34d"))
-		draw_circle(Vector2.ZERO, r - 10.0, Color("#3b8ff0") if face == 0 else Color("#e0523b"))
+		draw_circle(Vector2.ZERO, r, UIStyle.color("coin_rim"))
+		draw_circle(Vector2.ZERO, r - 4.0, UIStyle.color("coin_face"))
+		draw_circle(Vector2.ZERO, r - 10.0, UIStyle.color("player") if face == 0 else UIStyle.color("enemy"))
 		var icon := UIKit.icon(GameData.ui_icon("paw" if face == 0 else "whistle"))
 		if icon != null:
 			var side := (r - 12.0) * 1.4

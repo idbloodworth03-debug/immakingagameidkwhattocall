@@ -104,12 +104,12 @@ static func group_info(group: String, key: String) -> Dictionary:
 		if group == special:
 			var s: Dictionary = data.get(special, {})
 			return {"group": group, "label": String(s.get("label", group)), "short": String(s.get("short", s.get("label", group))),
-				"icon": String(s.get("icon", "")), "color": Color(String(s.get("color", "#7d8799")))}
+				"icon": String(s.get("icon", "")), "color": UIStyle.color({"tools": "sort_tools", "not_owned": "sort_not_owned", "legends": "sort_legends"}[special])}
 	match key:
 		"level":
 			return {"group": group, "label": String(data.get("level_label", "Level %d")) % int(group),
 				"short": String(data.get("level_short", "Lv %d")) % int(group), "icon": "",
-				"color": Color(String(data.get("level_color", "#47a9ec")))}
+				"color": UIStyle.color("sort_level")}
 		"rarity":
 			var name := GameData.rarity_name(group)
 			return {"group": group, "label": name, "short": name, "icon": String(data.get("rarity_icon", "star")),
@@ -117,12 +117,12 @@ static func group_info(group: String, key: String) -> Dictionary:
 		"class":
 			var info := GameData.class_info(group)
 			return {"group": group, "label": String(info.get("name", group)), "short": String(info.get("short", info.get("name", group))),
-				"icon": String(info.get("icon", "")), "color": Color(String(info.get("color", "#7d8799")))}
+				"icon": String(info.get("icon", "")), "color": UIStyle.class_color(group)}
 		"biome":
 			var h: Dictionary = GameData.habitats.get(group, {})
 			return {"group": group, "label": String(h.get("name", group)), "short": String(h.get("name", group)),
-				"icon": String(h.get("icon", "")), "color": Color(String(h.get("color", "#7d8799")))}
-	return {"group": group, "label": group, "short": group, "icon": "", "color": Color("#7d8799")}
+				"icon": String(h.get("icon", "")), "color": UIStyle.habitat_color(group)}
+	return {"group": group, "label": group, "short": group, "icon": "", "color": UIStyle.color("disabled")}
 
 
 ## Whether `a` goes before `b`.

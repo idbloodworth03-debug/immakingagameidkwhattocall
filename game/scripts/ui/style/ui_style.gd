@@ -32,11 +32,33 @@ static func data() -> Dictionary:
 # --- Values ----------------------------------------------------------------
 
 static func color(key: String) -> Color:
+	var known: Variant = _colors.get(key)
+	if known != null:
+		return known
 	var value: Variant = data().get("colors", {}).get(key, null)
 	if value is String:
-		return Color(String(value))
+		_colors[key] = Color(String(value))
+		return _colors[key]
 	push_warning("ui_style.json: no color '%s'" % key)
 	return Color.MAGENTA
+
+
+## Colors read so far (a card draws dozens a frame); GameData clears it
+## when the data is (re)loaded.
+static var _colors := {}
+
+
+static func forget_colors() -> void:
+	_colors.clear()
+
+
+## A habitat's and a class's color (ui_style.json "habitat_*", "class_*").
+static func habitat_color(habitat: String) -> Color:
+	return color("habitat_" + habitat) if data().get("colors", {}).has("habitat_" + habitat) else color("disabled")
+
+
+static func class_color(class_id: String) -> Color:
+	return color("class_" + class_id) if data().get("colors", {}).has("class_" + class_id) else color("disabled")
 
 
 ## The lighter top of a gradient made from `base`.
@@ -213,7 +235,7 @@ static func theme() -> Theme:
 
 	# Thin, rounded scroll bars.
 	var grabber := StyleBoxFlat.new()
-	grabber.bg_color = Color("#e9f2ff")
+	grabber.bg_color = color("scroll_grabber")
 	grabber.set_corner_radius_all(6)
 	grabber.content_margin_left = 6
 	grabber.content_margin_right = 6

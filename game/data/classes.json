@@ -1,15 +1,15 @@
 {
   "_note": "Animal classes (every animal has one, in animals.json \"class\") and the Specialists' traits (\"trait\"). Where each class stands in an army: \"formation\"; how many animals a card brings: \"squads\". counters: extra damage (percent) one class does to another; less for a negative number (Tanks are armored: everyone but Tank Destroyers does 30% less to them). A class's targets and range override the animal's own (Ranged reach at least `range` tiles; Air flies). line: the one short line shown when you hold a card.",
   "classes": [
-    {"id": "tank", "name": "Tank", "icon": "class_tank", "color": "#4f8ef0", "row": "front", "targets": "ground",
+    {"id": "tank", "name": "Tank", "icon": "class_tank", "row": "front", "targets": "ground",
      "line": "Tough. Holds the front line."},
-    {"id": "tank_destroyer", "name": "Tank Destroyer", "icon": "class_tank_destroyer", "color": "#e4523b", "row": "middle", "targets": "ground",
+    {"id": "tank_destroyer", "name": "Tank Destroyer", "icon": "class_tank_destroyer", "row": "middle", "targets": "ground",
      "line": "Huge damage to Tanks."},
-    {"id": "ranged", "name": "Ranged", "icon": "class_ranged", "color": "#5ab532", "row": "back", "targets": "air_ground", "range": 7.0,
+    {"id": "ranged", "name": "Ranged", "icon": "class_ranged", "row": "back", "targets": "air_ground", "range": 7.0,
      "line": "Hits from afar. Beats Air."},
-    {"id": "air", "name": "Air", "icon": "class_air", "color": "#3fb8e8", "row": "middle", "targets": "air_ground", "flying": true,
+    {"id": "air", "name": "Air", "icon": "class_air", "row": "middle", "targets": "air_ground", "flying": true,
      "line": "Flies. Only Ranged and Air can hit it."},
-    {"id": "specialist", "name": "Specialist", "icon": "class_specialist", "color": "#f2a93b", "row": "middle", "targets": "ground",
+    {"id": "specialist", "name": "Specialist", "icon": "class_specialist", "row": "middle", "targets": "ground",
      "line": "Has a special trick."}
   ],
   "traits": [

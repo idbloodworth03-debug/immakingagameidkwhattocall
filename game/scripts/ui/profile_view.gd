@@ -96,7 +96,7 @@ func _build() -> void:
 		_build.call_deferred()
 	)
 	settings_row.add_child(music_button)
-	var credits := UIKit.button("Credits", UIKit.GREY, 22, Vector2(0, 64))
+	var credits := UIKit.button("Credits", UIKit.BLUE, 22, Vector2(0, 64))
 	credits.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	credits.pressed.connect(_show_credits)
 	settings_row.add_child(credits)

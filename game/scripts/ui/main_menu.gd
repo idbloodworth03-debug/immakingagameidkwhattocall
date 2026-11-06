@@ -217,7 +217,7 @@ func _show_match_result(result: Dictionary) -> void:
 
 	var boss_reward: Dictionary = result.get("boss_reward", {})
 	if not boss_reward.is_empty():
-		var reward_panel := UIKit.panel(Color("#8a5a00"), 14)
+		var reward_panel := UIKit.panel(UIStyle.color("boss_reward"), 14)
 		box.add_child(reward_panel)
 		var reward_box := UIKit.vbox(6)
 		reward_panel.add_child(reward_box)

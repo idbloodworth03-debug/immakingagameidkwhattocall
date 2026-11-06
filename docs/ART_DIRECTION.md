@@ -65,7 +65,7 @@ of their rendered frames (`game/scripts/fx/`):
 lives in `scripts/ui/ui_kit.gd`:
 - **Buttons** have a pressable colored edge, a gloss and a soft shadow, and sink when pressed (`button_skin.gd`).
 - **Panels** are raised (a lighter rim and a drop shadow) or sunken for lists and stats. Text is bold and outlined in deep navy with a drop shadow.
-- **Cards** (`animal_card.gd`): a glossy rim in the rarity's color (silver Common, orange Rare, purple Epic, teal Legendary), the animal's portrait in a spotlight of its habitat color, a name plate, and a level badge with a progress bar that turns green when an upgrade is ready. In Draft Duel (`game_card.gd`) a card shows only the art, its class badge in the top-left corner, its stars and, when a pick would add a star, a green arrow. Epic and Legendary cards glow and catch a sweep of light now and then.
+- **Cards** (`animal_card.gd`): a glossy rim in the rarity's color (steel silver Common, orange Rare, purple Epic, teal Legendary, rose pink Mythic), the animal's portrait in a spotlight of its habitat color, a name plate, and a level badge with a progress bar that turns green when an upgrade is ready. In Draft Duel (`game_card.gd`) a card shows only the art, its class badge in the top-left corner, its stars and, when a pick would add a star, a green arrow. Epic and Legendary cards glow and catch a sweep of light now and then.
 - **The menu background** is a deep blue gradient with faint paw prints; the bottom bar has an icon per tab, and the chosen tab lifts up.
 - **Icons:** white silhouettes from [game-icons.net](https://game-icons.net) (free to use with credit, see [CREDITS.md](../CREDITS.md)) for tools, emotes, player icons, tabs and buttons.
 - **Rival Ranger portraits** (`ranger_portrait.gd`): placeholders drawn in code from each rival's `look` in `rivals.json` (skin, hair and hat styles, eyes, mouth, glasses or freckles...), lit from the top left with a cool rim on the right and outlines in a dark shade of each part's color, on the rival's banner colors. Their face changes with their mood (happy, sad). An illustrator could replace them with painted heads later.
@@ -90,9 +90,18 @@ sizes. So far the Draft Duel shop uses it; the rest of the screens move over nex
 - **Palette:** warm summer sky to sunshine behind everything, wood browns, leaf
   green for the main action, sky blue, barn red for danger, purple for tools,
   brass/gold for rewards, dark brown outlines, and a frame color per rarity.
-- **Light:** a warm grade with a soft vignette over the whole game
-  (`Atmosphere`, colors in `ui_style.json`, strength in `feel.json` "grade"); a
-  warm glow around picked things; brass icons catch a glint now and then.
+  The home screen keeps its blue look: a bright sky-blue backdrop with deep,
+  saturated blue panels, each with a bright rim. **Every color lives in
+  `ui_style.json`** ("colors"): the Ranger Camp pieces, the home screen's blues
+  (`kit_*`), rarities (`rarity_*`), classes (`class_*`), habitats
+  (`habitat_*`), sorting and a few one-off pieces; rarities.json, classes.json
+  and habitats.json have none of their own. All of them are solid and
+  saturated: nothing is see-through. Disabled and locked things are solid but
+  muted (a gray button, an arena you haven't reached in muted tones), never
+  faded; an enabled button is never gray.
+- **Light:** no full-screen grade or vignette (they browned and darkened
+  everything); a warm glow around picked things; brass icons catch a glint
+  now and then.
 - **Text:** four sizes only (26, 32, 44 and 64 px, which is 14, 17, 24 and 35 pt
   on an iPhone). Titles, numbers and buttons are in Lilita One with a thick
   dark-brown outline and a drop shadow; the few longer lines are in Nunito.

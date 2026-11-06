@@ -2,43 +2,39 @@
   {
     "id": "common",
     "name": "Common",
-    "color": "#c9d3df",
     "start_level": 1,
     "conservation": "Least Concern"
   },
   {
     "id": "rare",
     "name": "Rare",
-    "color": "#ffa63d",
     "start_level": 3,
     "conservation": "Near Threatened or Vulnerable"
   },
   {
     "id": "epic",
     "name": "Epic",
-    "color": "#c36bff",
     "start_level": 6,
     "conservation": "Endangered"
   },
   {
     "id": "legendary",
     "name": "Legendary",
-    "color": "#41f0d8",
     "start_level": 9,
     "conservation": "Critically Endangered"
   },
   {
     "id": "mythic",
     "name": "Mythic",
-    "color": "#ff5fa8",
     "start_level": 11,
     "conservation": "Mythical creature",
     "frame": {
-      "_note": "The animated Mythic card frame: a pulsing glow, the rim's color drifting through a soft rainbow, a spark of light running round the rim and a few twinkling sparkles. Seconds are per cycle; strengths 0-1.",
+      "_note": "The animated Mythic card frame: a pulsing glow, the rim's color drifting through a bold rainbow (rainbow_saturation: how saturated its colors are), a spark of light running round the rim and a few twinkling sparkles. Seconds are per cycle; strengths 0-1.",
       "glow": 0.55,
       "glow_size": 10,
       "pulse_seconds": 2.4,
       "rainbow": 0.35,
+      "rainbow_saturation": 0.85,
       "rainbow_seconds": 9.0,
       "spark_seconds": 3.2,
       "spark_size": 0.05,

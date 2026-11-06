@@ -29,7 +29,7 @@ static func confirm(question: String, yes_text: String, on_yes: Callable, yes_co
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	content.add_child(row)
 	var modal := open(content, "", 560.0)
-	var cancel := UIKit.button("Cancel", UIKit.GREY, 26, Vector2(200, 76))
+	var cancel := UIKit.button("Cancel", UIKit.BLUE, 26, Vector2(200, 76))
 	cancel.pressed.connect(modal.close)
 	row.add_child(cancel)
 	var yes := UIKit.button(yes_text, yes_color, 26, Vector2(220, 76))

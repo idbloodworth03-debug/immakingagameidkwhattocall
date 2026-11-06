@@ -1,5 +1,5 @@
 {
-  "_note": "Sorting animals (scripts/ui/animal_sort.gd, sort_bar.gd): the four ways, each screen's first choice, the group names and the bar's sizes. A player's last choice on each screen is saved in their profile (\"sort\").",
+  "_note": "Sorting animals (scripts/ui/animal_sort.gd, sort_bar.gd): the four ways, each screen's first choice, the group names and the bar's sizes (the groups' colors are in ui_style.json, sort_*). A player's last choice on each screen is saved in their profile (\"sort\").",
   "options": [
     {"id": "level", "label": "Level", "highest_first": true},
     {"id": "rarity", "label": "Rarity", "highest_first": true},
@@ -10,10 +10,9 @@
   "screens": {"deck": "class", "bans": "class", "animals": "rarity", "starters": "class", "army": "class"},
   "level_label": "Level %d",
   "level_short": "Lv %d",
-  "level_color": "#47a9ec",
-  "legends": {"label": "Legends", "short": "Legend", "icon": "sparkles", "color": "#ff5fa8"},
-  "not_owned": {"label": "Not found yet", "short": "New", "icon": "locked", "color": "#7d8799"},
-  "tools": {"label": "Ranger tools", "short": "Tools", "icon": "toolbox", "color": "#a465de"},
+  "legends": {"label": "Legends", "short": "Legend", "icon": "sparkles"},
+  "not_owned": {"label": "Not found yet", "short": "New", "icon": "locked"},
+  "tools": {"label": "Ranger tools", "short": "Tools", "icon": "toolbox"},
   "rarity_icon": "star",
   "_bar": "The full bar (Your Deck, bans, Animals tab) and the compact one inside a match: button height, text size, the gap between buttons and the arrow on the chosen one.",
   "bar": {"height": 72, "text": "body", "gap": 8, "arrow": 22},

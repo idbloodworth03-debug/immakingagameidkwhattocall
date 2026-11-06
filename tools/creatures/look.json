@@ -83,10 +83,12 @@
     },
     "_models_note": "The 3D viewer's models (art/models/*.glb): no tangents (no normal maps), no LODs or shadow meshes (one animal, close up, no real lights), no light baking. Less to download and to keep in memory.",
     "crowd": {
-      "mode": "lossless",
+      "mode": "lossy",
+      "quality": 0.9,
       "mipmaps": true
     },
-    "_arenas_note": "Arena pictures are rendered lossless and compressed once here (lossy WebP). An older picture saved lossy is kept lossless instead, so it isn't compressed twice (set_import.py checks)."
+    "_arenas_note": "Arena pictures are rendered lossless and compressed once here (lossy WebP). An older picture saved lossy is kept lossless instead, so it isn't compressed twice (set_import.py checks).",
+    "_crowd_note": "The arenas' crowd strips (crowd.py): small spectators far behind the fence, so one lossy pass is plenty (a quarter of the download)."
   },
   "model": {
     "_note": "The real-3D models for the animal viewer (export_gltf.py): about `triangles` triangles for the body, animations sampled at keys_per_second, and which animations (the viewer idles and plays the others when tapped). battle: the fights' lighter models (game/art/models/battle/): about `triangles` for the body, each eye, ear or claw cut to piece_triangles, every animation a fight plays, and models.json with each one's size in field tiles.",

@@ -234,7 +234,7 @@ class Body:
 			queue_redraw()
 
 	func _draw() -> void:
-		if frame.is_empty():
+		if frame.is_empty() or frame.get("texture") == null:
 			return
 		var region: Rect2 = frame.region
 		var anchor: Vector2 = frame.anchor * k

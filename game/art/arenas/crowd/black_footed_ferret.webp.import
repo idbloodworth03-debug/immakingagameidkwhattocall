@@ -15,9 +15,9 @@ dest_files=["res://.godot/imported/black_footed_ferret.webp-07958d97e91925467bb4
 
 [params]
 
-compress/mode=0
+compress/mode=1
 compress/high_quality=false
-compress/lossy_quality=0.7
+compress/lossy_quality=0.9
 compress/uastc_level=2
 compress/rdo_quality_loss=0.0
 compress/hdr_compression=1

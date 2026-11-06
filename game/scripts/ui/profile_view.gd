@@ -198,6 +198,9 @@ func _dev_tools() -> Control:
 			ArmyTest.use_models = true
 			Transition.go("res://scenes/army_test.tscn")],
 		["Big army test (sprites)", func() -> void:
+			if not UnitSprites.has_pictures("red_fox"):
+				UIKit.toast("The sprites aren't in this build")
+				return
 			ArmyTest.use_models = false
 			Transition.go("res://scenes/army_test.tscn")],
 		["Attack styles", func() -> void: Transition.go("res://scenes/style_showcase.tscn")],

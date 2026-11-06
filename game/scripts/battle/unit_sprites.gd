@@ -64,6 +64,13 @@ static func has(id: String) -> bool:
 	return not _sheet(id).is_empty()
 
 
+## True if its sheet's pictures are in this build (the web build leaves
+## them out: the animals are 3D models there, and the sheets' data is
+## enough).
+static func has_pictures(id: String) -> bool:
+	return ResourceLoader.exists(ROOT + id + "/sheet.webp")
+
+
 static func portrait(id: String) -> Texture2D:
 	if not _portraits.has(id):
 		var path := ROOT + id + "/portrait.webp"
@@ -193,9 +200,10 @@ static func _sheet(id: String) -> Dictionary:
 	if _sheets.has(id):
 		return _sheets[id]
 	var sheet := {}
+	# The data alone: the pictures may not be in this build (the web build
+	# shows 3D models, has_pictures).
 	var json_path := ROOT + id + "/sheet.json"
-	var texture_path := ROOT + id + "/sheet.webp"
-	if FileAccess.file_exists(json_path) and ResourceLoader.exists(texture_path):
+	if FileAccess.file_exists(json_path):
 		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(json_path))
 		if parsed is Dictionary:
 			sheet = parsed

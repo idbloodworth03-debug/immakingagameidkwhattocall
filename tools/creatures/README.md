@@ -38,7 +38,9 @@ mane grows with its face).
    game's knockouts are a cartoon poof.
 5. **Render** (`sprites.py`): the card portraits and the sprite sheets (the
    game shows its animals as 3D models now, from step 8; the sheets are its
-   fallback, its timing data and the source of the crowd strips). Cycles
+   fallback, its timing data and the source of the crowd strips; the web
+   build leaves the sheets' pictures out, which keeps its download a third
+   the size). Cycles
    with Freestyle outlines (one deep,
    crisp line; the game's shader no longer adds a second), an orthographic
    camera at the game's 50-degree angle, five directions (the game mirrors

@@ -109,6 +109,42 @@ func test_a_stunned_animal_looks_dizzy() -> void:
 		break
 
 
+## A little fight of these animals ([team, id]), one each, under their
+## uids (as the attack-style showcase has them).
+func _little_fight(specs: Array, seed_value: int) -> BattleSim:
+	var sim := BattleSim.new([{}, {}], seed_value)
+	sim.army = BattleArmy.new(sim.rules, sim.tps)
+	var y := 9000
+	for spec in specs:
+		var f: BattleSim.Fighter = sim.spawn_units(int(spec[0]), String(spec[1]), 1, 8000, y)[0]
+		f.deploy_ticks = 0
+		y += 1500
+	return sim
+
+
+func test_a_new_fight_gets_its_own_models() -> void:
+	# A new fight's animals come under the same keys (its uids start over):
+	# each must get its own model, not the one that stood there last.
+	var field := BattleField.new()
+	field.use_models = true
+	field.size = Vector2(720, 1300)
+	_made.append(field)
+	_host().add_child(field)
+	var stage := field._stage
+	for specs in [[[0, "wild_boar"], [1, "wild_boar"], [1, "gray_squirrel"]], [[0, "red_fox"], [1, "brown_bear"], [1, "raccoon"]]]:
+		field.sim = _little_fight(specs, 9)
+		field.snap_camera()
+		field._sync_views(0.0)
+		stage.sync(field._views, field.now())
+	var checked := 0
+	for key in field._views:
+		var v: UnitView = field._views[key]
+		if v.modeled:
+			check_eq(stage._models[key].id, v.id, "the %s is drawn as itself" % v.id)
+			checked += 1
+	check(checked >= 3, "checked every animal (%d)" % checked)
+
+
 func test_the_arena_preview_shows_models() -> void:
 	var preview := ArenaPreview.new()
 	preview.animate = true

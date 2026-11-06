@@ -149,6 +149,12 @@ func sync(views: Dictionary, now: float) -> void:
 		if not v.modeled:
 			continue
 		var m: Model = _models.get(key)
+		if m != null and m.id != v.id:
+			# Another animal under the same key now (a new fight's): its own
+			# model, and the old one back in the pool.
+			_retire(m)
+			_models.erase(key)
+			m = null
 		if m == null:
 			m = _make_model(v)
 			if m == null:
@@ -159,10 +165,15 @@ func sync(views: Dictionary, now: float) -> void:
 		_pose(m, v, now, ppu, right, up, forward)
 	for key in _models.keys():
 		if not seen.has(key):
-			var gone: Model = _models[key]
-			gone.pivot.visible = false
-			(_pool.get_or_add(gone.id, []) as Array).append(gone)
+			_retire(_models[key])
 			_models.erase(key)
+
+
+## A model no animal needs any more: hidden, and kept for the next of its
+## kind.
+func _retire(m: Model) -> void:
+	m.pivot.visible = false
+	(_pool.get_or_add(m.id, []) as Array).append(m)
 
 
 func _make_model(v: UnitView) -> Model:

@@ -55,22 +55,28 @@ func test_the_formation() -> void:
 	check(by_rank.td.map(func(f): return f.y).max() < by_rank.ranged.map(func(f): return f.y).min(), "Ranged at the back")
 	# The wall: one line, shoulder to shoulder, the Mythic hero in the middle.
 	var walls: Array = by_rank.wall.filter(func(f): return not f.memory.flank)
-	check(walls.all(func(f): return f.y == walls[0].y), "the wall is one straight line")
+	check(by_rank.wall.all(func(f): return f.y == walls[0].y), "the wall is one straight line")
 	var middle_x := m.sim.width / 2
 	var yeti: BattleSim.Fighter = walls.filter(func(f): return f.card.id == "yeti")[0]
 	check(absi(yeti.x - middle_x) < T, "the hero stands in the middle")
-	# Specialists on the flanks: past both ends of their rank's line.
-	var fox: BattleSim.Fighter = m.sim.units(0).filter(func(f): return f.card.id == "red_fox")[0]
-	var xs: Array = walls.map(func(f): return f.x)
-	check(fox.x > xs.max() or fox.x < xs.min(), "the Red Fox (Burrow) on the wall's flank")
-	var eel: BattleSim.Fighter = m.sim.units(0).filter(func(f): return f.card.id == "electric_eel")[0]
-	var td_xs: Array = by_rank.td.filter(func(f): return not f.memory.flank).map(func(f): return f.x)
-	check(eel.x > td_xs.max() or eel.x < td_xs.min(), "the Electric Eel (Stun) on the Tank Destroyers' flank")
-	# The ranged lines are even: the same gap between neighbours.
-	var ranged: Array = by_rank.ranged.filter(func(f): return f.y == by_rank.ranged[0].y)
-	ranged.sort_custom(func(a, b): return a.x < b.x)
-	for i in range(1, ranged.size() - 1):
-		check_eq(ranged[i + 1].x - ranged[i].x, ranged[1].x - ranged[0].x, "evenly spaced")
+	# Three or more squads of a rank: spread over the three lanes.
+	var wall_lanes := {}
+	for f in by_rank.wall:
+		wall_lanes[int(f.memory.lane)] = true
+	check_eq(wall_lanes.size(), 3, "the wall's squads spread over all three lanes")
+	for f in m.sim.units(0):
+		check_eq(BattleArmy.lane_at(m.sim, f.x), int(f.memory.lane), "%s stands in its own lane" % f.card.id)
+	# Specialists on the flanks: an outer end of their lane's line.
+	for spec in [["red_fox", "wall"], ["electric_eel", "td"]]:
+		var s: BattleSim.Fighter = m.sim.units(0).filter(func(f): return f.card.id == spec[0])[0]
+		var xs: Array = by_rank[spec[1]].filter(func(f): return f != s and int(f.memory.lane) == int(s.memory.lane) and f.y == s.y).map(func(f): return f.x)
+		check(xs.is_empty() or s.x > xs.max() or s.x < xs.min(), "the %s at an end of its lane's line" % spec[0])
+	# The ranged lines are even in each lane: the same gap between neighbours.
+	for lane in [-1, 0, 1]:
+		var ranged: Array = by_rank.ranged.filter(func(f): return f.y == by_rank.ranged[0].y and int(f.memory.lane) == lane)
+		ranged.sort_custom(func(a, b): return a.x < b.x)
+		for i in range(1, ranged.size() - 1):
+			check_eq(ranged[i + 1].x - ranged[i].x, ranged[1].x - ranged[0].x, "evenly spaced")
 
 
 func test_marching_in_step() -> void:
@@ -131,23 +137,30 @@ func test_the_front_holds_while_it_fights() -> void:
 
 
 func test_ranks_close_up() -> void:
-	var m := _armies(["brown_bear*3"], ["brown_bear"])
+	# Six bears: two in each lane. One falls; the other in its lane closes
+	# up into the middle of the lane, and nobody changes lanes.
+	var m := _armies(["brown_bear*6"], ["brown_bear"])
 	var army: BattleArmy = m.sim.army
-	var bears := m.sim.units(0)
-	bears.sort_custom(func(a, b): return a.x < b.x)
-	var left: BattleSim.Fighter = bears[0]
+	var lane_w := m.sim.width / 3
+	var bears := m.sim.units(0).filter(func(f): return int(f.memory.lane) == -1)
+	check_eq(bears.size(), 2, "two bears in the left lane")
+	var lanes_before := {}
+	for f in m.sim.units(0):
+		lanes_before[f.uid] = int(f.memory.lane)
 	m.step()
-	m.sim.deal_damage(left, left.hp + 1, null)
+	m.sim.deal_damage(bears[0], bears[0].hp + 1, null)
 	for i in army.repack_ticks + 1:
 		m.step()
-	var slots: Array = m.sim.units(0).map(func(f): return f.memory.slot.x)
-	slots.sort()
-	check_eq(slots.size(), 2, "two left")
-	check_eq(slots[0] + slots[1], 0, "the wall closes up around the middle")
+	check_eq(m.sim.units(0).size(), 5, "five left")
+	check_eq(int(bears[1].memory.slot.x), -lane_w, "the other closes up into the middle of its lane")
+	for f in m.sim.units(0):
+		check_eq(int(f.memory.lane), int(lanes_before[f.uid]), "everyone keeps its lane")
 
 
 func test_tank_destroyers_charge_the_tanks() -> void:
-	var m := _armies(["brown_bear*2", "lion*2"], ["brown_bear*2", "wild_boar"])
+	# A Tank in every lane: each lane's Tank Destroyers charge the Tank in
+	# their lane (battle_rules.json "lanes").
+	var m := _armies(["brown_bear*3", "lion*3"], ["brown_bear*3", "wild_boar"])
 	var army: BattleArmy = m.sim.army
 	while m.phase == "fight" and not army.charged[0]:
 		m.step()

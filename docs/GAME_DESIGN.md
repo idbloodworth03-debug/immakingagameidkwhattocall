@@ -84,7 +84,8 @@ slow the target 50% for 2.5 seconds). Specialists are elites: one animal,
 stronger than a squad's, with these stronger traits.
 
 **Fight** (`scripts/battle/battle_army.gd`, numbers in `battle_rules.json`
-"army"). The armies fight on their own, as armies:
+"army"). The armies line up in three lanes (below) and fight on their own,
+as armies:
 1. **Lineup:** both armies stand in formation a moment, then FIGHT!
 2. **March:** each army moves up as one, at one pace, every animal in its
    place and the whole army in step (with dust and a stomp on every step).
@@ -93,8 +94,8 @@ stronger than a squad's, with these stronger traits.
 4. **Clash:** the walls meet with a big thump and a ring of dust. The front
    holds while it fights; the lines never pass through each other.
 5. **Charge:** a moment later the Tank Destroyers leave their line and go
-   around the end of their own wall for the enemy Tanks (back to their line
-   once there are none left).
+   around the end of their own wall for the enemy Tanks in their lane (back
+   to their line once there are none left).
 6. **All-out war:** from the clash on, nobody keeps its place or waits for
    a fight to come to it. Every animal goes for an enemy anywhere on the
    field. Fighters take a slot round one (below); they walk around
@@ -114,6 +115,23 @@ army against many) does it wait just outside reach for a slot to come
 free. Shooters take no slot. **Personal space** (`spacing`): animals never
 overlap, and within a little room of each other they're nudged gently
 apart. Defeated animals poof away quickly (`feel.json`).
+
+**Lanes and the battle line** (`lanes` in `battle_rules.json`). The field
+is three lanes: left, middle and right. Each rank's squads are spread over
+them, the middle one first, so an army with one squad of a class stays a
+single column in the middle, and a big army lines up in three columns, each
+with its own Tanks in front, Tank Destroyers, Air and Ranged behind. A
+squad keeps its lane all fight. Fighters go for an enemy in their own lane
+and only move into the next lane when theirs has nobody they can take on;
+shooters mostly shoot in their lane. A Tank Destroyer's charge goes for the
+Tanks in its lane. In each lane the **battle line** sits halfway between
+the two sides' front animals on the ground and moves at most 1.5 tiles a
+second, so it pushes back and forth as one side wins ground: fighters don't
+go after enemies more than 1.5 tiles past it (only when there's nobody
+else), and Ranged stay 1.2 tiles behind it. **Flankers** roam free of the
+lanes and the line: the Tiger, Red Fox, Barn Owl, Harbor Seal and Sunda
+Pangolin (the list is in the data). Air flies over the line but keeps to
+its lane.
 
 **The King Cobra** stands at the very back of its army's Ranged: an animal
 whose reach is at least 8 tiles (`back_reach` in `classes.json`

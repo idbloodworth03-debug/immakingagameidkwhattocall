@@ -22,7 +22,9 @@ extends Node
 ## enemy at once (in reach of it), the worst moment and on average over the
 ## ticks with a fight; spread how the fighting (melee pairs in reach, and
 ## shots) is shared across the field's three lanes, left, center and right,
-## with an evenness score (1 = perfectly even, 0 = all in one lane). Target
+## with an evenness score (1 = perfectly even, 0 = all in one lane); how
+## much of the fighting is in each animal's own lane, and how often Ranged
+## stand in front of their battle line (battle_rules.json "lanes"). Target
 ## switches (the targeting rules, scripts/battle/targeting.gd): per animal
 ## per minute, in each third of the fights (steady or bunched?), why (its
 ## target fell, slipped away, was out of reach, had no way in to it, a
@@ -147,7 +149,7 @@ func _reset_stats() -> void:
 		"volley_first": 0, "charge_after_clash": 0,
 		"war_ticks": 0, "idle_ticks": 0, "fighting_ticks": 0, "idle_no_target": 0,
 		"war_by_class": {}, "idle_by_class": {}, "idle_why": {}, "idle_waiting": 0,
-		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0,
+		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0, "ranged_ticks": 0, "ranged_past": 0, "lane_checks": 0, "own_lane": 0,
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 	}
@@ -265,12 +267,25 @@ func _watch_crowding() -> void:
 			if dx * dx + dy * dy < need * need:
 				stats.overlap_units += 1
 				break
+		var lined: bool = sim.army != null and sim.army.has_method("lane_steps") and sim.army.at_war()
+		if lined and f.cls == "ranged" and not sim.army.crosses(f) and f.memory.has("slot"):
+			# Ranged in front of their lane's battle line.
+			var y := int(sim.army.line[clampi(f.x * 3 / maxi(1, sim.width), 0, 2)])
+			stats.ranged_ticks += 1
+			if y >= 0 and (y - f.y if f.team == 0 else f.y - y) > 0:
+				stats.ranged_past += 1
 		var t: BattleSim.Fighter = f.target
 		if t == null or not t.alive or not sim.in_range(f, t):
 			continue
 		var lane := clampi(int(float(t.x) / lane_w), 0, 2)
 		stats.lane_fights[lane] += 1
-		if f.attack_range < 1500:
+		if lined and f.memory.has("slot") and not sim.army.roams(f):
+			stats.lane_checks += 1
+			if sim.army.lane_steps(sim, f, t) == 0:
+				stats.own_lane += 1
+		# An attacker: a fighter allowed to strike it (one waiting for a slot
+		# isn't, even standing close).
+		if f.attack_range < 1500 and (sim.army == null or not sim.army.has_method("has_slot") or sim.army.has_slot(f, t)):
 			if not on.has(t):
 				on[t] = 0
 			on[t] += 1
@@ -282,6 +297,14 @@ func _watch_crowding() -> void:
 			over = over or int(on[t]) > _slots_of(t)
 		if over:
 			stats.pile_over += 1
+			if OS.get_environment("PILE_LOG") != "":
+				for t in on:
+					if int(on[t]) > _slots_of(t):
+						var who := []
+						for f in units:
+							if f.target == t and f.attack_range < 1500 and sim.in_range(f, t):
+								who.append("%s slot=%s on=%s k=%s why=%s" % [f.card.id, sim.army.has_slot(f, t), f.memory.get("engage_on", -1) == t.uid, f.memory.get("engage_k", "-"), f.memory.get("locked_why", "-")])
+						print("PILE t=%d on %s(%s): %s" % [sim.tick, t.card.id, t.cls, " | ".join(who)])
 		stats.pile_max = maxi(stats.pile_max, most)
 		stats.pile_sum += most
 		stats.pile_ticks += 1
@@ -678,6 +701,7 @@ func _report() -> void:
 		"  overlap               %.1f%% of animals overlap another one" % [100.0 * stats.overlap_units / maxf(1, stats.unit_ticks)],
 		"  pile-ups              at most %d melee attackers on one enemy at once; %.1f on average (the busiest enemy, each tick with a fight); %.1f%% of those ticks have an enemy with more in reach than its slots" % [stats.pile_max, float(stats.pile_sum) / maxf(1, stats.pile_ticks), 100.0 * stats.pile_over / maxf(1, stats.pile_ticks)],
 		"  spread                left %.0f%% / center %.0f%% / right %.0f%% of the fighting; evenness %.2f" % [100.0 * lanes[0] / lane_total, 100.0 * lanes[1] / lane_total, 100.0 * lanes[2] / lane_total, entropy / log(3.0)],
+		"  lanes and the line    %.0f%% of the fighting (flankers aside) in an animal's own lane; Ranged in front of their battle line %.1f%% of the time" % [100.0 * stats.own_lane / maxf(1, stats.lane_checks), 100.0 * stats.ranged_past / maxf(1, stats.ranged_ticks)],
 	])
 	lines.append_array([
 		"Army checks",

@@ -111,6 +111,9 @@ func test_attackers_stand_apart_round_their_target() -> void:
 	var m := _armies(["lion*2"], ["brown_bear"], 3)
 	var sim := m.sim
 	var army: BattleArmy = sim.army
+	for f in sim.units(1):
+		f.hp = 1000000
+		f.max_hp = 1000000
 	var seen := false
 	for i in 25 * sim.tps:
 		if m.phase != "fight":

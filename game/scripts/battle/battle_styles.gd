@@ -1108,11 +1108,11 @@ static func _venom(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -
 	t.poison = maxi(t.poison, ticks(sim, f.sp("seconds", 4.0)))
 	t.poison_dps = maxi(t.poison_dps, f.damage * int(f.sp("dps_pct", 35)) / 100)
 	sim.events.append({"type": "venom", "uid": f.uid, "to": t.uid, "x": t.x, "y": t.y})
-	# Only once it has kept this one for the commit time (targeting.gd);
-	# until then the targeting rules move it on when the time's up.
+	# Hopping on is its whole ability, so it needn't wait out the commit
+	# time (targeting.gd).
 	var next := prefer_target(sim, f)
-	if next != null and next != t and sim.targeting.settled(sim, f):
-		Targeting.lock(sim, f, next, "ability")
+	if next != null and next != t:
+		Targeting.lock(sim, f, next, "hop")
 		f.target = next
 
 

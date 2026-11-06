@@ -97,13 +97,28 @@ stronger than a squad's, with these stronger traits.
    once there are none left).
 6. **All-out war:** from the clash on, nobody keeps its place or waits for
    a fight to come to it. Every animal goes for an enemy anywhere on the
-   field. Fighters take an open spot around one, the less crowded enemies
-   first, so the whole enemy line is fought along, not just its middle;
-   they walk around teammates and other enemies in the way, round the end
-   of a line if they must. Shooters close in until they're in reach and
-   shoot over everyone (nothing blocks a shot). A burrower whose army is
-   gone comes up at once.
+   field. Fighters take a slot round one (below); they walk around
+   teammates and other enemies in the way, round the end of a line if they
+   must. Shooters close in until they're in reach and shoot over everyone
+   (nothing blocks a shot). A burrower whose army is gone comes up at once.
 7. **Collapse:** when animals fall, the ones behind step up into the gaps.
+
+**Engagement slots** (`engagement` in `battle_rules.json`): only so many
+fighters (anything that isn't a shooter) attack one enemy at once: 2, or 3
+for a Tank (it's bigger). Each takes one of the enemy's slots, evenly
+spaced round it on its own side, and stands there, never on top of
+another. If its closest enemy has no free slot, it takes the next closest
+that has one, so the fight spreads into clear matchups instead of one
+pile. Only when every enemy it could fight is full (the last few of an
+army against many) does it wait just outside reach for a slot to come
+free. Shooters take no slot. **Personal space** (`spacing`): animals never
+overlap, and within a little room of each other they're nudged gently
+apart. Defeated animals poof away quickly (`feel.json`).
+
+**The King Cobra** stands at the very back of its army's Ranged: an animal
+whose reach is at least 8 tiles (`back_reach` in `classes.json`
+"formation") gets a line of its own behind every other Ranged, so its
+range shows.
 
 You can blow the **War Horn** once (one tap: the whole army surges, biting
 harder, attacking faster and moving faster for a few seconds, with a horn
@@ -487,8 +502,11 @@ check (`crowd` in `feel.json`). From 24 animals on the field:
   falls), and it looks around twice a second (animals take turns), not
   every frame. An animal already hitting its target keeps on with it; only
   a threat up close turns it. The King Cobra has no back-rank rule of its
-  own: its long reach (10 tiles) lets it hit the back ranks from the
-  closest-target rule.
+  own: it's a long-range sniper on the closest-target rule (10 tiles of
+  reach, from the very back of its ranks), unlike the Raccoon. The Komodo
+  Dragon's venom hop is free of the commit time (hopping on is its whole
+  ability). A fighter only turns on a threat, or a closer enemy, with a
+  free engagement slot.
 - Only Ranged and Air can hit Air.
 - Melee range is 0.7 tiles. Speeds: Slow 0.75, Medium 1, Fast 1.5 and Very fast 2 tiles per second.
 
@@ -535,7 +553,7 @@ in a little fight (with a Slow button).
     slash); its first strike on each enemy does 1.8 times.
   - **Komodo Dragon**, "Venom bite keeps hurting; moves to the next.": its
     bite poisons for 4 s (the victim goes green); then it's off to an enemy
-    not poisoned yet.
+    not poisoned yet, straight away (no commit time for its hops).
   - **Cerberus**, "Three heads, three bites every attack.": three quick fiery
     bites (42% each), spread over the enemies in reach.
 - Ranged (every Ranged animal is a little tougher than before, 35% of its

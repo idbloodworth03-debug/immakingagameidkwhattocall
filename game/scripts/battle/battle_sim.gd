@@ -125,6 +125,10 @@ var melee := 0
 ## Who each animal fights and when it may switch (battle_rules.json
 ## "targeting").
 var targeting: Targeting
+## Personal space (battle_rules.json "spacing"): how close (edge to edge)
+## animals may stand before being nudged apart, and how hard.
+var personal_space := 0
+var space_push_pct := 25
 ## The field's size this fight, and the line between the two halves.
 var width := WIDTH
 var height := HEIGHT
@@ -145,6 +149,9 @@ func _init(levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> voi
 	deploy_ticks = roundi(float(rules.deploy_seconds) * tps)
 	melee = roundi(float(rules.melee_range) * TILE)
 	targeting = Targeting.new(rules, tps)
+	var spacing: Dictionary = rules.get("spacing", {})
+	personal_space = roundi(float(spacing.get("personal_space", 0.0)) * TILE)
+	space_push_pct = int(spacing.get("push_pct", 25))
 	for team_index in 2:
 		var team := Team.new()
 		team.levels = levels[team_index]
@@ -482,8 +489,11 @@ func _separate() -> void:
 		f.y = clampi(f.y, f.radius, height - f.radius)
 
 
+## Two animals too close: an overlap is pushed apart at once, and within
+## personal space they're nudged apart gently (push_pct of the gap a tick).
 func _push_apart(a: Fighter, b: Fighter) -> void:
-	var min_d := a.radius + b.radius
+	var body := a.radius + b.radius
+	var min_d := body + personal_space
 	var dx := b.x - a.x
 	var dy := b.y - a.y
 	if absi(dx) >= min_d or absi(dy) >= min_d:
@@ -495,7 +505,12 @@ func _push_apart(a: Fighter, b: Fighter) -> void:
 		dx = 1 if (a.uid + b.uid) % 2 == 0 else -1
 		dy = 0
 		d = 1
-	var push := (min_d - d) / 2 + 1
+	var push := 0
+	if d < body:
+		push = (body - d) / 2 + 1
+	push += (min_d - maxi(d, body)) * space_push_pct / 200
+	if push <= 0:
+		return
 	a.x -= dx * push / d
 	a.y -= dy * push / d
 	b.x += dx * push / d

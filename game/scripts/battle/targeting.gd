@@ -49,10 +49,12 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 ## target is still good (it can attack it and reach it), `find` picks a
 ## fresh one (Callable() -> Fighter: the closest it can attack, or what its
 ## ability or class prefers), and `preferred` says whether a target is one
-## of those it prefers (Callable(Fighter) -> bool). Returns the target to
+## of those it prefers (Callable(Fighter) -> bool), and `room` whether it
+## may take on a given enemy (Callable(Fighter) -> bool: a fighter needs a
+## free engagement slot, BattleArmy; none: always). Returns the target to
 ## have (maybe its current one); a switch is stamped (lock()), and a threat
 ## response raises an "alert".
-func decide(sim: BattleSim, f: BattleSim.Fighter, current_ok: bool, find: Callable, preferred: Callable) -> BattleSim.Fighter:
+func decide(sim: BattleSim, f: BattleSim.Fighter, current_ok: bool, find: Callable, preferred: Callable, room := Callable()) -> BattleSim.Fighter:
 	var t := f.target
 	# 1. Its target fell or can't be had: a new one at once.
 	if t == null or not current_ok:
@@ -68,7 +70,7 @@ func decide(sim: BattleSim, f: BattleSim.Fighter, current_ok: bool, find: Callab
 	if uid >= 0 and uid != t.uid and calm and sim.tick - int(f.memory.get("threat_at", sim.tick)) >= reaction_ticks \
 			and BattleSim.edge_distance(f, t) > threat_reach:
 		var threat := _threat(sim, f)
-		if threat != null and sim.can_target(f, threat):
+		if threat != null and sim.can_target(f, threat) and (not room.is_valid() or room.call(threat)):
 			lock(sim, f, threat, "threat")
 			sim.events.append({"type": "alert", "uid": f.uid, "to": threat.uid, "x": f.x, "y": f.y})
 			return threat
@@ -81,7 +83,7 @@ func decide(sim: BattleSim, f: BattleSim.Fighter, current_ok: bool, find: Callab
 	var found: BattleSim.Fighter = find.call()
 	if found == null or found == t:
 		return t
-	if better(f, found, t, preferred):
+	if better(f, found, t, preferred) and (not room.is_valid() or room.call(found)):
 		lock(sim, f, found, "ability" if preferred.call(found) else "closer")
 		return found
 	return t
@@ -110,8 +112,9 @@ func settled(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 
 ## `f` takes `t` as its target now: the commit time starts. `why`: "lost"
 ## (its old one fell or can't be had), "no_room" (no way in to it),
-## "threat", "closer" or "ability" (one its ability or class prefers), for
-## the record (tests, reports).
+## "threat", "closer", "ability" (one its ability or class prefers) or
+## "hop" (an ability whose whole point is moving on: the Komodo Dragon's
+## venom, free of the commit time), for the record (tests, reports).
 static func lock(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, why := "lost") -> void:
 	if t != f.target:
 		f.memory.locked = sim.tick

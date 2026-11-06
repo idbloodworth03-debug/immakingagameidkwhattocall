@@ -9,6 +9,20 @@
     "threat_tiles": 1.2,
     "threat_forget_seconds": 2.0
   },
+  "engagement": {
+    "_note": "Engagement slots (scripts/battle/battle_army.gd): only so many fighters (reach under army.war.shooter_reach) may attack one enemy at once: `slots`, or its class's in slots_by_class (a Tank is bigger). Each takes one of the enemy's slots, evenly spaced slot_degrees apart round it on its own side, and stands there. An enemy with no free slot is passed over for the next closest with one; only when every enemy is full does a fighter wait wait_gap tiles outside its reach for a slot to come free. Shooters take no slot.",
+    "slots": 2,
+    "slots_by_class": {
+      "tank": 3
+    },
+    "slot_degrees": 50,
+    "wait_gap": 0.6
+  },
+  "spacing": {
+    "_note": "Personal space (scripts/battle/battle_sim.gd): animals at the same height never overlap (an overlap is pushed apart at once), and within personal_space tiles of each other (edge to edge) they're nudged apart by push_pct of the gap each tick, gently, so nobody stacks up.",
+    "personal_space": 0.12,
+    "push_pct": 25
+  },
   "ticks_per_second": 20,
   "deploy_seconds": 1.0,
   "melee_range": 0.7,
@@ -35,12 +49,10 @@
     "contact_gap": 1.6,
     "damage_pct": 200,
     "war": {
-      "_note": "All-out war (battle_army.gd): from the clash, or once a front has been held up by a fight for after_hold_seconds, nobody keeps its place or waits. Every animal goes for an enemy anywhere on the field. A fighter (reach under shooter_reach tiles) takes an open spot next to its target, checked every spot_seconds; each teammate already on that enemy makes it count crowd_cost tiles further away, and full_cost more once there's no room left around it, so attackers spread along the whole enemy line. Walking there, it looks look_ahead tiles ahead and passes anyone in its way (teammates, and enemies it isn't after) with pass_margin tiles to spare, on round the same side to the end of a line; once it steps aside, it keeps on to the spot beside them for up to detour_seconds (rather than turning straight back into them). Shooters close in until they're in reach; nothing blocks their shots.",
+      "_note": "All-out war (battle_army.gd): from the clash, or once a front has been held up by a fight for after_hold_seconds, nobody keeps its place or waits. Every animal goes for an enemy anywhere on the field. A fighter (reach under shooter_reach tiles) takes a slot round its target (engagement, above) and heads for the open spot nearest it, checked every spot_seconds. Walking there, it looks look_ahead tiles ahead and passes anyone in its way (teammates, and enemies it isn't after) with pass_margin tiles to spare, on round the same side to the end of a line; once it steps aside, it keeps on to the spot beside them for up to detour_seconds (rather than turning straight back into them). Shooters close in until they're in reach; nothing blocks their shots.",
       "after_hold_seconds": 1.0,
       "shooter_reach": 1.5,
       "spot_seconds": 0.15,
-      "crowd_cost": 0.6,
-      "full_cost": 6.0,
       "look_ahead": 1.2,
       "pass_margin": 0.15,
       "detour_seconds": 0.4

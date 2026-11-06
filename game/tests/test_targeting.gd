@@ -255,7 +255,7 @@ func test_the_same_rules_in_an_army_fight() -> void:
 			if last.has(f.uid) and last[f.uid] != f.target:
 				var why := String(f.memory.get("locked_why", "lost"))
 				whys[why] = int(whys.get(why, 0)) + 1
-				if why != "lost":
+				if why != "lost" and why != "no_room" and why != "hop":
 					chosen += 1
 					if int(f.memory.get("locked", sim.tick)) - int(since.get(f.uid, -100000)) < commit:
 						early += 1

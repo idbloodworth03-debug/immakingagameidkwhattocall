@@ -146,8 +146,8 @@ func _reset_stats() -> void:
 		"first_volley": 0.0, "clash": 0.0, "charge": 0.0, "with_volley": 0, "with_clash": 0, "with_charge": 0,
 		"volley_first": 0, "charge_after_clash": 0,
 		"war_ticks": 0, "idle_ticks": 0, "fighting_ticks": 0, "idle_no_target": 0,
-		"war_by_class": {}, "idle_by_class": {}, "idle_why": {},
-		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0,
+		"war_by_class": {}, "idle_by_class": {}, "idle_why": {}, "idle_waiting": 0,
+		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0,
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 	}
@@ -271,14 +271,27 @@ func _watch_crowding() -> void:
 		var lane := clampi(int(float(t.x) / lane_w), 0, 2)
 		stats.lane_fights[lane] += 1
 		if f.attack_range < 1500:
-			on[t.uid] = int(on.get(t.uid, 0)) + 1
+			if not on.has(t):
+				on[t] = 0
+			on[t] += 1
 	if not on.is_empty():
 		var most := 0
-		for k in on:
-			most = maxi(most, int(on[k]))
+		var over := false
+		for t in on:
+			most = maxi(most, int(on[t]))
+			over = over or int(on[t]) > _slots_of(t)
+		if over:
+			stats.pile_over += 1
 		stats.pile_max = maxi(stats.pile_max, most)
 		stats.pile_sum += most
 		stats.pile_ticks += 1
+
+
+## How many fighters may attack `t` at once (battle_rules.json
+## "engagement"; read here so older fights can be measured the same way).
+func _slots_of(t: BattleSim.Fighter) -> int:
+	var e: Dictionary = GameData.battle_rules.get("engagement", {"slots": 2, "slots_by_class": {"tank": 3}})
+	return int(e.get("slots_by_class", {}).get(t.cls, e.get("slots", 2)))
 
 
 ## The idle check, every tick: is each animal fighting, on its way
@@ -317,12 +330,20 @@ func _watch_idle() -> void:
 		stats.idle_ticks += 1
 		stats.idle_by_class[f.cls] = int(stats.idle_by_class.get(f.cls, 0)) + 1
 		var can_hit := false
+		var open_slot := false
 		for t in sim.fighters:
 			if sim.can_target(f, t) and t.is_unit():
 				can_hit = true
-				break
+				if sim.army == null or not sim.army.has_method("room") or sim.army.room(sim, f, t):
+					open_slot = true
+					break
 		var why := "nothing it can hit"
-		if can_hit:
+		if can_hit and not open_slot:
+			# Every enemy it could fight has all its engagement slots taken:
+			# it waits its turn (the rule, not standing about).
+			why = "waiting for a slot"
+			stats.idle_waiting += 1
+		elif can_hit:
 			if sim.army != null and sim.army.has_method("at_war") and not sim.army.at_war():
 				why = "before the war"
 			elif f.target == null:
@@ -569,6 +590,10 @@ func _finish_fight() -> void:
 		stats.third_switches[clampi((int(k) - first) * 3 / n, 0, 2)] += 1
 	if duel.wiped_at[0] < 0 and duel.wiped_at[1] < 0:
 		stats.timeouts += 1
+		if OS.get_environment("IDLE_LOG") != "":
+			for f in duel.sim.fighters:
+				if f.alive and f.is_unit():
+					print("TIMEOUT left %s team=%d hp=%d/%d (%d,%d) target=%s burrowing=%s ball=%s engage=%s" % [f.card.id, f.team, f.hp, f.max_hp, f.x, f.y, f.target.card.id if f.target != null else "-", f.memory.get("burrowing", false), f.memory.get("ball", 0), f.memory.get("engage_on", -1)])
 	fights_left -= 1
 	if fights_left > 0:
 		_next_fight()
@@ -638,7 +663,7 @@ func _report() -> void:
 		"  why they switched     %s" % [_switch_whys()],
 		"  by choice             %.1f switches per animal per minute away from a target still standing; %.1f of those within 2 s of its last switch; %.2f back and forth (back to one it left within 3 s: %s)" % [stats.switches_alive / secs * 60.0, stats.quick_choice / secs * 60.0, stats.back_and_forth / secs * 60.0, _top(stats.bnf_why, 5)],
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
-		"  IDLE                  %.1f%% of animal-time while enemies are alive spent standing about with an enemy it could fight (%.1f%% more with nothing it can hit: a ground fighter with only flyers left); %.0f%% fighting; %s" % [100.0 * (stats.idle_ticks - stats.idle_no_target) / maxf(1, stats.war_ticks), 100.0 * stats.idle_no_target / maxf(1, stats.war_ticks), 100.0 * stats.fighting_ticks / maxf(1, stats.war_ticks), _idle_by_class()],
+		"  IDLE                  %.1f%% of animal-time while enemies are alive spent standing about with an enemy it could fight (%.1f%% more with nothing it can hit: a ground fighter with only flyers left; %.1f%% more waiting for a slot while every enemy it could fight is full); %.0f%% fighting; %s" % [100.0 * (stats.idle_ticks - stats.idle_no_target - stats.idle_waiting) / maxf(1, stats.war_ticks), 100.0 * stats.idle_no_target / maxf(1, stats.war_ticks), 100.0 * stats.idle_waiting / maxf(1, stats.war_ticks), 100.0 * stats.fighting_ticks / maxf(1, stats.war_ticks), _idle_by_class()],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
 	]
 	var lanes: Array = stats.lane_fights
@@ -651,7 +676,7 @@ func _report() -> void:
 	lines.append_array([
 		"Readability",
 		"  overlap               %.1f%% of animals overlap another one" % [100.0 * stats.overlap_units / maxf(1, stats.unit_ticks)],
-		"  pile-ups              at most %d melee attackers on one enemy at once; %.1f on average (the busiest enemy, each tick with a fight)" % [stats.pile_max, float(stats.pile_sum) / maxf(1, stats.pile_ticks)],
+		"  pile-ups              at most %d melee attackers on one enemy at once; %.1f on average (the busiest enemy, each tick with a fight); %.1f%% of those ticks have an enemy with more in reach than its slots" % [stats.pile_max, float(stats.pile_sum) / maxf(1, stats.pile_ticks), 100.0 * stats.pile_over / maxf(1, stats.pile_ticks)],
 		"  spread                left %.0f%% / center %.0f%% / right %.0f%% of the fighting; evenness %.2f" % [100.0 * lanes[0] / lane_total, 100.0 * lanes[1] / lane_total, 100.0 * lanes[2] / lane_total, entropy / log(3.0)],
 	])
 	lines.append_array([

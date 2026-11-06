@@ -198,7 +198,9 @@ func test_same_armies_same_fight() -> void:
 ## on the field while the other side still has animals, the share spent
 ## standing about (not fighting, nor in the last half second, and moving less
 ## than a quarter of what it could in half a second) with an enemy it could
-## hit. Plays the fight to its end.
+## hit and that has a slot free for it (waiting for a slot while every enemy
+## is full is the engagement rule, not standing about). Plays the fight to
+## its end.
 func _idle_share(m: DraftMatch) -> float:
 	var window := 10
 	var trail := {}
@@ -230,8 +232,13 @@ func _idle_share(m: DraftMatch) -> float:
 				continue
 			if Vector2(path[-1] - path[0]).length() * 4.0 >= float(f.speed * window):
 				continue
-			if sim.fighters.any(func(t): return t.is_unit() and sim.can_target(f, t)):
-				idle += 1
+			if not sim.fighters.any(func(t): return t.is_unit() and sim.can_target(f, t)):
+				continue
+			# Waiting its turn for a slot while every enemy it could fight
+			# is full (engagement slots) isn't standing about.
+			if not sim.fighters.any(func(t): return t.is_unit() and sim.can_target(f, t) and sim.army.room(sim, f, t)):
+				continue
+			idle += 1
 		m.step()
 		steps += 1
 	return float(idle) / maxf(1.0, on_field)

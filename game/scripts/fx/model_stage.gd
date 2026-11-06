@@ -343,6 +343,11 @@ func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Ve
 	_param(m, m.outline, "opacity", snappedf(v.m_opacity, 0.02))
 	if m.team_line != null:
 		_param(m, m.team_line, "opacity", snappedf(v.m_opacity, 0.02))
+		# The squad picked with a tap: its band thicker and brighter.
+		var glow := snappedf(v.m_glow, 0.05)
+		var color := BattleField.team_color(m.team)
+		_param(m, m.team_line, "color", color.lerp(Color.WHITE, 0.4 * glow) if glow > 0.0 else color)
+		_param(m, m.team_line, "width_px", outline_px(render_scale) + (Feel.num("models", "team_outline_px", 3.0) + Feel.num("readability", "squad_band_boost_px", 2.5) * glow) * render_scale)
 	_param(m, m.skin, "tint", v.m_tint)
 
 

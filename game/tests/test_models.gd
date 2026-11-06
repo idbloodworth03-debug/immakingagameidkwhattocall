@@ -209,6 +209,85 @@ func test_shots_trail_their_team_color() -> void:
 	check(field.fx.time - float(trail[1][1]) <= keep + 0.001, "only the last %.2f s of it" % keep)
 
 
+## A quick tap on the field at `point` (the field's own coordinates).
+func _tap(field: BattleField, point: Vector2) -> void:
+	for down in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = down
+		e.position = point
+		field._gui_input(e)
+
+
+## Plays the fight on the field for `seconds` (as the screen does), with
+## the field's frames.
+func _play(field: BattleField, seconds: float) -> void:
+	var sim := field.sim
+	for i in roundi(seconds * 60.0):
+		if i % 3 == 0:
+			sim.step()
+			field.add_events(sim.take_events())
+		field._process(1.0 / 60.0)
+
+
+func test_tapping_a_squad_shows_what_it_is_doing() -> void:
+	var field := _fight()
+	_play(field, 6.0)
+	var army: Array = field._views.values().filter(func(v): return v.team == 0 and v.fighter != null and v.fighter.target != null)
+	check(not army.is_empty(), "animals of ours going for someone")
+	if army.is_empty():
+		return
+	var v: UnitView = army[0]
+	var group := int(v.fighter.memory.group)
+	var scale_before := Engine.time_scale
+	var tick_before := field.sim.tick
+	# A tap on one of its animals picks its squad.
+	_tap(field, v.position + v.head() * 0.5)
+	check_eq(field.picked_group, group, "a tap on an animal picks its squad")
+	field._process(1.0 / 60.0)
+	for w: UnitView in field._views.values():
+		var in_squad := w.fighter != null and int(w.fighter.memory.get("group", -1)) == group
+		if in_squad:
+			check(w.m_glow > 0.2, "its animals glow (%s)" % w.id)
+		else:
+			check_eq(w.m_glow, 0.0, "the others don't (%s)" % w.id)
+	var pairs := field.picked_targets()
+	check(not pairs.is_empty(), "lines to the enemies it's going for")
+	for pair in pairs:
+		check(pair[0].fighter.target == pair[1].fighter, "each line to that animal's own target")
+		check(pair[1].team != pair[0].team, "an enemy")
+	# The fight goes on: nothing paused or slowed.
+	_play(field, 0.5)
+	check(field.sim.tick > tick_before, "the fight goes on")
+	check_eq(Engine.time_scale, scale_before, "at its usual speed")
+	check_eq(field.playback, 1.0, "the field isn't slowed")
+	# The lines show only for a moment; the glow stays.
+	_play(field, Feel.num("readability", "squad_lines_seconds", 2.5) + 0.5)
+	if field.picked_group >= 0:
+		check(field.picked_targets().is_empty(), "the lines fade after a moment")
+		check(not field.picked_views().is_empty(), "while the squad stays picked")
+	# Tapping nothing lets go.
+	_tap(field, Vector2(5, 5))
+	check_eq(field.picked_group, -1, "a tap on nothing lets go")
+
+
+func test_a_squad_by_its_banner_and_letting_go() -> void:
+	var field := _fight()
+	field._process(1.0 / 60.0)
+	var flags := field.banners()
+	check(not flags.is_empty(), "squads have banners")
+	var flag: Dictionary = flags[0]
+	_tap(field, flag.flag)
+	check_eq(field.picked_group, int(flag.group), "a tap on a banner picks its squad")
+	_tap(field, flag.flag)
+	check_eq(field.picked_group, -1, "the same banner again lets go")
+	# Aiming a tool, a tap is the tool's.
+	field.highlight = "field"
+	_tap(field, flag.flag)
+	check_eq(field.picked_group, -1, "while a tool is aimed, a tap doesn't pick")
+	field.highlight = ""
+
+
 func test_the_arena_preview_shows_models() -> void:
 	var preview := ArenaPreview.new()
 	preview.animate = true

@@ -211,6 +211,9 @@ var m_rot := 0.0
 var m_opacity := 1.0
 var m_flash := 0.0
 var m_gold := 0.0
+## How much it glows as one of the squad picked with a tap (0 to 1,
+## pulsing; set by the field).
+var m_glow := 0.0
 var m_tint := Color.WHITE
 var m_visible := true
 var m_face := ""

@@ -141,6 +141,14 @@ sprites: a band round the picture). Every shot trails a short streak in
 the shooter's team color with a ring of it round the shot, and its landing
 sparks take the color too, so you can see who's shooting at whom.
 
+**See what a squad is doing:** a quick tap on a squad's banner, or on one
+of its animals, picks it: its animals glow (a soft pulsing glow on the
+ground, their team band thicker and brighter), its flag gets a ring, and
+for a couple of seconds dashed lines show which enemy each of them is going
+for, with a target ring on each. Tap it again, or tap anywhere else, to let
+go. The fight never pauses or slows for it; a hold still shows the
+animal's info, and while a tool is being aimed a tap is the tool's.
+
 **The King Cobra** stands at the very back of its army's Ranged: an animal
 whose reach is at least 8 tiles (`back_reach` in `classes.json`
 "formation") gets a line of its own behind every other Ranged, so its

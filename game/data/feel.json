@@ -416,7 +416,7 @@
   },
 
   "readability": {
-    "_note": "Telling who's doing what in a fight. When an animal turns on an enemy biting it up close (the targeting rules' threat response, battle_rules.json \"targeting\"), a cartoon \"!\" pops over its head for alert_seconds: alert_size pixels tall, alert_color, popping in with alert_pop overshoot. Not shown for ordinary target changes. Who's shooting at whom: every shot trails a streak in the shooter's team color (blue yours, red the enemy's) over the last shot_trail_seconds of its flight, up to shot_trail_width pixels wide and shot_trail_alpha strong, with a ring of it shot_ring_scale times the shot's size (shot_ring_px wide) round the shot, and its landing sparks take the team color too. The animals' own team bands: \"models\" team_outline_px (3D) and \"characters\" team_outline_texels (sprites).",
+    "_note": "Telling who's doing what in a fight. When an animal turns on an enemy biting it up close (the targeting rules' threat response, battle_rules.json \"targeting\"), a cartoon \"!\" pops over its head for alert_seconds: alert_size pixels tall, alert_color, popping in with alert_pop overshoot. Not shown for ordinary target changes. Who's shooting at whom: every shot trails a streak in the shooter's team color (blue yours, red the enemy's) over the last shot_trail_seconds of its flight, up to shot_trail_width pixels wide and shot_trail_alpha strong, with a ring of it shot_ring_scale times the shot's size (shot_ring_px wide) round the shot, and its landing sparks take the team color too. The animals' own team bands: \"models\" team_outline_px (3D) and \"characters\" team_outline_texels (sprites). Seeing what a squad is doing: a quick tap on its banner (within squad_banner_tap_px) or one of its animals picks it (the same again, or a tap on nothing, lets go; a hold still shows info, and a tool being aimed takes the tap). Its animals glow on the ground (squad_glow_alpha strong, squad_glow_scale times their size, pulsing at squad_pulse_speed) and their 3D band grows squad_band_boost_px wider and brighter; its flag gets a ring; for squad_lines_seconds, dashed lines (squad_line_px wide, squad_dash_px dashes) run from each to the enemy it's going for, with a target ring (squad_marker_px) on that enemy. The fight never pauses or slows for it.",
     "alert_seconds": 0.85,
     "alert_size": 30.0,
     "alert_color": "#ffd23f",
@@ -425,7 +425,16 @@
     "shot_trail_width": 4.0,
     "shot_trail_alpha": 0.75,
     "shot_ring_scale": 1.5,
-    "shot_ring_px": 2.5
+    "shot_ring_px": 2.5,
+    "squad_banner_tap_px": 30.0,
+    "squad_glow_alpha": 0.5,
+    "squad_glow_scale": 2.4,
+    "squad_pulse_speed": 4.0,
+    "squad_band_boost_px": 2.5,
+    "squad_lines_seconds": 2.5,
+    "squad_line_px": 3.0,
+    "squad_dash_px": 10.0,
+    "squad_marker_px": 15.0
   },
 
   "info": {

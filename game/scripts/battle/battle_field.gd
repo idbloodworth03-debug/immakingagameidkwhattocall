@@ -112,6 +112,13 @@ var _k_swarm := 1.0
 
 var _press_at := Vector2.ZERO
 var _pressed := false
+var _press_ms := 0
+## The squad picked with a tap (its group; -1: none), its team, and when
+## its target lines started showing (field time) (feel.json "readability"
+## squad_*).
+var picked_group := -1
+var picked_team := 0
+var _picked_at := -100.0
 ## Ambient life: cloud shadows drifting over, grass tufts swaying.
 var _clouds: Array = []
 var _tufts: Array = []
@@ -416,6 +423,58 @@ func view_at(point: Vector2) -> UnitView:
 	return best
 
 
+## Picks the squad whose banner or animal is at `point` (the field's own
+## coordinates): it glows, and lines show to the enemies it's going for.
+## The same squad again, or a tap on nothing, lets go of it. The fight
+## goes on as ever.
+func pick_squad_at(point: Vector2) -> void:
+	var group := -1
+	var team := 0
+	var r := Feel.num("readability", "squad_banner_tap_px", 30.0)
+	var best := r
+	for b: Dictionary in banners():
+		var d := point.distance_to(b.flag)
+		if d <= best:
+			best = d
+			group = int(b.group)
+			team = int(b.team)
+	if group < 0:
+		var v := view_at(get_global_transform_with_canvas() * point)
+		if v != null and v.army and v.fighter != null:
+			group = int(v.fighter.memory.get("group", -1))
+			team = v.team
+	if group < 0 or group == picked_group:
+		picked_group = -1
+		return
+	picked_group = group
+	picked_team = team
+	_picked_at = _time
+	Sound.play("pop", -10.0, 0.15)
+
+
+## The picked squad's animals still standing.
+func picked_views() -> Array:
+	if picked_group < 0:
+		return []
+	return _views.values().filter(func(v: UnitView) -> bool:
+		return v.fighter != null and v.defeat < 0.0 and not v.doomed and int(v.fighter.memory.get("group", -1)) == picked_group)
+
+
+## While the picked squad's target lines show: [its animal, the enemy it's
+## going for] for each of them with a target on the field.
+func picked_targets() -> Array:
+	var out := []
+	if picked_group < 0 or _time - _picked_at > Feel.num("readability", "squad_lines_seconds", 2.5):
+		return out
+	for v: UnitView in picked_views():
+		var t: BattleSim.Fighter = v.fighter.target
+		if t != null and t.alive and t.is_unit():
+			var tv := view_for_uid(t.uid)
+			if tv != null and tv.defeat < 0.0:
+				out.append([v, tv])
+	return out
+
+
 ## The field's own clock (seconds; stops during hit-stop, slows in a close-up).
 func now() -> float:
 	return _time
@@ -548,10 +607,16 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
 		if event.pressed:
 			_press_at = event.position
+			_press_ms = Time.get_ticks_msec()
 			_pressed = true
 		elif _pressed:
 			_pressed = false
 			if event.position.distance_to(_press_at) < 24.0:
+				# A quick tap (not a hold for info) with no tool being aimed:
+				# picks the squad there (or lets go of it).
+				var quick := Time.get_ticks_msec() - _press_ms < roundi(Feel.num("info", "hold_seconds", 0.35) * 1000.0)
+				if quick and highlight == "":
+					pick_squad_at(event.position)
 				tapped.emit(to_field(event.position))
 
 
@@ -598,9 +663,15 @@ func _process(delta: float) -> void:
 	_land_due()
 	fx._process_fx(dt)
 	_ambient(delta)
+	var glow := 0.0
+	if picked_group >= 0:
+		glow = 0.65 + 0.35 * sin(_time * Feel.num("readability", "squad_pulse_speed", 4.0))
 	for v in _views.values():
 		v.animate(dt, _time)
 		v.position = to_screen(v.render_pos().x, v.render_pos().y)
+		v.m_glow = glow if picked_group >= 0 and v.fighter != null and int(v.fighter.memory.get("group", -1)) == picked_group else 0.0
+	if picked_group >= 0 and picked_views().is_empty():
+		picked_group = -1  # the whole squad is down
 	if _stage != null:
 		_stage.sync(_views, _time)
 	_remove_finished()
@@ -1479,6 +1550,7 @@ func _draw_arena(canvas: CanvasItem) -> void:
 ## Shadows and rings first, then the class badges: their circles, then the
 ## icons a class at a time, so each kind of picture is drawn in one batch.
 func _draw_unit_ground(canvas: CanvasItem) -> void:
+	_draw_squad_glow(canvas)
 	var badges := []
 	for v in _views.values():
 		v.draw_ground(canvas, badges)
@@ -1501,9 +1573,67 @@ func _draw_unit_ground(canvas: CanvasItem) -> void:
 ## Each squad's banner, over its animals: a flag on a pole in its team's
 ## color with its class's icon. Elite Specialists and Mythic heroes get a
 ## gold one.
-func _draw_banners(canvas: CanvasItem) -> void:
-	if sim == null or sim.army == null:
+## A soft glow on the ground under each animal of the picked squad, in its
+## team's color, gently pulsing.
+func _draw_squad_glow(canvas: CanvasItem) -> void:
+	if picked_group < 0:
 		return
+	var r := "readability"
+	var color := team_color(picked_team).lightened(0.35)
+	var strength := Feel.num(r, "squad_glow_alpha", 0.5)
+	var tile := float(BattleSim.TILE) * _scale()
+	for v: UnitView in picked_views():
+		var size := maxf(14.0, float(v.fighter.radius) * _scale() * Feel.num(r, "squad_glow_scale", 2.4))
+		var pulse := v.m_glow
+		canvas.draw_set_transform(v.position, 0.0, Vector2(1.0, 0.55))
+		for k in 5:
+			var f := 1.0 - k / 5.0
+			canvas.draw_circle(Vector2.ZERO, size * (0.45 + 0.55 * f) + tile * 0.04 * pulse, Color(color, strength * 0.22 * (1.0 - f * 0.6) * pulse))
+		canvas.draw_arc(Vector2.ZERO, size * 0.9, 0.0, TAU, 32, Color(color, strength * pulse), 3.0, true)
+		canvas.draw_set_transform(Vector2.ZERO)
+
+
+## For a moment after a squad is picked: a dashed line from each of its
+## animals to the enemy it's going for, and a target ring on that enemy,
+## fading out at the end.
+func _draw_squad_targets(canvas: CanvasItem) -> void:
+	var pairs := picked_targets()
+	if pairs.is_empty():
+		return
+	var r := "readability"
+	var seconds := Feel.num(r, "squad_lines_seconds", 2.5)
+	var age := _time - _picked_at
+	var fade := clampf((seconds - age) / 0.5, 0.0, 1.0)
+	var color := Color(team_color(picked_team).lightened(0.2), fade)
+	var ink := Color(UIKit.INK, 0.55 * fade)
+	var width := Feel.num(r, "squad_line_px", 3.0)
+	var dash := Feel.num(r, "squad_dash_px", 10.0)
+	var ring := Feel.num(r, "squad_marker_px", 15.0)
+	var marked := {}
+	for pair in pairs:
+		var a: Vector2 = (pair[0] as UnitView).middle()
+		var b: Vector2 = (pair[1] as UnitView).middle()
+		var gap := ring + 2.0
+		if a.distance_to(b) > gap * 2.0:
+			var end := b - (b - a).normalized() * gap
+			canvas.draw_dashed_line(a, end, ink, width + 2.0, dash, true, true)
+			canvas.draw_dashed_line(a, end, color, width, dash, true, true)
+		marked[pair[1]] = b
+	for at: Vector2 in marked.values():
+		var spin := _time * 2.0
+		canvas.draw_arc(at, ring, 0.0, TAU, 28, ink, 5.0, true)
+		canvas.draw_arc(at, ring, 0.0, TAU, 28, color, 3.0, true)
+		for k in 4:
+			var ang := spin + k * PI / 2.0
+			var dir := Vector2(cos(ang), sin(ang))
+			canvas.draw_line(at + dir * (ring - 5.0), at + dir * (ring + 6.0), color, 3.0, true)
+
+
+## Every squad's banner: {"base": the pole's foot, "tip": its top, "flag":
+## the flag's middle, team, cls, gold, group}, over the middle of the squad.
+func banners() -> Array:
+	if sim == null or sim.army == null:
+		return []
 	var a := "army"
 	var squads := {}
 	for v: UnitView in _views.values():
@@ -1512,7 +1642,7 @@ func _draw_banners(canvas: CanvasItem) -> void:
 		var g := int(v.fighter.memory.get("group", -1))
 		var top := v.position + v.head()
 		if not squads.has(g):
-			squads[g] = {"x": 0.0, "n": 0, "top": top.y, "team": v.team, "cls": v.cls,
+			squads[g] = {"x": 0.0, "n": 0, "top": top.y, "team": v.team, "cls": v.cls, "group": g,
 				"gold": v.fighter.memory.get("hero", false) or v.fighter.memory.get("elite", false)}
 		var sq: Dictionary = squads[g]
 		sq.x += top.x
@@ -1521,11 +1651,23 @@ func _draw_banners(canvas: CanvasItem) -> void:
 	var pole := Feel.num(a, "banner_pole_pixels", 22.0)
 	var w := Feel.num(a, "banner_width_pixels", 22.0)
 	var h := Feel.num(a, "banner_height_pixels", 17.0)
+	for sq: Dictionary in squads.values():
+		sq.base = Vector2(float(sq.x) / int(sq.n), float(sq.top) - 4.0)
+		sq.tip = (sq.base as Vector2) - Vector2(0, pole + h)
+		sq.flag = (sq.tip as Vector2) + Vector2(w * 0.5, h * 0.5)
+	return squads.values()
+
+
+func _draw_banners(canvas: CanvasItem) -> void:
+	_draw_squad_targets(canvas)
+	var a := "army"
+	var w := Feel.num(a, "banner_width_pixels", 22.0)
+	var h := Feel.num(a, "banner_height_pixels", 17.0)
 	var alpha := Feel.num(a, "banner_alpha", 1.0)
 	var ink := Color(UIKit.INK, alpha)
-	for sq: Dictionary in squads.values():
-		var base := Vector2(float(sq.x) / int(sq.n), float(sq.top) - 4.0)
-		var tip := base - Vector2(0, pole + h)
+	for sq: Dictionary in banners():
+		var base: Vector2 = sq.base
+		var tip: Vector2 = sq.tip
 		canvas.draw_line(base, tip, ink, 2.5)
 		var color: Color = team_color(int(sq.team))
 		if sq.gold:
@@ -1536,6 +1678,9 @@ func _draw_banners(canvas: CanvasItem) -> void:
 		var flag := PackedVector2Array([tip, tip + Vector2(w, wave * 0.5), tip + Vector2(w * 0.86, h * 0.5 + wave), tip + Vector2(w, h + wave * 0.5), tip + Vector2(0, h)])
 		canvas.draw_colored_polygon(flag, Color(color, alpha))
 		canvas.draw_polyline(flag + PackedVector2Array([tip]), ink, 2.0)
+		if int(sq.group) == picked_group:
+			# The picked squad's flag: a glowing ring round it.
+			canvas.draw_arc(tip + Vector2(w * 0.5, h * 0.5), maxf(w, h) * 0.95, 0.0, TAU, 24, Color(team_color(int(sq.team)).lightened(0.4), 0.85), 3.0, true)
 		var icon := UIKit.icon(GameData.ui_icon(String(GameData.class_info(String(sq.cls)).get("icon", ""))))
 		if icon != null:
 			var side := h * 0.8

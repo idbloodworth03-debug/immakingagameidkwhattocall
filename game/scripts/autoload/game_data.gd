@@ -53,6 +53,7 @@ var rival_rules: Dictionary = {}     # rivals.json settings (bosses, easing, rew
 var rivals: Array = []               # Rival Rangers, in rivals.json order
 var ui_style: Dictionary = {}        # the design system (ui_style.json, see UIStyle)
 var art: Dictionary = {}
+var sorting: Dictionary = {}       # how animals sort (sorting.json)
 
 
 func _init() -> void:
@@ -122,6 +123,7 @@ func reload() -> void:
 	rivals = rival_rules.get("rivals", [])
 	ui_style = _load("ui_style.json")
 	art = _load("art.json")
+	sorting = _load("sorting.json")
 
 
 func _load(file_name: String) -> Variant:

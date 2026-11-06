@@ -6,6 +6,8 @@ extends Control
 ## After a ban phase (MatchPlan.banned), a slot that held a banned animal
 ## shows empty for you to fill, and banned animals are crossed out below.
 ## START saves the deck and begins the match once all 8 slots are full.
+## The collection sorts by Level, Rarity, Class or Biome (SortBar), in
+## groups with a header each; the deck's own slots keep their order.
 
 const MENU_SCENE := "res://scenes/main.tscn"
 const MATCH_SCENE := "res://scenes/draft.tscn"
@@ -16,7 +18,9 @@ var _size := 8
 ## Animals nobody can use this match (the ban phase).
 var _banned: Array = []
 var _slots: GridContainer
-var _collection: GridContainer
+## The collection: a header and a grid for each group of the sort.
+var _collection: VBoxContainer
+var _sort: SortBar
 var _count: Label
 var _done: Button
 
@@ -60,15 +64,18 @@ func _ready() -> void:
 	tray.add_child(_slots)
 	column.add_child(tray)
 
+	# Sort the collection: Level, Rarity, Class, Biome.
+	_sort = SortBar.make("deck")
+	_sort.sort_changed.connect(func(_key: String, _desc: bool) -> void: _refresh())
+	column.add_child(_sort)
+
 	var scroll := ScrollContainer.new()
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(scroll)
-	var center := CenterContainer.new()
-	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	scroll.add_child(center)
-	_collection = _grid()
-	center.add_child(_collection)
+	_collection = UIStyle.vbox("s")
+	_collection.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.add_child(_collection)
 
 	_done = UIKit.button("START", UIKit.YELLOW, 44, Vector2(400, 104))
 	_done.icon = UIKit.icon(GameData.ui_icon("tab_battle"))
@@ -88,27 +95,24 @@ func _grid() -> GridContainer:
 	return grid
 
 
-## Every animal you own, by class (as they'd line up in battle), rarest
-## first within a class.
-func _owned_animals() -> Array:
+## Every animal you own, in groups by the chosen sort (AnimalSort).
+func _owned_groups() -> Array:
 	var ids: Array = GameData.card_order.filter(func(id): return Profile.has_card(id) and not GameData.is_tool(id))
-	ids.sort_custom(func(a: String, b: String) -> bool:
-		var ca := GameData.class_order.find(GameData.class_of(a))
-		var cb := GameData.class_order.find(GameData.class_of(b))
-		if ca != cb:
-			return ca < cb
-		var ra := GameData.rarity_order.find(GameData.cards[a].rarity)
-		var rb := GameData.rarity_order.find(GameData.cards[b].rarity)
-		if ra != rb:
-			return ra > rb
-		return String(GameData.cards[a].name) < String(GameData.cards[b].name))
-	return ids
+	return AnimalSort.grouped(ids, _sort.key, _sort.desc, Profile.card_levels())
+
+
+## The collection's animals in the order shown.
+func shown_order() -> Array:
+	var out := []
+	for group in _owned_groups():
+		out.append_array(group.ids)
+	return out
 
 
 func _refresh() -> void:
-	for grid in [_slots, _collection]:
-		for child in grid.get_children():
-			grid.remove_child(child)
+	for box in [_slots, _collection]:
+		for child in box.get_children():
+			box.remove_child(child)
 			child.queue_free()
 	for i in _size:
 		if _deck[i] != "":
@@ -119,19 +123,28 @@ func _refresh() -> void:
 			_slots.add_child(card)
 		else:
 			_slots.add_child(_EmptySlot.new())
-	for id in _owned_animals():
-		var card := AnimalCard.create(id)
-		card.info = AnimalCard.Info.LEVEL
-		if _deck.has(id):
-			# In your deck: fully bright, with a checkmark.
-			card.checked = true
-		elif _banned.has(id):
-			# Banned: in full color under the red X.
-			var x := BanX.new()
-			x.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-			card.add_child(x)
-		UIKit.on_tap(card, func() -> void: _toggle(id))
-		_collection.add_child(card)
+	for group in _owned_groups():
+		_collection.add_child(AnimalSort.header(group))
+		var center := CenterContainer.new()
+		center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var grid := _grid()
+		# Always a full row wide, so a short group lines up on the left.
+		grid.custom_minimum_size.x = grid.columns * AnimalCard.SIZE_NORMAL.x + (grid.columns - 1) * 12
+		center.add_child(grid)
+		_collection.add_child(center)
+		for id: String in group.ids:
+			var card := AnimalCard.create(id)
+			card.info = AnimalCard.Info.LEVEL
+			if _deck.has(id):
+				# In your deck: fully bright, with a checkmark.
+				card.checked = true
+			elif _banned.has(id):
+				# Banned: in full color under the red X.
+				var x := BanX.new()
+				x.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+				card.add_child(x)
+			UIKit.on_tap(card, func() -> void: _toggle(id))
+			grid.add_child(card)
 	_count.text = "%d/%d" % [_filled(), _size]
 	_done.disabled = _filled() < _size
 

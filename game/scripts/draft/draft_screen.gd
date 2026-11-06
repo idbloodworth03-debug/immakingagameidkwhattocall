@@ -58,6 +58,10 @@ var _option_cards: Array = []
 var _banned: Array = []
 var _herd_scroll: ScrollContainer
 var _herd_row: HBoxContainer
+## Sorting your starters (round 1) and your army row: compact bars
+## (SortBar) above each, never over the offers, slots or Fight!.
+var _start_sort: SortBar
+var _army_sort: SortBar
 ## Your army in formation while you pick (new squads march into place; tap
 ## an animal to upgrade it).
 var _army_view: BattleField
@@ -241,6 +245,13 @@ func _build_pick_view() -> VBoxContainer:
 		_slots.append(slot)
 	view.add_child(header)
 
+	# Sort your starters (round 1 only).
+	_start_sort = SortBar.make("starters", true)
+	_start_sort.sort_changed.connect(func(_key: String, _desc: bool) -> void:
+		_build_options(false)
+		_refresh_pick())
+	view.add_child(_start_sort)
+
 	# The options (filled each round).
 	_options_holder = Control.new()
 	_options_holder.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
@@ -263,6 +274,11 @@ func _build_pick_view() -> VBoxContainer:
 	# It takes whatever room the options leave.
 	army_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	view.add_child(army_box)
+
+	# Sort your army row.
+	_army_sort = SortBar.make("army", true)
+	_army_sort.sort_changed.connect(func(_key: String, _desc: bool) -> void: _refresh_herd_row())
+	view.add_child(_army_sort)
 
 	# Your herd, in a row that scrolls, then your tools.
 	_herd_scroll = ScrollContainer.new()
@@ -465,20 +481,27 @@ func _pick_signature() -> String:
 		duel.offers[0].map(func(o): return o.taken), duel.ready, _flying.keys()])
 
 
-## The options as big cards: the whole deck in round 1 (a grid), after
-## that two groups, each on its own tray: the animals in a row, and the
-## tools in a row under them.
-func _build_options() -> void:
+## The options as big cards: the whole deck in round 1 (a grid, in the
+## order of the sort bar above it, a small tag on the first card of each
+## group), after that two groups, each on its own tray: the animals in a
+## row, and the tools in a row under them. `pop`: the cards pop in one by
+## one (not when just re-sorted).
+func _build_options(pop := true) -> void:
 	for child in _options_holder.get_children():
 		_options_holder.remove_child(child)
 		child.queue_free()
 	_option_cards.clear()
+	_option_cards.resize(duel.offers[0].size())
+	_start_sort.visible = duel.is_first_round()
 	var step := Feel.num("ui", "stagger_seconds", 0.05)
 	# Just the room the cards need: your army below gets the rest.
 	var gap := float(UIStyle.space("s"))
+	# Round 1's rows sit a little further apart: each group's line and tag
+	# run in the gap under its cards.
+	var row_gap := float(GameData.sorting.get("marker", {}).get("row_gap", 30))
 	if duel.is_first_round():
 		var card := _size("start_card", Vector2(156, 176))
-		_options_holder.custom_minimum_size.y = ceilf(duel.offers[0].size() / 4.0) * (card.y + gap)
+		_options_holder.custom_minimum_size.y = ceilf(duel.offers[0].size() / 4.0) * (card.y + row_gap)
 	else:
 		var pad := Feel.num("pick", "tray_padding", 8.0)
 		_options_holder.custom_minimum_size.y = 2.0 * (_size("offer_card", Vector2(156, 184)).y + 2.0 * pad) + gap
@@ -489,14 +512,25 @@ func _build_options() -> void:
 		var grid := GridContainer.new()
 		grid.columns = 4
 		grid.add_theme_constant_override("h_separation", UIStyle.space("s"))
-		grid.add_theme_constant_override("v_separation", UIStyle.space("s"))
+		grid.add_theme_constant_override("v_separation", int(row_gap))
 		grid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		scroll.add_child(grid)
 		_options_holder.add_child(scroll)
-		for slot in duel.offers[0].size():
-			var card := _option_card(slot, _size("start_card", Vector2(156, 176)))
-			grid.add_child(card)
-			_pop_after(card, step * slot)
+		var order := 0
+		var groups := start_groups()
+		for g in groups.size():
+			var group: Dictionary = groups[g]
+			for k in group.slots.size():
+				var slot: int = group.slots[k]
+				var card := _option_card(slot, _size("start_card", Vector2(156, 176)))
+				# One line for the group's cards in this row, from the first.
+				if k == 0 or order % 4 == 0:
+					var run := mini(group.slots.size() - k, 4 - order % 4)
+					_add_group_line(card, group, k == 0, run, float(UIStyle.space("s")), row_gap)
+				grid.add_child(card)
+				if pop:
+					_pop_after(card, step * order)
+				order += 1
 		return
 	var rows := UIStyle.vbox("s")
 	rows.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -526,8 +560,44 @@ func _option_card(slot: int, card_size: Vector2) -> GameCard:
 	var card := GameCard.make(id, card_size)
 	card.show_name = false
 	_bind_card(card, func() -> void: _tap_option(slot), id)
-	_option_cards.append(card)
+	_option_cards[slot] = card
 	return card
+
+
+## Round 1's offers in groups by the sort bar (AnimalSort.grouped), each
+## group's offer slots in order: [{group info..., "slots": [...]}]. Only
+## the order they're shown in: the offers themselves never change.
+func start_groups() -> Array:
+	var ids: Array = duel.offers[0].map(func(o): return String(o.id))
+	var used := {}
+	var out := []
+	for group in AnimalSort.grouped(ids, _start_sort.key, _start_sort.desc, Profile.card_levels()):
+		var slots := []
+		for id: String in group.ids:
+			for slot in ids.size():
+				if ids[slot] == id and not used.has(slot):
+					used[slot] = true
+					slots.append(slot)
+					break
+		group.slots = slots
+		out.append(group)
+	return out
+
+
+## Round 1's groups at a glance: a line in the group's color in the gap
+## under its cards (`run` of them, in this row, from `card`), and at the
+## start of the group's first line its tag (its icon, and its name if it
+## fits along the line).
+func _add_group_line(card: Control, group: Dictionary, first: bool, run: int, h_gap: float, gap: float) -> void:
+	var width := run * (card.custom_minimum_size.x + h_gap) - h_gap
+	var line := AnimalSort.line(group, width, gap)
+	line.position = Vector2(0, card.custom_minimum_size.y)
+	line.set_meta("cards", run)
+	card.add_child(line)
+	if first:
+		var tag := AnimalSort.tag(group, not AnimalSort.label_fits(group, width - 8.0))
+		tag.position = Vector2(4, (gap - tag.custom_minimum_size.y) / 2.0)
+		line.add_child(tag)
 
 
 ## Brings the pick view up to date: the title, every card's state, the
@@ -613,14 +683,26 @@ func _refresh_slots() -> void:
 
 ## Your army in a scrolling row (an arrow on each one a pick can upgrade or
 ## add a squad of), then your tools.
+## Your army in the order of the sort bar above it, a thin divider before
+## each group, then your tools. Only the order on screen changes: your
+## herd (duel.herds) stays as it is.
 func _refresh_herd_row() -> void:
 	var herd: Array = duel.herds[0]
 	var card_size := _size("herd_card", Vector2(104, 120))
-	_herd_scroll.get_parent().visible = not duel.is_first_round() and (not herd.is_empty() or not duel.tools[0].is_empty())
+	var shown: bool = not duel.is_first_round() and (not herd.is_empty() or not duel.tools[0].is_empty())
+	_herd_scroll.get_parent().visible = shown
+	_army_sort.visible = shown
 	var children := _herd_row.get_children()
 	var wanted := []
-	for entry in herd:
-		wanted.append("a:" + String(entry.id))
+	var dividers := {}
+	for group in AnimalSort.grouped(herd.map(func(e): return String(e.id)), _army_sort.key, _army_sort.desc, Profile.card_levels()):
+		wanted.append("d:" + String(group.group))
+		dividers["d:" + String(group.group)] = group
+		for id: String in group.ids:
+			wanted.append("a:" + id)
+	if not duel.tools[0].is_empty():
+		wanted.append("d:tools")
+		dividers["d:tools"] = AnimalSort.group_info("tools", _army_sort.key)
 	for id in duel.tools[0]:
 		wanted.append("t:" + String(id))
 	var have := children.map(func(c): return String(c.get_meta("key", "")))
@@ -628,21 +710,28 @@ func _refresh_herd_row() -> void:
 		for child in children:
 			_herd_row.remove_child(child)
 			child.queue_free()
-		for i in wanted.size():
-			var key: String = wanted[i]
+		for key: String in wanted:
+			if key.begins_with("d:"):
+				var divider := AnimalSort.divider(dividers[key], card_size.y)
+				divider.set_meta("key", key)
+				_herd_row.add_child(divider)
+				continue
 			var id := key.substr(2)
 			var card := GameCard.make(id, card_size)
 			card.set_meta("key", key)
 			if key.begins_with("a:"):
-				var index := i
-				_bind_card(card, func() -> void: _tap_herd(index), id)
+				# Which herd animal it is is looked up at the tap: the row's
+				# order is only the sort's.
+				_bind_card(card, func() -> void: _tap_herd(duel.herd_index(0, id)), id)
 			else:
 				_bind_card(card, func() -> void: pass, id)
 			_herd_row.add_child(card)
 			if not have.has(key):
 				UIKit.pop_in(card, 0.4, 0.35)
 	for i in herd.size():
-		var card: GameCard = _herd_row.get_child(i)
+		var card := _herd_card(i)
+		if card == null:
+			continue
 		var stars := int(herd[i].stars)
 		var arrow: bool = duel.can_star(0, i) == "" or duel.can_reinforce(0, i) == ""
 		if card.stars != stars or card.upgrade_arrow != arrow:
@@ -650,6 +739,27 @@ func _refresh_herd_row() -> void:
 			card.upgrade_arrow = arrow
 			card.animate(arrow)
 			card.queue_redraw()
+
+
+## The card in your army row for herd animal `index`, or null.
+func _herd_card(index: int) -> GameCard:
+	if index < 0 or index >= duel.herds[0].size():
+		return null
+	var key := "a:" + String(duel.herds[0][index].id)
+	for child in _herd_row.get_children():
+		if String(child.get_meta("key", "")) == key:
+			return child as GameCard
+	return null
+
+
+## Your army row's animals in the order shown.
+func herd_row_order() -> Array:
+	var out := []
+	for child in _herd_row.get_children():
+		var key := String(child.get_meta("key", ""))
+		if key.begins_with("a:"):
+			out.append(key.substr(2))
+	return out
 
 
 func _tap_option(slot: int) -> void:
@@ -679,9 +789,9 @@ func _pick(slot: int, replace: int) -> void:
 ## every squad of it) and +Squad (another full squad of it: "+3 Squad" for
 ## Ranged), each one of your 3 picks. Nothing else.
 func _tap_herd(index: int) -> void:
-	if index >= duel.herds[0].size():
+	if index < 0 or index >= duel.herds[0].size():
 		return
-	var card: GameCard = _herd_row.get_child(index)
+	var card := _herd_card(index)
 	var can_up: bool = duel.can_star(0, index) == ""
 	var can_more: bool = duel.can_reinforce(0, index) == ""
 	if not can_up and not can_more:
@@ -711,7 +821,7 @@ func _tap_herd(index: int) -> void:
 
 ## Upgrade: a star for every squad of herd animal `index` (one pick).
 func _upgrade(index: int) -> void:
-	var card: GameCard = _herd_row.get_child(index)
+	var card := _herd_card(index)
 	var from := card.get_global_rect()
 	var into: int = duel.picks_made[0].size()
 	if duel.star(0, index):
@@ -725,7 +835,7 @@ func _upgrade(index: int) -> void:
 ## Reinforce: another full squad of herd animal `index` (one pick); it
 ## marches into the formation.
 func _reinforce(index: int) -> void:
-	var card: GameCard = _herd_row.get_child(index)
+	var card := _herd_card(index)
 	var from := card.get_global_rect()
 	var into: int = duel.picks_made[0].size()
 	if duel.reinforce(0, index):
@@ -858,7 +968,8 @@ func _first_match_tip() -> void:
 	seen.append(key)
 	Profile.save()
 	var text := "Tap 3 animals" if key == "pick" else "Tap your animals: Upgrade or +Squad"
-	var anchor: Control = _options_holder if key == "pick" else _herd_scroll
+	# Round 2's goes above the army row's sort bar, not over it.
+	var anchor: Control = _options_holder if key == "pick" else (_army_sort as Control if _army_sort.visible else _herd_scroll)
 	_hide_tip()
 	var tip := UIStyle.chip(UIStyle.label(text, "body"), UIStyle.color("primary"))
 	tip.mouse_filter = Control.MOUSE_FILTER_IGNORE

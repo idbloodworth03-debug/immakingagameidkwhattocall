@@ -1,15 +1,32 @@
 extends Control
 ## Animals tab: every animal and tool you've found (your Draft Duel pool),
-## the ones you haven't, and the ones that unlock in higher arenas.
+## the ones you haven't, and the ones that unlock in higher arenas. A sort
+## bar (Level, Rarity, Class, Biome) stays at the top; the animals come in
+## groups with a header each, the ones you don't own yet locked among them
+## (last of all in the Level sort), then your tools.
 
 var _content: VBoxContainer
+var _sort: SortBar
 
 
 func _ready() -> void:
+	var layout := UIStyle.vbox("xs")
+	layout.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(layout)
+	var bar_margin := MarginContainer.new()
+	for side in ["left", "right"]:
+		bar_margin.add_theme_constant_override("margin_" + side, 16)
+	# Below the version label in the corner.
+	bar_margin.add_theme_constant_override("margin_top", int(GameData.sorting.get("tab_top", 40)))
+	bar_margin.add_theme_constant_override("margin_bottom", 0)
+	_sort = SortBar.make("animals")
+	_sort.sort_changed.connect(func(_key: String, _desc: bool) -> void: _rebuild())
+	bar_margin.add_child(_sort)
+	layout.add_child(bar_margin)
 	var scroll := ScrollContainer.new()
-	scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
+	layout.add_child(scroll)
 	var margin := MarginContainer.new()
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for side in ["left", "right", "top", "bottom"]:
@@ -42,26 +59,24 @@ func _rebuild() -> void:
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	intro_row.add_child(text)
 
-	var found := []
-	var not_found := []
-	var locked := []
-	for id in _sorted_animals():
-		if Profile.has_card(id):
-			found.append(id)
-		elif int(GameData.cards[id].unlock_arena_index) <= Profile.highest_arena():
-			not_found.append(id)
-		else:
-			locked.append(id)
-
 	_content.add_child(UIKit.heading("Collection  %d/%d" % [Profile.found_count(), GameData.card_order.size()]))
-	_add_card_grid(found)
-	if not not_found.is_empty():
-		_content.add_child(UIKit.heading("Not found yet"))
-		_content.add_child(UIKit.paragraph("These can drop from cages in your arena.", 20))
-		_add_card_grid(not_found)
-	if not locked.is_empty():
-		_content.add_child(UIKit.heading("Unlock in higher arenas"))
-		_add_card_grid(locked)
+	for group in groups():
+		_content.add_child(AnimalSort.header(group))
+		_add_card_grid(group.ids)
+
+
+## Every animal and tool in groups by the chosen sort (AnimalSort): the
+## ones you don't own sort the same way (and show locked).
+func groups() -> Array:
+	return AnimalSort.grouped(GameData.card_order, _sort.key, _sort.desc, Profile.card_levels())
+
+
+## The animals' and tools' ids in the order shown.
+func shown_order() -> Array:
+	var out := []
+	for group in groups():
+		out.append_array(group.ids)
+	return out
 
 
 func _add_card_grid(ids: Array) -> void:
@@ -79,23 +94,6 @@ func _grid() -> GridContainer:
 	grid.add_theme_constant_override("h_separation", 12)
 	grid.add_theme_constant_override("v_separation", 12)
 	return grid
-
-
-## Rarest first, then cheapest first - the usual collection order.
-func _sorted_animals() -> Array:
-	var ids := GameData.card_order.duplicate()
-	ids.sort_custom(func(a: String, b: String) -> bool:
-		var animal_a: Dictionary = GameData.cards[a]
-		var animal_b: Dictionary = GameData.cards[b]
-		var rank_a := GameData.rarity_order.find(animal_a.rarity)
-		var rank_b := GameData.rarity_order.find(animal_b.rarity)
-		if rank_a != rank_b:
-			return rank_a > rank_b
-		if animal_a.cost != animal_b.cost:
-			return animal_a.cost < animal_b.cost
-		return String(animal_a.name) < String(animal_b.name)
-	)
-	return ids
 
 
 ## An animal opens the 3D viewer; a Ranger tool, its details.

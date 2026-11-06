@@ -5,6 +5,8 @@ extends Control
 ## on yours, tap a card and BAN; the rival thinks a moment (dots by its
 ## face) and bans one of yours. Every ban stamps a big red X on its card.
 ## Then on to your deck (deck_screen.gd), with the bans in MatchPlan.
+## The cards sort by Level, Rarity, Class or Biome (SortBar), in groups
+## with a header each; re-sorting moves the cards, stamps and all.
 ## Timings and sizes: feel.json "bans".
 
 const MENU_SCENE := "res://scenes/main.tscn"
@@ -19,10 +21,15 @@ var _banner: PanelContainer
 var _banner_label: Label
 var _thinking: _Dots
 var _scroll: ScrollContainer
+## The cards' groups: a header and a grid for each.
+var _groups: VBoxContainer
+var _sort: SortBar
 var _coin: _Coin
 var _ban_button: ChunkyButton
 var _slots := [[], []]
 var _busy := true
+## Tests turn this off: no coin flip, no turns (they drive the phase).
+var auto_start := true
 
 
 func _ready() -> void:
@@ -35,7 +42,8 @@ func _ready() -> void:
 	var owned: Array = GameData.card_order.filter(func(id): return Profile.has_card(id) and not GameData.is_tool(id))
 	phase = BanPhase.new(BanPhase.choices_for(owned, int(rival.get("arena_index", 0))), owned, _rng.randi_range(0, 1))
 	_build()
-	_flip_coin()
+	if auto_start:
+		_flip_coin()
 
 
 func _num(key: String, fallback: float) -> float:
@@ -111,19 +119,19 @@ func _build() -> void:
 		tip.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		column.add_child(tip)
 
+	# Sort them: Level, Rarity, Class, Biome.
+	_sort = SortBar.make("bans")
+	_sort.sort_changed.connect(func(_key: String, _desc: bool) -> void: _lay_out())
+	column.add_child(_sort)
+
 	# The animals.
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	column.add_child(_scroll)
-	var center := CenterContainer.new()
-	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_scroll.add_child(center)
-	var grid := GridContainer.new()
-	grid.columns = int(_num("columns", 4))
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	center.add_child(grid)
+	_groups = UIStyle.vbox("s")
+	_groups.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_groups)
 	var size_value: Variant = GameData.feel.get("bans", {}).get("card", [158, 214])
 	var card_size := Vector2(float(size_value[0]), float(size_value[1]))
 	for id in phase.choices:
@@ -132,8 +140,8 @@ func _build() -> void:
 		card.custom_minimum_size = card_size
 		card.pivot_offset = card_size / 2.0
 		UIKit.on_tap(card, func() -> void: _tap(id))
-		grid.add_child(card)
 		_cards[id] = card
+	_lay_out()
 
 	_ban_button = UIStyle.button("BAN", "danger", "close")
 	_ban_button.min_width = 400.0
@@ -141,6 +149,45 @@ func _build() -> void:
 	_ban_button.pressed.connect(_ban_selected)
 	column.add_child(_ban_button)
 	_refresh_button()
+
+
+## Puts the cards in their groups for the chosen sort. The cards are the
+## same ones, moved (a ban's X and the selection go with them).
+func _lay_out() -> void:
+	for card: AnimalCard in _cards.values():
+		if card.get_parent() != null:
+			card.get_parent().remove_child(card)
+	for child in _groups.get_children():
+		_groups.remove_child(child)
+		child.queue_free()
+	var levels := {}
+	for id: String in phase.owned:
+		levels[id] = Profile.card_level(id)
+	for group in AnimalSort.grouped(phase.choices, _sort.key, _sort.desc, levels):
+		_groups.add_child(AnimalSort.header(group))
+		var center := CenterContainer.new()
+		center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var grid := GridContainer.new()
+		grid.columns = int(_num("columns", 4))
+		grid.add_theme_constant_override("h_separation", 10)
+		grid.add_theme_constant_override("v_separation", 10)
+		# Always a full row wide, so a short group lines up on the left.
+		var size_value: Variant = GameData.feel.get("bans", {}).get("card", [158, 214])
+		grid.custom_minimum_size.x = grid.columns * float(size_value[0]) + (grid.columns - 1) * 10
+		center.add_child(grid)
+		_groups.add_child(center)
+		for id: String in group.ids:
+			grid.add_child(_cards[id])
+
+
+## The cards' ids in the order shown.
+func shown_order() -> Array:
+	var out := []
+	for center in _groups.get_children():
+		if center is CenterContainer:
+			for card: AnimalCard in center.get_child(0).get_children():
+				out.append(card.animal_id)
+	return out
 
 
 func _set_banner(text: String, color: Color) -> void:

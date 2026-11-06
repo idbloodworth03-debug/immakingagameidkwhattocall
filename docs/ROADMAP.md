@@ -100,6 +100,7 @@
 - [ ] Render the tools' effects and the cages in the same style
 - [x] Roster expansion: 102 more animals and Mythics in four batches (docs/ROSTER.md)
 - [x] Rebalance the original 20 animals to their rarity's power range
+- [x] Sorting: Level, Rarity, Class and Biome on Your Deck, the bans, the Animals tab and inside a match (see GAME_DESIGN.md, Sorting)
 
 ## Phase 3: Online play
 

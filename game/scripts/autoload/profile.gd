@@ -91,6 +91,7 @@ func _new_profile() -> Dictionary:
 		"shop_day": "",
 		"shop_bought": [],
 		"settings": {"sound": true, "music": true},
+		"sort": {},
 	}
 	for i in int(prog.cage_slots):
 		profile.cage_slots.append(null)
@@ -389,6 +390,25 @@ func card_levels() -> Dictionary:
 	for id in data.collection:
 		levels[id] = int(data.collection[id].level)
 	return levels
+
+
+## How the player last sorted the animals on `screen` (AnimalSort):
+## {"key": "level"|"rarity"|"class"|"biome", "desc": bool}, or {} if they
+## never picked one there.
+func sort_choice(screen: String) -> Dictionary:
+	var all: Variant = data.get("sort", {})
+	if all is Dictionary and all.get(screen) is Dictionary:
+		return all[screen]
+	return {}
+
+
+## Remembers a screen's sort. (Saved, but no `changed`: nothing else cares.)
+func set_sort_choice(screen: String, key: String, desc: bool) -> void:
+	if not data.get("sort") is Dictionary:
+		data["sort"] = {}
+	data.sort[screen] = {"key": key, "desc": desc}
+	if autosave:
+		save()
 
 
 # --- Battles ---------------------------------------------------------------

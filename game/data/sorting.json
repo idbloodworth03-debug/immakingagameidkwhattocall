@@ -1,0 +1,27 @@
+{
+  "_note": "Sorting animals (scripts/ui/animal_sort.gd, sort_bar.gd): the four ways, each screen's first choice, the group names and the bar's sizes. A player's last choice on each screen is saved in their profile (\"sort\").",
+  "options": [
+    {"id": "level", "label": "Level", "highest_first": true},
+    {"id": "rarity", "label": "Rarity", "highest_first": true},
+    {"id": "class", "label": "Class", "highest_first": false},
+    {"id": "biome", "label": "Biome", "highest_first": false}
+  ],
+  "_screens": "Each screen's sort until the player picks one: deck (Your Deck), bans, animals (the Animals tab), starters (round 1 of a match) and army (your army row in a match).",
+  "screens": {"deck": "class", "bans": "class", "animals": "rarity", "starters": "class", "army": "class"},
+  "level_label": "Level %d",
+  "level_short": "Lv %d",
+  "level_color": "#47a9ec",
+  "legends": {"label": "Legends", "short": "Legend", "icon": "sparkles", "color": "#ff5fa8"},
+  "not_owned": {"label": "Not found yet", "short": "New", "icon": "locked", "color": "#7d8799"},
+  "tools": {"label": "Ranger tools", "short": "Tools", "icon": "toolbox", "color": "#a465de"},
+  "rarity_icon": "star",
+  "_bar": "The full bar (Your Deck, bans, Animals tab) and the compact one inside a match: button height, text size, the gap between buttons and the arrow on the chosen one.",
+  "bar": {"height": 72, "text": "body", "gap": 8, "arrow": 22},
+  "_tab_top": "Room above the bar on the Animals tab, under the version label in the corner.",
+  "tab_top": 40,
+  "compact": {"height": 56, "text": "small", "gap": 8, "arrow": 18},
+  "_header": "Section headers in the big grids: text size and icon size.",
+  "header": {"text": "body", "icon": 34},
+  "_marker": "Inside a match, instead of headers. Round 1: a line in each group's color in the gap under its cards (line thick, rows row_gap apart), with the group's tag (tag_height tall, its icon tag_icon) on the first one. Your army row: a thin divider before each group (divider_width wide, its icon divider_icon).",
+  "marker": {"row_gap": 30, "line": 8, "tag_height": 28, "tag_icon": 22, "divider_width": 40, "divider_icon": 24}
+}

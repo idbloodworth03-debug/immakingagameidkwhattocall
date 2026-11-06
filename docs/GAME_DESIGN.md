@@ -324,6 +324,23 @@ Each animal has:
 - **A habitat** (flavor: the color of its card window) and **tags** like Canine or Big Cat.
 - A **power** number (2 to 8, the old shop cost) the computer opponent uses to judge it. The old ability names stay in the data for flavor; they don't do anything in a fight.
 
+### Sorting
+
+Wherever animals are listed, a row of four chunky buttons sorts them:
+**Level, Rarity, Class, Biome** (`game/data/sorting.json`,
+`scripts/ui/animal_sort.gd`, `sort_bar.gd`). It's on Your Deck, the ban
+screen, the Animals tab, and inside a match on the round 1 starters and on
+your army row (a slimmer bar there, above the list it sorts, so it never
+covers the offers, the pick slots or Fight!).
+
+- The chosen button is lit, with an arrow; tapping it again flips the order.
+- **Level:** highest first. Animals you don't own yet always come last, both ways.
+- **Rarity:** Mythic first. **Class:** Tank first (classes.json order). **Biome:** by habitat (habitats.json order); Mythics have no real habitat, so they get a **Legends** group of their own.
+- Ties fall back to rarest first, then the name, so the order never jumps about. Tools come after the animals, in their own group.
+- Each sort shows a header for each group (its icon and name in its color, and how many). Inside a match, where headers don't fit, the first card of each group gets a small tag (round 1) and a thin divider stands before each group (your army row).
+- Each screen remembers its own choice (saved in the profile, `sort`); until you pick, Your Deck, the bans and a match sort by class, the Animals tab by rarity.
+- Sorting only changes the order on screen: picks, bans, your deck and your army stay as they are. On the Animals tab, the animals you don't own yet sort the same way and stay locked.
+
 ### The roster
 
 | Animal | Rarity | Class | Unlocks in |

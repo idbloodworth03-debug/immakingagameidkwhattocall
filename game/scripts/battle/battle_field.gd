@@ -576,6 +576,19 @@ func shake(amount: float) -> void:
 	_trauma = clampf(_trauma + amount, 0.0, 1.0)
 
 
+## An ice blast on the ground at `ground` (screen pixels), `reach` pixels
+## across: the Yeti's pound, or a smaller one round a frozen animal
+## (fx_layer "ice_blast"; colors from feel.json "styles").
+func _ice_blast(ground: Vector2, reach: float, seconds: float, shards: int, cracks: int) -> Dictionary:
+	var looks: Dictionary = GameData.feel.get("styles", {})
+	var blast := fx.effect("ice_blast", ground, reach, Color(String(looks.get("frost", "#9fe6ff"))), seconds)
+	blast.dark = Color(String(looks.get("ice_dark", "#2f7fd6")))
+	blast.core = Color(String(looks.get("ice_core", "#ffffff")))
+	blast.shards = shards
+	blast.cracks = cracks
+	return blast
+
+
 ## A slow-motion close-up on one animal (its view key): zoom in, hold,
 ## zoom out (data/feel.json, "celebrations"). False if it isn't on the field.
 func celebrate(key: Variant) -> bool:
@@ -1120,14 +1133,15 @@ func _show_style(e: Dictionary) -> void:
 			sweep.b_ang = (b - at).angle()
 			Sound.play("whoosh", -8.0, 0.1)
 		"pound":
+			# The Yeti's ground pound: a layered ice blast (fx_layer "ice_blast":
+			# core, glow, shockwave, shards, cracks), snow thrown up, a shake.
 			var ground := to_screen(e.x, e.y)
 			var frost := Color(String(looks.get("frost", "#9fe6ff")))
-			fx.effect("flash", ground, e.radius * s * 0.55, Color(frost, 0.8), 0.25)
-			fx.effect("ring", ground, e.radius * s, frost, 0.55, "", true)
-			fx.effect("ring", ground, e.radius * s * 0.95, Color.WHITE, 0.45, "", true)
-			fx.effect("ring", ground, e.radius * s * 0.6, frost.lightened(0.3), 0.4, "", true)
-			fx.burst("sparkle", ground, 10, 260.0, 0.6, 8.0, [frost, Color.WHITE], 200.0, 2.0, 180.0)
-			fx.burst("puff", ground, 8, 200.0, 0.6, 10.0, [Color("#eef8ff"), frost.lightened(0.4)], -20.0, 2.5)
+			var snow := Color(String(looks.get("snow", "#f4fbff")))
+			_ice_blast(ground, e.radius * s * Feel.num("styles", "ice_blast_reach", 1.1), Feel.num("styles", "ice_blast_seconds", 0.9),
+					Feel.count("styles", "ice_shards", 10), Feel.count("styles", "ice_cracks", 6))
+			fx.burst("puff", ground, Feel.count("styles", "snow_puffs", 10), 230.0, 0.7, 11.0, [snow, frost.lightened(0.4)], -30.0, 2.5, 40.0)
+			fx.burst("sparkle", ground, 14, 300.0, 0.7, 8.0, [frost, Color.WHITE], 260.0, 2.0, 220.0)
 			shake(Feel.num("styles", "pound_shake", 0.18))
 			Sound.play("boom", -6.0, 0.1)
 		"reflect":
@@ -1351,9 +1365,10 @@ func _show_style(e: Dictionary) -> void:
 			var patch := fx.effect("frost_patch", to_screen(e.x, e.y), e.radius * s, Color(String(looks.get("frost_patch", "#c8f2ff"))), float(e.seconds), "", true)
 			patch.edge = Color(String(looks.get("frost", "#9fe6ff")))
 		"freeze":
-			# Frozen solid: a burst of ice.
+			# Frozen solid: a smaller burst of ice round its feet, shards and all.
 			var frost := Color(String(looks.get("frost", "#9fe6ff")))
-			fx.effect("flash", at, 420 * s, Color(frost.lightened(0.5), 0.9), 0.22)
+			var feet := v.position if v != null else to_screen(e.x, e.y)
+			_ice_blast(feet, 340 * s, 0.6, 6, 4)
 			fx.burst("spark", at, 10, 260.0, 0.4, 8.0, [frost, Color.WHITE], 200.0, 3.0)
 			Sound.play("pop", -4.0, 0.2)
 		"head_lit":

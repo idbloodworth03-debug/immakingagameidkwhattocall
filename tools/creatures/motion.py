@@ -66,6 +66,9 @@ def _scale(c):
 
 
 def idle(c, t):
+    persona = PERSONAS.get(c.motion.get("persona"), {})
+    if "idle" in persona:
+        return persona["idle"](c, t)
     body = c.motion.get("body")
     if body == "bird":
         return bird_flap(c, t, power=c.motion.get("hover_power", 0.55))
@@ -712,6 +715,9 @@ def fidget(c, t):
     and then): a look one way and the other, a head shake with the ears
     flapping, a tail wag. Fliers turn a somersault in the air. Starts and
     ends on the idle pose, so it slips in and out of the idle."""
+    persona = PERSONAS.get(c.motion.get("persona"), {})
+    if "fidget" in persona:
+        return persona["fidget"](c, t)
     body = c.motion.get("body")
     if body in ("bird", "winged", "insect"):
         return _air_fidget(c, t)
@@ -764,6 +770,9 @@ def victory(c, t):
     """A short goofy celebration, looping: bears and others that rear rise up
     on their hind legs waving their paws and roaring; others bounce on the
     spot with their head up and mouth open. Fliers twirl as they flap."""
+    persona = PERSONAS.get(c.motion.get("persona"), {})
+    if "victory" in persona:
+        return persona["victory"](c, t)
     body = c.motion.get("body")
     if body in ("bird", "winged"):
         p = winged_flap(c, (t * 2) % 1, power=1.2) if body == "winged" else bird_flap(c, (t * 2) % 1, power=1.2)
@@ -1021,10 +1030,124 @@ def attack2(c, t):
     return ATTACKS[c.motion["attack2"]](c, t)
 
 
+# --- Personality (the movie look, docs/ART_DIRECTION.md): an animal's own
+# idle, fidget and victory, and attacks built for it. Animation principles:
+# anticipation (a clear wind-up, held a beat), timing and weight (a big
+# animal moves slowly into things and fast out of them), follow-through
+# (the head and arms carry on past the stop and settle), arcs, controlled
+# squash and stretch. movie.json "motion" picks these (persona, attack).
+
+def pound(c, t):
+    """The Yeti's ground pound (upright). Anticipation: it rocks back onto
+    its heels and hauls both fists up over its head, slowing as they reach
+    the top (a beat of hang time, roaring). Then it drops: the whole body
+    pitches forward and down, knees bending, and both fists slam the ground
+    together (HIT_AT), squashing low. Follow-through: the head and shoulders
+    carry on down and bounce back, the fists lift off the ground a little,
+    and it settles upright."""
+    p = Pose()
+    s = _scale(c)
+    rise = float(keys(t, [(0, 0), (0.3, 0.8), (0.5, 1.0), (0.6, -0.3), (0.72, -0.14), (0.86, 0.03), (1, 0)]))
+    up = max(rise, 0.0)
+    crouch = max(-rise, 0.0) / 0.3
+    # After the slam: the head and arms overshoot and come back.
+    settle = float(keys(t, [(0, 0), (0.6, 0), (0.68, 1), (0.8, -0.35), (0.92, 0.1), (1, 0)]))
+    # Rock back onto the heels, then pitch forward over the fists.
+    _rear(c, p, 0.14 * up - 0.3 * crouch)
+    p.move(z=s * (0.05 * up - 0.3 * crouch), y=s * 0.1 * crouch)
+    for side in ("L", "R"):
+        # Arms: straight down at rest; overhead (elbows a little bent, fists
+        # curled) at the top; forward and down onto the ground on the slam.
+        p.leg("fl." + side, upper=3.0 * up + 0.85 * crouch + 0.35 * settle, lower=-0.45 * up - 0.1 * crouch,
+              foot=-0.5 * up + 0.3 * crouch)
+        # Legs straighten up onto the toes, then bend to take the landing.
+        p.leg("hl." + side, upper=-0.08 * up + 0.5 * crouch, lower=0.05 * up - 0.65 * crouch, foot=0.4 * crouch)
+    p.rot("chest", x=0.12 * up - 0.4 * crouch - 0.08 * settle)
+    p.rot("hips", x=-0.15 * crouch)
+    p.rot("neck", x=0.1 * up - 0.15 * crouch)
+    # Looks up roaring at the top; the head drives down with the slam and
+    # overshoots.
+    p.rot("head", x=0.3 * up - 0.3 * crouch - 0.25 * settle)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.8 * up + 0.5 * crouch))
+    return p
+
+
+def yeti_idle(c, t):
+    """Big and heavy: slow deep breaths that lift the shoulders, a slow sway
+    from foot to foot with the long arms swinging a little late, a slow look
+    about, a huff at the end of each breath."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    sway = math.sin(t * TAU + 0.6)
+    p.move(z=s * 0.009 * breath)
+    p.rot("chest", x=0.035 * breath, z=0.04 * sway)
+    p.rot("hips", z=-0.02 * sway)
+    for side, sign in (("L", 1), ("R", -1)):
+        # The shoulders rise with the breath; the arms hang and swing a
+        # little behind the sway (overlap), elbows soft.
+        p.leg("fl." + side, upper=0.05 * breath + 0.03 * math.sin(t * TAU - 0.8), lower=-0.12, foot=-0.1,
+              splay=sign * 0.03 * sway)
+    look = math.sin(t * TAU) * 0.14
+    p.rot("neck", x=0.03 + 0.02 * math.cos(t * TAU * 2), z=look * 0.5)
+    p.rot("head", z=look * 0.4, x=-0.03 * breath)
+    p.rot("jaw", x=-0.06 * max(0.0, -breath))
+    return p
+
+
+def yeti_fidget(c, t):
+    """Shakes the snow off (a quick shiver with the arms held out, head
+    flopping), then a huge slow stretch and yawn, arms up, back arched,
+    up on the toes, and settles back into the idle."""
+    p = yeti_idle(c, 0.0)
+    s = _scale(c)
+    shiver_env = float(keys(t, [(0, 0), (0.07, 1), (0.28, 1), (0.36, 0), (1, 0)]))
+    shiver = math.sin(t * TAU * 7) * shiver_env
+    stretch = float(keys(t, [(0, 0), (0.36, 0), (0.55, 1), (0.74, 1), (0.92, 0), (1, 0)]))
+    p.rot("chest", y=0.12 * shiver, z=0.08 * shiver, x=0.14 * stretch)
+    p.rot("hips", z=-0.06 * shiver)
+    p.rot("neck", y=0.1 * shiver, x=0.12 * stretch)
+    p.rot("head", y=0.25 * shiver, z=0.1 * shiver, x=0.3 * stretch)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.35 * shiver_env + 2.5 * stretch, lower=-0.6 * shiver_env - 0.45 * stretch,
+              foot=-0.3 * stretch, splay=sign * 0.4 * shiver_env)
+        p.leg("hl." + side, upper=-0.08 * stretch, lower=0.05 * stretch)
+    p.move(z=s * 0.045 * stretch)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.2 * shiver_env + 0.9 * stretch))
+    return p
+
+
+def yeti_victory(c, t):
+    """Proud and goofy, looping: it beats its chest with alternating fists,
+    then flings both arms up with a roar and a little hop, lands, and starts
+    again."""
+    p = yeti_idle(c, 0.0)
+    s = _scale(c)
+    beat = math.sin(t * TAU * 4)
+    beating = float(keys(t, [(0, 1), (0.42, 1), (0.52, 0), (1, 0)]))
+    up = float(keys(t, [(0, 0), (0.44, 0), (0.58, 1), (0.86, 1), (1, 0)]))
+    hop = max(0.0, math.sin(max(0.0, (t - 0.5)) * TAU)) if t >= 0.5 else 0.0
+    for side, sign in (("L", 1), ("R", -1)):
+        chest = 1.15 + 0.4 * beat * sign
+        p.leg("fl." + side, upper=chest * beating + 2.75 * up, lower=-1.5 * beating - 0.4 * up, foot=-0.3,
+              splay=sign * 0.25 * up)
+        p.leg("hl." + side, upper=-0.3 * hop, lower=-0.35 * hop, foot=0.4 * hop)
+    p.rot("chest", x=-0.06 * beating + 0.1 * up, y=0.06 * beat * beating)
+    p.rot("neck", x=-0.1 * beating + 0.05 * up)
+    p.rot("head", x=0.25 * beating + 0.4 * up, y=0.05 * beat * beating)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.45 * beating + 0.95 * up))
+    p.move(z=s * 0.32 * hop)
+    return p
+
+
+PERSONAS = {
+    "yeti": {"idle": yeti_idle, "fidget": yeti_fidget, "victory": yeti_victory},
+}
+
 ATTACKS.update({"slam": slam, "rake": rake, "lob": lob, "handstand": handstand, "leap": leap,
-                "tail_slap": tail_slap, "ram": ram})
+                "tail_slap": tail_slap, "ram": ram, "pound": pound})
 HIT_AT.update({"slam": 0.55, "rake": 0.5, "lob": 0.5, "handstand": 0.5, "leap": 0.5, "tail_slap": 0.5,
-               "ram": 0.45, "special": 0.72})
+               "ram": 0.45, "special": 0.72, "pound": 0.6})
 
 
 def death(c, t):

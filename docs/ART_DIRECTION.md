@@ -147,13 +147,14 @@ feathers of the material library). The Komodo is scaly all over: bold
 green with a sandy belly and orange flecks, an amber eye under a brow, a
 grin and a pink forked tongue, bigger claws; its portrait uses the domed
 scales material and its real-time models' shader draws the scale cells
-from the model's own shape (no extra geometry or memory: 21k triangles,
-0.9 MB in the viewer, as before). The Falcon keeps its own markings in the
+from the model's own shape (no extra geometry or memory: 21k triangles and
+0.9 MB in the viewer, from 24k and 1.0 MB). The Falcon keeps its own markings in the
 bold palette (a navy helmet, a steel-blue back, a cream barred breast,
 yellow feet), with feather cards laid over its body like shingles: 650
-small ones in the portrait, 240 bigger ones in the viewer (the model grew
-from 0.9 to 1.1 MB) and 40 chunky ones in battle, each shaded darker at
-the base with a pale edge and shaft by the shader. The other animals keep
+small ones in the portrait, 240 bigger ones in the viewer (20k triangles
+and 0.9 MB, from 18k and 0.75 MB) and 40 chunky ones in battle (3.1k
+triangles and 205 KB, from 2.9k and 182 KB), each shaded darker at the
+base with a pale edge and shaft by the shader. The other animals keep
 the flat cartoon look below until they move over.
 
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its

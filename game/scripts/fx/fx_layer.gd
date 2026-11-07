@@ -443,8 +443,9 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 0.25 - PI / 2) * r * 0.35, Color(color, 0.85), 5.0)
 			canvas.draw_set_transform(Vector2.ZERO)
 		"frost_patch":
-			# The Yeti's frost on the ground: an icy disc with crystals round its
-			# edge, frosting over quickly and melting away at the end.
+			# The Yeti's frost on the ground: an icy disc with a glassy sheen and
+			# little crystals standing round its edge, frosting over quickly and
+			# melting away at the end.
 			var grow := Ease.out_cubic(clampf(t * 8.0, 0.0, 1.0))
 			var melt := 1.0 - clampf((t - 0.8) / 0.2, 0.0, 1.0)
 			var edge: Color = fx.get("edge", color)
@@ -452,17 +453,65 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.6))
 			canvas.draw_circle(Vector2.ZERO, rr, Color(color, 0.42 * melt))
 			canvas.draw_circle(Vector2.ZERO, rr * 0.65, Color(1, 1, 1, 0.2 * melt))
+			canvas.draw_arc(Vector2.ZERO, rr * 0.8, PI * 1.1, PI * 1.45, 12, Color(1, 1, 1, 0.5 * melt), maxf(2.0, rr * 0.04))
 			canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 40, Color(edge, 0.95 * melt), 5.0)
+			canvas.draw_set_transform(Vector2.ZERO)
 			var rng := RandomNumberGenerator.new()
 			rng.seed = int(fx.seed)
 			for i in 10:
 				var a := TAU * i / 10.0 + rng.randf() * 0.3
-				var at := Vector2.from_angle(a) * rr * rng.randf_range(0.55, 0.95)
-				var size := rr * rng.randf_range(0.08, 0.14)
-				for k in 3:
-					var d := Vector2.from_angle(k * PI / 3.0) * size
-					canvas.draw_line(at - d, at + d, Color(1, 1, 1, 0.9 * melt), 2.5)
+				var d := rr * rng.randf_range(0.6, 0.95)
+				var base := p + Vector2(cos(a) * d, sin(a) * d * 0.6)
+				var h := rr * rng.randf_range(0.12, 0.2) * grow * melt
+				var w := h * 0.35
+				var lean := rng.randf_range(-0.3, 0.3) * h
+				_shard(canvas, base, h, w, lean, edge.darkened(0.35), color.lightened(0.4), Color.WHITE, melt)
+		"ice_blast":
+			# The Yeti's ground pound (docs/ART_DIRECTION.md, effects). The
+			# build-up is the frost gathering on its fists (style_look.gd); this
+			# is the impact and the fade, in layers: a white core flash, an icy
+			# glow, a shockwave ring racing out, ice shards bursting up out of
+			# the ground round it and frost cracks across it, all melting back
+			# at the end. Values: feel.json "styles" ice_*.
+			var dark: Color = fx.get("dark", color.darkened(0.5))
+			var core: Color = fx.get("core", Color.WHITE)
+			var reach := Ease.out_cubic(clampf(t * 1.8, 0.0, 1.0))
+			var fade := 1.0 - clampf((t - 0.45) / 0.55, 0.0, 1.0)
+			var rr := r * (0.2 + 0.8 * reach)
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.6))
+			canvas.draw_circle(Vector2.ZERO, rr * 0.95, Color(color, 0.28 * fade))
+			var flash := 1.0 - clampf(t * 3.5, 0.0, 1.0)
+			if flash > 0.0:
+				canvas.draw_circle(Vector2.ZERO, r * 0.55 * (0.4 + 0.6 * flash), Color(core, 0.85 * flash))
+			# The shockwave: a thick bright ring thinning as it spreads.
+			var width := maxf(3.0, r * 0.1 * (1.0 - 0.6 * reach))
+			canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 48, Color(dark, 0.7 * fade), width + 4.0)
+			canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 48, Color(core, 0.95 * fade), width)
+			# Frost cracks racing out across the ground.
+			var cracks := int(fx.get("cracks", 6))
+			for i in cracks:
+				var a := TAU * (i + rng.randf() * 0.5) / cracks
+				var far := rr * rng.randf_range(0.7, 1.0)
+				var pts := PackedVector2Array([Vector2.ZERO])
+				for k in range(1, 5):
+					pts.append(Vector2.from_angle(a + rng.randf_range(-0.12, 0.12)) * far * k / 4.0)
+				canvas.draw_polyline(pts, Color(core, 0.8 * fade), maxf(1.5, r * 0.02))
 			canvas.draw_set_transform(Vector2.ZERO)
+			# Ice shards shooting up out of the ground round the ring, then
+			# sinking back as they melt.
+			var shards := int(fx.get("shards", 10))
+			var grow := Ease.out_back(clampf((t - 0.04) / 0.3, 0.0, 1.0), 2.0)
+			var melt := 1.0 - Ease.in_cubic(clampf((t - 0.5) / 0.5, 0.0, 1.0))
+			for i in shards:
+				var a := TAU * i / shards + rng.randf_range(-0.2, 0.2)
+				var d := r * rng.randf_range(0.4, 0.85)
+				var base := p + Vector2(cos(a) * d, sin(a) * d * 0.6)
+				var h := r * rng.randf_range(0.22, 0.45) * grow * melt
+				var w := h * rng.randf_range(0.28, 0.4)
+				var lean := rng.randf_range(-0.25, 0.25) * h
+				_shard(canvas, base, h, w, lean, dark, color.lightened(0.45), core, melt)
 		"ink_cloud":
 			# The Kraken's ink: a dark, swirling cloud spreading out, then
 			# thinning away.
@@ -593,6 +642,18 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			if texture != null:
 				var side: float = r * (0.6 + 0.4 * Ease.out_back(minf(1.0, t * 3.0)))
 				canvas.draw_texture_rect(texture, Rect2(p - Vector2(side, side) / 2.0, Vector2(side, side)), false, Color(color, 1.0 - Ease.in_cubic(t)))
+
+
+## One ice crystal standing on the ground at `base`: `h` tall, `w` wide at
+## the foot, leaning `lean` sideways; a dark edge, a pale face and a white
+## shine down one side.
+static func _shard(canvas: CanvasItem, base: Vector2, h: float, w: float, lean: float, dark: Color, pale: Color, shine: Color, alpha: float) -> void:
+	if h < 1.0:
+		return
+	var tip := base + Vector2(lean, -h)
+	canvas.draw_colored_polygon(PackedVector2Array([base + Vector2(-w, 0), tip, base + Vector2(w, 0), base + Vector2(0, w * 0.5)]), Color(dark, 0.95 * alpha))
+	canvas.draw_colored_polygon(PackedVector2Array([base + Vector2(-w * 0.55, -w * 0.1), base + Vector2(lean * 0.9, -h * 0.9), base + Vector2(w * 0.45, -w * 0.1)]), Color(pale, 0.95 * alpha))
+	canvas.draw_line(base + Vector2(-w * 0.2, -w * 0.3), base + Vector2(lean * 0.75, -h * 0.78), Color(shine, 0.9 * alpha), maxf(1.5, w * 0.22))
 
 
 static func _draw_text(canvas: CanvasItem, center: Vector2, text: String, font_size: int, color: Color, outline := 4) -> void:

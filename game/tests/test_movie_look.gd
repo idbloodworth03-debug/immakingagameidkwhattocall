@@ -106,6 +106,23 @@ func test_the_komodo_dragon_is_scaly_and_the_falcon_feathered() -> void:
 			_made.append(m.pivot)
 
 
+func test_the_yeti_has_its_own_animations() -> void:
+	# Its pound lands at the sheet's hit time (the battle times strikes to
+	# it), and the viewer can hold a pose for a screenshot (dev).
+	check_eq(float(UnitSprites.animation("yeti", "attack").get("hit", 0.0)), 0.6, "the pound lands at 0.6 of the attack")
+	var viewer := _viewer("yeti")
+	if viewer.model() == null:
+		check(false, "the model loaded")
+		return
+	for anim in ["idle", "fidget", "attack", "victory"]:
+		check(viewer.model().find_children("*", "AnimationPlayer", true, false)[0].has_animation(anim), "it has a %s" % anim)
+	viewer.pose_at("attack:0.6")
+	var player: AnimationPlayer = viewer.model().find_children("*", "AnimationPlayer", true, false)[0]
+	check_eq(player.assigned_animation, "attack", "holding the attack")
+	check(not player.is_playing(), "paused")
+	check(absf(player.current_animation_position - 0.6 * player.get_animation("attack").length) < 0.02, "at its hit")
+
+
 func test_the_other_animals_keep_the_cartoon_look() -> void:
 	var viewer := _viewer("red_fox")
 	if viewer.model() == null:

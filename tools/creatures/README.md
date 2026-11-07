@@ -114,7 +114,16 @@ mane grows with its face).
    `?viewer=<id>` (dev tools on) goes straight to that animal's viewer. Every number
    is in `movie.json`; `cartoon.load(id)` gives any listed animal the movie
    look. `FRAME=head FUR=0 python preview.py yeti head.png` checks a face
-   fast (`FUR=0`: no strands; `FRAME=head`: a close-up).
+   fast (`FUR=0`: no strands; `FRAME=head`: a close-up). Its animations
+   can be its own too (`movie.json` "motion"): a persona in `motion.py`
+   PERSONAS gives it its own idle, fidget and victory (the Yeti breathes
+   heavily and sways, shakes snow off and yawns, beats its chest and
+   roars), and an attack built for it (`pound`: fists hauled overhead with
+   a beat of hang time, then slammed down with the whole body, squashing
+   low and settling), on the animation principles in
+   docs/ART_DIRECTION.md: anticipation, weight, follow-through, arcs,
+   squash and stretch. `STYLE=movie python strip.py yeti attack out.png`
+   shows one as a filmstrip.
 
 Each animal is one file in `species/`.
 

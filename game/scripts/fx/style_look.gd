@@ -246,7 +246,7 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					state = "frost"
 					var glow := 0.5 + 0.5 * sin(now * 8.0)
 					p.tint = Color(1.0, 1.0, 1.0).lerp(_color("frost", "#9fe6ff"), 0.35 + 0.2 * glow)
-					_puffs(dt, "sparkle", _color("frost", "#9fe6ff"), Vector2(0.0, -0.3), Vector2(0, -60), 0.12)
+					_gather(dt, _color("frost", "#9fe6ff"))
 	if f != null and view.defeat < 0.0 and view.field != null and view.field.sim != null:
 		# Roused by a Lion's roar: a golden glow and sparkles.
 		if int(f.memory.get("roared", -1)) > view.field.sim.tick:
@@ -329,6 +329,28 @@ func _puffs(dt: float, particle: String, color: Color, spot: Vector2, vel: Vecto
 	var h := _height()
 	var at := view.position + position + Vector2(spot.x * h + randf_range(-0.15, 0.15) * h, spot.y * h)
 	view.field.fx.particle(particle, at, vel + Vector2(randf_range(-20, 20), randf_range(-10, 10)), 0.6, size, color, 60.0 if particle == "leaf" else -20.0, 2.0, randf_range(-4, 4))
+
+
+var _gather_in := 0.0
+
+
+## The build-up to the Yeti's pound: frost gathering on its fists, sparkles
+## drawn in from all round toward its hands and a glow swelling there
+## (feel.json "styles" gather_*).
+func _gather(dt: float, color: Color) -> void:
+	_gather_in -= dt
+	if _gather_in > 0.0 or view.field == null:
+		return
+	_gather_in = _num("gather_every", 0.05)
+	var h := _height()
+	var hands := view.position + position + Vector2(0.0, -h * _num("gather_height", 0.5))
+	var ring := h * _num("gather_radius", 0.7)
+	var a := randf() * TAU
+	var from := hands + Vector2(cos(a), sin(a) * 0.7) * ring
+	var life := 0.35
+	view.field.fx.particle("sparkle", from, (hands - from) / life, life, 6.0, color, 0.0, 0.0)
+	if randf() < 0.3:
+		view.field.fx.particle("glow", hands + Vector2(randf_range(-0.2, 0.2) * h, randf_range(-0.1, 0.1) * h), Vector2(0, -10), 0.3, 9.0, Color(color, 0.7), 0.0, 1.0)
 
 
 var _status_in := 0.0

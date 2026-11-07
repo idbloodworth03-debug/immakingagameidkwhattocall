@@ -91,8 +91,15 @@ func _open_dev_shortcut() -> void:
 	var id := String(query) if query is String else ""
 	if id.is_empty() or not GameData.cards.has(id) or GameData.is_tool(id):
 		return
+	# &pose=attack:0.6 holds that animation at that point (screenshots of a pose).
+	var pose: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('pose') || ''", true)
 	select_tab(1)
-	AnimalViewer.open.call_deferred(id)
+	_open_viewer_dev.call_deferred(id, String(pose) if pose is String else "")
+
+
+func _open_viewer_dev(id: String, pose: String) -> void:
+	var viewer := AnimalViewer.open(id)
+	viewer.dev_pose = pose
 
 
 func select_tab(index: int) -> void:

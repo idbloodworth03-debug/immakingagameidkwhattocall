@@ -62,6 +62,9 @@ def load(species):
     else:
         _paint(c, design)
     _parts(c, design)
+    # Its own animations (motion.py: a persona's idle, fidget and victory,
+    # an attack built for it).
+    c.motion = dict(c.motion, **design.get("motion", {}))
     return c
 
 

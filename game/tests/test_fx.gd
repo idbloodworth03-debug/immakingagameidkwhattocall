@@ -95,6 +95,37 @@ func test_hits_show_when_the_strike_lands() -> void:
 	field.free()
 
 
+func test_the_yetis_pound_rings_out_in_ice() -> void:
+	# The pound: a layered ice blast (core, glow, shockwave, shards, cracks)
+	# over the frost patch it leaves; a frozen animal gets a smaller one.
+	var made := _field()
+	var field: BattleField = made.field
+	var bear: BattleSim.Fighter = made.bear
+	var boar: BattleSim.Fighter = made.boar
+	field.add_events([
+		{"type": "pound", "uid": bear.uid, "x": bear.x, "y": bear.y, "radius": 2000},
+		{"type": "frost", "uid": bear.uid, "x": bear.x, "y": bear.y, "radius": 2200, "seconds": 5.0},
+	])
+	field._process(1.0 / 60.0)
+	var blasts: Array = field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "ice_blast")
+	check_eq(blasts.size(), 1, "one ice blast")
+	if blasts.size() == 1:
+		var blast: Dictionary = blasts[0]
+		check(int(blast.get("shards", 0)) >= 6 and int(blast.get("cracks", 0)) >= 3, "with ice shards and frost cracks (%d, %d)" % [int(blast.get("shards", 0)), int(blast.get("cracks", 0))])
+		check(float(blast.radius) > 2000.0 * field._scale(), "reaching past the pound's radius")
+		check(blast.has("dark") and blast.has("core"), "in the ice colors")
+	check(not field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "frost_patch").is_empty(), "the frost patch stays behind")
+	check(field._trauma > 0.0, "and the field shakes")
+	for i in 80:
+		field._process(1.0 / 60.0)
+	check(field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "ice_blast").is_empty(), "the blast melts away within a second and a half")
+	field.add_events([{"type": "freeze", "uid": boar.uid, "x": boar.x, "y": boar.y}])
+	field._process(1.0 / 60.0)
+	var small: Array = field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "ice_blast")
+	check(small.size() == 1 and float(small[0].radius) < 2000.0 * field._scale(), "a frozen animal gets a smaller burst")
+	field.free()
+
+
 func test_a_knockout_waits_for_its_hit() -> void:
 	var made := _field()
 	var field: BattleField = made.field

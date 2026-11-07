@@ -34,6 +34,9 @@ var _skin: ShaderMaterial
 var _outline: ShaderMaterial
 ## The model has the movie look (hero art: no outline, its own shading).
 var _movie := false
+## For testing: an animation to hold at a point in it once the model loads
+## ("attack:0.6"), for screenshots of a pose. Empty: none.
+var dev_pose := ""
 var _shadow: MeshInstance3D
 var _info_box: VBoxContainer
 var _hint: Control
@@ -225,6 +228,23 @@ func _model_ready(scene: PackedScene) -> void:
 	var fade := create_tween()
 	fade.tween_property(_placeholder, "modulate:a", 0.0, 0.2)
 	fade.tween_callback(_placeholder.hide)
+	if not dev_pose.is_empty():
+		pose_at(dev_pose)
+
+
+## For testing: holds one animation at a point in it ("attack:0.6", 0 to 1),
+## so a pose can be screenshotted. The fidgets stop.
+func pose_at(spec: String) -> void:
+	if _player == null:
+		return
+	var anim := spec.get_slice(":", 0)
+	var at := float(spec.get_slice(":", 1)) if spec.contains(":") else 0.0
+	if not _player.has_animation(anim):
+		return
+	_player.play(anim)
+	_player.seek(clampf(at, 0.0, 1.0) * _player.get_animation(anim).length, true)
+	_player.pause()
+	_next_fidget = INF
 
 
 func _apply_look() -> void:

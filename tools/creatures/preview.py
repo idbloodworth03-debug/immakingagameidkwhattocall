@@ -29,13 +29,24 @@ def main(species, out, pose=None, size=480):
     if pose:
         import motion
         motion.preview_pose(arm, creature, pose)
-    S.lights()
+    lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
+    if getattr(creature, "style", "") == "movie":
+        # Hero art: strands (FUR=0 for a fast bare check), materials, studio lights.
+        import movie
+        movie.dress(creature, arm, body, mesh, quality=float(os.environ.get("FUR", 1.0)),
+                    size=float(hi[2] - lo[2]))
+    else:
+        S.lights()
     S.shadow_catcher(8)
     if getattr(creature, "style", "") == "cartoon":
         S.outline(2.5)
-    lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     center = (lo + hi) / 2
     span = float(max(hi - lo)) * 1.25
+    if os.environ.get("FRAME") == "head" and "skull" in creature.joints:
+        # A close-up of the head.
+        import numpy as np
+        center = creature.joint("skull") + np.array([0.0, 0.0, -0.03])
+        span = float(max(hi - lo)) * 0.42
     sc.render.resolution_x = size
     sc.render.resolution_y = size
     views = []

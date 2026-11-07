@@ -30,6 +30,10 @@ body's height, so faces read on a card.
 
 ### 2. Material library
 
+![The material library under the studio lights](art/material_library.jpg)
+(`tools/creatures/material_sheet.py`: front row short, long and fluffy fur,
+feathers, scales; back row shell, skin, horn and claw, eye, nose.)
+
 Every animal is built from the same materials, each starting from a color
 in our palette and adding the craftsmanship: shading from root to tip,
 grooves, gloss. Never a pale or gray-washed version of the color.
@@ -120,6 +124,24 @@ animal.
   60 fps on an iPhone with big armies.
 
 ## Where the look is now
+
+**The Yeti is the first animal on the animated-movie look** (the style
+guide above). It is built by `tools/creatures/movie.py` from its design in
+`tools/creatures/movie.json`: the cartoon's shape with gentler proportions,
+a bare blue face with a muzzle, a nose and a grin, eyes set under a brow
+with a blue iris and a catchlight, fingers and toes with dark glossy nails,
+horns swept back, and a shaggy white coat with icy-blue shadows. Its card
+portrait grows real groomed fur strands and uses the material library and
+the studio lights, with no outline. Its real-time models carry the same
+coat as sculpted locks in the mesh: about 560 fine ones for the 3D viewer
+(33,000 triangles, 1.5 MB, from 21,000 and 0.9 MB) and 70 chunky ones for
+the battlefield (5,400 triangles, 318 KB, from 3,400 and 227 KB), drawn by
+their own shader (`game/scripts/fx/model_movie.gdshader`, values in
+`game/data/viewer.json` "movie_look") with the studio lighting, strand
+detail that fades out before it can shimmer, and eyes with an iris. In
+battle it keeps the dark line and team band, drawn round the animal's
+edge and not round every lock. The other animals keep the flat cartoon
+look below until they move over.
 
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and

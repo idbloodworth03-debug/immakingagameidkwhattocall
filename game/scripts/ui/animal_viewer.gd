@@ -32,6 +32,8 @@ var _model: Node3D
 var _player: AnimationPlayer
 var _skin: ShaderMaterial
 var _outline: ShaderMaterial
+## The model has the movie look (hero art: no outline, its own shading).
+var _movie := false
 var _shadow: MeshInstance3D
 var _info_box: VBoxContainer
 var _hint: Control
@@ -173,12 +175,12 @@ func load_model_now() -> void:
 func _model_ready(scene: PackedScene) -> void:
 	_model = scene.instantiate() as Node3D
 	_turntable.add_child(_model)
+	_movie = ModelStage.is_movie(_model)
 	_skin = ShaderMaterial.new()
 	_skin.shader = SKIN_SHADER
 	_outline = ShaderMaterial.new()
 	_outline.shader = OUTLINE_SHADER
 	_apply_look()
-	_skin.next_pass = _outline
 	var box := AABB()
 	var first := true
 	for mesh in _model.find_children("*", "MeshInstance3D", true, false):
@@ -226,15 +228,24 @@ func _model_ready(scene: PackedScene) -> void:
 
 
 func _apply_look() -> void:
-	var key_dir: Array = _look.get("key_dir", [-0.45, 0.72, 0.55])
-	_skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
-	for key in ["key_color", "shade_color", "rim_color", "silhouette_color"]:
-		if _look.has(key):
-			_skin.set_shader_parameter(key, Color(String(_look[key])))
-	for key in ["soft", "rim", "rim_width", "highlight", "vibrance"]:
-		if _look.has(key):
-			_skin.set_shader_parameter(key, float(_look[key]))
 	var unknown := not Profile.has_card(animal_id)
+	if _movie:
+		# Hero art: the movie shading and no outline (the rim light separates
+		# it from the background), except as an undiscovered silhouette.
+		ModelStage.dress_movie(_skin, animal_id)
+		_skin.set_shader_parameter("silhouette_color", Color(String(_look.get("silhouette_color", "#1d2f5e"))))
+		_skin.next_pass = _outline if unknown else null
+		_outline.set_shader_parameter("lock_push", ModelStage.lock_push())
+	else:
+		_skin.next_pass = _outline
+		var key_dir: Array = _look.get("key_dir", [-0.45, 0.72, 0.55])
+		_skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
+		for key in ["key_color", "shade_color", "rim_color", "silhouette_color"]:
+			if _look.has(key):
+				_skin.set_shader_parameter(key, Color(String(_look[key])))
+		for key in ["soft", "rim", "rim_width", "highlight", "vibrance"]:
+			if _look.has(key):
+				_skin.set_shader_parameter(key, float(_look[key]))
 	_skin.set_shader_parameter("silhouette", 1.0 if unknown else 0.0)
 	_outline.set_shader_parameter("width_px", float(_look.get("outline_px", 1.8)) * render_scale)
 	_outline.set_shader_parameter("color", Color(String(_look.get("outline_color", "#140c09"))))

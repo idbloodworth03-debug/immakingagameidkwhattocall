@@ -98,6 +98,20 @@ mane grows with its face).
    renders one sample of each under those lights (`--quick` for a half-size,
    thin-haired check in a minute or two).
 
+11. **The movie look** (`movie.py`, `movie.json`), the animated-movie pass
+   itself, one design per animal that has moved to it (the Yeti first): the
+   cartoon shape with its own proportions, eyes set under a brow with an
+   iris, a bare face with a muzzle, nose and grin, fingers and toes with
+   nails, horns, and a coat in the bold palette with a deeper shade between
+   the clumps. Hero art (`sprites.py --only portrait`, `preview.py`) grows
+   real strands and uses the material library and studio lights, with no
+   outline. The real-time models (`export_gltf.py`) get the same coat as
+   sculpted fur locks (fine for the viewer, chunky for the battle), named
+   `<id>_movie` so the game draws them with their own shader. Every number
+   is in `movie.json`; `cartoon.load(id)` gives any listed animal the movie
+   look. `FRAME=head FUR=0 python preview.py yeti head.png` checks a face
+   fast (`FUR=0`: no strands; `FRAME=head`: a close-up).
+
 Each animal is one file in `species/`.
 
 Body plans: `anatomy.py` has four-legged animals (`quadruped`, which also

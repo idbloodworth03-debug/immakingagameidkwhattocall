@@ -47,6 +47,9 @@ ANIMS = MODEL.get("animations", ["idle", "fidget", "attack", "victory"])
 # animation the battle plays, and their size in field tiles.
 LODS = {"viewer": {}, "battle": MODEL.get("battle", {})}
 LOD = dict(LODS["viewer"])
+# Which of LODS is being made (an animal with the movie look, movie.py,
+# grows its fur locks to suit it).
+LOD_NAME = ["viewer"]
 
 
 def _setting(key, fallback):
@@ -171,9 +174,65 @@ def _decimate(obj, triangles):
     return sum(len(p.vertices) - 2 for p in obj.data.polygons)
 
 
-def _skin_material():
-    mat = bpy.data.materials.get("skin") or bpy.data.materials.new("skin")
+def _skin_material(name="skin"):
+    """The model's one material. The game only reads its name: "movie" for
+    an animal with the movie look (its own shader: fur locks, eyes with an
+    iris, studio lighting), "skin" otherwise."""
+    mat = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     return mat
+
+
+def _movie_locks(creature, arm, body, mesh):
+    """An animal with the movie look: the skin under its fur a deeper shade,
+    and its coat as sculpted locks (movie.py), skinned to the bones of the
+    skin they grow from. Returns the locks' object."""
+    import movie
+    from sdf import bone_weights
+    lod = LOD_NAME[0]
+    me = body.data
+    attr = me.color_attributes["Col"]
+    flat = np.empty(len(attr.data) * 4)
+    attr.data.foreach_get("color", flat)
+    colors = flat.reshape(-1, 4)[:, :3].copy()
+    deeper = movie.under_fur(creature, mesh, colors, lod)
+    rgba = np.ones((len(deeper), 4))
+    rgba[:, :3] = deeper
+    attr.data.foreach_set("color", rgba.ravel())
+    verts, faces, cols, uv, uv2, roots = movie.lock_geometry(creature, mesh, colors, lod)
+    lm = bpy.data.meshes.new(creature.name + "_locks")
+    lm.from_pydata(verts.tolist(), [], faces)
+    lm.update()
+    for poly in lm.polygons:
+        poly.use_smooth = True
+    rgba = np.ones((len(cols), 4))
+    rgba[:, :3] = cols
+    lm.color_attributes.new("Col", "FLOAT_COLOR", "POINT").data.foreach_set("color", rgba.ravel())
+    loops = np.empty(len(lm.loops), int)
+    lm.loops.foreach_get("vertex_index", loops)
+    # glTF flips V (v -> 1 - v): flipped here so the game reads them as is.
+    a = uv[loops].copy()
+    a[:, 1] = 1.0 - a[:, 1]
+    lm.uv_layers.new(name="UVMap").data.foreach_set("uv", a.ravel())
+    b = uv2[loops].copy()
+    b[:, 1] = 1.0 - b[:, 1]
+    lm.uv_layers.new(name="UV2").data.foreach_set("uv", b.ravel())
+    locks = bpy.data.objects.new(lm.name, lm)
+    bpy.context.scene.collection.objects.link(locks)
+    weights = bone_weights(mesh)
+    for name, w in weights.items():
+        lw = w[roots]
+        idx = np.nonzero(lw > 0.01)[0]
+        if not len(idx):
+            continue
+        vg = locks.vertex_groups.new(name=name)
+        for i in idx:
+            vg.add([int(i)], float(lw[i]), "REPLACE")
+    mod = locks.modifiers.new("rig", "ARMATURE")
+    mod.object = arm
+    locks.parent = arm
+    tris = sum(len(p.vertices) - 2 for p in lm.polygons)
+    print(f"[model] {creature.name}: {lod} fur locks {tris} triangles")
+    return locks
 
 
 def assemble(creature):
@@ -189,18 +248,28 @@ def assemble(creature):
         bpy.data.objects.remove(facing)
     _rest(arm)
 
+    movie_look = getattr(creature, "style", "") == "movie"
+    locks = _movie_locks(creature, arm, body, mesh) if movie_look else None
     target = int(_setting("triangles", 16000))
+    if movie_look:
+        target = int(creature.design.get("body_triangles", {}).get(LOD_NAME[0], target))
     piece_cap = int(_setting("piece_triangles", 0))
     pieces = []
     for obj in list(bpy.data.objects):
-        if obj.type != "MESH" or obj == body:
+        if obj.type != "MESH" or obj == body or obj == locks:
             continue
         if obj.parent == arm and obj.parent_type == "BONE":
             bone = obj.parent_bone
         else:
             continue
         eye = bool(obj.data.materials) and obj.data.materials[0].name.startswith("cartoon_eye")
-        if _colors_of(obj) is None or eye:
+        movie_eye = movie_look and bool(obj.data.materials) and obj.data.materials[0].name.startswith("eye")
+        if movie_eye:
+            # The movie look's eye: its color is the iris (the shader draws
+            # the white, iris, pupil and catchlight).
+            eye = True
+            _paint(obj, S.hex_color(creature.design["eyes"]["iris"]), eye)
+        elif _colors_of(obj) is None or eye:
             _paint(obj, _material_color(obj), eye)
         if eye:
             _eye_uv(obj)
@@ -225,10 +294,12 @@ def assemble(creature):
         if obj.data.color_attributes.get("HairCol"):
             obj.data.color_attributes.remove(obj.data.color_attributes["HairCol"])
 
+    if locks is not None:
+        pieces.append(locks)
     # One mesh, one material slot (the game draws it with its own shader).
     for obj in [body] + pieces:
         obj.data.materials.clear()
-        obj.data.materials.append(_skin_material())
+        obj.data.materials.append(_skin_material("movie" if movie_look else "skin"))
         for attr in [a.name for a in obj.data.attributes if a.domain == "POINT" and a.data_type == "FLOAT"
                      and not a.name.startswith(".")]:
             if attr not in ("position",):
@@ -249,6 +320,10 @@ def assemble(creature):
     body.parent = arm
     body.matrix_parent_inverse = Matrix.Identity(4)
     body.matrix_basis = Matrix.Identity(4)
+    if movie_look:
+        # The game picks its shader by this name (ModelStage.is_movie).
+        body.name = creature.name + "_movie"
+        body.data.name = creature.name + "_movie"
     tris = sum(len(p.vertices) - 2 for p in body.data.polygons)
     print(f"[model] {creature.name}: body {body_tris} triangles, {tris} in all, {len(body.data.vertices)} vertices")
     return arm, body, mesh
@@ -342,6 +417,7 @@ def main():
     args = parser.parse_args(argv)
     LOD.clear()
     LOD.update(LODS[args.lod])
+    LOD_NAME[0] = args.lod
     out = args.out or (os.path.join(OUT, "battle") if args.lod == "battle" else OUT)
     ids = args.species
     if args.all:

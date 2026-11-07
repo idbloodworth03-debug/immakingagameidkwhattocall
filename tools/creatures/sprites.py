@@ -411,13 +411,21 @@ def render_portrait(creature, out_dir, samples, size=None, with_fur=True):
     size = size or int(S.LOOK["portrait_size"])
     sc = S.reset()
     sc.cycles.samples = int(S.LOOK["portrait_samples"])
-    arm, body, mesh = S.build(creature, with_fur=with_fur)
+    movie_look = getattr(creature, "style", "") == "movie"
+    arm, body, mesh = S.build(creature, with_fur=with_fur and not movie_look)
     motion.apply(arm, motion.idle(creature, 0.0))
-    S.lights(1.1)
+    lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
+    if movie_look:
+        # Hero art (docs/ART_DIRECTION.md): groomed strands, the material
+        # library, the studio lights and no outline.
+        import movie
+        movie.dress(creature, arm, body, mesh, quality=1.0 if with_fur else 0.0, size=float(hi[2] - lo[2]))
+        sc.cycles.samples = int(creature.design.get("portrait_samples", sc.cycles.samples))
+    else:
+        S.lights(1.1)
     S.shadow_catcher(8)
     if getattr(creature, "style", "") == "cartoon":
         S.outline(float(S.LOOK["outline"]["portrait_pixels"]) * size / 512.0)
-    lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     center = (lo + hi) / 2 + np.array(arm["rest_offset"])
     radius = float(np.linalg.norm(hi - lo)) / 2
     d = np.array(creature.motion.get("portrait_view", (-0.75, 1.0, 0.55)), float)
@@ -431,7 +439,8 @@ def render_portrait(creature, out_dir, samples, size=None, with_fur=True):
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)
     im = Image.fromarray(clean_alpha(np.asarray(Image.open(path).convert("RGBA"))))
-    im.save(os.path.join(out_dir, "portrait.webp"), "WEBP", lossless=True, quality=100, method=4)
+    im.save(os.path.join(out_dir, os.environ.get("PORTRAIT_NAME", "portrait.webp")), "WEBP", lossless=True,
+            quality=100, method=4)
     os.remove(path)
 
 
@@ -442,7 +451,7 @@ def main():
     parser.add_argument("--samples", type=int, default=int(S.LOOK["sprite_samples"]))
     parser.add_argument("--only", choices=["sprites", "portrait"])
     parser.add_argument("--bare", action="store_true", help="no fur strands (much faster, for testing)")
-    parser.add_argument("--style", choices=["cartoon", "real"], default="cartoon",
+    parser.add_argument("--style", choices=["cartoon", "real", "movie"], default="cartoon",
                         help="cartoon (big head and eyes, outlined) or real proportions with fur")
     parser.add_argument("--anims", help="comma-separated animations to render again, keeping the others "
                         "from the existing sheet (e.g. --anims fidget --only sprites); 'new' renders only the "

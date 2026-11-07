@@ -127,19 +127,42 @@ def _bump(nt, height, strength, distance=0.01):
 
 # --- Fur ------------------------------------------------------------------------------
 
-def fur_material(color, kind="short"):
+def fur_material(color, kind="short", color_attribute=None, groom=None, deep=None):
     """Hair strands: darker at the root, lighter at the tip, each strand a
-    shade different (look.json materials.fur.<kind>)."""
-    f = MAT["fur"][kind]
+    shade different (look.json materials.fur.<kind>). With
+    `color_attribute`, each strand takes its color from the skin's paint
+    where it grows (a tiger's stripes) instead of one `color`."""
+    f = dict(MAT["fur"][kind], **(groom or {}))
     m, nt, out = _new_material("fur_" + kind)
     info = nt.nodes.new("ShaderNodeHairInfo")
     ramp = _math(nt, "POWER", info.outputs["Intercept"], 0.6)
-    root = shade(color, f["root_darken"])
-    tip = shade(color, -f["tip_lighten"])
-    col = _mix_color(nt, ramp, root, tip)
-    # A little per-strand variation.
-    var = _math(nt, "MULTIPLY", _math(nt, "SUBTRACT", info.outputs["Random"], 0.5), f["variation"] * 2.0)
-    col = _mix_color(nt, _math(nt, "ABSOLUTE", var), col, shade(color, 0.25 if f["variation"] > 0 else 0))
+    if color_attribute:
+        attr = nt.nodes.new("ShaderNodeVertexColor")
+        attr.layer_name = color_attribute
+        base = attr.outputs["Color"]
+        # Root: the paint darker (or toward its `deep` shade); tip: lighter.
+        root = _mix_color(nt, f["root_darken"], base, deep or (0.0, 0.0, 0.0, 1.0))
+        tip = _mix_color(nt, f["tip_lighten"], base, (1.0, 1.0, 1.0, 1.0))
+        col = _mix_color(nt, ramp, root, tip)
+        var = _math(nt, "MULTIPLY", _math(nt, "SUBTRACT", info.outputs["Random"], 0.5), f["variation"] * 2.0)
+        col = _mix_color(nt, _math(nt, "ABSOLUTE", var), col, (0.0, 0.0, 0.0, 1.0))
+    else:
+        root = shade(color, f["root_darken"])
+        tip = shade(color, -f["tip_lighten"])
+        col = _mix_color(nt, ramp, root, tip)
+        # A little per-strand variation.
+        var = _math(nt, "MULTIPLY", _math(nt, "SUBTRACT", info.outputs["Random"], 0.5), f["variation"] * 2.0)
+        col = _mix_color(nt, _math(nt, "ABSOLUTE", var), col, shade(color, 0.25 if f["variation"] > 0 else 0))
+    if f.get("shading") == "soft":
+        # Soft solid fibres: the color as painted in the light, the sky's
+        # color in the shade (a real hair shader grays light coats).
+        b = _principled(nt)
+        nt.links.new(col, b.inputs["Base Color"])
+        b.inputs["Roughness"].default_value = f["hair_roughness"]
+        b.inputs["Sheen Weight"].default_value = f.get("sheen", 0.5)
+        b.inputs["Specular IOR Level"].default_value = 0.3
+        nt.links.new(b.outputs[0], out.inputs["Surface"])
+        return m
     hair = nt.nodes.new("ShaderNodeBsdfHairPrincipled")
     hair.parametrization = "COLOR"
     nt.links.new(col, hair.inputs["Color"])
@@ -150,10 +173,12 @@ def fur_material(color, kind="short"):
     return m
 
 
-def add_fur(obj, color, kind="short", density=1.0, weight_group=None, seed=0, comb=(0.0, 0.3, -1.0)):
+def add_fur(obj, color, kind="short", density=1.0, weight_group=None, seed=0, comb=(0.0, 0.3, -1.0),
+            color_attribute=None, length=None, groom=None, deep=None):
     """Groomed fur on `obj`: guide strands from the skin, combed down a
-    little (droop), with child strands clumped round each guide."""
-    f = MAT["fur"][kind]
+    little (droop), with child strands clumped round each guide. `groom`
+    overrides any of the coat's settings (look.json materials.fur.<kind>)."""
+    f = dict(MAT["fur"][kind], **(groom or {}))
     area = sum(p.area for p in obj.data.polygons) * (obj.scale[0] * obj.scale[1])
     mod = obj.modifiers.new("fur_" + kind, "PARTICLE_SYSTEM")
     ps = mod.particle_system
@@ -162,18 +187,22 @@ def add_fur(obj, color, kind="short", density=1.0, weight_group=None, seed=0, co
     s.type = "HAIR"
     s.use_advanced_hair = True
     s.count = max(50, int(area * f["parents"] * density))
-    s.hair_length = f["length"]
+    hair_len = f["length"] if length is None else length
+    s.hair_length = hair_len
     s.hair_step = 5
     # Mostly laid down along the comb direction (droop), standing up off
     # the skin only a little (normal): groomed, not a dandelion.
-    s.normal_factor = f["length"] * f.get("normal", 0.4)
+    s.normal_factor = hair_len * f.get("normal", 0.4)
     c = np.asarray(comb, float)
-    c = c / (np.linalg.norm(c) + 1e-9) * f["length"] * f["droop"]
+    c = c / (np.linalg.norm(c) + 1e-9) * hair_len * f["droop"]
     s.object_align_factor = tuple(c)
     s.use_hair_bspline = True
-    s.child_type = "INTERPOLATED"
+    # Interpolated children make an even coat; simple ones gather round
+    # each guide into its own lock (a shaggy coat).
+    s.child_type = f.get("child_type", "INTERPOLATED")
     s.child_percent = 6
     s.rendered_child_count = f["children"]
+    s.child_radius = f.get("child_radius", 0.02)
     s.clump_factor = f["clump"]
     s.clump_shape = f["clump_shape"]
     s.roughness_1 = f["roughness"]
@@ -191,8 +220,30 @@ def add_fur(obj, color, kind="short", density=1.0, weight_group=None, seed=0, co
     if weight_group:
         ps.vertex_group_density = weight_group
         ps.vertex_group_length = weight_group
-    s.material_slot = _slot(obj, fur_material(color, kind))
+    s.material_slot = _slot(obj, fur_material(color, kind, color_attribute, groom, deep))
+    _calibrate(obj, ps, hair_len)
     return ps
+
+
+def _calibrate(obj, ps, length):
+    """Blender grows long hair from launch speeds, not from its length
+    setting: measure the longest strands and rescale them to `length`."""
+    s = ps.settings
+    for _ in range(3):
+        dg = bpy.context.evaluated_depsgraph_get()
+        evaluated = obj.evaluated_get(dg).particle_systems[ps.name]
+        longest = []
+        for p in evaluated.particles[:4000]:
+            keys = np.array([tuple(h.co) for h in p.hair_keys])
+            if len(keys) > 1:
+                longest.append(np.linalg.norm(np.diff(keys, axis=0), axis=1).sum())
+        if not longest:
+            return
+        scale = length / float(np.percentile(longest, 98))
+        if abs(scale - 1) < 0.04:
+            return
+        s.normal_factor *= scale
+        s.object_align_factor = tuple(v * scale for v in s.object_align_factor)
 
 
 def _slot(obj, mat):
@@ -282,18 +333,22 @@ def shell_material(color, name="shell"):
     return m
 
 
-def horn_material(color, name="horn", axis_len=1.0):
+def horn_material(color, name="horn", axis_len=1.0, centered=False, tip_color=None, offset=0.0):
     """Ivory-to-dark-tip, fine ridges, satin shine. The horn runs up its
-    object's Z axis, `axis_len` long."""
+    object's Z axis from its origin, `axis_len` long; or, `centered`, over
+    its whole length (a cone made round its middle). `tip_color`: the tip's
+    own color instead of the base color darker."""
     k = MAT["horn"]
     m, nt, out = _new_material(name)
     b = _principled(nt)
     tex = nt.nodes.new("ShaderNodeTexCoord")
     sep = nt.nodes.new("ShaderNodeSeparateXYZ")
-    nt.links.new(tex.outputs["Object"], sep.inputs[0])
-    along = _math(nt, "DIVIDE", sep.outputs["Z"], axis_len, clamp=False)
+    nt.links.new(tex.outputs["Generated" if centered else "Object"], sep.inputs[0])
+    # `offset`: where the base is on the object's Z axis (a cone made round
+    # its middle starts half its length down).
+    along = sep.outputs["Z"] if centered else _math(nt, "DIVIDE", _math(nt, "ADD", sep.outputs["Z"], offset), axis_len)
     along = _math(nt, "MINIMUM", _math(nt, "MAXIMUM", along, 0.0), 1.0)
-    col = _mix_color(nt, _math(nt, "POWER", along, 1.6), color, shade(color, k["tip_darken"]))
+    col = _mix_color(nt, _math(nt, "POWER", along, k.get("tip_power", 1.6)), color, tip_color or shade(color, k["tip_darken"]))
     ridges = _math(nt, "SINE", _math(nt, "MULTIPLY", along, k["ridges"] * math.pi))
     nt.links.new(col, b.inputs["Base Color"])
     nt.links.new(_bump(nt, _math(nt, "MULTIPLY", ridges, k["ridge_depth"]), 0.4, 0.003), b.inputs["Normal"])
@@ -301,6 +356,44 @@ def horn_material(color, name="horn", axis_len=1.0):
     b.inputs["Coat Weight"].default_value = k["coat"]
     nt.links.new(b.outputs[0], out.inputs["Surface"])
     return m
+
+
+def horn_mesh(length, radius, bend=40.0, tip=0.12, segments=20, sides=20, name="horn"):
+    """A horn: a round tube tapering to a point (`tip` of the base radius),
+    curving `bend` degrees over its length. Its base sits at the origin, it
+    grows up +Z and curves toward +Y. Returns the object."""
+    verts, faces = [], []
+    bend_r = math.radians(max(bend, 0.01))
+    arc = length / bend_r
+    for i in range(segments + 1):
+        t = i / segments
+        a = bend_r * t
+        # The centerline on an arc in the YZ plane.
+        cy, cz = arc * (1 - math.cos(a)), arc * math.sin(a)
+        ty, tz = math.sin(a), math.cos(a)          # along the arc
+        ny, nz = tz, -ty                           # in-plane normal
+        r = radius * (1 - (1 - tip) * t ** 1.3)
+        for j in range(sides):
+            phi = 2 * math.pi * j / sides
+            x = r * math.cos(phi)
+            k = r * math.sin(phi)
+            verts.append((x, cy + ny * k, cz + nz * k))
+    for i in range(segments):
+        for j in range(sides):
+            a0 = i * sides + j
+            a1 = i * sides + (j + 1) % sides
+            faces.append((a0, a1, a1 + sides, a0 + sides))
+    verts.append((0.0, arc * (1 - math.cos(bend_r)), arc * math.sin(bend_r)))
+    top = len(verts) - 1
+    for j in range(sides):
+        faces.append((segments * sides + j, segments * sides + (j + 1) % sides, top))
+    me = bpy.data.meshes.new(name)
+    me.from_pydata(verts, [], faces)
+    for poly in me.polygons:
+        poly.use_smooth = True
+    obj = bpy.data.objects.new(name, me)
+    bpy.context.scene.collection.objects.link(obj)
+    return obj
 
 
 def claw_material(name="claw"):
@@ -315,23 +408,29 @@ def claw_material(name="claw"):
     return m
 
 
-def eye_material(iris_color, name="eye"):
+def eye_material(iris_color, name="eye", forward="-Y", radius=1.0):
     """A glossy cornea over the iris and a big pupil: the key light makes a
-    crisp catchlight. The eye looks down its object's -Y axis."""
-    k = MAT["eye"]
+    crisp catchlight. The eye looks down its object's -Y axis, or its +Z
+    axis with forward="+Z" (the creatures' eyes); `radius`: the eyeball's
+    radius in its object's own space."""
+    k = dict(MAT["eye"])
+    k["iris"] *= radius
+    k["pupil"] *= radius
     m, nt, out = _new_material(name)
     b = _principled(nt)
     tex = nt.nodes.new("ShaderNodeTexCoord")
     sep = nt.nodes.new("ShaderNodeSeparateXYZ")
     nt.links.new(tex.outputs["Object"], sep.inputs[0])
     # Distance from the eye's front axis, on the front half only.
-    r = _math(nt, "SQRT", _math(nt, "ADD", _math(nt, "MULTIPLY", sep.outputs["X"], sep.outputs["X"]),
-                                 _math(nt, "MULTIPLY", sep.outputs["Z"], sep.outputs["Z"])))
-    front = _math(nt, "LESS_THAN", sep.outputs["Y"], 0.0)
+    a1, a2, ahead = ("X", "Z", "Y") if forward == "-Y" else ("X", "Y", "Z")
+    r = _math(nt, "SQRT", _math(nt, "ADD", _math(nt, "MULTIPLY", sep.outputs[a1], sep.outputs[a1]),
+                                 _math(nt, "MULTIPLY", sep.outputs[a2], sep.outputs[a2])))
+    front = (_math(nt, "LESS_THAN", sep.outputs[ahead], 0.0) if forward == "-Y"
+             else _math(nt, "GREATER_THAN", sep.outputs[ahead], 0.0))
     in_iris = _math(nt, "MULTIPLY", _math(nt, "LESS_THAN", r, k["iris"]), front)
     in_pupil = _math(nt, "MULTIPLY", _math(nt, "LESS_THAN", r, k["pupil"]), front)
     # Rays in the iris, and a darker ring round its edge.
-    angle = _math(nt, "ARCTAN2", sep.outputs["X"], sep.outputs["Z"])
+    angle = _math(nt, "ARCTAN2", sep.outputs[a1], sep.outputs[a2])
     rays = _math(nt, "MULTIPLY", _math(nt, "ABSOLUTE", _math(nt, "SINE", _math(nt, "MULTIPLY", angle, 24.0))), k["iris_rays"])
     iris_col = _mix_color(nt, rays, iris_color, shade(iris_color, -0.35))
     rim = _math(nt, "GREATER_THAN", r, k["iris"] * 0.86)

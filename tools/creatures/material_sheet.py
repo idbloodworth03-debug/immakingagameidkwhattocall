@@ -91,56 +91,57 @@ def main():
     M.studio_lights(target=(0, 0.6, 0.45), scale=1.8)
     rgba = M.rgba
     cols = [-2, -1, 0, 1, 2]
-    z = 0.45
-    def at(i, row):
-        # The back row stands on a step, so the front row doesn't hide it.
-        return (cols[i] * SPACING, row * 1.7, z + row * 0.55)
+    step_top = 0.27 + 0.55 / 2
+
+    def at(i, row, rest=0.36):
+        # Resting on the floor, or on the step for the back row (so the front
+        # row doesn't hide it); `rest`: how high its middle is off its floor.
+        return (cols[i] * SPACING, row * 1.7, rest + (step_top if row else 0.0))
 
     # Row 0 (front): the three furs, feathers, scales.
     fur_specs = [("short", "#ef6f24"), ("long", "#7cc2f2"), ("fluffy", "#f2b234")]
     for i, (kind, color) in enumerate(fur_specs):
-        s = sphere("fur_" + kind, at(i, 0), radius=0.36)
+        s = sphere("fur_" + kind, at(i, 0, 0.36), radius=0.36)
         under = M.skin_material(M.shade(rgba(color), 0.45), "under_" + kind)
         s.data.materials.append(under)
-        M.add_fur(s, rgba(color), kind, seed=i, density=0.15 if QUICK else 1.0)
+        # Combed toward the side, so the clumps show; a swatch-sized length.
+        M.add_fur(s, rgba(color), kind, seed=i, density=0.15 if QUICK else 1.0, comb=(1.0, 0.0, -0.45),
+                  length=M.MAT["fur"][kind]["length"] * (0.55 if kind == "long" else 0.8))
     # Feathers on a sphere, combed down and back.
-    body = sphere("feather_body", at(3, 0), radius=0.34)
+    body = sphere("feather_body", at(3, 0, 0.34), radius=0.34)
     body.data.materials.append(M.skin_material(M.shade(rgba("#2f86e0"), 0.5), "feather_under"))
     pts, nrm = fibonacci_sphere(int(M.MAT["feathers"]["count"] * (0.5 if QUICK else 1.0)), 0.34, lower_cut=-0.9)
-    pts = [p + np.array(at(3, 0)) for p in pts]
-    M.scatter_feathers(pts, nrm, comb=(0.0, 0.25, -1.0), color=rgba("#2f86e0"), seed=3, follow=0.34)
-    s = sphere("scales", at(4, 0), radius=0.38)
+    pts = [p + np.array(at(3, 0, 0.34)) for p in pts]
+    # Laid from front to back like a bird's, so the rows of tips show.
+    M.scatter_feathers(pts, nrm, comb=(1.0, 0.0, -0.35), color=rgba("#2f86e0"), seed=3, follow=0.34)
+    s = sphere("scales", at(4, 0, 0.38), radius=0.38)
     s.data.materials.append(M.scales_material(rgba("#3fae4a")))
 
     # Row 1 (back): shell, skin, horn + claw, eye.
-    shell = sphere("shell", at(0, 1), radius=0.4)
+    shell = sphere("shell", at(0, 1, 0.4 * 0.72), radius=0.4)
     shell.scale = (1.0, 1.0, 0.72)
     shell.data.materials.append(M.shell_material(rgba("#7a9a3a")))
-    skin = sphere("skin", at(1, 1), radius=0.38)
+    skin = sphere("skin", at(1, 1, 0.38), radius=0.38)
     skin.data.materials.append(M.skin_material(rgba("#7fb3e8")))
-    # A horn (a curved cone) and a claw beside it.
-    bpy.ops.mesh.primitive_cone_add(vertices=48, radius1=0.2, radius2=0.025, depth=0.95, location=(at(2, 1)[0] - 0.12, at(2, 1)[1], 0.38 + 0.55))
-    horn = bpy.context.object
-    bpy.ops.object.shade_smooth()
-    bend = horn.modifiers.new("bend", "SIMPLE_DEFORM")
-    bend.deform_method = "BEND"
-    bend.angle = math.radians(55)
-    bend.deform_axis = "Y"
-    horn.data.materials.append(M.horn_material(rgba("#f2e6c8"), axis_len=0.95))
-    # Object space runs from -depth/2: shift the horn's own origin to its base.
-    for v in horn.data.vertices:
-        v.co.z += 0.475
-    horn.location.z = 0.57
-    bpy.ops.mesh.primitive_cone_add(vertices=32, radius1=0.1, radius2=0.006, depth=0.42, location=(at(2, 1)[0] + 0.24, at(2, 1)[1] - 0.15, 0.69), rotation=(math.radians(70), 0, 0))
-    claw = bpy.context.object
-    bpy.ops.object.shade_smooth()
+    # A horn curving back and a claw beside it.
+    horn = M.horn_mesh(0.8, 0.17, bend=60.0)
+    horn.location = at(2, 1, 0.0)
+    horn.location.x -= 0.15
+    horn.location.y -= 0.12
+    horn.rotation_euler = (0, 0, math.radians(-60))
+    horn.data.materials.append(M.horn_material(rgba("#f2e6c8"), axis_len=0.62))
+    claw = M.horn_mesh(0.4, 0.085, bend=80.0, tip=0.05, name="claw")
+    claw.location = at(2, 1, 0.0)
+    claw.location.x += 0.32
+    claw.location.y -= 0.22
+    claw.rotation_euler = (0, 0, math.radians(-130))
     claw.data.materials.append(M.claw_material())
     # An eye: looking at the camera (its -Y axis).
-    eye = sphere("eye", at(3, 1), radius=0.36, subdiv=6)
-    eye.data.materials.append(M.eye_material(rgba("#3b8ff0")))
+    eye = sphere("eye", at(3, 1, 0.36), radius=0.36, subdiv=6)
+    eye.data.materials.append(M.eye_material(rgba("#3b8ff0"), radius=0.36))
     eye.rotation_euler = (math.radians(-12), 0, math.radians(8))
     # A last fluffy-skin sample: a cartoon nose (skin, darker, glossy).
-    nose = sphere("nose", at(4, 1), radius=0.3)
+    nose = sphere("nose", at(4, 1, 0.3 * 0.85), radius=0.3)
     nose.scale = (1.15, 0.9, 0.85)
     nm = M.skin_material(rgba("#3a2d3a"), "nose")
     nm.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.25

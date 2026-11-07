@@ -17,10 +17,14 @@ uniform float gold = 0.0;
 uniform vec3 gold_color : source_color = vec3(1.0, 0.82, 0.25);
 uniform float opacity = 1.0;
 uniform float depth_push = 0.0;
+// A model with the movie look: its fur locks' hull is pushed further back,
+// so the line only shows round the animal's edge, not round every lock
+// lying on its body (UV2.y is 2 on a lock).
+uniform float lock_push = 0.0;
 
 void vertex() {
 	vec4 view_pos = MODELVIEW_MATRIX * vec4(VERTEX, 1.0);
-	view_pos.z -= depth_push;
+	view_pos.z -= depth_push + (UV2.y > 1.5 ? lock_push : 0.0);
 	vec3 view_normal = normalize(MODELVIEW_NORMAL_MATRIX * NORMAL);
 	vec4 clip = PROJECTION_MATRIX * view_pos;
 	vec2 dir = (PROJECTION_MATRIX * vec4(view_normal, 0.0)).xy;

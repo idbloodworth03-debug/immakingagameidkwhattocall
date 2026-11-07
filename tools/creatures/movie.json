@@ -1,0 +1,231 @@
+{
+ "_note": "The animated-movie look (docs/ART_DIRECTION.md, 'Style guide'), one design per animal that has moved to it; any animal not listed keeps the flat cartoon look. shape: proportions on top of the real animal (cartoon.py's head, muzzle, eyes, ears, legs, length, belly, limbs). eyes: iris color, how deep they sit in the head (share of their radius), the brow above them. colors: the bold palette per body part (fur, its deeper shade where the clumps part, bare skin, palms and soles, nails, horns). fur: the coat (materials kind), the hero render's strand density and length (meters, the longest), length per body part (meters at 1.0), where the fur parts to bare skin, and the comb; groom: the coat's settings for this animal (bigger locks for a shaggy yeti); under: how much of the deeper shade shows under the fur. locks: the real-time models' sculpted fur clumps, per level of detail (viewer, battle): how many, how long and wide (meters), sides round each and rings along it, how much they lift off the skin and curl back to it (lift, hug), how flat (thickness as a share of width) and how the end is shaped (tip: point, a soft point like a clump of hair, or round; end: how far along the last ring is), the root-to-tip shading, color variation, and the baked soft shadow between clumps. face: the bare face mask on the head (the head's parts facing `forward` from the skull, blending in between `from` and `to`). digits: fingers and toes grown out of each paw along its length (count, spacing, length and root/tip radius in meters, curl toward the palm, which side the palm faces), each with a glossy nail (radius, length). horns: swept out (out, back, up), their length and thickness. mouth: a carved grin where the face's surface lies in direction `dir` from the skull, its half width, depth and gap (radii), sunk `inset` of its depth. nose: on the face in direction `dir`, its radii and how deep it sits (share). ears: false hides the ears in the fur. face below: the bare face stops below this (the direction's height) so the chin and throat keep their fur. portrait_samples: Cycles samples for its card portrait. muzzle: a rounded muzzle on the face (in direction dir from the skull; radii; out: how far it stands out, a share of its depth) that the nose and mouth sit on. mouth smile: the corners turned up (degrees), from `corner` meters either side of the middle. tail: false takes the tail away. colors nose: the nose. shade_low: how much of the deeper shade the fur and skin take toward the feet. body_triangles: the real-time body's triangles per level of detail (less where the locks cover it).",
+ "yeti": {
+  "shape": {
+   "head": 1.4,
+   "muzzle": 0.38,
+   "eyes": 2.0,
+   "ears": 1.0,
+   "legs": 0.74,
+   "length": 0.92,
+   "belly": 1.24,
+   "limbs": 1.5
+  },
+  "eyes": {
+   "iris": "#1f78e6",
+   "sink": 0.42,
+   "squash": [
+    0.95,
+    1.0,
+    0.8
+   ],
+   "brow": [
+    1.25,
+    0.55,
+    0.5
+   ],
+   "brow_lift": 0.95,
+   "brow_forward": 0.25
+  },
+  "colors": {
+   "fur": "#e8f2fc",
+   "fur_deep": "#7db3ea",
+   "skin": "#5fb0f2",
+   "skin_deep": "#3f86d6",
+   "nails": "#1d2433",
+   "horn": "#2f95e6",
+   "horn_tip": "#a9e2ff",
+   "mouth": "#2a3f73",
+   "nose": "#1f4f9e"
+  },
+  "bare": [
+   "front_paw",
+   "hind_paw"
+  ],
+  "fur": {
+   "kind": "long",
+   "density": 1.0,
+   "lengths": {
+    "torso": 1.0,
+    "chest": 1.0,
+    "belly": 1.0,
+    "rump": 1.0,
+    "shoulder": 1.05,
+    "thigh": 0.95,
+    "neck": 1.0,
+    "head": 0.75,
+    "front_upper": 1.1,
+    "front_lower": 1.15,
+    "hind_upper": 0.9,
+    "hind_lower": 0.75
+   },
+   "comb": [
+    0.0,
+    -0.12,
+    -1.0
+   ],
+   "length": 0.1,
+   "groom": {
+    "parents": 900,
+    "children": 150,
+    "clump": 0.94,
+    "clump_shape": 0.5,
+    "roughness": 0.006,
+    "root_darken": 0.55,
+    "tip_lighten": 0.15,
+    "normal": 0.25,
+    "droop": 1.2,
+    "root_mm": 2.2,
+    "tip_mm": 0.45,
+    "child_type": "SIMPLE",
+    "child_radius": 0.042,
+    "shading": "soft",
+    "sheen": 0.6,
+    "hair_roughness": 0.55
+   },
+   "under": 0.5
+  },
+  "locks": {
+   "viewer": {
+    "count": 560,
+    "length": 0.13,
+    "width": 0.036,
+    "sides": 5,
+    "rings": 4,
+    "lift": 0.1,
+    "root_darken": 0.16,
+    "tip_lighten": 0.45,
+    "variation": 0.06,
+    "occlusion": 0.25,
+    "seed": 7,
+    "hug": 0.2,
+    "flat": 0.4,
+    "end": 0.84,
+    "tip": "point"
+   },
+   "battle": {
+    "count": 70,
+    "length": 0.15,
+    "width": 0.06,
+    "sides": 4,
+    "rings": 3,
+    "lift": 0.08,
+    "root_darken": 0.14,
+    "tip_lighten": 0.4,
+    "variation": 0.04,
+    "occlusion": 0.22,
+    "seed": 7,
+    "hug": 0.2,
+    "flat": 0.45,
+    "end": 0.85,
+    "tip": "point"
+   }
+  },
+  "face": {
+   "regions": [
+    "head",
+    "face",
+    "snout",
+    "jaw",
+    "brow"
+   ],
+   "forward": [
+    0.0,
+    1.0,
+    -0.2
+   ],
+   "from": 0.3,
+   "to": 0.42,
+   "below": -0.78
+  },
+  "digits": {
+   "hands": {
+    "paw": "front_paw",
+    "palm": "in",
+    "count": 4,
+    "spacing": 0.042,
+    "length": 0.1,
+    "radius": [
+     0.034,
+     0.028
+    ],
+    "curl": 0.25,
+    "nail": [
+     0.019,
+     0.03
+    ]
+   },
+   "feet": {
+    "paw": "hind_paw",
+    "palm": "down",
+    "count": 4,
+    "spacing": 0.038,
+    "length": 0.05,
+    "radius": [
+     0.033,
+     0.029
+    ],
+    "curl": 0.1,
+    "nail": [
+     0.019,
+     0.028
+    ]
+   }
+  },
+  "horns": {
+   "out": 0.8,
+   "back": 0.35,
+   "up": 0.7,
+   "length": 0.11,
+   "thick": 1.35
+  },
+  "mouth": {
+   "dir": [
+    0.0,
+    1.0,
+    -0.62
+   ],
+   "radii": [
+    0.068,
+    0.04,
+    0.007
+   ],
+   "inset": 0.45,
+   "smile": 16,
+   "corner": 0.042
+  },
+  "portrait_samples": 96,
+  "nose": {
+   "dir": [
+    0.0,
+    1.0,
+    -0.2
+   ],
+   "radii": [
+    0.036,
+    0.024,
+    0.022
+   ],
+   "sink": 0.45
+  },
+  "ears": false,
+  "muzzle": {
+   "dir": [
+    0.0,
+    1.0,
+    -0.42
+   ],
+   "radii": [
+    0.085,
+    0.05,
+    0.058
+   ],
+   "out": 0.45
+  },
+  "tail": false,
+  "shade_low": 0.2,
+  "body_triangles": {
+   "viewer": 11000
+  }
+ }
+}

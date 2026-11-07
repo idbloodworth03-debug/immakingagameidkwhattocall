@@ -18,6 +18,8 @@ extends Node2D
 
 const SKIN_SHADER := preload("res://scripts/fx/model_skin.gdshader")
 const OUTLINE_SHADER := preload("res://scripts/fx/model_outline.gdshader")
+## Animals with the movie look (docs/ART_DIRECTION.md): their own shading.
+const MOVIE_SHADER := preload("res://scripts/fx/model_movie.gdshader")
 const DIR := "res://art/models/battle/"
 const ATTACKS := ["attack", "attack2", "special"]
 ## Each cartoon face as the eye shader's [blink, lid, pupil size, happy, dizzy].
@@ -58,6 +60,8 @@ class Model:
 	## The team's colored band outside the dark outline (battle only).
 	var team_line: ShaderMaterial
 	var team := -1
+	## It has the movie look (its own shading; its locks' outline pushed back).
+	var movie := false
 	var anim := ""
 	var lengths := {}
 	var size := 1.0
@@ -211,6 +215,8 @@ func _set_team(m: Model, team: int) -> void:
 		m.team_line = ShaderMaterial.new()
 		m.team_line.shader = OUTLINE_SHADER
 		m.team_line.set_shader_parameter("depth_push", Feel.num("models", "team_outline_depth", 0.06))
+		if m.movie:
+			m.team_line.set_shader_parameter("lock_push", lock_push())
 		m.outline.next_pass = m.team_line
 	m.team = team
 	m.team_line.set_shader_parameter("color", BattleField.team_color(team))
@@ -223,6 +229,39 @@ func _fit(m: Model, v: UnitView) -> void:
 	var c := "characters"
 	m.size = tile_scale(v.id) * Feel.num(c, "sprite_scale", 1.6) * v.size_k * (Feel.num(c, "swarm_scale", 0.8) if v.swarm else 1.0)
 	m.body.scale = Vector3.ONE * m.size
+
+
+## True if this model has the movie look: its mesh is named <id>_movie
+## (tools/creatures/export_gltf.py).
+static func is_movie(root: Node) -> bool:
+	return not root.find_children("*_movie", "MeshInstance3D", true, false).is_empty()
+
+
+## How far a movie-look model's fur locks' outline is pushed back, so the
+## line only shows round its edge (viewer.json "movie_look").
+static func lock_push() -> float:
+	return float(GameData.viewer.get("movie_look", {}).get("lock_outline_push", 0.25))
+
+
+## A skin material in the movie look's shading (viewer.json "movie_look"):
+## studio lighting, fur locks with strands, eyes with an iris and catchlight.
+static func dress_movie(skin: ShaderMaterial, id: String) -> void:
+	skin.shader = MOVIE_SHADER
+	var look: Dictionary = GameData.viewer.get("movie_look", {})
+	for key in look:
+		var value: Variant = look[key]
+		if key == "lid_colors" or key == "lock_outline_push":
+			continue
+		if value is Array and (value as Array).size() == 3:
+			skin.set_shader_parameter(key, Vector3(float(value[0]), float(value[1]), float(value[2])))
+		elif value is Array and (value as Array).size() == 2:
+			skin.set_shader_parameter(key, Vector2(float(value[0]), float(value[1])))
+		elif value is String:
+			skin.set_shader_parameter(key, Color(String(value)))
+		elif value is float or value is int:
+			skin.set_shader_parameter(key, float(value))
+	var lids: Dictionary = look.get("lid_colors", {})
+	skin.set_shader_parameter("lid_color", Color(String(lids[id])) if lids.has(id) else UnitSprites.lid_color(id))
 
 
 ## The outline's width in the viewport's real pixels.
@@ -245,19 +284,24 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 	m.body = scene.instantiate() as Node3D
 	m.turn.add_child(m.body)
 	m.skin = ShaderMaterial.new()
-	m.skin.shader = SKIN_SHADER
 	m.outline = ShaderMaterial.new()
 	m.outline.shader = OUTLINE_SHADER
 	var look: Dictionary = GameData.viewer.get("look", {})
-	var key_dir: Array = look.get("key_dir", [-0.45, 0.72, 0.55])
-	m.skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
-	for key in ["key_color", "shade_color", "rim_color"]:
-		if look.has(key):
-			m.skin.set_shader_parameter(key, Color(String(look[key])))
-	for key in ["soft", "rim", "rim_width", "highlight", "vibrance"]:
-		if look.has(key):
-			m.skin.set_shader_parameter(key, float(look[key]))
-	m.skin.set_shader_parameter("lid_color", UnitSprites.lid_color(id))
+	m.movie = is_movie(m.body)
+	if m.movie:
+		dress_movie(m.skin, id)
+		m.outline.set_shader_parameter("lock_push", lock_push())
+	else:
+		m.skin.shader = SKIN_SHADER
+		var key_dir: Array = look.get("key_dir", [-0.45, 0.72, 0.55])
+		m.skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
+		for key in ["key_color", "shade_color", "rim_color"]:
+			if look.has(key):
+				m.skin.set_shader_parameter(key, Color(String(look[key])))
+		for key in ["soft", "rim", "rim_width", "highlight", "vibrance"]:
+			if look.has(key):
+				m.skin.set_shader_parameter(key, float(look[key]))
+		m.skin.set_shader_parameter("lid_color", UnitSprites.lid_color(id))
 	m.outline.set_shader_parameter("width_px", outline_width)
 	m.outline.set_shader_parameter("color", Color(String(look.get("outline_color", "#140c09"))))
 	m.skin.next_pass = m.outline

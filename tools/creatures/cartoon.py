@@ -33,6 +33,11 @@ TORSO_REGIONS = ("torso", "chest", "belly", "rump", "shoulder", "thigh")
 
 
 def load(species, style="cartoon"):
+    """style: "cartoon", "real", or "movie" (movie.py; "cartoon" also gives
+    the movie look to an animal listed in movie.json)."""
+    import movie
+    if style == "movie" or (style == "cartoon" and movie.wants(species)):
+        return movie.load(species)
     creature = importlib.import_module(species).make()
     if style == "cartoon":
         cartoonify(creature)

@@ -130,25 +130,29 @@ def _eyes(c, k):
     for e in [e for e in c.extras if e.material == "eye"]:
         d = np.asarray(e.direction, float)
         r = max(e.radii) / 1.05
-        origin = skull if skull is not None else np.asarray(e.center) - d * r * 3
+        # An eye on another head (Cerberus) is sunk from its own head, not
+        # the skull in the middle.
+        own = skull is not None and e.bone == "head"
+        origin = skull if own else np.asarray(e.center) - d * r * 3
         p = surface_point(c.shapes, origin, d, sink=r * float(k["sink"]))
         sq = k.get("squash", (0.9, 1.0, 0.8))
         e.center = tuple(p)
         e.radii = (r * sq[0], r * sq[1], r * sq[2])
         e.pupil = "movie"
         e.color = k["iris"]
-        eyes.append((p, r, d))
-    c.eyes = [(p, r) for p, r, _ in eyes]
+        eyes.append((p, r, d, e.bone))
+    c.eyes = [(p, r) for p, r, _, _ in eyes]
     # A brow over each eye: a soft ridge that shades it and carries the
     # expression.
     b = k.get("brow")
     if b:
-        for p, r, d in eyes:
+        for p, r, d, bone in eyes:
             up = np.array([0.0, 0.0, 1.0]) - d * d[2]
             up /= np.linalg.norm(up)
             center = p + up * r * float(k["brow_lift"]) + d * r * float(k["brow_forward"])
-            # Part of the head, so a species' own paint covers it too.
-            c.shapes.append(ellipsoid(tuple(center), (r * b[0], r * b[1], r * b[2]), "head", "head",
+            # Part of the head, so a species' own paint covers it too; on the
+            # eye's own bone.
+            c.shapes.append(ellipsoid(tuple(center), (r * b[0], r * b[1], r * b[2]), "head", bone,
                                       blend=r * 0.8))
 
 
@@ -295,7 +299,9 @@ def _parts(c, design):
                 e.tip = tuple(base + (tip - base) * claw_scale)
         elif e.material == "nose" and "nose" in col:
             e.color = col["nose"]
-        elif e.material in ("horn", "tusk"):
+        elif e.material == "tusk":
+            e.color = col.get("tusk", col.get("horn", e.color))
+        elif e.material == "horn":
             e.color = col.get("horn", e.color)
             if horns and e.material == "horn" and e.tip is not None:
                 # Swept out to the side and back instead of straight up.
@@ -346,19 +352,65 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
         body.data.materials.clear()
         body.data.materials.append(M.scales_material(M.rgba(col["skin"]), "movie_scales", color_attribute="Col",
                                                      cell=sc.get("cell")))
+    elif surface == "shell":
+        _shell_dress(c, body, mesh, design)
     else:
-        # Skin: the painted colors, soft, a little sheen.
+        # Skin: the painted colors, soft, a little sheen (surface "skin" all
+        # over, or under a coat of fur).
         skin = M.skin_material(M.rgba(col["skin"]), "movie_skin")
         nt = skin.node_tree
         bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
         attr = nt.nodes.new("ShaderNodeVertexColor")
         attr.layer_name = "Col"
-        # Under the fur the skin is a deeper shade of it, so the gaps between
-        # clumps read as soft shadow.
-        under = nt.nodes.new("ShaderNodeAttribute")
-        under.attribute_name = "under_fur"
-        deep = M._mix_color(nt, under.outputs["Fac"], attr.outputs["Color"], M.rgba(col["fur_deep"]))
-        nt.links.new(deep, bsdf.inputs["Base Color"])
+        base_color = attr.outputs["Color"]
+        if surface == "fur":
+            # Under the fur the skin is a deeper shade of it, so the gaps
+            # between clumps read as soft shadow.
+            under = nt.nodes.new("ShaderNodeAttribute")
+            under.attribute_name = "under_fur"
+            deep = M.rgba(col["fur_deep"]) if "fur_deep" in col else (0.0, 0.0, 0.0, 1.0)
+            base_color = M._mix_color(nt, under.outputs["Fac"], base_color, deep)
+            # And matte: shiny skin showing between the clumps reads as
+            # gray flecks on a dark coat.
+            cover = nt.nodes.new("ShaderNodeAttribute")
+            cover.attribute_name = "fur_cover"
+            for name, covered in (("Roughness", 0.95), ("Specular IOR Level", 0.0), ("Sheen Weight", 0.0)):
+                mix = nt.nodes.new("ShaderNodeMix")
+                mix.data_type = "FLOAT"
+                nt.links.new(cover.outputs["Fac"], mix.inputs["Factor"])
+                mix.inputs[2].default_value = bsdf.inputs[name].default_value
+                mix.inputs[3].default_value = covered
+                nt.links.new(mix.outputs["Result"], bsdf.inputs[name])
+        nt.links.new(base_color, bsdf.inputs["Base Color"])
+        wr = design.get("skin", {}).get("wrinkles", 0.0)
+        if wr:
+            # Leathery skin: wavy fold lines round the body (a wave texture,
+            # distorted) over a fine grain (noise), bumped and a little darker
+            # in the creases.
+            depth = float(design["skin"].get("depth", 0.3))
+            tex = nt.nodes.new("ShaderNodeTexCoord")
+            wave = nt.nodes.new("ShaderNodeTexWave")
+            wave.wave_type = "BANDS"
+            wave.bands_direction = "Y"
+            # A few big, heavily distorted folds...
+            wave.inputs["Scale"].default_value = float(wr) * 0.25
+            wave.inputs["Distortion"].default_value = 9.0
+            wave.inputs["Detail"].default_value = 3.0
+            nt.links.new(tex.outputs["Object"], wave.inputs["Vector"])
+            # ...over a fine crackle, the way thick skin is.
+            noise = nt.nodes.new("ShaderNodeTexNoise")
+            noise.inputs["Scale"].default_value = float(wr) * 3.0
+            noise.inputs["Detail"].default_value = 7.0
+            noise.inputs["Roughness"].default_value = 0.75
+            nt.links.new(tex.outputs["Object"], noise.inputs["Vector"])
+            folds = M._math(nt, "POWER", wave.outputs["Fac"], 1.5)
+            height = M._math(nt, "ADD", M._math(nt, "MULTIPLY", folds, 0.35), M._math(nt, "MULTIPLY", noise.outputs["Fac"], 0.65))
+            nt.links.new(M._bump(nt, height, depth * 1.2, 0.012), bsdf.inputs["Normal"])
+            # Creases a touch darker.
+            crease = M._math(nt, "MULTIPLY", M._math(nt, "SUBTRACT", 1.0, folds), depth * 0.2)
+            darker = M._mix_color(nt, crease, base_color, (0.0, 0.0, 0.0, 1.0))
+            nt.links.new(darker, bsdf.inputs["Base Color"])
+            bsdf.inputs["Roughness"].default_value = 0.7
         body.data.materials.clear()
         body.data.materials.append(skin)
     _dress_pieces(c, design, quality)
@@ -377,16 +429,76 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
     vg = body.vertex_groups.new(name="fur")
     a = body.data.attributes.new("under_fur", "FLOAT", "POINT")
     a.data.foreach_set("value", np.clip(w * 2.0, 0, 1) * float(f.get("under", 0.7)))
+    cover = body.data.attributes.new("fur_cover", "FLOAT", "POINT")
+    cover.data.foreach_set("value", np.clip(w * 2.0, 0, 1))
     for i in np.nonzero(w > 0.01)[0]:
         vg.add([int(i)], float(w[i]), "REPLACE")
     if quality > 0:
+        _refresh_hair_colors(body)
         M.add_fur(body, M.rgba(col["fur"]), f["kind"], density=f.get("density", 1.0) * quality,
                   weight_group="fur", seed=3, comb=tuple(f["comb"]), color_attribute="HairCol",
-                  length=f.get("length"), groom=f.get("groom"), deep=M.rgba(col["fur_deep"]))
+                  length=f.get("length"), groom=f.get("groom"),
+                  deep=M.rgba(col["fur_deep"]) if "fur_deep" in col else None)
         # Particle hair must come after the armature so it follows the pose.
         with bpy.context.temp_override(object=body):
             while body.modifiers.find("fur_" + f["kind"]) < body.modifiers.find("rig"):
                 bpy.ops.object.modifier_move_down(modifier="fur_" + f["kind"])
+
+
+def _refresh_hair_colors(body):
+    """The strands read their color from "HairCol", a per-corner copy of the
+    paint made when the mesh was built (scene.py): bring it up to date with
+    the finished paint, so a panda's black patches grow black fur."""
+    me = body.data
+    src = me.color_attributes["Col"]
+    rgba = np.empty(len(src.data) * 4)
+    src.data.foreach_get("color", rgba)
+    rgba = rgba.reshape(-1, 4)
+    if src.domain == "CORNER":
+        per_corner = rgba
+    else:
+        loop_verts = np.empty(len(me.loops), int)
+        me.loops.foreach_get("vertex_index", loop_verts)
+        per_corner = rgba[loop_verts]
+    hair = me.color_attributes.get("HairCol")
+    if hair is None:
+        hair = me.color_attributes.new("HairCol", "BYTE_COLOR", "CORNER")
+    hair.data.foreach_set("color", per_corner.ravel())
+
+
+def shell_weight(c, mesh):
+    """How much each vertex belongs to the shell (design "shell" regions)."""
+    w = np.zeros(len(mesh.verts))
+    for r in c.design.get("shell", {}).get("regions", ["shell", "plastron"]):
+        try:
+            w = np.maximum(w, mesh.region_weight(r))
+        except (ValueError, IndexError):
+            pass
+    return w
+
+
+def _shell_dress(c, body, mesh, design):
+    """A turtle: the shell material on the shell's faces (plates with growth
+    rings, the painted scute lines kept), scales on the rest."""
+    import materials as M
+    col = design["colors"]
+    sh = design.get("shell", {})
+    me = body.data
+    me.materials.clear()
+    me.materials.append(M.scales_material(M.rgba(col["skin"]), "movie_scales", color_attribute="Col", cell=sh.get("cell")))
+    me.materials.append(M.shell_material(M.rgba(col.get("shell", col["skin"])), "movie_shell", color_attribute="Col",
+                                         cell=sh.get("plate")))
+    w = shell_weight(c, mesh)
+    loops = np.empty(len(me.loops), int)
+    me.loops.foreach_get("vertex_index", loops)
+    starts = np.empty(len(me.polygons), int)
+    me.polygons.foreach_get("loop_start", starts)
+    totals = np.empty(len(me.polygons), int)
+    me.polygons.foreach_get("loop_total", totals)
+    on_shell = np.zeros(len(me.polygons), int)
+    for i in range(len(me.polygons)):
+        on_shell[i] = 1 if w[loops[starts[i]:starts[i] + totals[i]]].mean() > 0.5 else 0
+    me.polygons.foreach_set("material_index", on_shell)
 
 
 def _dress_pieces(c, design, quality):
@@ -405,8 +517,9 @@ def _dress_pieces(c, design, quality):
             mat.node_tree.nodes["Principled BSDF"].inputs["Base Color"].default_value = M.rgba(col["nails"])
         elif name.startswith("extra_horn") or name.startswith("extra_tusk"):
             depth = float(obj.dimensions.z / max(obj.scale.z, 1e-9))
-            mat = M.horn_material(M.rgba(col["horn"]), axis_len=depth, offset=depth / 2,
-                                  tip_color=M.rgba(col.get("horn_tip", col["horn"])))
+            base = col.get("tusk", col.get("horn", "#f2e6c8")) if name.startswith("extra_tusk") else col.get("horn", "#f2e6c8")
+            tip = col.get("tusk_tip", base) if name.startswith("extra_tusk") else col.get("horn_tip", base)
+            mat = M.horn_material(M.rgba(base), axis_len=depth, offset=depth / 2, tip_color=M.rgba(tip))
         elif name.startswith("extra_tongue"):
             mat = M.skin_material(M.rgba(col["tongue"]), "tongue")
             mat.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.3
@@ -655,7 +768,7 @@ def lock_geometry(c, mesh, colors, lod):
             break
     comb = np.asarray(c.design["fur"]["comb"], float)
     comb /= np.linalg.norm(comb)
-    deep, white = _hex(col["fur_deep"]), np.ones(3)
+    deep, white = (_hex(col["fur_deep"]) if "fur_deep" in col else np.zeros(3)), np.ones(3)
     sides, rings = int(k["sides"]), int(k["rings"])
     out_v, out_f, out_c, out_uv, out_uv2, out_root = [], [], [], [], [], []
     for i in chosen:
@@ -731,6 +844,7 @@ def under_fur(c, mesh, colors, lod):
     between locks, baked into the colors."""
     k = c.design["locks"][lod]
     share = np.clip(fur_lengths(c, mesh) * 2.0, 0, 1)
-    deep = _hex(c.design["colors"]["fur_deep"])
+    col = c.design["colors"]
+    deep = _hex(col["fur_deep"]) if "fur_deep" in col else np.zeros(3)
     amount = (share * k["occlusion"])[:, None]
     return np.asarray(colors, float) * (1 - amount) + deep[None, :] * amount

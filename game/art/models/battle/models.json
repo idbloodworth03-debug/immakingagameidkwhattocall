@@ -1,15 +1,15 @@
 {
  "asian_elephant": {
-  "tile_scale": 1.01121
+  "tile_scale": 0.89578
  },
  "barn_owl": {
   "tile_scale": 1.1784
  },
  "black_rhino": {
-  "tile_scale": 1.0889
+  "tile_scale": 0.92265
  },
  "brown_bear": {
-  "tile_scale": 1.25925
+  "tile_scale": 1.12017
  },
  "california_condor": {
   "tile_scale": 0.67057
@@ -24,7 +24,7 @@
   "tile_scale": 1.88537
  },
  "giant_panda": {
-  "tile_scale": 1.16508
+  "tile_scale": 1.05094
  },
  "gray_squirrel": {
   "tile_scale": 3.96968
@@ -36,7 +36,7 @@
   "tile_scale": 0.93897
  },
  "hippopotamus": {
-  "tile_scale": 0.91447
+  "tile_scale": 0.77304
  },
  "honey_badger": {
   "tile_scale": 1.90498
@@ -75,7 +75,7 @@
   "tile_scale": 1.6219
  },
  "snapping_turtle": {
-  "tile_scale": 1.87018
+  "tile_scale": 1.62804
  },
  "striped_skunk": {
   "tile_scale": 1.85635

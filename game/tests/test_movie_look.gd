@@ -123,6 +123,27 @@ func test_the_yeti_has_its_own_animations() -> void:
 	check(absf(player.current_animation_position - 0.6 * player.get_animation("attack").length) < 0.02, "at its hit")
 
 
+## The animals on the movie look so far (tools/creatures/movie.json).
+const MOVIE := ["yeti", "komodo_dragon", "peregrine_falcon", "brown_bear", "giant_panda", "hippopotamus",
+	"asian_elephant", "black_rhino", "snapping_turtle"]
+
+
+func test_every_movie_look_animal_gets_the_movie_shader() -> void:
+	for id in MOVIE:
+		var viewer := _viewer(id)
+		check(viewer.model() != null, "%s's model loaded" % id)
+		if viewer.model() == null:
+			continue
+		check(ModelStage.is_movie(viewer.model()), "%s is marked as the movie look" % id)
+		var mesh := viewer.model().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+		check_eq(_shader_name(mesh.material_override), "model_movie.gdshader", "%s drawn with the movie shader" % id)
+		var m := ModelStage.new_model(id, 1.5)
+		check(m != null and m.movie and _shader_name(m.skin) == "model_movie.gdshader", "%s has the movie look in battle" % id)
+		if m != null:
+			_made.append(m.pivot)
+		cleanup()
+
+
 func test_the_other_animals_keep_the_cartoon_look() -> void:
 	var viewer := _viewer("red_fox")
 	if viewer.model() == null:

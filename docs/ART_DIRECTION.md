@@ -154,8 +154,40 @@ yellow feet), with feather cards laid over its body like shingles: 650
 small ones in the portrait, 240 bigger ones in the viewer (20k triangles
 and 0.9 MB, from 18k and 0.75 MB) and 40 chunky ones in battle (3.1k
 triangles and 205 KB, from 2.9k and 182 KB), each shaded darker at the
-base with a pale edge and shaft by the shader. The other animals keep
-the flat cartoon look below until they move over.
+base with a pale edge and shaft by the shader.
+
+**The Yeti moves and strikes like a movie character** (step 4; the
+principles in section 7 of the style guide). Its animations are its own
+(`tools/creatures/motion.py`, a "persona" picked in `movie.json` "motion"):
+an idle of slow deep breaths that lift the shoulders, a sway from foot to
+foot with the long arms swinging a beat behind, and a slow look about; a
+fidget that shakes the snow off and then stretches and yawns; a victory
+that beats its chest and flings both arms up with a roar and a hop. Its
+pound is built on anticipation and weight: it rocks back and hauls both
+fists overhead, slowing into a beat of hang time, then pitches forward and
+slams both fists down, squashing low, the head and shoulders overshooting
+and bouncing back before it settles. Its ability effect has three phases
+(`game/scripts/fx/fx_layer.gd` "ice_blast", numbers in `game/data/feel.json`
+"styles"): the build-up, frost gathering onto its fists during the wind-up
+before a pound; the impact, a white core flash, an icy glow, a shockwave
+ring racing out, ice shards bursting up out of the ground round it, frost
+cracks across the ground, snow thrown up and a shake; and the fade, the
+shards melting back as the frost patch it leaves settles in. An enemy
+frozen on the frost gets a smaller burst of the same.
+
+**The Tanks followed** (the first rollout batch): the Brown Bear in a
+shaggy warm-brown coat with grizzled tips, clawed toes and a grin; the
+Giant Panda in fluffy white and black with its eye patches; the Hippo,
+Elephant and Rhino in bold leathery skin (surface "skin": wrinkle folds
+bumped into the hero renders, ivory tusks and horns, toenails); the
+Snapping Turtle with a mossy plated shell (the shell material on the
+shell's faces, the painted scute lines kept) over scaly skin. All keep
+their own markings, re-colored into the bold palette (movie.json "paint":
+"species" with a palette swap). Their models carry fur locks only where
+there is fur (the Bear and Panda: 34k triangles in the viewer and 5.6k in
+battle, from 21k and 3.3k); the skin animals grew only by their toes and
+tusks (4.2k in battle, from 3.3k) and the Turtle not at all. The other
+animals keep the flat cartoon look below until they move over.
 
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and

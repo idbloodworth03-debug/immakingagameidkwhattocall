@@ -109,8 +109,10 @@ mane grows with its face).
    outline. The real-time models (`export_gltf.py`) get the same coat as
    sculpted fur locks (fine for the viewer, chunky for the battle), or as
    feather cards (`surface: feathers`), or scaly skin the game's shader
-   draws the cells on (`surface: scales`), named `<id>_movie` so the game
-   draws them with their own shader. The website opened with
+   draws the cells on (`surface: scales`), or bare leathery skin
+   (`surface: skin`, wrinkles bumped into the hero render) or a turtle's
+   plated shell over scales (`surface: shell`), named `<id>_movie` so the
+   game draws them with their own shader. The website opened with
    `?viewer=<id>` (dev tools on) goes straight to that animal's viewer
    (`&pose=attack:0.6` holds a pose), and with `?showcase=<id>&slow=1` to
    its attack showcase, slowed down. Every number

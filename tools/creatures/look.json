@@ -179,9 +179,9 @@
       "cell": 0.16,
       "groove": 0.08,
       "rings": 7,
-      "ring_depth": 0.25,
+      "ring_depth": 0.15,
       "roughness": 0.3,
-      "coat": 0.55
+      "coat": 0.35
     },
     "skin": {
       "roughness": 0.48,

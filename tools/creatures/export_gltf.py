@@ -299,14 +299,28 @@ def assemble(creature):
     if body.data.color_attributes.get("HairCol"):
         body.data.color_attributes.remove(body.data.color_attributes["HairCol"])
     _plain_uv(body)
-    if movie_look and creature.design.get("surface") == "scales":
+    if movie_look and creature.design.get("surface") in ("scales", "shell"):
         # Scales: the game's shader draws the cells (UV2.y is 3 on scaly skin;
-        # UV2.x: the cell size in meters).
-        sc = creature.design.get("scales", {})
+        # UV2.x: the cell size in meters). A turtle's shell stays plain (its
+        # scute lines are painted).
+        sc = creature.design.get(creature.design["surface"], {})
         cell = float(sc.get("cell", 0.035))
         me = body.data
-        a = np.tile([cell, 1.0 - 3.0], len(me.loops))
-        me.uv_layers["UV2"].data.foreach_set("uv", a)
+        loops = np.empty(len(me.loops), int)
+        me.loops.foreach_get("vertex_index", loops)
+        scaly = np.ones(len(me.vertices), bool)
+        if creature.design["surface"] == "shell":
+            import movie
+            # The body was cut down: judge by the nearest original vertex.
+            from scipy.spatial import cKDTree
+            co = np.empty(len(me.vertices) * 3)
+            me.vertices.foreach_get("co", co)
+            _, nearest = cKDTree(mesh.verts).query(co.reshape(-1, 3))
+            scaly = movie.shell_weight(creature, mesh)[nearest] < 0.5
+        a = np.zeros((len(me.loops), 2))
+        a[:, 0] = np.where(scaly[loops], cell, 0.0)
+        a[:, 1] = np.where(scaly[loops], 1.0 - 3.0, 1.0)
+        me.uv_layers["UV2"].data.foreach_set("uv", a.ravel())
     for obj in pieces:
         if obj.data.color_attributes.get("HairCol"):
             obj.data.color_attributes.remove(obj.data.color_attributes["HairCol"])

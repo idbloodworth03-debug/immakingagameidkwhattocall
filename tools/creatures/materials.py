@@ -140,9 +140,14 @@ def fur_material(color, kind="short", color_attribute=None, groom=None, deep=Non
         attr = nt.nodes.new("ShaderNodeVertexColor")
         attr.layer_name = color_attribute
         base = attr.outputs["Color"]
-        # Root: the paint darker (or toward its `deep` shade); tip: lighter.
+        # Root: the paint darker (or toward its `deep` shade); tip: brighter
+        # in the same hue (not toward white, which washes a coat out).
         root = _mix_color(nt, f["root_darken"], base, deep or (0.0, 0.0, 0.0, 1.0))
-        tip = _mix_color(nt, f["tip_lighten"], base, (1.0, 1.0, 1.0, 1.0))
+        bright = nt.nodes.new("ShaderNodeVectorMath")
+        bright.operation = "SCALE"
+        nt.links.new(base, bright.inputs[0])
+        bright.inputs["Scale"].default_value = 1.8
+        tip = _mix_color(nt, f["tip_lighten"], base, bright.outputs["Vector"])
         col = _mix_color(nt, ramp, root, tip)
         var = _math(nt, "MULTIPLY", _math(nt, "SUBTRACT", info.outputs["Random"], 0.5), f["variation"] * 2.0)
         col = _mix_color(nt, _math(nt, "ABSOLUTE", var), col, (0.0, 0.0, 0.0, 1.0))
@@ -160,7 +165,8 @@ def fur_material(color, kind="short", color_attribute=None, groom=None, deep=Non
         nt.links.new(col, b.inputs["Base Color"])
         b.inputs["Roughness"].default_value = f["hair_roughness"]
         b.inputs["Sheen Weight"].default_value = f.get("sheen", 0.5)
-        b.inputs["Specular IOR Level"].default_value = 0.3
+        # Dark coats glint gray under the lights unless their shine is low.
+        b.inputs["Specular IOR Level"].default_value = f.get("specular", 0.3)
         nt.links.new(b.outputs[0], out.inputs["Surface"])
         return m
     hair = nt.nodes.new("ShaderNodeBsdfHairPrincipled")
@@ -316,13 +322,24 @@ def scales_material(color, name="scales", color_attribute=None, cell=None):
     return m
 
 
-def shell_material(color, name="shell"):
-    """Big plates with growth rings and a waxy coat."""
+def shell_material(color, name="shell", color_attribute=None, cell=None):
+    """Big plates with growth rings and a waxy coat. With `color_attribute`,
+    the plates take the skin's paint (a painted scute pattern stays);
+    `cell`: the plate size in meters (look.json's by default)."""
     k = MAT["shell"]
     m, nt, out = _new_material(name)
     b = _principled(nt)
     tex = nt.nodes.new("ShaderNodeTexCoord")
-    scale = 1.0 / k["cell"]
+    if color_attribute:
+        attr = nt.nodes.new("ShaderNodeVertexColor")
+        attr.layer_name = color_attribute
+        color = attr.outputs["Color"]
+        darker = lambda amount: _mix_color(nt, amount, color, (0.0, 0.0, 0.0, 1.0))
+        lighter = lambda amount: _mix_color(nt, amount, color, (1.0, 1.0, 1.0, 1.0))
+    else:
+        darker = lambda amount: shade(color, amount)
+        lighter = lambda amount: shade(color, -amount)
+    scale = 1.0 / (cell or k["cell"])
     cells = _voronoi(nt, scale, "F1")
     edges = _voronoi(nt, scale, "DISTANCE_TO_EDGE")
     for v in (cells, edges):
@@ -331,8 +348,10 @@ def shell_material(color, name="shell"):
     rings = _math(nt, "SINE", _math(nt, "MULTIPLY", cells.outputs["Distance"], k["rings"] * math.pi * 2))
     ring_h = _math(nt, "MULTIPLY", rings, k["ring_depth"])
     height = _math(nt, "ADD", groove, ring_h)
-    col = _mix_color(nt, _math(nt, "SUBTRACT", 1.0, groove), color, shade(color, 0.55))
-    col = _mix_color(nt, _math(nt, "MULTIPLY", _math(nt, "ADD", rings, 1.0), 0.15), col, shade(color, -0.25))
+    # Painted plates keep their paint: the grooves and rings only shade it.
+    col = _mix_color(nt, _math(nt, "SUBTRACT", 1.0, groove), color, darker(0.35 if color_attribute else 0.55))
+    col = _mix_color(nt, _math(nt, "MULTIPLY", _math(nt, "ADD", rings, 1.0), 0.08 if color_attribute else 0.15), col,
+                     lighter(0.12 if color_attribute else 0.25))
     nt.links.new(col, b.inputs["Base Color"])
     nt.links.new(_bump(nt, height, 0.6, 0.006), b.inputs["Normal"])
     b.inputs["Roughness"].default_value = k["roughness"]

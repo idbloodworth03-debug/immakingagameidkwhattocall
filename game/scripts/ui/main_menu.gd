@@ -84,10 +84,16 @@ func _ready() -> void:
 ## For testing only (debug builds, or show_dev_tools in testing.json): the
 ## website opened with ?viewer=<animal id> goes straight to that animal's
 ## 3D viewer (&pose=attack:0.6 holds that animation at that point), and
-## with ?showcase=<animal id> to its attack showcase (&slow=1 slowed down):
+## with ?showcase=<animal id> to its attack showcase (&slow=1 slowed down),
+## and with ?army=1 to the Big army test:
 ## for checking a new model on a phone, or for screenshots.
 func _open_dev_shortcut() -> void:
 	if not OS.has_feature("web") or not (OS.is_debug_build() or GameData.testing.get("show_dev_tools", false)):
+		return
+	if _query("army") == "1":
+		# The Big army test (40 animals a side, an fps counter), as 3D models.
+		ArmyTest.use_models = true
+		Transition.go.call_deferred("res://scenes/army_test.tscn")
 		return
 	var show := _query("showcase")
 	if GameData.cards.has(show) and GameData.styles.has(show):

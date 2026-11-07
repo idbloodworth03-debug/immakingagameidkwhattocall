@@ -45,7 +45,7 @@ def main(species, out, pose=None, size=480):
     if os.environ.get("FRAME") == "head" and "skull" in creature.joints:
         # A close-up of the head.
         import numpy as np
-        center = creature.joint("skull") + np.array([0.0, 0.0, -0.03])
+        center = creature.joint("skull") + np.array(arm["rest_offset"]) + np.array([0.0, 0.0, -0.03])
         span = float(max(hi - lo)) * 0.42
     sc.render.resolution_x = size
     sc.render.resolution_y = size

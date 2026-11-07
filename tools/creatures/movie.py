@@ -41,7 +41,8 @@ def wants(species):
 
 
 def load(species):
-    c = importlib.import_module(species).make()
+    module = importlib.import_module(species)
+    c = module.make()
     design = copy.deepcopy(DESIGNS[species])
     c.cartoon = dict(design["shape"])
     cartoon.cartoonify(c)
@@ -51,7 +52,15 @@ def load(species):
     _eyes(c, design["eyes"])
     if design.get("digits"):
         _digits(c, design["digits"])
-    _paint(c, design)
+    if design.get("paint") == "species":
+        # The species' own markings (a falcon's helmet and barred breast),
+        # in the bold palette: its colors swapped for the design's.
+        if hasattr(module, "COLORS"):
+            module.COLORS.update(design.get("palette", {}))
+        c.bare_regions = set(design.get("bare", []))
+        c.palette = dict(c.palette or {}, **design.get("face_lines", {}))
+    else:
+        _paint(c, design)
     _parts(c, design)
     return c
 
@@ -135,7 +144,8 @@ def _eyes(c, k):
             up = np.array([0.0, 0.0, 1.0]) - d * d[2]
             up /= np.linalg.norm(up)
             center = p + up * r * float(k["brow_lift"]) + d * r * float(k["brow_forward"])
-            c.shapes.append(ellipsoid(tuple(center), (r * b[0], r * b[1], r * b[2]), "brow", "head",
+            # Part of the head, so a species' own paint covers it too.
+            c.shapes.append(ellipsoid(tuple(center), (r * b[0], r * b[1], r * b[2]), "head", "head",
                                       blend=r * 0.8))
 
 
@@ -209,6 +219,10 @@ def _paint(c, design):
     c.face_weight = face_weight
 
     def painted(mesh, creature):
+        if design.get("surface", "fur") != "fur":
+            # No coat: the skin's colors everywhere (the species' own paint,
+            # in the bold palette, if it keeps one).
+            return _skin_paint(mesh, creature, design)
         bare = np.maximum(_bare_weight(mesh, bare_regions), face_weight(mesh))
         v = mesh.verts
         lo, hi = v[:, 2].min(), v[:, 2].max()
@@ -221,6 +235,33 @@ def _paint(c, design):
     c.paint = painted
     c.palette = dict(c.palette or {}, eye_line_size=0.0, mouth=col.get("mouth", "#2a2a40"))
     c.bare_regions = bare_regions
+
+
+def _skin_paint(mesh, creature, design):
+    """A scaly or bare-skinned animal: its skin color, a deeper shade low
+    down and underneath (soft occlusion), and its own markings on top
+    (design "markings": the species' paint, re-colored by the palette)."""
+    col = design["colors"]
+    skin, deep = _hex(col["skin"]), _hex(col["skin_deep"])
+    v = mesh.verts
+    lo, hi = v[:, 2].min(), v[:, 2].max()
+    low = np.clip((hi - v[:, 2]) / max(hi - lo, 1e-6), 0, 1) ** 2
+    k = float(design.get("shade_low", 0.3))
+    out = skin[None, :] * (1 - k * low[:, None]) + deep[None, :] * (k * low[:, None])
+    n = _normals(mesh)
+    under = np.clip(-n[:, 2], 0, 1) * float(design.get("underside", 0.0))
+    belly = _hex(col.get("belly", col["skin"]))
+    out = out * (1 - under[:, None]) + belly[None, :] * under[:, None]
+    for spec in design.get("spots", []):
+        # Spots or flecks on top (a Komodo's orange flecks), in the palette.
+        from paint import Painter
+        p = Painter(mesh, {"spot": spec["color"]})
+        p.colors = out
+        mask = np.clip(n[:, 2] * spec.get("on_top", 1.0) + (1.0 - spec.get("on_top", 1.0)), 0, 1)
+        p.spots("spot", spec["cell"], spec["radius"], ring=spec.get("ring", 0.0), mask=mask,
+                strength=spec.get("strength", 1.0), seed=spec.get("seed", 17))
+        out = p.colors
+    return out
 
 
 def _bare_weight(mesh, regions):
@@ -236,9 +277,19 @@ def _bare_weight(mesh, regions):
 def _parts(c, design):
     col = design["colors"]
     horns = design.get("horns")
+    claw_scale = float(design.get("claw_scale", 1.0))
     for e in c.extras:
-        if e.material == "claw":
+        if e.material == "claw" and e.bone == "jaw" and "tongue" in col:
+            # A tongue (species build it from "claw" cones on the jaw).
+            e.material = "tongue"
+            e.color = col["tongue"]
+        elif e.material == "claw":
             e.color = col["nails"]
+            e.radius *= claw_scale
+            e.tip_radius *= claw_scale
+            if e.tip is not None and claw_scale != 1.0:
+                base, tip = np.asarray(e.center, float), np.asarray(e.tip, float)
+                e.tip = tuple(base + (tip - base) * claw_scale)
         elif e.material == "nose" and "nose" in col:
             e.color = col["nose"]
         elif e.material in ("horn", "tusk"):
@@ -265,20 +316,57 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
     import materials as M
     design = c.design
     col = design["colors"]
-    # Skin: the painted colors, soft, a little sheen.
-    skin = M.skin_material(M.rgba(col["skin"]), "movie_skin")
-    nt = skin.node_tree
-    bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
-    attr = nt.nodes.new("ShaderNodeVertexColor")
-    attr.layer_name = "Col"
-    # Under the fur the skin is a deeper shade of it, so the gaps between
-    # clumps read as soft shadow.
-    under = nt.nodes.new("ShaderNodeAttribute")
-    under.attribute_name = "under_fur"
-    deep = M._mix_color(nt, under.outputs["Fac"], attr.outputs["Color"], M.rgba(col["fur_deep"]))
-    nt.links.new(deep, bsdf.inputs["Base Color"])
-    body.data.materials.clear()
-    body.data.materials.append(skin)
+    surface = design.get("surface", "fur")
+    if surface == "feathers":
+        # Smooth skin in the painted colors (the wings' blades, the tail,
+        # legs and beak), with feather cards laid over the body.
+        skin = M.skin_material(M.rgba(col["skin"]), "movie_skin")
+        nt = skin.node_tree
+        bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+        attr = nt.nodes.new("ShaderNodeVertexColor")
+        attr.layer_name = "Col"
+        nt.links.new(attr.outputs["Color"], bsdf.inputs["Base Color"])
+        bsdf.inputs["Sheen Weight"].default_value = M.MAT["feathers"]["sheen"] * 0.5
+        bsdf.inputs["Subsurface Weight"].default_value = 0.0
+        # Feathers are matte: no glossy highlight washing dark markings out
+        # (even a rough highlight swamps a navy helmet seen at a low angle).
+        bsdf.inputs["Roughness"].default_value = 0.85
+        bsdf.inputs["Specular IOR Level"].default_value = 0.0
+        bsdf.inputs["Sheen Weight"].default_value = 0.04
+        body.data.materials.clear()
+        body.data.materials.append(skin)
+        if quality > 0:
+            _feather_cards(c, body, mesh, design["feathers"], hero=True)
+    elif surface == "scales":
+        # Scales all over, in the painted colors.
+        sc = design.get("scales", {})
+        body.data.materials.clear()
+        body.data.materials.append(M.scales_material(M.rgba(col["skin"]), "movie_scales", color_attribute="Col",
+                                                     cell=sc.get("cell")))
+    else:
+        # Skin: the painted colors, soft, a little sheen.
+        skin = M.skin_material(M.rgba(col["skin"]), "movie_skin")
+        nt = skin.node_tree
+        bsdf = next(n for n in nt.nodes if n.type == "BSDF_PRINCIPLED")
+        attr = nt.nodes.new("ShaderNodeVertexColor")
+        attr.layer_name = "Col"
+        # Under the fur the skin is a deeper shade of it, so the gaps between
+        # clumps read as soft shadow.
+        under = nt.nodes.new("ShaderNodeAttribute")
+        under.attribute_name = "under_fur"
+        deep = M._mix_color(nt, under.outputs["Fac"], attr.outputs["Color"], M.rgba(col["fur_deep"]))
+        nt.links.new(deep, bsdf.inputs["Base Color"])
+        body.data.materials.clear()
+        body.data.materials.append(skin)
+    _dress_pieces(c, design, quality)
+    # The lights round the animal where it really is (a flier hangs at its
+    # altitude), sized to its longest side (a wingspan, a long tail).
+    lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
+    center = (lo + hi) / 2 + np.asarray(arm["rest_offset"], float)
+    reach = float(max(hi - lo))
+    M.studio_lights(target=(float(center[0]), float(center[1]), float(center[2])), scale=max(size, reach * 0.8))
+    if surface != "fur":
+        return
     # Where fur grows, and how long: by body part, none on bare skin, eyes
     # and mouth.
     f = design["fur"]
@@ -296,9 +384,15 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
         with bpy.context.temp_override(object=body):
             while body.modifiers.find("fur_" + f["kind"]) < body.modifiers.find("rig"):
                 bpy.ops.object.modifier_move_down(modifier="fur_" + f["kind"])
-    # The pieces.
+
+
+def _dress_pieces(c, design, quality):
+    """Eye, nail, horn and nose materials on the pieces stuck to the body."""
+    import bpy
+    import materials as M
+    col = design["colors"]
     for obj in list(bpy.data.objects):
-        if obj.type != "MESH" or obj == body or not obj.data.materials:
+        if obj.type != "MESH" or obj.name.endswith("_body") or not obj.data.materials:
             continue
         name = obj.data.materials[0].name
         if name.startswith("eye") or name.startswith("cartoon_eye"):
@@ -310,6 +404,10 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
             depth = float(obj.dimensions.z / max(obj.scale.z, 1e-9))
             mat = M.horn_material(M.rgba(col["horn"]), axis_len=depth, offset=depth / 2,
                                   tip_color=M.rgba(col.get("horn_tip", col["horn"])))
+        elif name.startswith("extra_tongue"):
+            mat = M.skin_material(M.rgba(col["tongue"]), "tongue")
+            mat.node_tree.nodes["Principled BSDF"].inputs["Roughness"].default_value = 0.3
+            mat.node_tree.nodes["Principled BSDF"].inputs["Coat Weight"].default_value = 0.6
         elif name.startswith("extra_nose"):
             mat = M.skin_material(M.rgba(col["nose"]) if "nose" in col else M.shade(M.rgba(col["skin_deep"]), 0.45),
                                   "nose")
@@ -318,7 +416,155 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
             continue
         obj.data.materials.clear()
         obj.data.materials.append(mat)
-    M.studio_lights(target=(0.0, 0.0, size * 0.45), scale=size)
+
+
+# --- Feathers ----------------------------------------------------------------------------
+
+def feather_weight(c, mesh):
+    """Where feathers lie: the design's regions, not round the eyes or the
+    beak."""
+    k = c.design.get("feathers", {})
+    w = np.zeros(len(mesh.verts))
+    for r in k.get("regions", []):
+        try:
+            w = np.maximum(w, mesh.region_weight(r))
+        except (ValueError, IndexError):
+            pass
+    for center, radius in list(c.eyes):
+        d = np.linalg.norm(mesh.verts - center, axis=1)
+        w *= np.clip((d - radius * 1.8) / (radius * 1.5), 0, 1)
+    return np.clip(w * 1.5 - 0.2, 0, 1)
+
+
+def _even_points(mesh, weight, count, rng):
+    """`count` vertices spread evenly where `weight` is high (a cheap
+    Poisson disk), with their normals and the weight there."""
+    v = mesh.verts
+    f = np.asarray(mesh.faces)
+    tri = np.linalg.norm(np.cross(v[f[:, 1]] - v[f[:, 0]], v[f[:, 2]] - v[f[:, 0]]), axis=1) / 2
+    area = float((tri * weight[f].mean(axis=1).clip(0, 1)).sum())
+    spacing = math.sqrt(area / max(count, 1)) * 0.9
+    cand = np.nonzero(weight > 0.3)[0]
+    rng.shuffle(cand)
+    chosen, grid = [], {}
+    for i in cand:
+        p = v[i]
+        cell = tuple((p // spacing).astype(int))
+        near = False
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    for j in grid.get((cell[0] + dx, cell[1] + dy, cell[2] + dz), ()):
+                        if np.linalg.norm(v[j] - p) < spacing:
+                            near = True
+                            break
+                    if near:
+                        break
+                if near:
+                    break
+            if near:
+                break
+        if not near:
+            grid.setdefault(cell, []).append(i)
+            chosen.append(i)
+        if len(chosen) >= count:
+            break
+    return np.asarray(chosen, int)
+
+
+def _feather_cards(c, body, mesh, k, hero=True):
+    """Feather cards laid over the body like shingles (materials.py
+    scatter_feathers), each in the skin's painted color where it grows,
+    pointing along the comb (toward the tail), stuck to the body's bones."""
+    import bpy
+    import materials as M
+    rng = np.random.default_rng(int(k.get("seed", 5)))
+    w = feather_weight(c, mesh)
+    idx = _even_points(mesh, w, int(k["count"]), rng)
+    if not len(idx):
+        return None
+    normals = _normals(mesh)
+    attr = body.data.color_attributes["Col"]
+    flat = np.empty(len(attr.data) * 4)
+    attr.data.foreach_get("color", flat)
+    colors = flat.reshape(-1, 4)[:, :3]
+    size = k["size"]
+    obj = M.scatter_feathers(mesh.verts[idx], normals[idx], comb=tuple(k.get("comb", (0.0, -1.0, -0.2))),
+                             color=M.rgba(c.design["colors"]["skin"]), size=size, tilt=k.get("tilt"),
+                             jitter=k.get("jitter"), seed=int(k.get("seed", 5)), name=c.name + "_feathers",
+                             follow=float(k.get("follow", 0.06)), colors=colors[idx],
+                             lift_off=float(k.get("lift_off", 0.0)))
+    # Skinned like the body: each card follows the bone under its root.
+    from sdf import bone_weights
+    weights = bone_weights(mesh)
+    per_card = len(obj.data.vertices) // len(idx)
+    for name, bw in weights.items():
+        lw = bw[idx]
+        hit = np.nonzero(lw > 0.01)[0]
+        if not len(hit):
+            continue
+        vg = obj.vertex_groups.new(name=name)
+        for i in hit:
+            vg.add(list(range(int(i) * per_card, (int(i) + 1) * per_card)), float(lw[i]), "REPLACE")
+    arm = body.parent
+    mod = obj.modifiers.new("rig", "ARMATURE")
+    mod.object = arm
+    obj.parent = arm
+    obj.matrix_parent_inverse = body.matrix_parent_inverse.copy()
+    obj.matrix_basis = body.matrix_basis.copy()
+    return obj
+
+
+def feather_geometry(c, mesh, colors, lod):
+    """The coat as feather cards for the real-time models (movie.json
+    "feathers" <lod>): fewer, bigger cards than the hero art's, laid like
+    shingles, each in the paint's color where it grows, shaded darker at the
+    base and lighter at the edge by the game's shader. Returns (verts,
+    faces, colors, uv, uv2, root vertex per vertex); uv is (across, along)
+    and uv2 (a random number, 4)."""
+    import materials as M
+    k = dict(c.design["feathers"])
+    k.update(c.design["feathers"].get(lod, {}))
+    rng = np.random.default_rng(int(k.get("seed", 5)))
+    w = feather_weight(c, mesh)
+    idx = _even_points(mesh, w, int(k["count"]), rng)
+    if not len(idx):
+        return None
+    normals = _normals(mesh)
+    size = k["size"]
+    cv, cf, cu = M.feather_card(size[0], size[1], float(k.get("follow", 0.06)), segments=int(k.get("segments", 4)))
+    cv = np.asarray(cv, float)
+    comb = np.asarray(k.get("comb", (0.0, -1.0, -0.2)), float)
+    tilt = math.radians(float(k.get("tilt", 8)))
+    jitter = float(k.get("jitter", 0.1))
+    lift_off = float(k.get("lift_off", 0.0))
+    out_v, out_f, out_c, out_uv, out_uv2, out_root = [], [], [], [], [], []
+    for i in idx:
+        p, n = mesh.verts[i], normals[i]
+        t = comb - n * (comb @ n)
+        if np.linalg.norm(t) < 1e-4:
+            t = np.cross(n, (1.0, 0.0, 0.0))
+        t /= np.linalg.norm(t)
+        ang = rng.normal(0, jitter)
+        b = np.cross(n, t)
+        t = t * math.cos(ang) + b * math.sin(ang)
+        b = np.cross(n, t)
+        lift = tilt * (1 + rng.normal(0, 0.2))
+        up = t * math.cos(lift) + n * math.sin(lift)
+        nn = np.cross(b, up)
+        sc = 1.0 + rng.normal(0, 0.12)
+        basis = np.stack([b, up, nn], axis=1) * sc
+        rnd = float(rng.random())
+        start = len(out_v)
+        pts = (cv @ basis.T) + p + n * lift_off
+        out_v.extend(list(pts))
+        out_c.extend([colors[i]] * len(pts))
+        out_uv.extend(cu)
+        out_uv2.extend([(rnd, 4.0)] * len(pts))
+        out_root.extend([i] * len(pts))
+        out_f.extend([tuple(j + start for j in f) for f in cf])
+    return (np.asarray(out_v), out_f, np.asarray(out_c), np.asarray(out_uv), np.asarray(out_uv2),
+            np.asarray(out_root))
 
 
 # --- Real-time models: sculpted fur locks -------------------------------------------------
@@ -327,6 +573,8 @@ def fur_lengths(c, mesh):
     """How long the fur is at each vertex, in shares of the longest: by body
     part, none on bare skin, round the eyes or on the lips."""
     from anatomy import mouth_mask
+    if c.design.get("surface", "fur") != "fur":
+        return np.zeros(len(mesh.verts))
     f = c.design["fur"]
     length = np.zeros(len(mesh.verts))
     for region, share in f["lengths"].items():

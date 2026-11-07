@@ -3,7 +3,8 @@ extends TestCase
 ## was built by tools/creatures/movie.py (its mesh named <id>_movie) is
 ## drawn by its own shader in the viewer (without an outline) and in battle
 ## (with the outline and team band, pushed back round its fur locks); the
-## others keep the cartoon shader. The Yeti is the first.
+## others keep the cartoon shader. The Yeti, the Komodo Dragon (scales) and
+## the Peregrine Falcon (feathers) are the first three.
 
 var _made: Array = []
 
@@ -72,6 +73,37 @@ func test_the_yeti_keeps_its_outline_and_team_band_in_battle() -> void:
 		if v.y > 1.5:
 			locks += 1
 	check(locks > 100 and locks < 5000, "a few chunky locks for the battlefield (%d lock vertices)" % locks)
+
+
+func _kind_counts(mesh: MeshInstance3D) -> Dictionary:
+	var arrays: Array = mesh.mesh.surface_get_arrays(0)
+	var uv2: PackedVector2Array = arrays[Mesh.ARRAY_TEX_UV2]
+	var counts := {}
+	for v in uv2:
+		var kind := int(round(v.y))
+		counts[kind] = int(counts.get(kind, 0)) + 1
+	return counts
+
+
+func test_the_komodo_dragon_is_scaly_and_the_falcon_feathered() -> void:
+	# Scaly skin is marked 3 in UV2.y (the shader draws the cells); feather
+	# cards are marked 4; both get the movie shader in the viewer and in battle.
+	for id in ["komodo_dragon", "peregrine_falcon"]:
+		var viewer := _viewer(id)
+		check(viewer.model() != null, "%s's model loaded" % id)
+		if viewer.model() == null:
+			continue
+		var mesh := viewer.model().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
+		check_eq(_shader_name(mesh.material_override), "model_movie.gdshader", "%s drawn with the movie shader" % id)
+		var counts := _kind_counts(mesh)
+		if id == "komodo_dragon":
+			check(int(counts.get(3, 0)) > 5000, "the Komodo's skin is scaly (%d scaly vertices)" % int(counts.get(3, 0)))
+		else:
+			check(int(counts.get(4, 0)) > 500, "the Falcon wears feather cards (%d card vertices)" % int(counts.get(4, 0)))
+		var m := ModelStage.new_model(id, 1.5)
+		check(m != null and m.movie, "%s has the movie look in battle" % id)
+		if m != null:
+			_made.append(m.pivot)
 
 
 func test_the_other_animals_keep_the_cartoon_look() -> void:

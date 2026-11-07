@@ -78,6 +78,21 @@ func _ready() -> void:
 	if not Profile.pending_match_result.is_empty():
 		_show_match_result.call_deferred(Profile.pending_match_result)
 		Profile.pending_match_result = {}
+	_open_dev_shortcut()
+
+
+## For testing only (debug builds, or show_dev_tools in testing.json): the
+## website opened with ?viewer=<animal id> goes straight to that animal's
+## 3D viewer (for checking a new model on a phone, or for screenshots).
+func _open_dev_shortcut() -> void:
+	if not OS.has_feature("web") or not (OS.is_debug_build() or GameData.testing.get("show_dev_tools", false)):
+		return
+	var query: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('viewer') || ''", true)
+	var id := String(query) if query is String else ""
+	if id.is_empty() or not GameData.cards.has(id) or GameData.is_tool(id):
+		return
+	select_tab(1)
+	AnimalViewer.open.call_deferred(id)
 
 
 func select_tab(index: int) -> void:

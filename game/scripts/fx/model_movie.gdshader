@@ -9,7 +9,7 @@
 // works the same: tint, fade, gold, flash, blinks and faces.
 // Values: data/viewer.json "movie_look".
 shader_type spatial;
-render_mode unshaded, cull_back, depth_draw_opaque;
+render_mode unshaded, cull_disabled, depth_draw_opaque;
 
 uniform vec3 key_dir = vec3(-0.45, 0.7, 0.55);      // toward the key light, in view space
 uniform vec3 key_color : source_color = vec3(1.0, 0.96, 0.9);
@@ -60,11 +60,21 @@ uniform float happy = 0.0;
 uniform float dizzy = 0.0;
 uniform float spin = 0.0;
 
+// Feather cards: darker at the base, a pale edge, a shaft down the middle.
+uniform float feather_base = 0.3;
+uniform float feather_edge = 0.25;
+uniform float feather_shaft = 0.2;
+// Scales: how deep the grooves between them look, and their color.
+uniform float scale_groove = 0.45;
+uniform float scale_dome = 0.12;
+uniform vec3 scale_shadow : source_color = vec3(0.35, 0.5, 0.3);
+
 varying vec3 v_color;
 varying vec3 v_eye;
-varying float v_kind;     // 0 skin and coat, 1 an eye, 2 a fur lock
+varying float v_kind;     // 0 skin and coat, 1 an eye, 2 a fur lock, 3 scaly skin
 varying vec2 v_lock;      // a lock: (round it, root to tip)
-varying float v_seed;
+varying float v_seed;     // a lock: its random number; scales: the cell size
+varying vec3 v_pos;       // model-space position (scales)
 
 void vertex() {
 	v_color = COLOR.rgb;
@@ -72,6 +82,35 @@ void vertex() {
 	v_kind = UV2.y;
 	v_lock = UV;
 	v_seed = UV2.x;
+	v_pos = VERTEX;
+}
+
+// Scales: a cell pattern from the model's own position, each scale a dome
+// with a groove round it, fading out when the cells get smaller than a few
+// pixels (then the skin reads as its plain color).
+float scales(vec3 p, float cell, out float dome) {
+	vec3 q = p / cell;
+	vec3 base = floor(q);
+	float best = 8.0;
+	float second = 8.0;
+	for (int x = -1; x <= 1; x++) {
+		for (int y = -1; y <= 1; y++) {
+			for (int z = -1; z <= 1; z++) {
+				vec3 b = base + vec3(float(x), float(y), float(z));
+				vec3 r = fract(sin(vec3(dot(b, vec3(127.1, 311.7, 74.7)), dot(b, vec3(269.5, 183.3, 246.1)), dot(b, vec3(113.5, 271.9, 124.6)))) * 43758.5453);
+				float d = length(q - (b + r));
+				if (d < best) {
+					second = best;
+					best = d;
+				} else if (d < second) {
+					second = d;
+				}
+			}
+		}
+	}
+	dome = clamp(1.0 - best, 0.0, 1.0);
+	// The groove is where the two nearest cells are about as close.
+	return clamp((second - best) / 0.35, 0.0, 1.0);
 }
 
 float disc(vec2 p, vec2 center, float radius) {
@@ -123,9 +162,28 @@ void fragment() {
 	// The compatibility renderer works in sRGB, like the vertex colors.
 	vec3 base = v_color;
 	bool is_eye = v_kind > 0.5 && v_kind < 1.5;
-	bool is_lock = v_kind > 1.5;
+	bool is_lock = v_kind > 1.5 && v_kind < 2.5;
+	bool is_scaly = v_kind > 2.5 && v_kind < 3.5;
+	bool is_feather = v_kind > 3.5;
 	if (is_eye) {
 		base = eye(v_color);
+	}
+	if (is_feather) {
+		// (across 0-1, along 0-1): darker toward the base, lighter at the
+		// edges, a pale shaft line, fading out when the card is tiny.
+		float across = abs(v_lock.x - 0.5) * 2.0;
+		float fade = 1.0 - smoothstep(0.3, 0.9, fwidth(v_lock.x));
+		base *= 1.0 - feather_base * (1.0 - v_lock.y) * fade;
+		base = mix(base, mix(base, vec3(1.0), feather_edge), pow(across, 3.0) * fade);
+		float shaft = 1.0 - smoothstep(0.0, 0.08 + fwidth(v_lock.x) * 2.0, abs(v_lock.x - 0.5));
+		base = mix(base, mix(base, vec3(1.0), feather_shaft), shaft * fade * (1.0 - v_lock.y * 0.5));
+	}
+	if (is_scaly) {
+		float dome;
+		float groove = scales(v_pos, max(v_seed, 0.001), dome);
+		float fade = 1.0 - smoothstep(0.15, 0.5, fwidth(length(v_pos)) / max(v_seed, 0.001));
+		base = mix(base, base * scale_shadow, (1.0 - groove) * scale_groove * fade);
+		base *= 1.0 + scale_dome * (dome - 0.5) * fade;
 	}
 	if (is_lock) {
 		// Strands round the lock: grooves between them, fading out before
@@ -158,6 +216,10 @@ void fragment() {
 	col = mix(vec3(grey), col, 1.0 + vibrance);
 	col *= tint;
 	col += gold_color * gold * (0.25 + 0.75 * smoothstep(0.4, 1.0, edge));
+	if (is_feather && !FRONT_FACING) {
+		// A feather card's back: the card's own color, lit flat.
+		col = v_color * (key_color * key * 0.6 + sky_color * ambient) * tint;
+	}
 	col = mix(col, silhouette_color, silhouette);
 	col = mix(col, vec3(1.0), flash);
 	ALBEDO = max(col, vec3(0.0));

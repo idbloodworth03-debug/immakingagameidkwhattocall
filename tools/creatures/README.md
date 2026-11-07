@@ -99,15 +99,19 @@ mane grows with its face).
    thin-haired check in a minute or two).
 
 11. **The movie look** (`movie.py`, `movie.json`), the animated-movie pass
-   itself, one design per animal that has moved to it (the Yeti first): the
+   itself, one design per animal that has moved to it (the Yeti, the
+   Komodo Dragon and the Peregrine Falcon first): the
    cartoon shape with its own proportions, eyes set under a brow with an
    iris, a bare face with a muzzle, nose and grin, fingers and toes with
    nails, horns, and a coat in the bold palette with a deeper shade between
    the clumps. Hero art (`sprites.py --only portrait`, `preview.py`) grows
    real strands and uses the material library and studio lights, with no
    outline. The real-time models (`export_gltf.py`) get the same coat as
-   sculpted fur locks (fine for the viewer, chunky for the battle), named
-   `<id>_movie` so the game draws them with their own shader. Every number
+   sculpted fur locks (fine for the viewer, chunky for the battle), or as
+   feather cards (`surface: feathers`), or scaly skin the game's shader
+   draws the cells on (`surface: scales`), named `<id>_movie` so the game
+   draws them with their own shader. The website opened with
+   `?viewer=<id>` (dev tools on) goes straight to that animal's viewer. Every number
    is in `movie.json`; `cartoon.load(id)` gives any listed animal the movie
    look. `FRAME=head FUR=0 python preview.py yeti head.png` checks a face
    fast (`FUR=0`: no strands; `FRAME=head`: a close-up).

@@ -140,8 +140,21 @@ their own shader (`game/scripts/fx/model_movie.gdshader`, values in
 `game/data/viewer.json` "movie_look") with the studio lighting, strand
 detail that fades out before it can shimmer, and eyes with an iris. In
 battle it keeps the dark line and team band, drawn round the animal's
-edge and not round every lock. The other animals keep the flat cartoon
-look below until they move over.
+edge and not round every lock.
+
+**The Komodo Dragon and the Peregrine Falcon followed** (the scales and
+feathers of the material library). The Komodo is scaly all over: bold
+green with a sandy belly and orange flecks, an amber eye under a brow, a
+grin and a pink forked tongue, bigger claws; its portrait uses the domed
+scales material and its real-time models' shader draws the scale cells
+from the model's own shape (no extra geometry or memory: 21k triangles,
+0.9 MB in the viewer, as before). The Falcon keeps its own markings in the
+bold palette (a navy helmet, a steel-blue back, a cream barred breast,
+yellow feet), with feather cards laid over its body like shingles: 650
+small ones in the portrait, 240 bigger ones in the viewer (the model grew
+from 0.9 to 1.1 MB) and 40 chunky ones in battle, each shaded darker at
+the base with a pale edge and shaft by the shader. The other animals keep
+the flat cartoon look below until they move over.
 
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and

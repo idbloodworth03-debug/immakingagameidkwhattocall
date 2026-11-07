@@ -1,5 +1,5 @@
 {
- "_note": "The animated-movie look (docs/ART_DIRECTION.md, 'Style guide'), one design per animal that has moved to it; any animal not listed keeps the flat cartoon look. shape: proportions on top of the real animal (cartoon.py's head, muzzle, eyes, ears, legs, length, belly, limbs). eyes: iris color, how deep they sit in the head (share of their radius), the brow above them. colors: the bold palette per body part (fur, its deeper shade where the clumps part, bare skin, palms and soles, nails, horns). fur: the coat (materials kind), the hero render's strand density and length (meters, the longest), length per body part (meters at 1.0), where the fur parts to bare skin, and the comb; groom: the coat's settings for this animal (bigger locks for a shaggy yeti); under: how much of the deeper shade shows under the fur. locks: the real-time models' sculpted fur clumps, per level of detail (viewer, battle): how many, how long and wide (meters), sides round each and rings along it, how much they lift off the skin and curl back to it (lift, hug), how flat (thickness as a share of width) and how the end is shaped (tip: point, a soft point like a clump of hair, or round; end: how far along the last ring is), the root-to-tip shading, color variation, and the baked soft shadow between clumps. face: the bare face mask on the head (the head's parts facing `forward` from the skull, blending in between `from` and `to`). digits: fingers and toes grown out of each paw along its length (count, spacing, length and root/tip radius in meters, curl toward the palm, which side the palm faces), each with a glossy nail (radius, length). horns: swept out (out, back, up), their length and thickness. mouth: a carved grin where the face's surface lies in direction `dir` from the skull, its half width, depth and gap (radii), sunk `inset` of its depth. nose: on the face in direction `dir`, its radii and how deep it sits (share). ears: false hides the ears in the fur. face below: the bare face stops below this (the direction's height) so the chin and throat keep their fur. portrait_samples: Cycles samples for its card portrait. muzzle: a rounded muzzle on the face (in direction dir from the skull; radii; out: how far it stands out, a share of its depth) that the nose and mouth sit on. mouth smile: the corners turned up (degrees), from `corner` meters either side of the middle. tail: false takes the tail away. colors nose: the nose. shade_low: how much of the deeper shade the fur and skin take toward the feet. body_triangles: the real-time body's triangles per level of detail (less where the locks cover it).",
+ "_note": "The animated-movie look (docs/ART_DIRECTION.md, 'Style guide'), one design per animal that has moved to it; any animal not listed keeps the flat cartoon look. shape: proportions on top of the real animal (cartoon.py's head, muzzle, eyes, ears, legs, length, belly, limbs). eyes: iris color, how deep they sit in the head (share of their radius), the brow above them. colors: the bold palette per body part (fur, its deeper shade where the clumps part, bare skin, palms and soles, nails, horns). fur: the coat (materials kind), the hero render's strand density and length (meters, the longest), length per body part (meters at 1.0), where the fur parts to bare skin, and the comb; groom: the coat's settings for this animal (bigger locks for a shaggy yeti); under: how much of the deeper shade shows under the fur. locks: the real-time models' sculpted fur clumps, per level of detail (viewer, battle): how many, how long and wide (meters), sides round each and rings along it, how much they lift off the skin and curl back to it (lift, hug), how flat (thickness as a share of width) and how the end is shaped (tip: point, a soft point like a clump of hair, or round; end: how far along the last ring is), the root-to-tip shading, color variation, and the baked soft shadow between clumps. face: the bare face mask on the head (the head's parts facing `forward` from the skull, blending in between `from` and `to`). digits: fingers and toes grown out of each paw along its length (count, spacing, length and root/tip radius in meters, curl toward the palm, which side the palm faces), each with a glossy nail (radius, length). horns: swept out (out, back, up), their length and thickness. mouth: a carved grin where the face's surface lies in direction `dir` from the skull, its half width, depth and gap (radii), sunk `inset` of its depth. nose: on the face in direction `dir`, its radii and how deep it sits (share). ears: false hides the ears in the fur. face below: the bare face stops below this (the direction's height) so the chin and throat keep their fur. portrait_samples: Cycles samples for its card portrait. muzzle: a rounded muzzle on the face (in direction dir from the skull; radii; out: how far it stands out, a share of its depth) that the nose and mouth sit on. mouth smile: the corners turned up (degrees), from `corner` meters either side of the middle. tail: false takes the tail away. colors nose: the nose. shade_low: how much of the deeper shade the fur and skin take toward the feet. body_triangles: the real-time body's triangles per level of detail (less where the locks cover it). surface: 'fur' (the default: the coat as strands and locks), 'scales' (scales all over: hero art as the scales material, the real-time models' shader draws the cells; scales cell: their size in meters) or 'skin'. belly: the underside's color (underside: how far up it reaches); tongue: a tongue's color. spots: markings on top of the skin (color, about one per cell x cell, radius; on_top: 1 only on the back, 0 everywhere), from the species' own pattern in the bold palette. claw_scale: the claws bigger. paint 'species': keep the species' own markings, with its colors swapped for `palette`; face_lines: eye ring color and size. surface 'feathers': the body under feather cards (feathers: which body parts, how many, their size in meters, tilt off the body, comb direction, follow: the body's curve). feathers lift_off: the roots this far off the skin (meters). feathers viewer / battle: the real-time models' bigger, fewer cards (count, size, segments along each, tilt, lift_off).",
  "yeti": {
   "shape": {
    "head": 1.4,
@@ -126,8 +126,7 @@
     "head",
     "face",
     "snout",
-    "jaw",
-    "brow"
+    "jaw"
    ],
    "forward": [
     0.0,
@@ -226,6 +225,187 @@
   "shade_low": 0.2,
   "body_triangles": {
    "viewer": 11000
+  }
+ },
+ "komodo_dragon": {
+  "shape": {
+   "head": 1.4,
+   "muzzle": 0.9,
+   "eyes": 2.6,
+   "ears": 1.0,
+   "legs": 0.85,
+   "length": 0.8,
+   "belly": 1.1,
+   "limbs": 1.6
+  },
+  "eyes": {
+   "iris": "#f7b52c",
+   "sink": 0.45,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.4
+   ],
+   "brow_lift": 1.0,
+   "brow_forward": 0.2
+  },
+  "colors": {
+   "skin": "#5f9a3c",
+   "skin_deep": "#2f6b2a",
+   "belly": "#e2cf8a",
+   "nails": "#1d2433",
+   "mouth": "#c43a5a",
+   "fur": "#5f9a3c",
+   "fur_deep": "#2f6b2a",
+   "tongue": "#f04a7a"
+  },
+  "surface": "scales",
+  "scales": {
+   "cell": 0.03
+  },
+  "shade_low": 0.35,
+  "underside": 0.8,
+  "portrait_samples": 96,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
+  },
+  "claw_scale": 1.9,
+  "spots": [
+   {
+    "color": "#f0872a",
+    "cell": 0.11,
+    "radius": 0.022,
+    "on_top": 1.0,
+    "strength": 0.9,
+    "seed": 17
+   }
+  ],
+  "mouth": {
+   "dir": [
+    0.0,
+    1.0,
+    -0.3
+   ],
+   "radii": [
+    0.12,
+    0.07,
+    0.006
+   ],
+   "inset": 0.3,
+   "smile": 12,
+   "corner": 0.075
+  }
+ },
+ "peregrine_falcon": {
+  "shape": {
+   "head": 1.5,
+   "muzzle": 0.7,
+   "eyes": 2.0,
+   "ears": 1.0,
+   "legs": 0.75,
+   "length": 0.85,
+   "belly": 1.15,
+   "limbs": 1.2
+  },
+  "eyes": {
+   "iris": "#2a1a0e",
+   "sink": 0.4,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.45
+   ],
+   "brow_lift": 0.9,
+   "brow_forward": 0.25
+  },
+  "colors": {
+   "skin": "#3f6fb5",
+   "skin_deep": "#23407a",
+   "nails": "#1d2433",
+   "mouth": "#c43a5a"
+  },
+  "paint": "species",
+  "palette": {
+   "slate": "#3f6fb5",
+   "dark": "#1b2a44",
+   "tips": "#24365e",
+   "cream": "#fff1d2",
+   "white": "#ffffff",
+   "bar": "#2c3e66",
+   "yellow": "#ffc83a",
+   "beak": "#5b7190"
+  },
+  "face_lines": {
+   "eye_line": "#ffc83a",
+   "eye_line_size": 1.12
+  },
+  "surface": "feathers",
+  "feathers": {
+   "regions": [
+    "torso",
+    "breast",
+    "neck",
+    "head"
+   ],
+   "count": 650,
+   "size": [
+    0.034,
+    0.018
+   ],
+   "tilt": 14,
+   "jitter": 0.1,
+   "comb": [
+    0.0,
+    -1.0,
+    -0.15
+   ],
+   "follow": 0.1,
+   "seed": 5,
+   "lift_off": 0.0015,
+   "viewer": {
+    "count": 240,
+    "size": [
+     0.05,
+     0.028
+    ],
+    "segments": 4,
+    "tilt": 12,
+    "lift_off": 0.002
+   },
+   "battle": {
+    "count": 40,
+    "size": [
+     0.08,
+     0.045
+    ],
+    "segments": 3,
+    "tilt": 10,
+    "lift_off": 0.003
+   }
+  },
+  "portrait_samples": 96,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
   }
  }
 }

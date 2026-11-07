@@ -183,9 +183,9 @@ def _skin_material(name="skin"):
 
 
 def _movie_locks(creature, arm, body, mesh):
-    """An animal with the movie look: the skin under its fur a deeper shade,
-    and its coat as sculpted locks (movie.py), skinned to the bones of the
-    skin they grow from. Returns the locks' object."""
+    """An animal with the movie look: its coat as sculpted fur locks (the
+    skin under them a deeper shade) or as feather cards (movie.py), skinned
+    to the bones of the skin they grow from. Returns the coat's object."""
     import movie
     from sdf import bone_weights
     lod = LOD_NAME[0]
@@ -194,11 +194,17 @@ def _movie_locks(creature, arm, body, mesh):
     flat = np.empty(len(attr.data) * 4)
     attr.data.foreach_get("color", flat)
     colors = flat.reshape(-1, 4)[:, :3].copy()
-    deeper = movie.under_fur(creature, mesh, colors, lod)
-    rgba = np.ones((len(deeper), 4))
-    rgba[:, :3] = deeper
-    attr.data.foreach_set("color", rgba.ravel())
-    verts, faces, cols, uv, uv2, roots = movie.lock_geometry(creature, mesh, colors, lod)
+    if creature.design.get("surface", "fur") == "feathers":
+        made = movie.feather_geometry(creature, mesh, colors, lod)
+        if made is None:
+            return None
+        verts, faces, cols, uv, uv2, roots = made
+    else:
+        deeper = movie.under_fur(creature, mesh, colors, lod)
+        rgba = np.ones((len(deeper), 4))
+        rgba[:, :3] = deeper
+        attr.data.foreach_set("color", rgba.ravel())
+        verts, faces, cols, uv, uv2, roots = movie.lock_geometry(creature, mesh, colors, lod)
     lm = bpy.data.meshes.new(creature.name + "_locks")
     lm.from_pydata(verts.tolist(), [], faces)
     lm.update()
@@ -216,6 +222,9 @@ def _movie_locks(creature, arm, body, mesh):
     b = uv2[loops].copy()
     b[:, 1] = 1.0 - b[:, 1]
     lm.uv_layers.new(name="UV2").data.foreach_set("uv", b.ravel())
+    if creature.design.get("surface", "fur") == "feathers":
+        # Cards show both sides.
+        lm["double_sided"] = True
     locks = bpy.data.objects.new(lm.name, lm)
     bpy.context.scene.collection.objects.link(locks)
     weights = bone_weights(mesh)
@@ -249,7 +258,7 @@ def assemble(creature):
     _rest(arm)
 
     movie_look = getattr(creature, "style", "") == "movie"
-    locks = _movie_locks(creature, arm, body, mesh) if movie_look else None
+    locks = _movie_locks(creature, arm, body, mesh) if movie_look and creature.design.get("surface", "fur") in ("fur", "feathers") else None
     target = int(_setting("triangles", 16000))
     if movie_look:
         target = int(creature.design.get("body_triangles", {}).get(LOD_NAME[0], target))
@@ -290,6 +299,14 @@ def assemble(creature):
     if body.data.color_attributes.get("HairCol"):
         body.data.color_attributes.remove(body.data.color_attributes["HairCol"])
     _plain_uv(body)
+    if movie_look and creature.design.get("surface") == "scales":
+        # Scales: the game's shader draws the cells (UV2.y is 3 on scaly skin;
+        # UV2.x: the cell size in meters).
+        sc = creature.design.get("scales", {})
+        cell = float(sc.get("cell", 0.035))
+        me = body.data
+        a = np.tile([cell, 1.0 - 3.0], len(me.loops))
+        me.uv_layers["UV2"].data.foreach_set("uv", a)
     for obj in pieces:
         if obj.data.color_attributes.get("HairCol"):
             obj.data.color_attributes.remove(obj.data.color_attributes["HairCol"])

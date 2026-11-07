@@ -89,7 +89,7 @@
     "exposure": 0.0
   },
   "materials": {
-    "_note": "The material library every animal shares (materials.py). Fur: strands from the skin (shading 'soft': solid fibres that keep the painted color in the light and take the sky's color in the shade; a real hair shader turns light coats pale and gray) with child strands clumped round each guide (clump: how tightly, 0-1; roughness: frizz; kink: curl), darker at the root and lighter at the tip (root_darken, tip_lighten), each strand a little different (variation); parents per square meter of skin and children per parent, length in meters, thickness in millimeters at the root and tip. short: a fox's coat; long: a yeti's or a bear's shaggy coat, combed down (droop: how far they're laid flat toward the comb direction; normal: how much they still stand up off the skin); fluffy: soft, curly down. Feathers: overlapping cards laid along the body like shingles (count per square meter, size in meters, tilt off the body in degrees), each darker at the base with a pale edge and a stiff shaft. Scales: domed cells (cell size in meters) with deep grooves between, each a slightly different shade. Shell: big plates with growth rings and a waxy coat. Skin: soft and a little translucent, with faint mottling. Horn: ivory to a darker tip (tip_power: how sharply the tip's color takes over; higher keeps the base color longer), fine ridges, satin shine; claws and nails: dark and glossy. Eyes: a glossy cornea over a colored iris and a big pupil (their sizes as a share of the eye's radius), so the key light makes a bright catchlight.",
+    "_note": "The material library every animal shares (materials.py). Fur: strands from the skin (shading 'soft': solid fibres that keep the painted color in the light and take the sky's color in the shade; a real hair shader turns light coats pale and gray) with child strands clumped round each guide (clump: how tightly, 0-1; roughness: frizz; kink: curl), darker at the root and lighter at the tip (root_darken, tip_lighten), each strand a little different (variation); parents per square meter of skin and children per parent, length in meters, thickness in millimeters at the root and tip. short: a fox's coat; long: a yeti's or a bear's shaggy coat, combed down (droop: how far they're laid flat toward the comb direction; normal: how much they still stand up off the skin); fluffy: soft, curly down. Feathers: overlapping cards laid along the body like shingles (count per square meter, size in meters, tilt off the body in degrees), each darker at the base with a pale edge and a stiff shaft a paler shade of its own color (shaft_lighten). Scales: domed cells (cell size in meters) with deep grooves between, each a slightly different shade. Shell: big plates with growth rings and a waxy coat. Skin: soft and a little translucent, with faint mottling. Horn: ivory to a darker tip (tip_power: how sharply the tip's color takes over; higher keeps the base color longer), fine ridges, satin shine; claws and nails: dark and glossy. Eyes: a glossy cornea over a colored iris and a big pupil (their sizes as a share of the eye's radius), so the key light makes a bright catchlight.",
     "fur": {
       "short": {
         "parents": 9000,
@@ -162,13 +162,10 @@
       "jitter": 0.08,
       "base_darken": 0.35,
       "edge_lighten": 0.22,
-      "shaft": [
-        0.55,
-        0.72,
-        0.95
-      ],
       "roughness": 0.45,
-      "sheen": 0.4
+      "sheen": 0.15,
+      "shaft_lighten": 0.35,
+      "specular": 0.1
     },
     "scales": {
       "cell": 0.035,

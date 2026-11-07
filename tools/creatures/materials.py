@@ -279,13 +279,20 @@ def _voronoi(nt, scale, feature="F1"):
     return v
 
 
-def scales_material(color, name="scales"):
-    """Domed scales with deep grooves between, each a shade different."""
+def scales_material(color, name="scales", color_attribute=None, cell=None):
+    """Domed scales with deep grooves between, each a shade different. With
+    `color_attribute`, the scales take the skin's paint as their color
+    (markings stay where they're painted); `cell`: the scale size in meters
+    (look.json's by default)."""
     k = MAT["scales"]
     m, nt, out = _new_material(name)
     b = _principled(nt)
     tex = nt.nodes.new("ShaderNodeTexCoord")
-    scale = 1.0 / k["cell"]
+    if color_attribute:
+        attr = nt.nodes.new("ShaderNodeVertexColor")
+        attr.layer_name = color_attribute
+        color = attr.outputs["Color"]
+    scale = 1.0 / (cell or k["cell"])
     cells = _voronoi(nt, scale, "F1")
     edges = _voronoi(nt, scale, "DISTANCE_TO_EDGE")
     nt.links.new(tex.outputs["Object"], cells.inputs["Vector"])
@@ -297,9 +304,10 @@ def scales_material(color, name="scales"):
     vary = nt.nodes.new("ShaderNodeSeparateColor")
     nt.links.new(cells.outputs["Color"], vary.inputs[0])
     var = _math(nt, "MULTIPLY", vary.outputs[0], k["shade_variation"] * 2.0)
-    col = _mix_color(nt, var, color, shade(color, 0.3))
+    darker = (lambda amount: _mix_color(nt, amount, color, (0.0, 0.0, 0.0, 1.0))) if color_attribute else (lambda amount: shade(color, amount))
+    col = _mix_color(nt, var, color, darker(0.3))
     # Grooves darker.
-    col = _mix_color(nt, _math(nt, "SUBTRACT", 1.0, groove), col, shade(color, 0.6))
+    col = _mix_color(nt, _math(nt, "SUBTRACT", 1.0, groove), col, darker(0.6))
     nt.links.new(col, b.inputs["Base Color"])
     nt.links.new(_bump(nt, height, 0.7, 0.004), b.inputs["Normal"])
     b.inputs["Roughness"].default_value = k["roughness"]
@@ -447,9 +455,11 @@ def eye_material(iris_color, name="eye", forward="-Y", radius=1.0):
 
 # --- Feathers ---------------------------------------------------------------------------
 
-def feather_material(color, name="feather"):
+def feather_material(color, name="feather", color_attribute=None):
     """Darker at the base, a pale edge, a stiff pale shaft down the middle
-    (UV: u across the vane, 0-1; v along it, base to tip)."""
+    (UV: u across the vane, 0-1; v along it, base to tip). With
+    `color_attribute`, each feather takes its color from that vertex color
+    (the skin's paint where it grows, so markings stay)."""
     k = MAT["feathers"]
     m, nt, out = _new_material(name)
     b = _principled(nt)
@@ -458,15 +468,26 @@ def feather_material(color, name="feather"):
     nt.links.new(uv.outputs["UV"], sep.inputs[0])
     u, v = sep.outputs["X"], sep.outputs["Y"]
     across = _math(nt, "ABSOLUTE", _math(nt, "SUBTRACT", u, 0.5))
-    col = _mix_color(nt, _math(nt, "SUBTRACT", 1.0, v), color, shade(color, k["base_darken"]))
-    col = _mix_color(nt, _math(nt, "POWER", _math(nt, "MULTIPLY", across, 2.0), 6.0), col, shade(color, -k["edge_lighten"]))
+    if color_attribute:
+        attr = nt.nodes.new("ShaderNodeVertexColor")
+        attr.layer_name = color_attribute
+        color = attr.outputs["Color"]
+        darker = lambda amount: _mix_color(nt, amount, color, (0.0, 0.0, 0.0, 1.0))
+        lighter = lambda amount: _mix_color(nt, amount, color, (1.0, 1.0, 1.0, 1.0))
+    else:
+        darker = lambda amount: shade(color, amount)
+        lighter = lambda amount: shade(color, -amount)
+    col = _mix_color(nt, _math(nt, "SUBTRACT", 1.0, v), color, darker(k["base_darken"]))
+    col = _mix_color(nt, _math(nt, "POWER", _math(nt, "MULTIPLY", across, 2.0), 6.0), col, lighter(k["edge_lighten"]))
     shaft = _math(nt, "LESS_THAN", across, 0.03)
-    col = _mix_color(nt, shaft, col, tuple(linear(k["shaft"])) + (1.0,))
+    # The shaft: a paler version of the feather's own color.
+    col = _mix_color(nt, shaft, col, lighter(k.get("shaft_lighten", 0.35)))
     # Barbs: fine diagonal lines.
     barbs = _math(nt, "SINE", _math(nt, "MULTIPLY", _math(nt, "ADD", v, _math(nt, "MULTIPLY", across, 0.8)), 160.0))
     nt.links.new(col, b.inputs["Base Color"])
     nt.links.new(_bump(nt, _math(nt, "MULTIPLY", barbs, 0.5), 0.15, 0.002), b.inputs["Normal"])
     b.inputs["Roughness"].default_value = k["roughness"]
+    b.inputs["Specular IOR Level"].default_value = k.get("specular", 0.15)
     b.inputs["Sheen Weight"].default_value = k["sheen"]
     nt.links.new(b.outputs[0], out.inputs["Surface"])
     return m
@@ -495,7 +516,8 @@ def feather_card(length, width, follow=0.5, segments=8):
     return verts, faces, uvs
 
 
-def scatter_feathers(points, normals, comb, color, size=None, tilt=None, jitter=None, seed=0, name="feathers", follow=0.5):
+def scatter_feathers(points, normals, comb, color, size=None, tilt=None, jitter=None, seed=0, name="feathers", follow=0.5,
+                     colors=None, lift_off=0.0):
     """Feathers laid over a body like shingles: one card at each point,
     flat on the surface, pointing along `comb` (combed backward/down),
     lifted `tilt` degrees, sized and turned a little at random. Returns one
@@ -507,9 +529,9 @@ def scatter_feathers(points, normals, comb, color, size=None, tilt=None, jitter=
     rng = np.random.default_rng(seed)
     cv, cf, cu = feather_card(size[0], size[1], follow)
     cv = np.asarray(cv, float)
-    all_v, all_f, all_uv = [], [], []
+    all_v, all_f, all_uv, all_c = [], [], [], []
     comb = np.asarray(comb, float)
-    for p, n in zip(points, normals):
+    for i, (p, n) in enumerate(zip(points, normals)):
         n = n / (np.linalg.norm(n) + 1e-9)
         t = comb - np.dot(comb, n) * n
         if np.linalg.norm(t) < 1e-4:
@@ -526,16 +548,22 @@ def scatter_feathers(points, normals, comb, color, size=None, tilt=None, jitter=
         s = 1.0 + rng.normal(0, 0.12)
         basis = np.stack([b, up, nn], axis=1) * s
         base = len(all_v)
-        all_v.extend(list((cv @ basis.T) + p))
-        all_f.extend([tuple(i + base for i in f) for f in cf])
+        # `lift_off`: the root a little off the skin, so the card isn't
+        # swallowed by a bumpy surface.
+        all_v.extend(list((cv @ basis.T) + p + n * lift_off))
+        all_f.extend([tuple(j + base for j in f) for f in cf])
         all_uv.extend(cu)
+        if colors is not None:
+            all_c.extend([tuple(colors[i][:3]) + (1.0,)] * len(cv))
     me = bpy.data.meshes.new(name)
     me.from_pydata([tuple(v) for v in all_v], [], all_f)
     uv = me.uv_layers.new(name="UVMap")
     for poly in me.polygons:
         for li in poly.loop_indices:
             uv.data[li].uv = all_uv[me.loops[li].vertex_index]
-    me.materials.append(feather_material(color, name + "_mat"))
+    if colors is not None:
+        me.color_attributes.new("Col", "FLOAT_COLOR", "POINT").data.foreach_set("color", np.asarray(all_c).ravel())
+    me.materials.append(feather_material(color, name + "_mat", color_attribute="Col" if colors is not None else None))
     for poly in me.polygons:
         poly.use_smooth = True
     obj = bpy.data.objects.new(name, me)

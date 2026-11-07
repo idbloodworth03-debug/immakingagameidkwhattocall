@@ -241,7 +241,9 @@ func pose_at(spec: String) -> void:
 	var at := float(spec.get_slice(":", 1)) if spec.contains(":") else 0.0
 	if not _player.has_animation(anim):
 		return
-	_player.play(anim)
+	# No blend from the idle (it would hold the blend's first frame instead).
+	_player.stop()
+	_player.play(anim, 0.0)
 	_player.seek(clampf(at, 0.0, 1.0) * _player.get_animation(anim).length, true)
 	_player.pause()
 	_next_fidget = INF

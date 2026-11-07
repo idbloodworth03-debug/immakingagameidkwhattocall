@@ -1,3 +1,4 @@
+class_name StyleShowcase
 extends Control
 ## For testing (Profile > Developer tools > Attack styles): each animal's
 ## attack style (styles.json) on its own, in a little fight set up so the

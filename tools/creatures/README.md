@@ -111,7 +111,9 @@ mane grows with its face).
    feather cards (`surface: feathers`), or scaly skin the game's shader
    draws the cells on (`surface: scales`), named `<id>_movie` so the game
    draws them with their own shader. The website opened with
-   `?viewer=<id>` (dev tools on) goes straight to that animal's viewer. Every number
+   `?viewer=<id>` (dev tools on) goes straight to that animal's viewer
+   (`&pose=attack:0.6` holds a pose), and with `?showcase=<id>&slow=1` to
+   its attack showcase, slowed down. Every number
    is in `movie.json`; `cartoon.load(id)` gives any listed animal the movie
    look. `FRAME=head FUR=0 python preview.py yeti head.png` checks a face
    fast (`FUR=0`: no strands; `FRAME=head`: a close-up). Its animations

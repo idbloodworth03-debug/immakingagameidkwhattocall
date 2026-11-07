@@ -83,18 +83,29 @@ func _ready() -> void:
 
 ## For testing only (debug builds, or show_dev_tools in testing.json): the
 ## website opened with ?viewer=<animal id> goes straight to that animal's
-## 3D viewer (for checking a new model on a phone, or for screenshots).
+## 3D viewer (&pose=attack:0.6 holds that animation at that point), and
+## with ?showcase=<animal id> to its attack showcase (&slow=1 slowed down):
+## for checking a new model on a phone, or for screenshots.
 func _open_dev_shortcut() -> void:
 	if not OS.has_feature("web") or not (OS.is_debug_build() or GameData.testing.get("show_dev_tools", false)):
 		return
-	var query: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('viewer') || ''", true)
-	var id := String(query) if query is String else ""
+	var show := _query("showcase")
+	if GameData.cards.has(show) and GameData.styles.has(show):
+		StyleShowcase.start_id = show
+		StyleShowcase.start_slow = _query("slow") == "1"
+		Transition.go.call_deferred("res://scenes/style_showcase.tscn")
+		return
+	var id := _query("viewer")
 	if id.is_empty() or not GameData.cards.has(id) or GameData.is_tool(id):
 		return
-	# &pose=attack:0.6 holds that animation at that point (screenshots of a pose).
-	var pose: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('pose') || ''", true)
 	select_tab(1)
-	_open_viewer_dev.call_deferred(id, String(pose) if pose is String else "")
+	_open_viewer_dev.call_deferred(id, _query("pose"))
+
+
+## One value from the website's address (?key=value), or "".
+func _query(key: String) -> String:
+	var value: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('%s') || ''" % key, true)
+	return String(value) if value is String else ""
 
 
 func _open_viewer_dev(id: String, pose: String) -> void:

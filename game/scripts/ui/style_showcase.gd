@@ -59,6 +59,11 @@ const STAGES := {
 	"crawl": {"units": [[0, "self", 8, 11], [0, "brown_bear", 9.4, 11.3], [1, "wild_boar", 7, 8], [1, "wild_boar", 9, 8], [1, "gray_squirrel", 6.5, 4.8], [1, "gray_squirrel", 9.5, 4.8]]},
 }
 
+## For testing: the animal to open on, and whether slowed down (the website
+## opened with ?showcase=<id>&slow=1, dev tools on; main_menu.gd).
+static var start_id := ""
+static var start_slow := false
+
 var field: BattleField
 var sim: BattleSim
 var _ids: Array = []
@@ -131,7 +136,12 @@ func _ready() -> void:
 	next.pressed.connect(func() -> void: _show(_index + 1))
 	bottom.add_child(next)
 	column.add_child(bottom)
-	_show(0)
+	if start_slow:
+		Engine.time_scale = Feel.num("styles", "showcase_slow_speed", 0.3)
+		slow.set_label("Normal")
+	_show(maxi(0, _ids.find(start_id)))
+	start_id = ""
+	start_slow = false
 
 
 ## Sets up the little fight for animal number `index` (wrapping round).

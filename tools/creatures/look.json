@@ -34,6 +34,179 @@
       0.58
     ]
   },
+  "studio": {
+    "_note": "The standard studio lighting every hero render uses (materials.py studio_lights): a big soft key light from the front-left above (warm white, so shadows are gentle and there's no harsh glare), a soft cool fill from the right, a rim light from behind that traces the silhouette, and a soft sky all round that fills the creases. Positions in meters from the subject (about a meter tall), energies in watts, sizes in meters (bigger = softer). exposure brightens the whole render.",
+    "key": {
+      "location": [
+        -2.6,
+        -3.6,
+        4.2
+      ],
+      "size": 3.2,
+      "energy": 420,
+      "color": [
+        1.0,
+        0.96,
+        0.9
+      ]
+    },
+    "fill": {
+      "location": [
+        3.6,
+        -2.4,
+        1.6
+      ],
+      "size": 4.0,
+      "energy": 140,
+      "color": [
+        0.9,
+        0.95,
+        1.0
+      ]
+    },
+    "rim": {
+      "location": [
+        1.2,
+        3.6,
+        3.2
+      ],
+      "size": 1.6,
+      "energy": 320,
+      "color": [
+        0.95,
+        0.97,
+        1.0
+      ]
+    },
+    "sky": {
+      "strength": 0.3,
+      "color": [
+        0.78,
+        0.84,
+        0.92
+      ]
+    },
+    "exposure": 0.0
+  },
+  "materials": {
+    "_note": "The material library every animal shares (materials.py). Fur: strands from the skin with child strands clumped round each guide (clump: how tightly, 0-1; roughness: frizz; kink: curl), darker at the root and lighter at the tip (root_darken, tip_lighten), each strand a little different (variation); parents per square meter of skin and children per parent, length in meters, thickness in millimeters at the root and tip. short: a fox's coat; long: a yeti's or a bear's shaggy coat, combed down (droop: how far they're laid flat toward the comb direction; normal: how much they still stand up off the skin); fluffy: soft, curly down. Feathers: overlapping cards laid along the body like shingles (count per square meter, size in meters, tilt off the body in degrees), each darker at the base with a pale edge and a stiff shaft. Scales: domed cells (cell size in meters) with deep grooves between, each a slightly different shade. Shell: big plates with growth rings and a waxy coat. Skin: soft and a little translucent, with faint mottling. Horn: ivory to a darker tip, fine ridges, satin shine; claws and nails: dark and glossy. Eyes: a glossy cornea over a colored iris and a big pupil, so the key light makes a bright catchlight.",
+    "fur": {
+      "short": {
+        "parents": 9000,
+        "children": 14,
+        "length": 0.045,
+        "root_mm": 0.9,
+        "tip_mm": 0.15,
+        "clump": 0.55,
+        "clump_shape": 0.3,
+        "roughness": 0.012,
+        "kink": 0.0,
+        "droop": 0.9,
+        "root_darken": 0.35,
+        "tip_lighten": 0.18,
+        "variation": 0.08,
+        "hair_roughness": 0.32,
+        "coat": 0.12,
+        "normal": 0.35
+      },
+      "long": {
+        "parents": 3500,
+        "children": 22,
+        "length": 0.15,
+        "root_mm": 1.4,
+        "tip_mm": 0.2,
+        "clump": 0.75,
+        "clump_shape": 0.45,
+        "roughness": 0.018,
+        "kink": 0.0,
+        "droop": 1.1,
+        "root_darken": 0.42,
+        "tip_lighten": 0.2,
+        "variation": 0.1,
+        "hair_roughness": 0.35,
+        "coat": 0.1,
+        "normal": 0.3
+      },
+      "fluffy": {
+        "parents": 4500,
+        "children": 26,
+        "length": 0.09,
+        "root_mm": 1.1,
+        "tip_mm": 0.2,
+        "clump": 0.35,
+        "clump_shape": 0.6,
+        "roughness": 0.03,
+        "kink": 0.012,
+        "droop": 0.5,
+        "root_darken": 0.3,
+        "tip_lighten": 0.25,
+        "variation": 0.08,
+        "hair_roughness": 0.4,
+        "coat": 0.05,
+        "normal": 0.55
+      }
+    },
+    "feathers": {
+      "count": 900,
+      "size": [
+        0.13,
+        0.058
+      ],
+      "tilt": 5,
+      "jitter": 0.08,
+      "base_darken": 0.35,
+      "edge_lighten": 0.3,
+      "shaft": [
+        0.95,
+        0.92,
+        0.85
+      ],
+      "roughness": 0.45,
+      "sheen": 0.4
+    },
+    "scales": {
+      "cell": 0.035,
+      "groove": 0.18,
+      "dome": 0.6,
+      "shade_variation": 0.12,
+      "roughness": 0.38,
+      "coat": 0.25
+    },
+    "shell": {
+      "cell": 0.16,
+      "groove": 0.08,
+      "rings": 7,
+      "ring_depth": 0.25,
+      "roughness": 0.3,
+      "coat": 0.55
+    },
+    "skin": {
+      "roughness": 0.48,
+      "subsurface": 0.18,
+      "subsurface_scale": 0.03,
+      "mottle": 0.06,
+      "sheen": 0.15
+    },
+    "horn": {
+      "tip_darken": 0.45,
+      "ridges": 22,
+      "ridge_depth": 0.15,
+      "roughness": 0.28,
+      "coat": 0.35
+    },
+    "claw": {
+      "color": "#26262e",
+      "roughness": 0.2,
+      "coat": 1.0
+    },
+    "eye": {
+      "iris": 0.42,
+      "pupil": 0.2,
+      "iris_rays": 0.15,
+      "coat_roughness": 0.02,
+      "sclera": "#f6f2ea"
+    }
+  },
   "skin": {
     "roughness": 0.5,
     "sheen": 0.02,

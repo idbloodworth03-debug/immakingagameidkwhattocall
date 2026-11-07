@@ -87,6 +87,17 @@ mane grows with its face).
    treehouses in each team's color and their ruins. It writes into
    `game/art/towers/`, which the game no longer has.
 
+10. **Materials and studio lights** (`materials.py`), for the
+   animated-movie pass (the style guide is in `docs/ART_DIRECTION.md`):
+   the shared material library every animal is built from (short, long
+   and fluffy fur as real groomed strands; feathers as overlapping cards;
+   scales; shell; skin; horn, tusk and claw; eyes with a glossy cornea for
+   the catchlight) and the standard studio lights (a soft warm key, a cool
+   fill, a rim light and a soft sky). All their numbers are in `look.json`
+   "materials" and "studio". `python material_sheet.py out.png [samples]`
+   renders one sample of each under those lights (`--quick` for a half-size,
+   thin-haired check in a minute or two).
+
 Each animal is one file in `species/`.
 
 Body plans: `anatomy.py` has four-legged animals (`quadruped`, which also

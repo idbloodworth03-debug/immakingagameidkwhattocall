@@ -1,5 +1,124 @@
 # Art, Sound and Name
 
+## Style guide: the animated-movie pass
+
+Where the animals are going: the craftsmanship of a modern animated movie
+with our goofy cartoon personality and our bold, saturated palette. The
+quality target is the reference Yeti (a big, simple, appealing shape with
+rich, touchable surface detail on top). We take its **craft**, not its
+pale, washed-out colors. Numbers live in `tools/creatures/look.json`
+("studio", "materials"); the shared materials are
+`tools/creatures/materials.py`; `material_sheet.py` renders them all.
+
+### 1. Shape language
+
+Big simple shapes first, detail second: every animal must read as one
+appealing shape when filled in solid black. Proportions are pushed about
+1.3 to 1.5 times past real life, with contrast between big and small parts
+(a huge torso against short legs, a big head against a small muzzle) and
+between straight and curved lines. Heads stay a quarter to a third of the
+body's height, so faces read on a card.
+
+| Class | Shape | Silhouette | Examples |
+|---|---|---|---|
+| **Tanks** | Huge chunky bodies: the torso over half the height, thick forearms, short sturdy legs, the head sunk into big shoulders. Slow, heavy, planted. | A boulder or a rounded triangle, wide at the bottom. | Brown Bear, Hippo, Elephant, Black Rhino, Turtle, Panda, Yeti |
+| **Tank Destroyers** | Lean and powerful: a deep chest, a narrow waist, long limbs, leaning forward, big jaws or tusks. | A wedge pointing at the enemy. | Lion, Tiger, Wild Boar, Wolf Pack, Honey Badger, Komodo, Cerberus |
+| **Ranged** | Smaller and nimble: a light body, a big head and big hands or paws (what they throw or shoot with), big alert eyes, perky ears and tails. | Small, upright, a clear head and hands. | Squirrel, Raccoon, Skunk, Cobra, Orangutan, Camel, Unicorn |
+| **Air** | Elegant wings at least twice the body's width, long primary feathers in clean S-curves, a small light body. | A V or an arrow in flight, a teardrop at rest. | Falcon, Owl, Harpy Eagle, Macaw, Condor, Dragon |
+| **Specialists** | Distinctive and quirky: one exaggerated signature feature. | That feature, first. | The Fox's huge tail, the Pangolin's plates, the Sloth's long arms, the Eel's zigzag, the Gorilla's chest, the Seal's round belly, the Red Panda's ringed tail, the Kraken's tentacles |
+| **Mythics** | Grand and impressive: a heroic upright posture, the biggest presence on the field, and one magical element that glows. | Tall and crowned. | Yeti's frost horns, Cerberus's three heads with ember eyes, Unicorn's rainbow mane and horn, Dragon's wings and glowing throat, Kraken's glowing suckers |
+
+### 2. Material library
+
+Every animal is built from the same materials, each starting from a color
+in our palette and adding the craftsmanship: shading from root to tip,
+grooves, gloss. Never a pale or gray-washed version of the color.
+
+- **Fur** (short, long, fluffy): real strands for hero art, groomed into
+  clumps (child strands gathered round each guide), combed down and back,
+  darker at the root and lighter at the tip, each strand a shade
+  different. Short: a fox's sleek coat. Long: a yeti's or bear's shaggy
+  coat that hangs. Fluffy: soft, slightly curly down (a panda's, a
+  chick's). The skin under the fur is a deeper shade of it, so the gaps
+  between clumps read as soft shadow.
+- **Feathers:** overlapping cards laid along the body like shingles, each
+  bending to follow the body, darker at the base with a pale edge, a stiff
+  pale shaft and fine barbs, with a soft sheen.
+- **Scales:** small domed cells with deep grooves between, each a slightly
+  different shade, a light waxy coat.
+- **Shell:** big plates with grooves and growth rings, a glossy coat.
+- **Skin** (faces, hands, noses, bellies): soft and a little translucent,
+  faint mottling, a soft sheen. Noses darker and glossier.
+- **Horns, tusks, claws:** horn and tusks ivory to a darker tip with fine
+  ridges and a satin shine; claws and nails dark and glossy.
+- **Eyes:** see 4.
+
+### 3. Lighting
+
+One studio setup for every hero render, so every animal belongs to the
+same game (look.json "studio"):
+- A big **soft key light** from the front-left above, warm white: gentle
+  shadows, no harsh white glare.
+- A soft **cool fill** from the right, so shadows keep their color.
+- A **rim light** from behind that traces the silhouette (this, not an
+  outline, separates the animal from the background in hero art).
+- A soft **sky** all round that fills creases and the gaps between fur
+  clumps with soft occlusion.
+- A soft **contact shadow** under the feet.
+
+The battlefield matches it: the same key direction (top-left on screen),
+the same warm-key and cool-fill split, and a soft shadow under every
+animal.
+
+### 4. Eyes and faces
+
+- Eyes have a colored iris (each species its own), a big pupil and a
+  glossy cornea, so the key light puts a crisp **catchlight** in the upper
+  left of every eye. Whites are a warm off-white. No more flat white
+  googly circles: eyes are smaller than today's, set into the face, with
+  lids.
+- Every face has readable features at card size: a clear muzzle shape, a
+  mouth line with corners that can smile, and brows (a ridge or a fur
+  tuft) that carry the expression.
+- An expression set every animal shares: friendly (idle), determined
+  (wind-up), ouch (hit), proud (victory), dizzy (defeat). The goofiness
+  stays in the expressions and reactions, cleanly drawn.
+- Heads turn three-quarters toward the camera in portraits.
+
+### 5. Outlines
+
+- **Hero art** (card portraits, the 3D viewer, cage reveals, the VS
+  screen): **no drawn outline**, like the reference. The rim light and the
+  contact shadow separate the animal from its background.
+- **Battlefield:** keeps the bold team-colored band and a dark inner line,
+  for reading who's who in a big army.
+- UI icons and badges keep their outlines.
+
+### 6. Two levels of detail
+
+- **Hero art:** full detail (strands, feather cards, grooves), rendered in
+  Cycles at 512 pixels or more.
+- **Battlefield models:** the same design and colors, simplified for the
+  size they're seen at (about 60 to 110 points tall on an iPhone): fur as
+  a few big, chunky sculpted clumps in the mesh instead of strands,
+  feathers as a few big layered shapes, scales and shell as painted
+  pattern, and the soft occlusion between clumps baked into the model's
+  colors. Shading is soft and smooth, lit like the hero art. No detail
+  smaller than a few screen pixels, so nothing shimmers. Only the animals
+  in a match are loaded (as now).
+
+### 7. Animation and effects (for the later steps)
+
+- Animation: anticipation (a clear wind-up before every attack), timing
+  and weight by size, follow-through and overlap (fur, ears, tails,
+  bellies settle after the motion), arcs, controlled squash and stretch,
+  and personality in every idle, attack, hit, victory and defeat.
+- Effects: every one in three phases (build-up, impact, fade), layered (a
+  bright core, a softer glow, particles, a shockwave for big hits), one
+  look per element (ice, fire, rainbow light, lightning, venom, ink, dust),
+  strong clear shapes, the Mythics' the biggest, all bright and solid and
+  60 fps on an iPhone with big armies.
+
 ## Where the look is now
 
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its

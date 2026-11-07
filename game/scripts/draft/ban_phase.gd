@@ -128,10 +128,16 @@ func bot_choice(style: Dictionary, levels: Dictionary, rng: RandomNumberGenerato
 	var luck := lerpf(float(r.get("luck_easy", 4.0)), float(r.get("luck_hard", 1.0)), clampf(difficulty, 0.0, 1.0))
 	var best := ""
 	var best_score := -INF
+	# At most most_mythic Mythics a match: once it has banned that many, it
+	# leaves the rest.
+	var mythics: int = bans[1].filter(func(b): return String(GameData.get_card(String(b)).get("rarity", "")) == "mythic").size()
+	var mythic_ok: bool = mythics < int(r.get("most_mythic", 99))
 	for id in choices:
 		if can_ban(1, id) != "":
 			continue
 		var card := GameData.get_card(id)
+		if not mythic_ok and String(card.get("rarity", "")) == "mythic":
+			continue
 		var cls := GameData.class_of(id)
 		var score := float(card.get("cost", 4)) * float(r.get("power", 0.4))
 		if threats.has(cls):

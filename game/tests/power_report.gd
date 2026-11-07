@@ -12,6 +12,8 @@ extends Node
 ## draws the herds from the whole roster, the animals on the way included.
 ## WEIGHTS=draft picks them as often as Draft Duel offers each rarity
 ## (draft_rules.json "rarity_weights"), so 0.5 = an average offered card.
+## RUN=n draws different fights (n = 1, 2...: separate runs to average, so
+## random noise doesn't pass for a change; RUN=0, the default, as before).
 const FIGHTS := 48
 
 func _ready() -> void:
@@ -56,7 +58,7 @@ func _ready() -> void:
 		if only != "" and not only.split(",").has(id):
 			continue
 		var rng := RandomNumberGenerator.new()
-		rng.seed = hash(id)
+		rng.seed = hash(id) + int(OS.get_environment("RUN")) * 1000003
 		var won := 0.0
 		for i in fights:
 			var herd := []

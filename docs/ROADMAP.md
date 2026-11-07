@@ -101,6 +101,8 @@
 - [x] Roster expansion: 102 more animals and Mythics in four batches (docs/ROSTER.md)
 - [x] Rebalance the original 20 animals to their rarity's power range
 - [x] Sorting: Level, Rarity, Class and Biome on Your Deck, the bans, the Animals tab and inside a match (see GAME_DESIGN.md, Sorting)
+- [x] Card show: the rarer the card, the more it shows off; a Mythic moment when one is offered, picked or freed (see GAME_DESIGN.md, Card show)
+- [x] Stronger Mythics: frost, fire breath, a healing beam, scattering flames and ink (see GAME_DESIGN.md, attack styles); the computer bans at most one of your Mythics a match
 
 ## Phase 3: Online play
 

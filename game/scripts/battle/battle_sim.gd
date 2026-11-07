@@ -245,6 +245,9 @@ func _update(f: Fighter) -> void:
 	BattleAbilities.on_tick(self, f)
 	if not f.alive or f.stun > 0:
 		return
+	# Panicked by a Dragon's fire: it runs out of it, and doesn't fight.
+	if BattleStyles.scared(self, f):
+		return
 	# Its style may take this turn (a charge under way, hiding in its shell,
 	# a snack).
 	if BattleStyles.act(self, f):
@@ -288,6 +291,13 @@ func _tick_effects(f: Fighter) -> void:
 		var amount := int(f.memory.poison_left) / tps
 		f.memory.poison_left = int(f.memory.poison_left) % tps
 		deal_damage(f, amount, null)
+	# Burning (Cerberus's fire breath): like poison, in fire.
+	if int(f.memory.get("burn", 0)) > 0:
+		f.memory.burn = int(f.memory.burn) - 1
+		f.memory.burn_left = int(f.memory.get("burn_left", 0)) + int(f.memory.get("burn_dps", 0))
+		var burned := int(f.memory.burn_left) / tps
+		f.memory.burn_left = int(f.memory.burn_left) % tps
+		deal_damage(f, burned, null)
 	if f.lifetime > 0:
 		f.lifetime -= 1
 		if f.lifetime == 0:
@@ -310,6 +320,10 @@ func _update_zones() -> void:
 			BattleStyles.burn(self, zone)
 		if zone.has("crawl"):
 			BattleStyles.crawl(self, zone)
+		if zone.has("frost"):
+			BattleStyles.frost(self, zone)
+		if zone.has("ink"):
+			BattleStyles.ink(self, zone)
 	zones = zones.filter(func(z): return z.ticks > 0)
 
 
@@ -522,6 +536,10 @@ func _push_apart(a: Fighter, b: Fighter) -> void:
 ## One blow (or shot) from `f` at `t`, carrying `pct` percent of its bite
 ## (a volley's shot carries the time since the last).
 func attack(f: Fighter, t: Fighter, pct := 100) -> void:
+	# Blinded by a Kraken's ink: a Ranged or Air animal can't hit.
+	if BattleStyles.blinded(self, f, t):
+		events.append({"type": "blind_miss", "uid": f.uid, "to": t.uid, "x": f.x, "y": f.y})
+		return
 	# A shot at an animal right behind a guardian hits the guardian instead.
 	var aimed := t
 	t = BattleStyles.redirect(self, f, t)

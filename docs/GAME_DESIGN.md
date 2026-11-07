@@ -222,7 +222,9 @@ never in an army. The screen is a grid of big cards (yours and every animal
 the rival could bring), a big "Your turn" / "Rival's turn" banner and each
 side's three ban slots; on your turn tap a card and BAN; the rival thinks a
 second (dots bouncing) and bans one of yours, going for what beats its
-favorite class (`threats`), your best-leveled and strongest first. Every
+favorite class (`threats`), your best-leveled and strongest first, but
+never more than one of your Mythics a match (`most_mythic`: before, it
+banned one of your Mythics in 90% of matches, `tests/ban_report.tscn`). Every
 ban stamps a big red X on its card with a thump. You can always fill a
 deck: 11 is a deck plus the rival's 3 bans, and a ban of one of your own is
 refused if it could leave you short. The first time, one line explains it.
@@ -616,8 +618,13 @@ in a little fight (with a Slow button).
   - **Black Rhino**, "Charges through the enemy line first.": once an enemy
     is within 5 tiles (or the war starts), it charges 5 tiles at 2.6 times
     its speed in a cloud of dust, knocking everyone aside.
-  - **Yeti**, "Every third hit: icy ground pound.": it glows icy blue the hit
-    before; the pound hits and knocks back everyone around it.
+  - **Yeti**, "Pound leaves frost; a second pound freezes.": it glows icy
+    blue the hit before; every third hit, the pound hits everyone around it
+    (50%) and knocks them back, and leaves a frost patch (2.2 tiles, 5 s)
+    where enemies on the ground move 50% and attack 40% slower, tinted icy
+    with snowflakes. An enemy still on the frost when the next pound lands
+    freezes solid for 2 s, in a block of ice, instead of being knocked
+    back.
 - Tank Destroyers:
   - **Wild Boar**, "Charges a Tank. Huge first hit.": outside an army it goes
     for the nearest Tank; it sprints at a Tank head down in a trail of dust,
@@ -636,8 +643,12 @@ in a little fight (with a Slow button).
   - **Komodo Dragon**, "Venom bite keeps hurting; moves to the next.": its
     bite poisons for 4 s (the victim goes green); then it's off to an enemy
     not poisoned yet, straight away (no commit time for its hops).
-  - **Cerberus**, "Three heads, three bites every attack.": three quick fiery
-    bites (42% each), spread over the enemies in reach.
+  - **Cerberus**, "Each knockout: its next bite breathes fire.": three quick
+    fiery bites (42% each), spread over the enemies in reach. Every enemy
+    its bites knock out lights one of its heads (up to 3, blazing and
+    sparking); its next attack spends one, breathing a 2.5-tile cone of
+    fire (70 degrees) that sets everyone on the ground in it burning for
+    4 s (80% of its bite a second, licked by flames).
 - Ranged (every Ranged animal is a little tougher than before, 35% of its
   card's health and 32% of its bite each, so they hold up now that
   everyone fights everywhere):
@@ -655,8 +666,11 @@ in a little fight (with a Slow button).
     (its own rhythm, not the volley).
   - **Sumatran Orangutan**, "Bouncing fruit hits up to three.": its fruit
     bounces on to two more enemies (50% each).
-  - **Unicorn**, "Rainbow beam pierces the whole line.": a rainbow beam that
-    goes on through its target, hitting every enemy along it (60%).
+  - **Unicorn**, "Rainbow beam pierces foes and heals friends.": a rainbow
+    beam that goes on through its target, hitting every enemy along it
+    (60%), and healing every teammate it passes through by 100% of its bite
+    (from the back row, that's its own front line): green and rainbow
+    sparkles and a "+" number.
 - Air:
   - **Peregrine Falcon**, "Super-fast dives, then climbs back up.": it dives
     at 2.5 times its speed, stretched out with white speed lines, dropping
@@ -680,7 +694,10 @@ in a little fight (with a Slow button).
   - **Dragon**, "Fire-breath runs leave a burning line.": every 6 s it flies
     a run over the nearest ground enemy, breathing fire, and leaves a
     5-tile line of fire burning for 3 s (30% of its bite a second to anyone
-    on the ground in it).
+    on the ground in it). An enemy that touches the fire panics for 1 s: a
+    "!" pops up, it shakes and sweats and runs out of the flames on fire,
+    still burning, and can't attack (once a run; the fearless Honey Badger
+    stands firm).
 - Specialists (the Burrowers still start underground; for the others the
   style is how their trait works, in place of the plain every-hit splash,
   stun or slow):
@@ -696,10 +713,13 @@ in a little fight (with a Slow button).
     every 5 s, with an enemy within 3 tiles, it flops onto its belly and
     slides 3 tiles at it, hitting everyone it passes with a splash and
     bowling them aside.
-  - **Kraken** (Splash), "Tentacles slam and drag enemies together.": every
-    attack, purple tentacles slam its target and two more enemies within
-    2.5 tiles (everyone near a slam takes 35%), then drag them all in toward
-    it.
+  - **Kraken** (Splash), "Slams drag foes in, then ink blinds them.":
+    every attack, purple tentacles slam its target and two more enemies
+    within 2.5 tiles (everyone near a slam takes 35%), then drag them all in
+    toward it, and it squirts a cloud of dark ink where it dragged them (1.3
+    tiles, 0.9 s). Enemy Ranged and Air in the ink, or shooting into it,
+    can't hit (their shots fizzle; ink over their eyes and a "?"); biters
+    still bite.
   - **Electric Eel** (Stun), "Lightning chains through four, stunning
     them.": every 2nd hit, lightning jumps from its target through up to
     four enemies, stunning each for 0.6 s (25% of its bite to the ones it

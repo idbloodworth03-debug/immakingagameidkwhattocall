@@ -15,7 +15,11 @@ const T := BattleSim.TILE
 ## tiles], "self" for the animal shown), and what's arranged first:
 ## "hurt": the animal starts at this share of its health; "aim": every enemy
 ## goes for the teammate at this index first; "seconds": how long before it
-## starts over (else showcase_seconds).
+## starts over (else showcase_seconds); "frail": the units at these indexes
+## start at frail_hp of their health (to be knocked out quickly);
+## "hurt_team": the animal's teammates start at this share of their health
+## (to be healed); "tough": the animal has this many times its health (to
+## last long enough to show a slow style).
 const STAGES := {
 	"cleave": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.8, 9.6], [1, "wild_boar", 9.2, 9.6]]},
 	"shell": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.8, 9.6], [1, "wild_boar", 9.2, 9.6]], "hurt": 0.45},
@@ -23,31 +27,32 @@ const STAGES := {
 	"reflect": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.6, 9.8], [1, "wild_boar", 9.4, 9.8], [1, "honey_badger", 8, 9.2]]},
 	"guard": {"units": [[0, "self", 8, 11], [0, "gray_squirrel", 8, 12.4], [1, "gray_squirrel", 7, 6.5], [1, "gray_squirrel", 9, 6.5]], "aim": 1},
 	"rhino_charge": {"units": [[0, "self", 8, 16], [1, "raccoon", 6.4, 10.5], [1, "raccoon", 7.5, 10.5], [1, "raccoon", 8.6, 10.5], [1, "raccoon", 9.7, 10.5]]},
-	"pound": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.6, 10.0], [1, "wild_boar", 9.4, 10.0], [1, "wolf_pack", 6.6, 13.0], [1, "wolf_pack", 9.4, 13.0]]},
+	"pound": {"units": [[0, "self", 8, 11.5], [1, "brown_bear", 6.6, 10.0], [1, "snapping_turtle", 9.4, 10.0], [1, "wolf_pack", 6.6, 13.0], [1, "wolf_pack", 9.4, 13.0]], "seconds": 13.0, "tough": 2.0},
 	"rush": {"units": [[0, "self", 8, 15], [1, "raccoon", 6.5, 11], [1, "brown_bear", 8.6, 9]]},
 	"pack": {"units": [[0, "self", 7.2, 12], [0, "self", 8.8, 12], [1, "brown_bear", 8, 9.6]]},
 	"roar": {"units": [[0, "self", 8, 12], [0, "wild_boar", 6.6, 12.4], [0, "wolf_pack", 9.4, 12.4], [1, "brown_bear", 6.8, 9.8], [1, "snapping_turtle", 9.2, 9.8]]},
 	"fearless": {"units": [[0, "self", 8, 12.5], [1, "gray_squirrel", 7.2, 11], [1, "asian_elephant", 9.6, 9]]},
 	"stalk": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 9.5]]},
 	"venom": {"units": [[0, "self", 8, 12.5], [1, "brown_bear", 6.6, 10], [1, "snapping_turtle", 8, 9.6], [1, "giant_panda", 9.4, 10]]},
-	"triple": {"units": [[0, "self", 8, 12], [1, "wild_boar", 6.9, 10.4], [1, "honey_badger", 8, 10], [1, "wolf_pack", 9.1, 10.4]]},
+	"triple": {"units": [[0, "self", 8, 12], [1, "gray_squirrel", 8, 10.7], [1, "gray_squirrel", 7.3, 10.9], [1, "wild_boar", 6.6, 9.8], [1, "honey_badger", 8, 9.4], [1, "wild_boar", 9.4, 9.8]],
+		"frail": [1, 2], "seconds": 9.0},
 	"burst": {"units": [[0, "self", 8, 15], [1, "brown_bear", 7.4, 9.5], [1, "peregrine_falcon", 9.4, 9.8]]},
 	"spray": {"units": [[0, "self", 8, 13.5], [1, "wild_boar", 6.9, 10.6], [1, "wild_boar", 8, 10.2], [1, "wild_boar", 9.1, 10.6]]},
 	"lob": {"units": [[0, "self", 8, 16], [1, "brown_bear", 8, 11], [1, "gray_squirrel", 7.4, 8], [1, "gray_squirrel", 8.6, 8]]},
 	"sniper": {"units": [[0, "self", 8, 17.5], [1, "brown_bear", 8, 8.5]]},
 	"spit": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 9.5]]},
 	"bounce": {"units": [[0, "self", 8, 15.5], [1, "wild_boar", 6.6, 9.8], [1, "wild_boar", 8, 9.2], [1, "wild_boar", 9.4, 9.8]]},
-	"pierce": {"units": [[0, "self", 8, 16.5], [1, "wild_boar", 8, 11.5], [1, "wild_boar", 8.1, 10], [1, "wild_boar", 7.9, 8.5]]},
+	"pierce": {"units": [[0, "self", 8, 16.5], [0, "brown_bear", 8, 13.2], [1, "wild_boar", 8, 11.5], [1, "wild_boar", 8.1, 10], [1, "wild_boar", 7.9, 8.5]], "hurt_team": 0.35},
 	"dive": {"units": [[0, "self", 8, 14.5], [1, "wild_boar", 7, 9.5], [1, "wild_boar", 9, 9.8]]},
 	"hunt": {"units": [[0, "self", 8, 13.5], [1, "brown_bear", 8, 11.2], [1, "gray_squirrel", 7.4, 8.4], [1, "gray_squirrel", 8.6, 8.7]]},
 	"grab": {"units": [[0, "self", 8, 12.5], [1, "gray_squirrel", 7.4, 9.5], [1, "gray_squirrel", 8.6, 9.5]]},
 	"crack": {"units": [[0, "self", 8, 13], [0, "brown_bear", 6.6, 11.2], [1, "asian_elephant", 8, 9.4]]},
 	"feast": {"units": [[0, "self", 8, 13], [0, "wild_boar", 5.5, 11.4], [0, "wild_boar", 10.5, 11.4], [1, "gray_squirrel", 5.5, 9.8], [1, "gray_squirrel", 10.5, 9.8], [1, "gray_squirrel", 8, 9]]},
-	"strafe": {"units": [[0, "self", 3, 12.5], [1, "wild_boar", 6, 10], [1, "wild_boar", 7.15, 9.04], [1, "wild_boar", 8.3, 8.08], [1, "wild_boar", 9.45, 7.12]]},
+	"strafe": {"units": [[0, "self", 3, 12.5], [1, "wild_boar", 6, 10], [1, "wild_boar", 7.15, 9.04], [1, "honey_badger", 8.3, 8.08], [1, "wild_boar", 9.45, 7.12]], "seconds": 9.0},
 	"dig": {"units": [[0, "self", 8, 13], [0, "snapping_turtle", 8, 10.8], [1, "brown_bear", 8, 9.4], [1, "gray_squirrel", 5.2, 7], [1, "gray_squirrel", 6.4, 7.3], [1, "gray_squirrel", 10.4, 7], [1, "gray_squirrel", 11.6, 7.2]], "seconds": 11.0},
 	"flip": {"units": [[0, "self", 8, 15], [1, "brown_bear", 8, 10.5], [1, "gray_squirrel", 6.5, 7.5], [1, "gray_squirrel", 9.5, 7.5]]},
 	"slide": {"units": [[0, "self", 4.4, 11], [1, "raccoon", 6.2, 11], [1, "raccoon", 7.3, 11.2], [1, "raccoon", 8.4, 10.9], [1, "raccoon", 7, 7.6]]},
-	"tentacles": {"units": [[0, "self", 8, 12.5], [1, "wild_boar", 6.3, 11], [1, "wild_boar", 8, 10.5], [1, "wild_boar", 9.7, 11]]},
+	"tentacles": {"units": [[0, "self", 8, 12.5], [1, "wild_boar", 8, 10.5], [1, "gray_squirrel", 6.6, 10.9], [1, "gray_squirrel", 9.4, 10.9], [1, "raccoon", 8, 6.5]], "seconds": 9.0},
 	"chain": {"units": [[0, "self", 8, 12.5], [1, "wild_boar", 5.9, 10.5], [1, "wild_boar", 7.3, 10.3], [1, "wild_boar", 8.7, 10.3], [1, "wild_boar", 10.1, 10.5]]},
 	"chest_beat": {"units": [[0, "self", 8, 11.5], [1, "wild_boar", 6.5, 10.4], [1, "wild_boar", 8, 9.8], [1, "wild_boar", 9.5, 10.4], [1, "wolf_pack", 8, 13.2]]},
 	"stand_tall": {"units": [[0, "self", 8, 12], [1, "wild_boar", 6.5, 10], [1, "wild_boar", 8, 9.5], [1, "wild_boar", 9.5, 10]]},
@@ -137,9 +142,23 @@ func _show(index: int) -> void:
 	var id: String = _ids[_index]
 	_title.text = String(GameData.cards[id].name)
 	_line.text = GameData.style_line(id)
+	_stage = STAGES[String(GameData.styles[id].kind)]
+	sim = stage_sim(id, 7 + _index)
+	field.sim = sim
+	# Nothing left over from the last fight (a fire still burning, a zone).
+	field.fx.effects.clear()
+	field.fx.projectiles.clear()
+	field.fx.particles.clear()
+	field.snap_camera()
+	_accumulator = 0.0
+	_age = 0.0
+	_over = 0.0
+
+
+## The little fight set up to show animal `id`'s style (STAGES).
+static func stage_sim(id: String, seed_value: int) -> BattleSim:
 	var stage: Dictionary = STAGES[String(GameData.styles[id].kind)]
-	_stage = stage
-	sim = BattleSim.new([{}, {}], 7 + _index)
+	var sim := BattleSim.new([{}, {}], seed_value)
 	# An army with nobody in it: the camera frames the fight like a battle.
 	sim.army = BattleArmy.new(sim.rules, sim.tps)
 	var made := []
@@ -152,21 +171,27 @@ func _show(index: int) -> void:
 	for f in made:
 		if f.team == 1:
 			f.damage = maxi(1, f.damage * bite / 100)
+	if stage.has("tough"):
+		made[0].max_hp = roundi(made[0].max_hp * float(stage.tough))
+		made[0].hp = made[0].max_hp
 	if stage.has("hurt"):
 		made[0].hp = maxi(1, roundi(made[0].max_hp * float(stage.hurt)))
+	for k in stage.get("frail", []):
+		made[int(k)].hp = maxi(1, roundi(made[int(k)].max_hp * Feel.num("styles", "showcase_frail_hp", 0.15)))
+	if stage.has("hurt_team"):
+		for k in range(1, made.size()):
+			if made[k].team == 0:
+				made[k].hp = maxi(1, roundi(made[k].max_hp * float(stage.hurt_team)))
 	if stage.has("aim"):
 		for f in made:
 			if f.team == 1:
 				f.target = made[int(stage.aim)]
-	field.sim = sim
-	# Nothing left over from the last fight (a fire still burning, a zone).
-	field.fx.effects.clear()
-	field.fx.projectiles.clear()
-	field.fx.particles.clear()
-	field.snap_camera()
-	_accumulator = 0.0
-	_age = 0.0
-	_over = 0.0
+	return sim
+
+
+## How long a stage runs before it starts over.
+static func stage_seconds(id: String) -> float:
+	return float(STAGES[String(GameData.styles[id].kind)].get("seconds", Feel.num("styles", "showcase_seconds", 7.0)))
 
 
 func _exit_tree() -> void:

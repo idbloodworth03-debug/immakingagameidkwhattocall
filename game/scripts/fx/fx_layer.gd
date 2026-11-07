@@ -442,6 +442,42 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 3.0 - PI / 2) * r * 0.55, Color(color, 0.85), 4.0)
 			canvas.draw_line(Vector2.ZERO, Vector2.from_angle(turn * 0.25 - PI / 2) * r * 0.35, Color(color, 0.85), 5.0)
 			canvas.draw_set_transform(Vector2.ZERO)
+		"frost_patch":
+			# The Yeti's frost on the ground: an icy disc with crystals round its
+			# edge, frosting over quickly and melting away at the end.
+			var grow := Ease.out_cubic(clampf(t * 8.0, 0.0, 1.0))
+			var melt := 1.0 - clampf((t - 0.8) / 0.2, 0.0, 1.0)
+			var edge: Color = fx.get("edge", color)
+			var rr := r * grow
+			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.6))
+			canvas.draw_circle(Vector2.ZERO, rr, Color(color, 0.42 * melt))
+			canvas.draw_circle(Vector2.ZERO, rr * 0.65, Color(1, 1, 1, 0.2 * melt))
+			canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 40, Color(edge, 0.95 * melt), 5.0)
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			for i in 10:
+				var a := TAU * i / 10.0 + rng.randf() * 0.3
+				var at := Vector2.from_angle(a) * rr * rng.randf_range(0.55, 0.95)
+				var size := rr * rng.randf_range(0.08, 0.14)
+				for k in 3:
+					var d := Vector2.from_angle(k * PI / 3.0) * size
+					canvas.draw_line(at - d, at + d, Color(1, 1, 1, 0.9 * melt), 2.5)
+			canvas.draw_set_transform(Vector2.ZERO)
+		"ink_cloud":
+			# The Kraken's ink: a dark, swirling cloud spreading out, then
+			# thinning away.
+			var grow := Ease.out_cubic(clampf(t * 6.0, 0.0, 1.0))
+			var thin := 1.0 - clampf((t - 0.7) / 0.3, 0.0, 1.0)
+			var rr := r * grow
+			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.6))
+			canvas.draw_circle(Vector2.ZERO, rr, Color(color, 0.36 * thin))
+			canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 40, Color(color.lightened(0.25), 0.9 * thin), 4.0)
+			canvas.draw_set_transform(Vector2.ZERO)
+			var puffs := int(fx.get("puffs", 7))
+			for i in puffs:
+				var a := float(fx.age) * 0.9 + TAU * i / puffs
+				var at := p + Vector2(cos(a) * rr * 0.55, sin(a) * rr * 0.33 - rr * 0.15)
+				canvas.draw_circle(at, rr * (0.28 + 0.06 * sin(float(fx.age) * 3.0 + i)), Color(color.lightened(0.12), 0.42 * thin))
 		"wisp":
 			# A glowing wisp flying from `at` to `end`, a little trail behind.
 			var end: Vector2 = fx.get("end", p)

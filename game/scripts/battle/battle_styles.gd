@@ -282,6 +282,9 @@ static func haste_pct(sim: BattleSim, f: BattleSim.Fighter) -> int:
 				and BattleSim.dist_to_point(t, zone.x, zone.y) <= r + t.radius):
 			pct -= int(zone.get("attack", zone.crawl))
 			break
+	# On a Yeti's frost: slower.
+	if int(f.memory.get("frost_until", -1)) >= sim.tick:
+		pct -= int(f.memory.get("frost_attack", 0))
 	return pct
 
 
@@ -306,6 +309,46 @@ static func shot_crawl(sim: BattleSim, shooter: int, t: BattleSim.Fighter) -> in
 static func crawl(sim: BattleSim, zone: Dictionary) -> void:
 	for e: BattleSim.Fighter in sim.enemies_near(int(zone.team), zone.x, zone.y, int(zone.radius)):
 		sim.slow_down(e, int(zone.crawl), 2)
+
+
+## Enemies in a Kraken's ink are marked inked (to show it; called every
+## tick for the cloud).
+static func ink(sim: BattleSim, zone: Dictionary) -> void:
+	if int(zone.ticks) <= 0:
+		return
+	for e: BattleSim.Fighter in sim.enemies_near(int(zone.team), zone.x, zone.y, int(zone.radius)):
+		e.memory.ink_until = sim.tick + 1
+
+
+## Whether `f` can't hit `t` for a Kraken's ink: a Ranged or Air animal in a
+## cloud of the other side's, or shooting into one.
+static func blinded(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> bool:
+	if not f.is_unit() or not (f.cls == "ranged" or f.cls == "air"):
+		return false
+	for zone: Dictionary in sim.zones:
+		if not zone.has("ink") or int(zone.team) == f.team or int(zone.ticks) <= 0:
+			continue
+		var r := int(zone.radius)
+		if BattleSim.dist_to_point(f, zone.x, zone.y) <= r + f.radius or (t != null and BattleSim.dist_to_point(t, zone.x, zone.y) <= r + t.radius):
+			return true
+	return false
+
+
+## Panicked by a Dragon's fire: `f` runs out of it and doesn't fight (its
+## turn), until the panic's over. Returns whether it's panicking.
+static func scared(sim: BattleSim, f: BattleSim.Fighter) -> bool:
+	if int(f.memory.get("scared_until", -1)) <= sim.tick:
+		return false
+	var dx := f.x - int(f.memory.get("scared_x", f.x))
+	var dy := f.y - int(f.memory.get("scared_y", f.y))
+	if dx == 0 and dy == 0:
+		# Right on the fire: back toward its own side.
+		dy = 1 if f.team == 0 else -1
+	var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+	var step := sim.current_speed(f)
+	f.x = clampi(f.x + dx * step / d, f.radius, sim.width - f.radius)
+	f.y = clampi(f.y + dy * step / d, f.radius, sim.height - f.radius)
+	return true
 
 
 ## How much faster than usual `f` moves (percent).
@@ -616,6 +659,17 @@ static func burn(sim: BattleSim, zone: Dictionary) -> void:
 		var reach := int(zone.width) + e.radius
 		if (e.x - px) * (e.x - px) + (e.y - py) * (e.y - py) > reach * reach:
 			continue
+		# Touching the fire, it panics: out of the flames, no fighting
+		# (once a run; the fearless Honey Badger stands firm).
+		if int(zone.get("scare", 0)) > 0 and not zone.scared.has(e.uid) and not steady(e):
+			zone.scared[e.uid] = true
+			e.memory.scared_until = sim.tick + int(zone.scare)
+			e.memory.scared_x = px
+			e.memory.scared_y = py
+			# ...on fire: it burns as it runs.
+			e.memory.burn = maxi(int(e.memory.get("burn", 0)), int(zone.scare))
+			e.memory.burn_dps = maxi(int(e.memory.get("burn_dps", 0)), int(zone.dps))
+			sim.events.append({"type": "scared", "uid": e.uid, "x": e.x, "y": e.y})
 		zone.acc[e.uid] = int(zone.acc.get(e.uid, 0)) + int(zone.dps)
 		var amount := int(zone.acc[e.uid]) / sim.tps
 		zone.acc[e.uid] = int(zone.acc[e.uid]) % sim.tps
@@ -788,6 +842,23 @@ static func _tentacles(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighte
 	var pull := tiles(f.sp("pull", 0.5))
 	for e: BattleSim.Fighter in hit.values():
 		_pull(sim, e, f, pull)
+	# Then a squirt of ink where it dragged them.
+	var seconds := float(f.sp("ink_seconds", 0.0))
+	if seconds > 0.0:
+		var x := 0
+		var y := 0
+		for e: BattleSim.Fighter in hit.values():
+			x += e.x
+			y += e.y
+		x /= hit.size()
+		y /= hit.size()
+		for z: Dictionary in sim.zones:
+			# One cloud per Kraken: the new one takes over.
+			if z.has("ink") and int(z.get("uid", -1)) == f.uid:
+				z.ticks = 0
+		var ink_r := tiles(f.sp("ink_radius", 1.5))
+		sim.add_zone({"team": f.team, "x": x, "y": y, "radius": ink_r, "ink": true, "ticks": ticks(sim, seconds), "uid": f.uid})
+		sim.events.append({"type": "ink", "uid": f.uid, "x": x, "y": y, "radius": ink_r, "seconds": seconds})
 
 
 ## Drags `e` up to `distance` toward `f` (not into it).
@@ -984,7 +1055,8 @@ static func _strafe(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 	var by := clampi(ay + dir.y * length / 1000, 0, sim.height)
 	var seconds := float(f.sp("seconds", 3.0))
 	sim.add_zone({"team": f.team, "line": [ax, ay, bx, by], "width": tiles(f.sp("width", 0.6)),
-		"dps": f.damage * int(f.sp("dps_pct", 60)) / 100, "ticks": ticks(sim, seconds), "x": (ax + bx) / 2, "y": (ay + by) / 2, "radius": length / 2})
+		"dps": f.damage * int(f.sp("dps_pct", 60)) / 100, "ticks": ticks(sim, seconds), "x": (ax + bx) / 2, "y": (ay + by) / 2, "radius": length / 2,
+		"scare": ticks(sim, f.sp("scare_seconds", 0.0)), "scared": {}})
 	f.memory.run_dir = dir
 	f.memory.run_left = BattleSim.isqrt((bx - f.x) * (bx - f.x) + (by - f.y) * (by - f.y))
 	f.memory.run_ready = sim.tick + ticks(sim, f.sp("every", 6.0))
@@ -1059,6 +1131,22 @@ static func _pierce(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) 
 			sim.strike(f, e, bite(sim, f, e, f.sp("pct", 60)), {"style": "pierce"})
 	sim.events.append({"type": "pierce", "uid": f.uid, "x": f.x, "y": f.y,
 		"ex": f.x + dx * length / d, "ey": f.y + dy * length / d})
+	# The rainbow heals every teammate it passes through.
+	var heal := f.damage * int(f.sp("heal_pct", 0)) / 100
+	if heal <= 0:
+		return
+	for a: BattleSim.Fighter in sim.fighters:
+		if a == f or a.team != f.team or not a.alive or not a.is_unit():
+			continue
+		var ax := a.x - f.x
+		var ay := a.y - f.y
+		var along := (ax * dx + ay * dy) / d
+		var side := absi(ay * dx - ax * dy) / d
+		if along > 0 and along <= length and side <= a.radius + width:
+			var before := a.hp
+			sim.heal(a, heal)
+			if a.hp > before:
+				sim.events.append({"type": "beam_heal", "uid": a.uid, "amount": a.hp - before, "x": a.x, "y": a.y})
 
 
 ## The Camel: in reach and ready, it charges up (standing still), then lets
@@ -1119,6 +1207,10 @@ static func _venom(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -
 ## Cerberus's other two heads bite too: the nearest other enemies in reach,
 ## or the same one again.
 static func _triple(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	# A head lit by an earlier knockout breathes fire with this attack.
+	if int(f.memory.get("fire", 0)) > 0:
+		f.memory.fire = int(f.memory.fire) - 1
+		_fire_breath(sim, f, t)
 	var reach := f.attack_range + tiles(f.sp("reach", 0.6))
 	var others := []
 	for e: BattleSim.Fighter in sim.fighters:
@@ -1133,6 +1225,42 @@ static func _triple(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) 
 		bitten.append(victim.uid)
 		sim.strike(f, victim, bite(sim, f, victim, f.sp("pct", 45)), {"head": head})
 	sim.events.append({"type": "triple", "uid": f.uid, "bitten": bitten, "x": t.x, "y": t.y})
+	# Every enemy its bites knocked out lights a head (fire_most at most).
+	var out := {}
+	for uid in bitten:
+		for e: BattleSim.Fighter in [t] + others:
+			if e.uid == int(uid) and not e.alive:
+				out[e.uid] = true
+	if not out.is_empty():
+		f.memory.fire = mini(int(f.memory.get("fire", 0)) + out.size(), int(f.sp("fire_most", 3)))
+		sim.events.append({"type": "head_lit", "uid": f.uid, "fire": f.memory.fire, "x": f.x, "y": f.y})
+
+
+## Cerberus's fire breath: a cone toward `t` that sets every enemy on the
+## ground in it burning.
+static func _fire_breath(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
+	var dx := t.x - f.x
+	var dy := t.y - f.y
+	var d := maxi(1, BattleSim.isqrt(dx * dx + dy * dy))
+	var reach := f.radius + tiles(f.sp("fire_tiles", 2.0))
+	var cone := int(f.sp("fire_cone", 70))
+	var cos_half := roundi(cos(deg_to_rad(float(cone) / 2.0)) * 1000.0)
+	var burn := ticks(sim, f.sp("fire_seconds", 3.0))
+	var dps := f.damage * int(f.sp("fire_dps_pct", 25)) / 100
+	var burned := []
+	for e: BattleSim.Fighter in sim.fighters:
+		if e.team == f.team or not e.alive or not e.is_unit() or e.is_flying() or not sim.can_target(f, e):
+			continue
+		var ex := e.x - f.x
+		var ey := e.y - f.y
+		var ed := maxi(1, BattleSim.isqrt(ex * ex + ey * ey))
+		# Its target always; the rest if they're in the cone.
+		if e != t and (ed - e.radius > reach or (ex * dx + ey * dy) * 1000 / (ed * d) < cos_half):
+			continue
+		e.memory.burn = maxi(int(e.memory.get("burn", 0)), burn)
+		e.memory.burn_dps = maxi(int(e.memory.get("burn_dps", 0)) if int(e.memory.get("burn", 0)) > 0 else 0, dps)
+		burned.append(e.uid)
+	sim.events.append({"type": "fire_breath", "uid": f.uid, "x": f.x, "y": f.y, "tx": t.x, "ty": t.y, "reach": reach, "cone": cone, "burned": burned})
 
 
 ## The Tiger, after prey it hasn't struck yet: out to its side first, then a
@@ -1201,12 +1329,44 @@ static func _cleave(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) 
 static func _pound(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
 	var radius := tiles(f.sp("radius", 2.0))
 	sim.events.append({"type": "pound", "uid": f.uid, "x": f.x, "y": f.y, "radius": radius})
+	var freeze := ticks(sim, f.sp("freeze_seconds", 1.0))
 	for e: BattleSim.Fighter in sim.enemies_near(f.team, f.x, f.y, radius):
 		if e.is_flying() or e.memory.get("burrowing", false):
 			continue
+		# Still on the frost of an earlier pound: frozen solid.
+		var frozen := e.memory.has("frost_until") and int(e.memory.frost_until) >= sim.tick - 1 and freeze > 0
 		if e != t:
 			sim.strike(f, e, bite(sim, f, e, f.sp("pct", 60)), {"pound": true})
-		sim.knock_back(e, f.x, f.y, tiles(f.sp("knock", 1.0)))
+		if frozen and e.alive:
+			sim.stun(e, freeze)
+			e.memory.frozen_until = sim.tick + freeze
+			sim.events.append({"type": "freeze", "uid": e.uid, "x": e.x, "y": e.y, "seconds": f.sp("freeze_seconds", 1.0)})
+		else:
+			sim.knock_back(e, f.x, f.y, tiles(f.sp("knock", 1.0)))
+	# A frost patch where it pounded.
+	var seconds := float(f.sp("frost_seconds", 5.0))
+	if seconds > 0.0:
+		var frost := tiles(f.sp("frost_radius", 1.5))
+		for z: Dictionary in sim.zones:
+			# One patch per Yeti: the new one takes over.
+			if z.has("frost") and int(z.get("uid", -1)) == f.uid:
+				z.ticks = 0
+		sim.add_zone({"team": f.team, "x": f.x, "y": f.y, "radius": frost, "frost": int(f.sp("frost_slow_pct", 35)),
+			"attack": int(f.sp("frost_attack_pct", 20)), "ticks": ticks(sim, seconds), "uid": f.uid})
+		sim.events.append({"type": "frost", "uid": f.uid, "x": f.x, "y": f.y, "radius": frost, "seconds": seconds})
+
+
+## Enemies on a Yeti's frost patch (on the ground) are slowed, moving and
+## attacking (called every tick for the patch).
+static func frost(sim: BattleSim, zone: Dictionary) -> void:
+	if int(zone.ticks) <= 0:
+		return
+	for e: BattleSim.Fighter in sim.enemies_near(int(zone.team), zone.x, zone.y, int(zone.radius)):
+		if e.is_flying() or e.memory.get("burrowing", false):
+			continue
+		sim.slow_down(e, int(zone.frost), 2)
+		e.memory.frost_until = sim.tick + 1
+		e.memory.frost_attack = int(zone.attack)
 
 
 ## The Black Rhino's charge: once, at the start of the war, straight at the

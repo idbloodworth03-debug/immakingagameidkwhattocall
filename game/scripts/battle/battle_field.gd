@@ -1004,7 +1004,8 @@ func add_events(events: Array) -> void:
 			"death":
 				_doom(e, float(chain.at) if not chain.is_empty() else _time)
 			"splash", "stun", "cleave", "pound", "reflect", "slam", "pack_bite", "venom", "triple", "spray", "pierce", \
-					"dive_hit", "crack", "grab", "drop", "feast", "tentacles", "chain", "flip":
+					"dive_hit", "crack", "grab", "drop", "feast", "tentacles", "chain", "flip", \
+					"frost", "freeze", "head_lit", "fire_breath", "beam_heal", "ink":
 				# Shown when the hit they came with lands.
 				if not chain.is_empty() and float(chain.at) > _time:
 					chain.after.append(e)
@@ -1046,7 +1047,8 @@ func _show(e: Dictionary) -> void:
 		"cleave", "pound", "reflect", "shell", "snack", "heal", "rhino_charge", "charge_end", \
 				"slam", "pack_bite", "roar", "venom", "triple", "pounce", "spray", "pierce", "spit_charge", \
 				"dive_hit", "crack", "grab", "drop", "feast", "fire_line", \
-				"dig", "flip", "ball", "slide", "slide_end", "tentacles", "chain", "chest_beat", "shockwave", "stand_tall":
+				"dig", "flip", "ball", "slide", "slide_end", "tentacles", "chain", "chest_beat", "shockwave", "stand_tall", \
+				"frost", "freeze", "head_lit", "fire_breath", "beam_heal", "scared", "ink", "blind_miss":
 			_show_style(e)
 		"sleep":
 			var at := to_screen(e.x, e.y) - Vector2(0, 18)
@@ -1344,6 +1346,61 @@ func _show_style(e: Dictionary) -> void:
 			fx.effect("dust", ground, e.radius * s * 0.8, Color("#c9b08a"), 0.6, "", true)
 			shake(Feel.num("styles", "shock_shake", 0.22))
 			Sound.play("boom", -2.0, 0.1)
+		"frost":
+			# The Yeti's pound leaves a frost patch on the ground.
+			var patch := fx.effect("frost_patch", to_screen(e.x, e.y), e.radius * s, Color(String(looks.get("frost_patch", "#c8f2ff"))), float(e.seconds), "", true)
+			patch.edge = Color(String(looks.get("frost", "#9fe6ff")))
+		"freeze":
+			# Frozen solid: a burst of ice.
+			var frost := Color(String(looks.get("frost", "#9fe6ff")))
+			fx.effect("flash", at, 420 * s, Color(frost.lightened(0.5), 0.9), 0.22)
+			fx.burst("spark", at, 10, 260.0, 0.4, 8.0, [frost, Color.WHITE], 200.0, 3.0)
+			Sound.play("pop", -4.0, 0.2)
+		"head_lit":
+			# A knockout lights one of Cerberus's heads.
+			var fire := Color(String(looks.get("fire", "#ff6a2a")))
+			fx.burst("spark", at - Vector2(0, 12), 8, 200.0, 0.45, 8.0, [fire, Color(String(looks.get("flame", "#ffc23a")))], -60.0, 3.0)
+			Sound.play("whoosh", -8.0, 0.2)
+		"fire_breath":
+			# A cone of fire from Cerberus's lit head.
+			var toward := to_screen(e.tx, e.ty) - Vector2(0, 10)
+			var fire := Color(String(looks.get("fire", "#ff6a2a")))
+			var flame := Color(String(looks.get("flame", "#ffc23a")))
+			var breath := Feel.num("styles", "fire_breath_seconds", 0.45)
+			var cone := fx.effect("cone", at, int(e.reach) * s, fire, breath)
+			cone.dir = (toward - at).normalized()
+			cone.spread = float(e.cone)
+			var inner := fx.effect("cone", at, int(e.reach) * s * 0.7, flame, breath * 0.8)
+			inner.dir = cone.dir
+			inner.spread = float(e.cone) * 0.6
+			for i in 8:
+				var u := (i + 1) / 9.0
+				fx.particle("spark", at.lerp(toward, u), cone.dir.rotated(randf_range(-0.4, 0.4)) * 160.0, 0.5, 9.0, flame if i % 2 == 0 else fire, -60.0, 2.0)
+			shake(Feel.num("styles", "slam_shake", 0.14) * 0.6)
+			Sound.play("boom", -8.0, 0.2)
+		"beam_heal":
+			# The rainbow heals a teammate it passes through.
+			if v != null and int(e.amount) > 0:
+				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key)
+				fx.burst("sparkle", at, 6, 140.0, 0.6, 7.0, [Color(String(looks.get("heal_sparkle", "#9dffb0"))), Color.WHITE, Color("#fff176")], -50.0, 2.5)
+		"scared":
+			# Panicked by the fire: a "!" and a hop out of it.
+			if v != null:
+				var pop := fx.effect("alert", v.position + v.head(), Feel.num("readability", "alert_size", 30.0) * 0.8, Color(String(looks.get("panic_color", "#ff9a2e"))), 0.8)
+				pop.follow = v
+			fx.burst("glow", at - Vector2(0, 14), 4, 120.0, 0.5, 5.0, [Color(String(looks.get("sweat", "#8fd8ff")))], 260.0, 2.0, 80.0)
+		"ink":
+			# A squirt of ink where the Kraken dragged them.
+			var ink := Color(String(looks.get("ink", "#2a1840")))
+			# Over the animals (the Kraken's big body would hide it on the ground).
+			var cloud := fx.effect("ink_cloud", to_screen(e.x, e.y), e.radius * s, ink, float(e.seconds))
+			cloud.puffs = int(looks.get("ink_puffs", 7))
+			fx.burst("puff", to_screen(e.x, e.y), 8, 180.0, 0.5, 11.0, [ink, ink.lightened(0.2)], 0.0, 3.0)
+			Sound.play("pop", -6.0, 0.3)
+		"blind_miss":
+			# A blinded shot fizzles.
+			if v != null and randf() < 0.5:
+				fx.burst("puff", at - Vector2(0, 10), 2, 60.0, 0.35, 6.0, [Color(String(looks.get("blind_puff", "#6b5585")))], -20.0, 2.0)
 		"stand_tall":
 			var orange := Color(String(looks.get("panda", "#ff8a3d")))
 			fx.effect("ring", to_screen(e.x, e.y), e.radius * s, orange, 0.6, "", true)

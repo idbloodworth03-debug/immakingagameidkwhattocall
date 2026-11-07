@@ -8,8 +8,9 @@
   "offer_animals": 4,
   "offer_tools": 2,
   "bans": {
-    "_note": "Before a match, once a player owns at least unlock_owned animals (a deck plus the rival's bans, so a deck can always be filled): a coin flip decides who bans first, then the two take turns until each has banned per_player animals. Nobody can use a banned animal that match. A ban of one of your own animals is refused if it could leave you fewer than a deck's worth once the rival's bans are in. The computer bans your animals that beat its favorite class (threats: favorite class -> the classes that beat it) at threat, your animals at owned (plus level for each level above the rarity's start), each point of power (cost) at power, and never likes banning its favorite class (favorite, negative); a weaker rival adds more luck (luck_easy to luck_hard).",
+    "_note": "Before a match, once a player owns at least unlock_owned animals (a deck plus the rival's bans, so a deck can always be filled): a coin flip decides who bans first, then the two take turns until each has banned per_player animals. Nobody can use a banned animal that match. A ban of one of your own animals is refused if it could leave you fewer than a deck's worth once the rival's bans are in. The computer bans your animals that beat its favorite class (threats: favorite class -> the classes that beat it) at threat, your animals at owned (plus level for each level above the rarity's start), each point of power (cost) at power, never likes banning its favorite class (favorite, negative), and bans at most most_mythic of your Mythics a match; a weaker rival adds more luck (luck_easy to luck_hard).",
     "per_player": 3,
+    "most_mythic": 1,
     "unlock_owned": 11,
     "threats": {
       "tank": ["tank_destroyer"],

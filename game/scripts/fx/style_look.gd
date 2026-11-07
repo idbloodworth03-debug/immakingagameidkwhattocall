@@ -141,7 +141,13 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					p.sx = 1.14
 					p.sy = 1.04
 			"triple":
-				if _fighting(f):
+				# A head lit by a knockout blazes; otherwise flames flicker off
+				# its heads in a fight.
+				var lit := int(f.memory.get("fire", 0))
+				if lit > 0:
+					p.tint = Color(1.0, 1.0, 1.0).lerp(_color("fire", "#ff6a2a"), 0.18 + 0.08 * sin(now * 12.0))
+					_puffs(dt, "spark", _color("flame", "#ffc23a"), Vector2(0.0, -0.85), Vector2(0, -110), 0.18 / lit, 7.0)
+				elif _fighting(f):
 					_puffs(dt, "glow", _color("fire", "#ff6a2a"), Vector2(0.0, -0.85), Vector2(0, -60), 0.4, 4.5)
 			"dive":
 				var sim := view.field.sim if view.field != null else null
@@ -249,6 +255,32 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 		# Sprayed by a Skunk: stink lines rising.
 		if int(f.memory.get("stink_until", -1)) > view.field.sim.tick:
 			_status_puffs(dt, "puff", _color("stink", "#c8d84a"), 0.2)
+		var tick := view.field.sim.tick
+		# Frozen solid by a Yeti's pound: icy blue, in a block of ice.
+		if int(f.memory.get("frozen_until", -1)) > tick:
+			state = "frozen"
+			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("frost", "#9fe6ff"), 0.6)
+			p.sx = 1.0
+			p.sy = 1.0
+		# On a Yeti's frost: icy, snowflakes.
+		elif int(f.memory.get("frost_until", -1)) >= tick:
+			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("frost", "#9fe6ff"), 0.3)
+			_status_puffs(dt, "sparkle", _color("frost", "#9fe6ff"), 0.22)
+		# Burning (Cerberus's fire breath): orange, flames licking up.
+		if int(f.memory.get("burn", 0)) > 0:
+			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("fire", "#ff6a2a"), 0.3)
+			_puffs(dt, "spark", _color("flame", "#ffc23a"), Vector2(0.0, -0.4), Vector2(0, -120), 0.09, 7.0)
+		# In a Kraken's ink: darkened, ink dripping off it.
+		if int(f.memory.get("ink_until", -1)) >= tick:
+			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("ink", "#2a1840"), 0.4)
+			_status_puffs(dt, "glow", _color("ink", "#2a1840"), 0.16)
+			if f.cls == "ranged" or f.cls == "air":
+				state = "blind" if state == "" else state
+		# Panicked by a Dragon's fire: shaking, hopping, sweat flying.
+		if int(f.memory.get("scared_until", -1)) > tick:
+			p.rot = sin(now * 40.0) * 8.0
+			p.lift = absf(sin(now * 18.0)) * 6.0
+			_puffs(dt, "glow", _color("sweat", "#8fd8ff"), Vector2(0.15, -0.9), Vector2(60, -90), 0.12, 5.0)
 		# Poisoned: green, dripping.
 		if f.poison > 0:
 			p.tint = p.tint * Color(1.0, 1.0, 1.0).lerp(_color("venom", "#7ee04a"), 0.45)
@@ -280,7 +312,7 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 	_trail = _trail.filter(func(dot: Array) -> bool: return float(dot[1]) < 0.45)
 	if kind == "crawl" and (f == null or view.defeat >= 0.0):
 		_end_zone()
-	if state != _state or cracked != _cracked or state in ["snack", "shell", "dive", "carry", "ball", "slide"] or not _trail.is_empty() or now - _glint_at < 0.35:
+	if state != _state or cracked != _cracked or state in ["snack", "shell", "dive", "carry", "ball", "slide", "frozen", "blind"] or not _trail.is_empty() or now - _glint_at < 0.35:
 		_state = state
 		_cracked = cracked
 		queue_redraw()
@@ -340,10 +372,48 @@ func _draw() -> void:
 			_draw_ball()
 		"slide":
 			_draw_water_streaks()
+		"frozen":
+			_draw_ice()
+		"blind":
+			_draw_blind()
 	if _cracked:
 		_draw_crack()
 	if _time - _glint_at < 0.35:
 		_draw_glint((_time - _glint_at) / 0.35)
+
+
+## A block of ice round an animal the Yeti froze.
+func _draw_ice() -> void:
+	var h := _height()
+	var w := h * 0.95
+	var frost := _color("frost", "#9fe6ff")
+	var block := Rect2(Vector2(-w / 2.0, -h * 1.02), Vector2(w, h * 1.08))
+	var box := StyleBoxFlat.new()
+	box.bg_color = Color(frost.lightened(0.3), 0.45)
+	box.border_color = Color(frost.lightened(0.55), 0.95)
+	box.set_border_width_all(int(maxf(2.0, h * 0.05)))
+	box.set_corner_radius_all(int(h * 0.12))
+	draw_style_box(box, block)
+	# Shine and cracks.
+	draw_line(block.position + Vector2(w * 0.18, h * 0.12), block.position + Vector2(w * 0.32, h * 0.5), Color(1, 1, 1, 0.85), maxf(2.0, h * 0.04))
+	draw_line(block.position + Vector2(w * 0.75, h * 0.2), block.position + Vector2(w * 0.62, h * 0.42), Color(1, 1, 1, 0.6), maxf(1.5, h * 0.025))
+	draw_line(block.position + Vector2(w * 0.62, h * 0.42), block.position + Vector2(w * 0.8, h * 0.6), Color(1, 1, 1, 0.6), maxf(1.5, h * 0.025))
+
+
+## A Ranged or Air animal blinded by a Kraken's ink: ink over its eyes and a
+## "?" over its head.
+func _draw_blind() -> void:
+	var h := _height()
+	var ink := _color("ink", "#2a1840")
+	draw_set_transform(Vector2(0, -h * 0.72), 0.0, Vector2(1.0, 0.45))
+	draw_circle(Vector2.ZERO, h * 0.28, Color(ink, 0.9))
+	draw_set_transform(Vector2.ZERO)
+	for i in 3:
+		var x := (i - 1) * h * 0.12
+		var drip := fposmod(_time * 1.6 + i * 0.37, 1.0)
+		draw_circle(Vector2(x, -h * 0.66 + drip * h * 0.3), h * 0.035, Color(ink, 1.0 - drip))
+	var bob := sin(_time * 6.0) * h * 0.04
+	UIStyle.draw_text(self, "?", Rect2(Vector2(-h * 0.3, -h * 1.55 + bob), Vector2(h * 0.6, h * 0.5)), "small", Color.WHITE)
 
 
 ## White speed lines streaming off the Falcon as it dives.

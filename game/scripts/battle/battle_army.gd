@@ -212,7 +212,6 @@ static func squad_of(card_id: String) -> Dictionary:
 		"line_max": maxi(1, int(def.get("line_max", 8))),
 		"leash": roundi(float(def.get("leash", 1.5)) * T),
 		"rank": rank, "flank": flank, "hero": hero, "elite": bool(def.get("elite", false)), "back": back,
-		"hero_scale": float(def.get("hero_scale", 1.0)),
 	}
 
 

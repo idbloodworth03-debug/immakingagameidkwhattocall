@@ -264,14 +264,7 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	# blinks) only.
 	v.walk = 0.0 if v.army else randf()
 	v.idle_phase = randf() * TAU
-	if v.army:
-		v.swarm = false
-		var army_feel: Dictionary = GameData.feel.get("army", {})
-		v.size_k = float(army_feel.get("squad_scale", {}).get(GameData.class_of(v.id), 1.0))
-		if f.memory.get("hero", false):
-			v.size_k *= BattleArmy.squad_of(v.id).hero_scale
-		elif f.memory.get("elite", false):
-			v.size_k *= float(army_feel.get("elite_scale", 1.12))
+	v.size_k = draw_k(f)
 	v.stars = int(f.memory.get("stars", 1))
 	v.cls = GameData.class_of(v.id)
 	# Facts about its sprite sheet, looked up once (a big fight animates
@@ -316,9 +309,7 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v._fidget_next = now + randf_range(first.x, first.y)
 	# How far its picture reaches (field units), for keeping animals from
 	# covering each other on screen.
-	var c := "characters"
-	var drawn := Feel.num(c, "sprite_scale", 1.6) * (Feel.num(c, "swarm_scale", 0.8) if v.swarm else 1.0)
-	v.spread_r = UnitSprites.top(v.id) / v._per_tile * 1000.0 * drawn * v.size_k * Feel.num("movement", "spread_body_share", 0.45)
+	v.spread_r = UnitSprites.top(v.id) / v._per_tile * 1000.0 * v.size_k * Feel.num("movement", "spread_body_share", 0.45)
 	v._follow_k = 1.0 if v.army else 1.0 + randf_range(-1.0, 1.0) * Feel.num("movement", "follow_variety", 0.25)
 	v._last_run = int(f.memory.get("run", 0))
 	v.body = Body.new()
@@ -346,6 +337,17 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.add_child(v.look)
 	v.z_index = 1 if v.flying else 0
 	return v
+
+
+## How much bigger (or smaller) than its natural size an animal is drawn:
+## its size in bodies.json (its longest side in tiles; an elite Specialist
+## feel.json army elite_scale bigger) over its model's natural longest side.
+static func draw_k(f: BattleSim.Fighter) -> float:
+	var id := String(f.card.id)
+	var size := float(GameData.bodies.get("animals", {}).get(id, {}).get("size", 1.0))
+	if f.memory.get("elite", false):
+		size *= Feel.num("army", "elite_scale", 1.14)
+	return size / maxf(0.05, float(ModelStage.natural_box(id).longest))
 
 
 ## A [low, high] pair from feel.json.
@@ -440,7 +442,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		move_dir = shown_v / speed
 		# The legs keep pace with the ground they cover (within limits, so a
 		# slow giant doesn't play its walk one frame a second).
-		var cycle := _walk_tiles * 1000.0 * float(t.walk_stride) * (float(t.swarm_scale) if swarm else 1.0)
+		var cycle := _walk_tiles * 1000.0 * float(t.walk_stride) * size_k
 		var fps := clampf(speed / maxf(cycle, 1.0) * _walk_frames, float(t.walk_min_fps), float(t.walk_max_fps))
 		walk += fps / _walk_frames * dt
 		if _placed and field.marching(team):
@@ -825,7 +827,7 @@ static func refresh_tuning() -> void:
 		t.turn_squash_seconds = Feel.num(m, "turn_squash_seconds", 0.12)
 		t.walk_hold_seconds = Feel.num(m, "walk_hold_seconds", 0.15)
 		t.walk_min_speed = Feel.num(m, "walk_min_speed_tiles", 0.15) * 1000.0
-		t.walk_stride = Feel.num("characters", "sprite_scale", 1.6) * Feel.num(m, "walk_stride_match", 1.0)
+		t.walk_stride = Feel.num(m, "walk_stride_match", 1.0)
 		t.walk_min_fps = Feel.num(m, "walk_min_fps", 5.0)
 		t.walk_max_fps = Feel.num(m, "walk_max_fps", 16.0)
 		t.swarm_scale = Feel.num("characters", "swarm_scale", 0.8)

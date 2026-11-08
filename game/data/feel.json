@@ -1,7 +1,7 @@
 {
  "_note": "How the game LOOKS and FEELS: animation, hit effects, particles, UI motion and backgrounds. Nothing here changes the rules or balance. Times are in seconds, sizes in screen pixels unless they say tiles. Set a strength to 0 to switch an effect off.",
  "characters": {
-  "_note": "The animals. class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a soft warm highlight on the edge facing the light (top-left), a soft cool rim light on the far edge (both edge_width texels wide at 56 pixels a tile, following the smooth edge so they stay smooth at any zoom), a little extra color punch, and gentle volume (gradient). The outline is the render's own single deep line; shader_line_tint above 0 tints it toward a dark shade (line_darkness) of the body color. In battle, team_outline_texels: a bold band in the team's color (blue yours, red the enemy's) round each sprite, this many texels wide (0: none; 3D models: \"models\" team_outline_px).",
+  "_note": "The animals. How big each is drawn in battle, and how big any may look on the screen, is bodies.json (sprite_scale here is only the arena crowd's, arena_life.gd). class_badge_radius: the class icon under each one, in pixels. shader_enabled false is the lighter option for slow phones (no shader at all; hits flash with a plain tint). shader_* values drive the per-animal shader (scripts/fx/unit.gdshader): a soft warm highlight on the edge facing the light (top-left), a soft cool rim light on the far edge (both edge_width texels wide at 56 pixels a tile, following the smooth edge so they stay smooth at any zoom), a little extra color punch, and gentle volume (gradient). The outline is the render's own single deep line; shader_line_tint above 0 tints it toward a dark shade (line_darkness) of the body color. In battle, team_outline_texels: a bold band in the team's color (blue yours, red the enemy's) round each sprite, this many texels wide (0: none; 3D models: \"models\" team_outline_px).",
   "class_badge_radius": 9.0,
   "shader_enabled": true,
   "sprite_scale": 1.6,
@@ -428,23 +428,16 @@
   "beam": "#fff0a0"
  },
  "army": {
-  "_note": "How armies look (Draft Duel). Everyone in a formation marches in step: one walk timing for the whole army, a step every march_stride_tiles of ground it covers, with a thump (stomp_volume_db) and a tiny shake (stomp_shake) on every step; small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Animals in an army are drawn at squad_scale of their size (so a formation reads as many animals in ranks); an elite Specialist elite_scale bigger; a Mythic hero its hero_scale (classes.json) bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
+  "_note": "How armies look (Draft Duel). Everyone in a formation marches in step: one walk timing for the whole army, a step every march_stride_tiles of ground it covers, with a thump (stomp_volume_db) and a tiny shake (stomp_shake) on every step; small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Every animal is drawn at its bodies.json size; an elite Specialist elite_scale bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom, nor so close that an animal looks bigger than bodies.json \"limits\" allows), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
   "march_stride_tiles": 0.6,
   "stomp_volume_db": -16.0,
   "stomp_shake": 0.03,
-  "squad_scale": {
-   "tank": 0.8,
-   "tank_destroyer": 0.7,
-   "ranged": 0.68,
-   "air": 0.74,
-   "specialist": 0.78
-  },
   "elite_scale": 1.14,
   "lineup_seconds": 1.2,
   "camera_margin_tiles": 1.4,
-  "camera_min_tiles": 9.0,
+  "camera_min_tiles": 8.5,
   "camera_head_room_tiles": 1.2,
-  "camera_max_zoom": 1.7,
+  "camera_max_zoom": 2.0,
   "camera_seconds": 0.9,
   "banner_width_pixels": 22.0,
   "banner_height_pixels": 17.0,

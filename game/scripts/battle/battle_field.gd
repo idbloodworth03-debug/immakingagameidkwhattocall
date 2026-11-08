@@ -321,7 +321,8 @@ func _frame_armies(delta: float, snap := false) -> void:
 	var least := (camera_min_tiles if camera_min_tiles > 0.0 else Feel.num(a, "camera_min_tiles", 10.0)) * 1000.0
 	var w := maxf(box.size.x, least)
 	var h := maxf(box.size.y, least * size.y / maxf(1.0, size.x))
-	var zoom := clampf(minf(size.x / (w * base), size.y / (h * base)), 1.0, camera_max_zoom if camera_max_zoom > 0.0 else Feel.num(a, "camera_max_zoom", 1.7))
+	var most := minf(camera_max_zoom if camera_max_zoom > 0.0 else Feel.num(a, "camera_max_zoom", 1.7), _size_zoom_cap(base))
+	var zoom := clampf(minf(size.x / (w * base), size.y / (h * base)), 1.0, maxf(1.0, most))
 	var look := box.get_center()
 	# Keep the view on the arena.
 	var half := size / (2.0 * base * zoom)
@@ -337,6 +338,32 @@ func _frame_armies(delta: float, snap := false) -> void:
 		_zoom = lerpf(_zoom, zoom, k)
 		_cam = _cam.lerp(look, k)
 	_arena.queue_redraw()
+
+
+## The zoom past which an animal on the field would look bigger than
+## bodies.json "limits" allows (a share of the screen's height: unit_max_pct
+## for any animal, hero_max_pct for a Mythic hero), from each one's standing
+## height at its drawn size (ModelStage.natural_box "up"; a bird's is its
+## body's, not its wingspan). So animals never get bigger than that, even
+## in a small fight. INF with nothing on the field.
+func _size_zoom_cap(base: float) -> float:
+	if sim == null:
+		return INF
+	var limits: Dictionary = GameData.bodies.get("limits", {})
+	var short := 1.0 - float(limits.get("camera_margin_pct", 4.0)) / 100.0
+	var unit_max := float(limits.get("unit_max_pct", 9.0)) / 100.0 * short
+	var hero_max := float(limits.get("hero_max_pct", 10.0)) / 100.0 * short
+	var screen := screen_height()
+	var cap := INF
+	for f: BattleSim.Fighter in sim.fighters:
+		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
+			continue
+		var up := float(ModelStage.natural_box(f.card.id).up) * UnitView.draw_k(f)
+		if up <= 0.0:
+			continue
+		var limit := hero_max if f.memory.get("hero", false) else unit_max
+		cap = minf(cap, limit * screen / (up * base * 1000.0))
+	return cap
 
 
 ## True while `team`'s army is marching forward this tick.
@@ -386,11 +413,11 @@ func _follow_field(delta: float) -> void:
 	_arena.queue_redraw()
 
 
-## Screen pixels per sprite pixel for an animal.
+## Screen pixels per sprite pixel for an animal at its natural size (the
+## view's size_k, from bodies.json, goes on top).
 func sprite_k(id: String, swarm: bool) -> float:
-	var c := "characters"
-	var k := _scale() * 1000.0 / UnitSprites.pixels_per_tile(id) * Feel.num(c, "sprite_scale", 1.6)
-	return k * (Feel.num(c, "swarm_scale", 0.8) if swarm else 1.0)
+	var k := _scale() * 1000.0 / UnitSprites.pixels_per_tile(id)
+	return k * (Feel.num("characters", "swarm_scale", 0.8) if swarm else 1.0)
 
 
 ## The same for a sheet drawn at `per_tile` pixels per tile, with this
@@ -399,14 +426,34 @@ func sprite_k_per_tile(per_tile: float, swarm: bool) -> float:
 	var frame := Engine.get_process_frames()
 	if frame != _k_frame:
 		_k_frame = frame
-		var c := "characters"
-		_k_base = _scale() * 1000.0 * Feel.num(c, "sprite_scale", 1.6)
-		_k_swarm = Feel.num(c, "swarm_scale", 0.8)
+		_k_base = _scale() * 1000.0
+		_k_swarm = Feel.num("characters", "swarm_scale", 0.8)
 	return _k_base / per_tile * (_k_swarm if swarm else 1.0)
 
 
 func views() -> Array:
 	return _views.values()
+
+
+## How tall an animal stands on screen now, as a share of the screen's
+## height (0 if it isn't a 3D model): the size the player sees it at.
+## feel.json "characters" size_pct says how big that may be.
+func unit_height_share(v: UnitView) -> float:
+	if _stage == null or not v.modeled:
+		return 0.0
+	return _stage.height_px(v.key) / maxf(1.0, screen_height())
+
+
+## The screen's height in the field's pixels (the window's, or a stand-in
+## for a phone's when a report says so: screen_height_override).
+var screen_height_override := 0.0
+
+
+func screen_height() -> float:
+	if screen_height_override > 0.0:
+		return screen_height_override
+	var viewport := get_viewport()
+	return viewport.get_visible_rect().size.y if viewport != null else size.y
 
 
 ## The animal drawn under a point (viewport coordinates), or null: the one
@@ -1867,8 +1914,39 @@ func banners() -> Array:
 	return squads.values()
 
 
+## For checking sizes (the website opened with ?fight=...&sizes=1, dev
+## tools on): each animal's standing height on screen, marked and labelled
+## as a share of the screen's height.
+var show_sizes := false
+
+
+func _draw_sizes(canvas: CanvasItem) -> void:
+	var font := ThemeDB.fallback_font
+	for v: UnitView in _views.values():
+		if v.fighter == null or v.defeat >= 0.0 or not v.modeled or _stage == null:
+			continue
+		var px := _stage.height_px(v.key)
+		if px <= 0.0:
+			continue
+		var share := px / maxf(1.0, screen_height())
+		var limits: Dictionary = GameData.bodies.get("limits", {})
+		var limit := float(limits.get("hero_max_pct", 10.0)) if v.fighter.memory.get("hero", false) else float(limits.get("unit_max_pct", 9.0))
+		var color := Color("#ff4d4d") if share * 100.0 > limit else Color("#2bff7a")
+		var foot := v.position + Vector2(v.spread_r * 0.0, 0.0)
+		var x := foot.x + 22.0
+		canvas.draw_line(Vector2(x, foot.y), Vector2(x, foot.y - px), color, 2.0)
+		canvas.draw_line(Vector2(x - 5, foot.y), Vector2(x + 5, foot.y), color, 2.0)
+		canvas.draw_line(Vector2(x - 5, foot.y - px), Vector2(x + 5, foot.y - px), color, 2.0)
+		var text := "%.1f%%" % (share * 100.0)
+		var at := Vector2(x + 7.0, foot.y - px * 0.5 + 5.0)
+		canvas.draw_string_outline(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, 4, Color(0, 0, 0, 0.9))
+		canvas.draw_string(font, at, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 14, color)
+
+
 func _draw_banners(canvas: CanvasItem) -> void:
 	_draw_squad_targets(canvas)
+	if show_sizes:
+		_draw_sizes(canvas)
 	var a := "army"
 	var w := Feel.num(a, "banner_width_pixels", 22.0)
 	var h := Feel.num(a, "banner_height_pixels", 17.0)

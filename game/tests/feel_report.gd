@@ -38,7 +38,11 @@ extends Node
 ## whole army's feet are in step, whether the Ranged fire together and their
 ## shots land together, and when the volleys, the clash and the charge come.
 
-const SIZE := Vector2(720, 1080)
+## The field's room on a phone's screen (an iPhone, 390 x 844 points: the
+## screen less the margins, the score bar and the action row), and the
+## screen's height, for measuring the animals as a share of it.
+const SIZE := Vector2(358, 680)
+const SCREEN_HEIGHT := 844.0
 
 var field: BattleField
 var duel: DraftMatch
@@ -82,6 +86,7 @@ func _ready() -> void:
 			weights.append(total)
 	field = BattleField.new()
 	field.size = SIZE
+	field.screen_height_override = SCREEN_HEIGHT
 	field.log_impacts = true
 	add_child(field)
 	_reset_stats()
@@ -154,6 +159,7 @@ func _reset_stats() -> void:
 		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0, "ranged_ticks": 0, "ranged_past": 0, "lane_checks": 0, "own_lane": 0,
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
+		"size_sum": 0.0, "size_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
 	}
 	switched_at.clear()
 var _volley_lands := {}
@@ -192,6 +198,7 @@ func _process(delta: float) -> void:
 	if duel.phase == "fight":
 		field.blend = clampf(accumulator / tick_length, 0.0, 1.0)
 	_watch_views(delta)
+	_watch_zoom()
 	_watch_army()
 
 
@@ -508,6 +515,7 @@ func _watch_views(_delta: float) -> void:
 		if v.defeat >= 0.0 or v.fighter == null:
 			continue
 		stats.unit_frames += 1
+		_watch_size(v)
 		if v.flash > 0.3:
 			stats.flash_frames += 1
 		# A health bar showing (hurt, and not yet faded away).
@@ -586,6 +594,61 @@ func _watch_views(_delta: float) -> void:
 			var r := (a.fighter.radius + b.fighter.radius) * s
 			if a.position.distance_to(b.position) < r * 0.7:
 				stats.overlap_pairs += 1
+
+
+## How big the animals are drawn (bodies.json "limits"): each
+## one's standing height as a share of the phone screen's height, every
+## frame; the average, the biggest Tank, the Mythic hero, and how many
+## animal-frames are over their limit; and the camera's zoom.
+func _watch_size(v: UnitView) -> void:
+	var share := field.unit_height_share(v)
+	if share <= 0.0:
+		return
+	var pct := share * 100.0
+	stats.size_sum += pct
+	stats.size_n += 1
+	var cls := String(v.cls)
+	stats.size_by_class[cls] = float(stats.size_by_class.get(cls, 0.0)) + pct
+	stats.size_n_by_class[cls] = int(stats.size_n_by_class.get(cls, 0)) + 1
+	var hero: bool = v.fighter != null and bool(v.fighter.memory.get("hero", false))
+	# Per animal: its average over the fight and its peak (a strike's
+	# stretch or a flinch's lean makes its box taller for a moment).
+	var tally: Dictionary = stats.size_by_id.get_or_add(v.id, {"sum": 0.0, "n": 0, "max": 0.0, "hero": hero, "cls": cls})
+	tally.sum += pct
+	tally.n += 1
+	tally.max = maxf(float(tally.max), pct)
+	var limits: Dictionary = GameData.bodies.get("limits", {})
+	var limit := float(limits.get("hero_max_pct", 10.0)) if hero else float(limits.get("unit_max_pct", 9.0))
+	if pct > limit:
+		stats.size_over += 1
+
+
+## The animal of `kind` ("tank": Tanks that aren't heroes; "hero": Mythic
+## heroes; "": any) drawn biggest on average, as "8.7% (hippopotamus,
+## peaks 10.9%)", or "none".
+func _biggest(kind: String) -> String:
+	var best := ""
+	var best_mean := -1.0
+	for id in stats.size_by_id:
+		var t: Dictionary = stats.size_by_id[id]
+		if kind == "hero" and not t.hero:
+			continue
+		if kind == "tank" and (t.hero or t.cls != "tank"):
+			continue
+		var mean := float(t.sum) / maxi(1, int(t.n))
+		if mean > best_mean:
+			best_mean = mean
+			best = id
+	if best == "":
+		return "none"
+	return "%.1f%% (%s, peaks %.1f%%)" % [best_mean, best, float(stats.size_by_id[best].max)]
+
+
+func _watch_zoom() -> void:
+	var ppu := field.field_scale() * 1000.0
+	stats.zoom_sum += ppu
+	stats.zoom_n += 1
+	stats.ppu_max = maxf(float(stats.ppu_max), ppu)
 
 
 ## The army checks for this frame: animals in their places while their army
@@ -696,6 +759,15 @@ func _thirds() -> String:
 	return " / ".join(parts)
 
 
+func _size_by_class() -> String:
+	var parts := []
+	for cls in GameData.class_order:
+		var n := int(stats.size_n_by_class.get(cls, 0))
+		if n > 0:
+			parts.append("%s %.1f%%" % [GameData.class_info(cls).get("name", cls), float(stats.size_by_class.get(cls, 0.0)) / n])
+	return ", ".join(parts)
+
+
 func _idle_by_class() -> String:
 	var whys := []
 	for why in stats.idle_why:
@@ -729,6 +801,9 @@ func _report() -> void:
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
 		"  IDLE                  %.1f%% of animal-time while enemies are alive spent standing about with an enemy it could fight (%.1f%% more with nothing it can hit: a ground fighter with only flyers left; %.1f%% more waiting for a slot while every enemy it could fight is full); %.0f%% fighting; %s" % [100.0 * (stats.idle_ticks - stats.idle_no_target - stats.idle_waiting) / maxf(1, stats.war_ticks), 100.0 * stats.idle_no_target / maxf(1, stats.war_ticks), 100.0 * stats.idle_waiting / maxf(1, stats.war_ticks), 100.0 * stats.fighting_ticks / maxf(1, stats.war_ticks), _idle_by_class()],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
+		"  SIZE                  share of the phone screen's height (%dx%d, field %dx%d): average animal %.1f%% (target %.0f%%); biggest Tank %s, Mythic hero %s, biggest of all %s; %.1f%% of animal-frames over their limit (%.0f%%, heroes %.0f%%); by class: %s; camera %.1f px a tile on average, %.1f at most" % [
+			int(SIZE.x) + 32, int(SCREEN_HEIGHT), int(SIZE.x), int(SIZE.y), stats.size_sum / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("average_target_pct", 6.0)), _biggest("tank"), _biggest("hero"), _biggest(""),
+			100.0 * stats.size_over / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("unit_max_pct", 9.0)), float(GameData.bodies.get("limits", {}).get("hero_max_pct", 10.0)), _size_by_class(), stats.zoom_sum / maxf(1, stats.zoom_n), stats.ppu_max],
 	]
 	var lanes: Array = stats.lane_fights
 	var lane_total := maxf(1.0, float(lanes[0] + lanes[1] + lanes[2]))

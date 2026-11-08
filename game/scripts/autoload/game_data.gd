@@ -38,6 +38,7 @@ var progression: Dictionary = {}
 var battle_rules: Dictionary = {}
 var draft_rules: Dictionary = {}     # Draft Duel tuning
 var feel: Dictionary = {}            # animation, effects and juice (feel.json)
+var bodies: Dictionary = {}          # how big each animal is drawn in battle, and the limits (bodies.json)
 var shots: Dictionary = {}           # how Ranged animals' shots look (shots.json)
 var styles: Dictionary = {}          # each animal's attack style (styles.json)
 var viewer: Dictionary = {}          # the 3D animal viewer (viewer.json)
@@ -99,6 +100,7 @@ func reload() -> void:
 	battle_rules = _load("battle_rules.json")
 	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
+	bodies = _load("bodies.json")
 	shots = _load("shots.json")
 	styles = _load("styles.json")
 	viewer = _load("viewer.json")

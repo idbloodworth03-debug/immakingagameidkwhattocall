@@ -1,3 +1,4 @@
+class_name DraftScreen
 extends Control
 ## Draft Duel against a Rival Ranger (the rules are in DraftMatch): best of
 ## 7, first to 4 round wins.
@@ -22,6 +23,14 @@ const DEBUG_SPEEDS := [1.0, 0.5, 0.25, 0.1, 0.0]
 
 var duel: DraftMatch
 var bot: DraftBot
+## For testing (the website opened with ?fight=<seed>, dev tools on;
+## main_menu.gd): {"seed", "mine", "theirs", "sizes"}: a match from that
+## seed, with these decks (comma-separated ids, or the usual), picked for
+## you by the computer, and (sizes) every animal's height marked on screen.
+static var dev_auto: Dictionary = {}
+var _auto_bot: DraftBot
+var _auto_wait := 0.0
+var _auto_log := 0.0
 var opponent: Dictionary = {}
 
 var _rng := RandomNumberGenerator.new()
@@ -84,6 +93,10 @@ var _banner_free_at := 0.0
 func _ready() -> void:
 	theme = UIStyle.theme()
 	_rng.randomize()
+	var auto := dev_auto
+	dev_auto = {}
+	if not auto.is_empty():
+		_rng.seed = int(auto.get("seed", 1))
 	# Your opponent is a Rival Ranger from your arena (or its boss, when a
 	# win would take you up), with their own way of playing (see Opponents).
 	# You pick from your deck and your tools; the rival brings a deck of its
@@ -93,13 +106,20 @@ func _ready() -> void:
 	_banned = MatchPlan.banned.duplicate()
 	MatchPlan.clear()
 	var mine: Array = DraftMatch.with_enough(Profile.get_deck().filter(func(id): return not _banned.has(id)) + Profile.owned_tools())
+	if String(auto.get("mine", "")) != "":
+		mine = DraftMatch.with_enough(_dev_ids(String(auto.mine)))
 	var theirs := _rival_pool(opponent, mine)
+	if String(auto.get("theirs", "")) != "":
+		theirs = DraftMatch.with_enough(_dev_ids(String(auto.theirs)))
 	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs], "banned": _banned})
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
+	if not auto.is_empty():
+		_auto_bot = DraftBot.new(duel, 0, _rng.randi(), 0.5, {})
 	# Only this match's animals' sprite sheets in memory (both decks, minus
 	# the bans; each loads when it first comes up), freed when it ends.
 	UnitSprites.keep_only(_match_animals())
 	_build()
+	_field.show_sizes = bool(auto.get("sizes", false))
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
 	# While the VS screen covers everything, the screen under it isn't drawn.
@@ -615,7 +635,9 @@ func _refresh_pick() -> void:
 	var left: int = duel.picks_left[0]
 	_pick_title.text = "Pick %d" % left if left > 0 and duel.has_any_pick(0) else "Ready!"
 	_pick_title.add_theme_color_override("font_color", UIStyle.color("text") if left > 0 else UIStyle.color("gold"))
-	for slot in _option_cards.size():
+	# (The cards are rebuilt for a new round's offers a frame after the
+	# round changes: only the ones with an offer behind them, until then.)
+	for slot in mini(_option_cards.size(), duel.offers[0].size()):
 		var card: GameCard = _option_cards[slot]
 		var item: Dictionary = duel.offers[0][slot]
 		var index := duel.herd_index(0, item.id)
@@ -1049,6 +1071,27 @@ func _opponent_moves(delta: float) -> void:
 		bot.pick()
 		var gap := _size("bot_pick_seconds", Vector2(0.4, 0.8))
 		_bot_wait = _rng.randf_range(gap.x, gap.y)
+	if _auto_bot != null:
+		# Testing: the computer picks for you too (?fight=<seed>).
+		_auto_wait -= delta
+		if duel.phase == "pick" and not duel.ready[0] and _auto_wait <= 0.0:
+			_auto_bot.pick()
+			_auto_wait = 0.25
+		_auto_log -= delta
+		if _auto_log <= 0.0:
+			# (What the match is doing, for the browser's console.)
+			_auto_log = 5.0
+			print("[fight] round %d %s ready=%s picks_left=%s any=[%s, %s] tick=%d" % [duel.round_number, duel.phase, duel.ready, duel.picks_left, duel.has_any_pick(0), duel.has_any_pick(1), duel.fight_tick])
+
+
+## Card ids from a comma-separated list, only the ones there are.
+static func _dev_ids(text: String) -> Array:
+	var ids := []
+	for part in text.split(","):
+		var id := part.strip_edges()
+		if GameData.cards.has(id):
+			ids.append(id)
+	return ids
 
 
 func _run_fight(delta: float) -> void:

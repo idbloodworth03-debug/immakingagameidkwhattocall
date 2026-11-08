@@ -68,6 +68,8 @@ class Model:
 	var face := "-"
 	var shown := {}
 	var id := ""
+	## Its mesh instances (for measuring it on screen).
+	var meshes: Array = []
 
 
 static func make(on: BattleField) -> ModelStage:
@@ -223,12 +225,47 @@ func _set_team(m: Model, team: int) -> void:
 	m.team_line.set_shader_parameter("width_px", outline_px(render_scale) + px * render_scale)
 
 
-## Its size on the field (as the sprite's: its squad's, an elite's or a
-## hero's size, a swarm smaller).
+## Its size on the field: its natural size (tile_scale) times the view's
+## draw factor (bodies.json "size" over its natural longest side).
 func _fit(m: Model, v: UnitView) -> void:
-	var c := "characters"
-	m.size = tile_scale(v.id) * Feel.num(c, "sprite_scale", 1.6) * v.size_k * (Feel.num(c, "swarm_scale", 0.8) if v.swarm else 1.0)
+	m.size = tile_scale(v.id) * v.size_k
 	m.body.scale = Vector3.ONE * m.size
+
+
+static var _boxes := {}
+
+
+## A battle model's box at its natural size (tile_scale), in field tiles:
+## {"longest": its longest side, "up": how tall it stands along the
+## camera's up when facing up or down the field (its height and its
+## length, foreshortened)}. Measured once from the mesh.
+static func natural_box(id: String) -> Dictionary:
+	if _boxes.has(id):
+		return _boxes[id]
+	var info := {"longest": 1.0, "up": 1.0}
+	var scene := _scene(id)
+	if scene != null:
+		var root := scene.instantiate() as Node3D
+		var box := AABB()
+		var first := true
+		for mesh in root.find_children("*", "MeshInstance3D", true, false):
+			var mi := mesh as MeshInstance3D
+			var xf := mi.transform
+			var p := mi.get_parent()
+			while p != null and p != root:
+				if p is Node3D:
+					xf = (p as Node3D).transform * xf
+				p = p.get_parent()
+			var b: AABB = xf * mi.get_aabb()
+			box = b if first else box.merge(b)
+			first = false
+		root.free()
+		var ts := tile_scale(id)
+		if not first:
+			info.longest = maxf(box.size.x, maxf(box.size.y, box.size.z)) * ts
+			info.up = (box.size.y * COS + box.size.z * SIN) * ts
+	_boxes[id] = info
+	return info
 
 
 ## True if this model has the movie look: its mesh is named <id>_movie
@@ -309,6 +346,7 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 		var instance := mesh as MeshInstance3D
 		instance.material_override = m.skin
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		m.meshes.append(instance)
 	var players := m.body.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		m.player = players[0]
@@ -405,3 +443,31 @@ func _param(m: Model, material: ShaderMaterial, param: String, value: Variant) -
 
 func model_count() -> int:
 	return _models.size()
+
+
+## How tall the animal under `key` stands on screen right now, in the
+## field's pixels (0 if it has no model): its model's box, as posed, turned
+## and scaled this frame, measured along the camera's up. The box is the
+## mesh's standing one (a rear or a crouch isn't followed), so it's the
+## animal's size as the player sees it, head to feet, back included (the
+## camera looks down at it).
+func height_px(key: Variant) -> float:
+	var m: Model = _models.get(key)
+	if m == null or camera == null or camera.size <= 0.0:
+		return 0.0
+	return model_height_units(m) * field.size.y / camera.size
+
+
+## A model's standing height along the camera's up, in field tiles.
+static func model_height_units(m: Model) -> float:
+	var up := Vector3(0, COS, -SIN)
+	var lo := INF
+	var hi := -INF
+	for mesh: MeshInstance3D in m.meshes:
+		var box := mesh.get_aabb()
+		var xf := mesh.global_transform
+		for i in 8:
+			var d := (xf * box.get_endpoint(i)).dot(up)
+			lo = minf(lo, d)
+			hi = maxf(hi, d)
+	return maxf(0.0, hi - lo) if lo < hi else 0.0

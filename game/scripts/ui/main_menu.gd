@@ -85,15 +85,27 @@ func _ready() -> void:
 ## website opened with ?viewer=<animal id> goes straight to that animal's
 ## 3D viewer (&pose=attack:0.6 holds that animation at that point), and
 ## with ?showcase=<animal id> to its attack showcase (&slow=1 slowed down),
-## and with ?army=1 to the Big army test:
-## for checking a new model on a phone, or for screenshots.
+## with ?army=1 to the Big army test, and with ?fight=<seed> to a real
+## Draft Duel the computer plays for you (&mine=, &theirs=, &sizes=1):
+## for checking a new model on a phone, or for screenshots. On a computer
+## the same come from the environment (DEV_FIGHT=3 DEV_SIZES=1), and
+## DEV_SHOT_DIR saves screenshots as it runs (DevShots).
 func _open_dev_shortcut() -> void:
-	if not OS.has_feature("web") or not (OS.is_debug_build() or GameData.testing.get("show_dev_tools", false)):
+	if not (OS.is_debug_build() or GameData.testing.get("show_dev_tools", false)):
 		return
+	DevShots.start_if_asked(self)
 	if _query("army") == "1":
 		# The Big army test (40 animals a side, an fps counter), as 3D models.
 		ArmyTest.use_models = true
 		Transition.go.call_deferred("res://scenes/army_test.tscn")
+		return
+	var fight := _query("fight")
+	if fight != "":
+		# A real Draft Duel against the computer, played for you by the
+		# computer too (?fight=<seed>; &mine=id,id and &theirs=id,id pick
+		# the decks; &sizes=1 marks every animal's height on screen).
+		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1"}
+		Transition.go.call_deferred("res://scenes/draft.tscn")
 		return
 	var show := _query("showcase")
 	if GameData.cards.has(show) and GameData.styles.has(show):
@@ -108,8 +120,12 @@ func _open_dev_shortcut() -> void:
 	_open_viewer_dev.call_deferred(id, _query("pose"))
 
 
-## One value from the website's address (?key=value), or "".
+## One value from the website's address (?key=value), or, on a computer,
+## from the environment (DEV_KEY=value: the same shortcuts for screenshots
+## from a script), or "".
 func _query(key: String) -> String:
+	if not OS.has_feature("web"):
+		return OS.get_environment("DEV_" + key.to_upper())
 	var value: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('%s') || ''" % key, true)
 	return String(value) if value is String else ""
 

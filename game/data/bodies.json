@@ -1,0 +1,116 @@
+{
+ "_note": "Each animal's body in battle (scripts/fx/unit_view.gd, model_stage.gd, battle_field.gd). size: how big it's drawn, its longest side in field tiles (a bird's wingspan, an upright animal's height), whatever its model's own proportions; a Mythic's is its hero size. limits: how big animals may look on the screen, as a share of the screen's height: average_target_pct is what a typical animal should be in a normal fight (Clash Royale's are 5-7%), unit_max_pct the most any animal may be (the biggest Tanks) and hero_max_pct the most a Mythic hero may be; the camera never zooms in past them (battle_field.gd; it stops camera_margin_pct short, for the breathing, leaning and turning a pose adds), the feel report measures them (tests/feel_report.gd SIZE) and tests/test_sizes.gd fails if one is over. Elite Specialists are drawn feel.json army elite_scale bigger.",
+ "limits": {
+  "average_target_pct": 6.0,
+  "unit_max_pct": 9.0,
+  "hero_max_pct": 10.0,
+  "camera_margin_pct": 8.0
+ },
+ "animals": {
+  "raccoon": {
+   "size": 1.22
+  },
+  "gray_squirrel": {
+   "size": 0.98
+  },
+  "red_fox": {
+   "size": 1.36
+  },
+  "peregrine_falcon": {
+   "size": 1.5
+  },
+  "wild_boar": {
+   "size": 1.37
+  },
+  "wolf_pack": {
+   "size": 1.2
+  },
+  "brown_bear": {
+   "size": 1.75
+  },
+  "hippopotamus": {
+   "size": 1.89
+  },
+  "lion": {
+   "size": 1.62
+  },
+  "tiger": {
+   "size": 1.62
+  },
+  "asian_elephant": {
+   "size": 1.52
+  },
+  "red_panda": {
+   "size": 1.3
+  },
+  "black_rhino": {
+   "size": 1.8
+  },
+  "california_condor": {
+   "size": 2.05
+  },
+  "striped_skunk": {
+   "size": 1.05
+  },
+  "barn_owl": {
+   "size": 1.5
+  },
+  "king_cobra": {
+   "size": 1.46
+  },
+  "sumatran_orangutan": {
+   "size": 1.95
+  },
+  "harpy_eagle": {
+   "size": 1.85
+  },
+  "hyacinth_macaw": {
+   "size": 1.6
+  },
+  "wild_bactrian_camel": {
+   "size": 1.52
+  },
+  "dragon": {
+   "size": 2.5
+  },
+  "unicorn": {
+   "size": 1.67
+  },
+  "snapping_turtle": {
+   "size": 1.75
+  },
+  "honey_badger": {
+   "size": 1.22
+  },
+  "harbor_seal": {
+   "size": 1.46
+  },
+  "giant_panda": {
+   "size": 1.7
+  },
+  "mountain_gorilla": {
+   "size": 2.15
+  },
+  "komodo_dragon": {
+   "size": 1.75
+  },
+  "sunda_pangolin": {
+   "size": 1.32
+  },
+  "electric_eel": {
+   "size": 1.48
+  },
+  "pygmy_three_toed_sloth": {
+   "size": 1.22
+  },
+  "yeti": {
+   "size": 2.5
+  },
+  "cerberus": {
+   "size": 1.83
+  },
+  "kraken": {
+   "size": 1.72
+  }
+ }
+}

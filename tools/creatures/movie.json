@@ -2342,7 +2342,10 @@
    }
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "squirrel"
+  }
  },
  "raccoon": {
   "shape": {
@@ -2484,7 +2487,10 @@
   },
   "shade_low": 0.3,
   "portrait_samples": 96,
-  "paint_smoothing": 2
+  "paint_smoothing": 2,
+  "motion": {
+   "persona": "raccoon"
+  }
  },
  "striped_skunk": {
   "shape": {
@@ -2622,7 +2628,10 @@
   },
   "shade_low": 0.2,
   "portrait_samples": 96,
-  "paint_smoothing": 2
+  "paint_smoothing": 2,
+  "motion": {
+   "persona": "skunk"
+  }
  },
  "king_cobra": {
   "shape": {
@@ -2686,7 +2695,10 @@
     "count": 0
    }
   },
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "cobra"
+  }
  },
  "wild_bactrian_camel": {
   "shape": {
@@ -2824,7 +2836,10 @@
    }
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "camel"
+  }
  },
  "sumatran_orangutan": {
   "shape": {
@@ -3002,7 +3017,10 @@
    }
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "orangutan"
+  }
  },
  "unicorn": {
   "shape": {
@@ -3147,7 +3165,10 @@
    }
   },
   "shade_low": 0.2,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "unicorn"
+  }
  },
  "barn_owl": {
   "shape": {

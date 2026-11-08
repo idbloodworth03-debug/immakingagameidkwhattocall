@@ -174,7 +174,8 @@ func test_the_movie_look_is_told_by_the_mesh_name() -> void:
 ## PERSONAS, movie.json "motion"): their models carry their own idle,
 ## fidget and victory.
 const PERSONAS := ["brown_bear", "giant_panda", "hippopotamus", "asian_elephant", "black_rhino", "snapping_turtle",
-	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus"]
+	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus",
+	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn"]
 
 
 func test_the_persona_animals_have_their_own_animations() -> void:

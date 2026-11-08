@@ -1927,8 +1927,446 @@ def cerberus_victory(c, t):
     return p
 
 
+
+# --- The Ranged animals' personas ------------------------------------------------------
+
+def squirrel_idle(c, t):
+    """Twitchy: sits up on its haunches with its paws held together, the
+    head jerking to look about, the nose twitching, the big tail curled up
+    over its back and flicking."""
+    p = Pose()
+    s = _scale(c)
+    _rear(c, p, 0.75)
+    p.move(z=-s * 0.3)
+    jerk = float(keys(t, [(0, 0), (0.18, 0), (0.22, 1), (0.42, 1), (0.46, -0.7), (0.68, -0.7), (0.72, 0), (1, 0)]))
+    twitch = math.sin(t * TAU * 8) * 0.03
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.95, lower=-1.3, foot=0.55)
+        p.leg("fl." + side, upper=1.2, lower=-1.5, foot=-0.3, splay=sign * 0.1)
+        p.rot("ear." + side, z=sign * 0.15 * max(0.0, math.sin(t * TAU * 3 + sign)))
+    p.rot("chest", x=0.05 + 0.02 * math.sin(t * TAU * 2))
+    p.rot("neck", x=0.15, z=0.3 * jerk)
+    p.rot("head", x=twitch, z=0.2 * jerk)
+    p.rot("jaw", x=-0.04 * max(0.0, math.sin(t * TAU * 8)))
+    curl = 0.5 + 0.1 * math.sin(t * TAU * 2)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-curl * (0.9 + 0.3 * i), z=math.sin(t * TAU * 3 - i) * 0.12)
+    return p
+
+
+def squirrel_fidget(c, t):
+    """Nibbles a nut: the paws come up to the mouth and the jaw works fast,
+    the head tipped, then it drops onto all fours, flicks its tail and sits
+    back up."""
+    p = squirrel_idle(c, 0.0)
+    s = _scale(c)
+    nibble = float(keys(t, [(0, 0), (0.1, 1), (0.5, 1), (0.58, 0), (1, 0)]))
+    chew = max(0.0, math.sin(t * TAU * 12)) * nibble
+    drop = float(keys(t, [(0, 0), (0.56, 0), (0.64, 1), (0.84, 1), (0.94, 0), (1, 0)]))
+    flick = math.sin(t * TAU * 8) * drop
+    _rear(c, p, -0.75 * drop)
+    p.move(z=s * 0.3 * drop)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.5 * nibble - 1.2 * drop, lower=-0.5 * nibble + 1.5 * drop, foot=-0.2 * nibble + 0.3 * drop)
+        p.leg("hl." + side, upper=-0.95 * drop, lower=1.3 * drop, foot=-0.55 * drop)
+    p.rot("neck", x=-0.1 * nibble - 0.15 * drop)
+    p.rot("head", x=-0.25 * nibble + 0.05 * chew, z=0.15 * nibble)
+    p.rot("jaw", x=-0.3 * chew)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=0.3 * drop * (0.5 + 0.3 * i), z=flick * 0.3 * (0.5 + 0.4 * i))
+    return p
+
+
+def squirrel_victory(c, t):
+    """Bounces on its hind legs with its paws flung up, the tail whipping,
+    chattering."""
+    p = squirrel_idle(c, 0.0)
+    s = _scale(c)
+    hop = max(0.0, math.sin(t * TAU * 3))
+    crouch = max(0.0, -math.sin(t * TAU * 3))
+    p.move(z=s * 0.3 * hop - s * 0.05 * crouch)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=1.4 * hop - 0.2 * crouch, lower=0.4 * hop - 0.2 * crouch, foot=-0.3, splay=sign * 0.35 * hop)
+        p.leg("hl." + side, upper=-0.5 * hop + 0.2 * crouch, lower=0.4 * hop - 0.2 * crouch, foot=-0.3 * hop + 0.2 * crouch)
+        p.rot("ear." + side, x=-0.3 * hop, z=sign * 0.2 * hop)
+    p.rot("neck", x=0.1 * hop)
+    p.rot("head", x=0.2 * hop, z=0.15 * math.sin(t * TAU * 6))
+    p.rot("jaw", x=-0.3 * max(0.0, math.sin(t * TAU * 9)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=0.3 * hop * (0.5 + 0.3 * i), z=math.sin(t * TAU * 6 - i) * 0.35)
+    return p
+
+
+def raccoon_idle(c, t):
+    """Shifty: hunched, sitting up a little with its paws held in front of
+    it rubbing together slowly, the masked head turning to peer about, the
+    ringed tail swaying."""
+    p = Pose()
+    s = _scale(c)
+    _rear(c, p, 0.3)
+    p.move(z=-s * 0.12)
+    rub = math.sin(t * TAU * 3)
+    peer = math.sin(t * TAU + 0.5)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.45, lower=-0.6, foot=0.3)
+        p.leg("fl." + side, upper=0.9 + 0.08 * rub * sign, lower=-1.2 - 0.1 * rub * sign, foot=-0.3, splay=sign * 0.1)
+        p.rot("ear." + side, z=sign * 0.12 * max(0.0, math.sin(t * TAU * 2 + sign)))
+    p.rot("chest", x=0.1 + 0.02 * math.sin(t * TAU * 2))
+    p.rot("neck", x=0.1, z=0.25 * peer)
+    p.rot("head", x=-0.05, z=0.15 * peer)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.1, z=math.sin(t * TAU * 2 - i * 0.8) * 0.2 * (0.5 + 0.4 * i))
+    return p
+
+
+def raccoon_fidget(c, t):
+    """Washes: sits right up and rubs its paws over each other fast, then
+    over its face and ears, and shakes its head with the ears flapping."""
+    p = raccoon_idle(c, 0.0)
+    s = _scale(c)
+    up = float(keys(t, [(0, 0), (0.12, 1), (0.8, 1), (0.92, 0), (1, 0)]))
+    wash = math.sin(t * TAU * 7) * float(keys(t, [(0, 0), (0.12, 1), (0.45, 1), (0.5, 0), (1, 0)]))
+    face = float(keys(t, [(0, 0), (0.46, 0), (0.54, 1), (0.74, 1), (0.8, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 10) * float(keys(t, [(0, 0), (0.8, 0), (0.85, 1), (0.96, 0), (1, 0)]))
+    _rear(c, p, 0.4 * up)
+    p.move(z=-s * 0.12 * up)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.45 * up, lower=-0.6 * up, foot=0.25 * up)
+        p.leg("fl." + side, upper=0.5 * up + 0.15 * wash * sign + 1.2 * face, lower=-0.4 * up - 0.2 * wash * sign - 0.4 * face,
+              foot=-0.2 * up, splay=sign * (0.15 * up - 0.1 * face))
+        p.rot("ear." + side, z=sign * 0.5 * shake, x=-0.2 * face)
+    p.rot("neck", x=0.05 * up - 0.1 * face)
+    p.rot("head", x=-0.1 * face + 0.1 * math.sin(t * TAU * 7) * face, y=0.3 * shake, z=0.1 * shake)
+    return p
+
+
+def raccoon_victory(c, t):
+    """Up on its hind legs rubbing its paws together with glee, hopping,
+    its bottom and ringed tail wiggling."""
+    p = raccoon_idle(c, 0.0)
+    s = _scale(c)
+    hop = max(0.0, math.sin(t * TAU * 3))
+    rub = math.sin(t * TAU * 6)
+    wiggle = math.sin(t * TAU * 3 + 1.0)
+    _rear(c, p, 0.5)
+    p.move(z=-s * 0.05 + s * 0.2 * hop)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.3 - 0.3 * hop, lower=-0.4 - 0.2 * hop, foot=0.3 + 0.2 * hop)
+        p.leg("fl." + side, upper=1.1 + 0.12 * rub * sign, lower=-1.5 - 0.15 * rub * sign, foot=-0.3)
+        p.rot("ear." + side, x=-0.2, z=sign * 0.15 * hop)
+    p.rot("hips", z=0.1 * wiggle)
+    p.rot("chest", x=0.05, z=-0.05 * wiggle)
+    p.rot("neck", x=0.15 + 0.1 * hop)
+    p.rot("head", x=0.15 * hop, z=0.12 * wiggle)
+    p.rot("jaw", x=-0.35 * hop)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.3, z=math.sin(t * TAU * 6 - i) * 0.4)
+    return p
+
+
+def skunk_idle(c, t):
+    """Tail held high and waving like a plume, the head low sniffing along,
+    a cautious little weight shift."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    p.move(z=s * 0.005 * breath)
+    p.rot("chest", x=0.02 * breath)
+    p.rot("neck", x=-0.2, z=0.12 * math.sin(t * TAU + 0.5))
+    p.rot("head", x=-0.05 + 0.04 * math.sin(t * TAU * 3), z=0.08 * math.sin(t * TAU + 0.5))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.12 * max(0.0, math.sin(t * TAU * 2 + sign)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.55 * (1.0 if i == 0 else 0.5), z=math.sin(t * TAU * 2 - i * 0.7) * 0.2 * (0.6 + 0.3 * i))
+    return p
+
+
+def skunk_fidget(c, t):
+    """The warning: stamps its front feet fast, one and the other, then
+    spins round to show its tail and hoists it straight up, holds, and
+    turns back."""
+    p = skunk_idle(c, 0.0)
+    s = _scale(c)
+    stamp_env = float(keys(t, [(0, 0), (0.06, 1), (0.4, 1), (0.46, 0), (1, 0)]))
+    stamp = math.sin(t * TAU * 8) * stamp_env
+    turn = float(keys(t, [(0, 0), (0.46, 0), (0.6, 1), (0.84, 1), (0.96, 0), (1, 0)]))
+    for side, sign in (("L", 1), ("R", -1)):
+        lift = max(0.0, stamp * sign)
+        p.leg("fl." + side, upper=0.5 * lift, lower=-0.6 * lift, foot=-0.2 * lift)
+    p.rot("chest", x=-0.05 * stamp_env)
+    p.rot("neck", x=-0.1 * stamp_env + 0.1 * turn)
+    p.rot("head", z=0.3 * turn)
+    _spin(c, p, z=math.pi * turn)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.7 * turn * (1.0 if i == 0 else 0.4), z=0.1 * math.sin(t * TAU * 4 - i) * turn)
+    p.move(z=s * 0.03 * abs(stamp))
+    return p
+
+
+def skunk_victory(c, t):
+    """Twirls on the spot with its tail straight up like a flag, hopping on
+    its toes, head high."""
+    p = skunk_idle(c, 0.0)
+    s = _scale(c)
+    hop = max(0.0, math.sin(t * TAU * 3))
+    _spin(c, p, z=t * TAU)
+    p.move(z=s * 0.15 * hop)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.3 * hop, lower=-0.4 * hop, foot=-0.3 * hop)
+        p.leg("hl." + side, upper=-0.2 * hop, lower=-0.2 * hop, foot=0.4 * hop)
+        p.rot("ear." + side, x=-0.2, z=sign * 0.15 * hop)
+    p.rot("neck", x=0.35)
+    p.rot("head", x=0.15, z=0.1 * math.sin(t * TAU * 3))
+    p.rot("jaw", x=-0.3 * hop)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.75 * (1.0 if i == 0 else 0.45), z=math.sin(t * TAU * 5 - i) * 0.1)
+    return p
+
+
+def cobra_idle(c, t):
+    """Raised and watchful: a slow hypnotic sway with the hood spread, the
+    head weaving a little against the body, the tongue flicking."""
+    p = Pose()
+    sway = math.sin(t * TAU)
+    p.rot("chest", z=0.08 * sway)
+    p.rot("neck", z=0.14 * sway, x=0.03 * math.sin(t * TAU * 2))
+    p.rot("neck2", z=-0.1 * sway, x=0.03 * math.sin(t * TAU * 2 + 1.0))
+    p.rot("head", z=-0.08 * sway, x=0.04 * math.sin(t * TAU * 2 + 2.0))
+    p.rot("jaw", x=-0.08 * max(0.0, math.sin(t * TAU * 5)) ** 3)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, z=math.sin(t * TAU - i * 0.9) * 0.08)
+    return p
+
+
+def cobra_fidget(c, t):
+    """A mock strike: it draws its head back and rises taller, hangs for a
+    beat with the jaws parting, strikes forward with a hiss, and draws
+    back into its sway."""
+    p = cobra_idle(c, 0.0)
+    back = float(keys(t, [(0, 0), (0.25, 1), (0.48, 1), (0.54, -0.2), (0.62, 0), (1, 0)]))
+    strike = float(keys(t, [(0, 0), (0.48, 0), (0.54, 1), (0.66, 0.7), (0.8, 0), (1, 0)]))
+    p.rot("chest", x=0.1 * max(back, 0.0))
+    p.rot("neck", x=0.25 * max(back, 0.0) - 0.3 * strike)
+    p.rot("neck2", x=-0.4 * max(back, 0.0) + 0.55 * strike)
+    p.rot("head", x=0.2 * max(back, 0.0) - 0.15 * strike)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.3 * max(back, 0.0) + 1.3 * strike))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, z=0.15 * max(back, 0.0) * math.sin(i * 1.2), x=0.1 * strike)
+    return p
+
+
+def cobra_victory(c, t):
+    """Dances: the whole raised body weaves side to side in big slow
+    swings, the head bobbing against them, jaws open hissing."""
+    p = cobra_idle(c, 0.0)
+    weave = math.sin(t * TAU)
+    bob = math.sin(t * TAU * 2)
+    p.rot("hips", z=0.1 * weave)
+    p.rot("chest", z=0.2 * weave, x=0.05 * bob)
+    p.rot("neck", z=0.25 * weave, x=0.1 * bob)
+    p.rot("neck2", z=-0.15 * weave, x=-0.08 * bob)
+    p.rot("head", z=-0.2 * weave, x=0.15 * bob)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.5 + 0.4 * max(0.0, bob)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, z=math.sin(t * TAU - i * 0.9) * 0.2)
+    return p
+
+
+def camel_idle(c, t):
+    """Chewing the cud: the jaw grinding round and round, the head bobbing
+    slowly on its long neck, ears flicking, a hind knee bending now and
+    then, the tail flicking."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    p.move(z=s * 0.004 * breath)
+    p.rot("chest", x=0.012 * breath)
+    p.rot("neck", x=0.05 + 0.03 * math.sin(t * TAU + 1.0), z=0.08 * math.sin(t * TAU * 0.5 * 2))
+    p.rot("head", x=-0.05 + 0.03 * math.sin(t * TAU * 2), z=0.05 * math.sin(t * TAU))
+    grind = t * TAU * 3
+    p.rot("jaw", x=-0.12 - 0.08 * math.sin(grind), z=0.12 * math.cos(grind))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.3 * max(0.0, math.sin(t * TAU * 2 + sign * 0.7)) ** 3)
+    rest = max(0.0, math.sin(t * TAU - 1.5)) ** 2
+    p.leg("hl.L", upper=0.15 * rest, lower=-0.25 * rest, foot=0.1 * rest)
+    _tail(p, t, sway=0.35, speed=2)
+    return p
+
+
+def camel_fidget(c, t):
+    """Works up a spit: chews, draws its head back with its cheeks puffing,
+    spits with a thrust of the head and the lips flying open, then grumbles,
+    shaking its head and smacking its lips."""
+    p = camel_idle(c, 0.0)
+    gather = float(keys(t, [(0, 0), (0.15, 0.4), (0.4, 1), (0.46, 1), (0.52, -0.4), (0.6, 0), (1, 0)]))
+    spit = float(keys(t, [(0, 0), (0.46, 0), (0.52, 1), (0.6, 0.5), (0.7, 0), (1, 0)]))
+    grumble = math.sin(t * TAU * 7) * float(keys(t, [(0, 0), (0.7, 0), (0.76, 1), (0.95, 0), (1, 0)]))
+    p.rot("neck", x=-0.2 * max(gather, 0.0) + 0.35 * spit, y=0.1 * grumble)
+    p.rot("head", x=-0.15 * max(gather, 0.0) + 0.3 * spit, z=0.15 * grumble, y=0.2 * grumble)
+    p.rot("jaw", x=-c.motion.get("gape", 0.4) * (1.6 * spit) - 0.15 * abs(grumble), z=0.2 * grumble)
+    p.rot("chest", x=0.03 * max(gather, 0.0) - 0.04 * spit)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, x=0.4 * max(gather, 0.0), z=sign * 0.4 * grumble)
+    return p
+
+
+def camel_victory(c, t):
+    """A proud high-stepping prance on the spot, the knees lifting high in
+    turn, the head held up and nodding, the tail swishing, lips smacking."""
+    p = camel_idle(c, 0.0)
+    s = _scale(c)
+    step = math.sin(t * TAU * 2)
+    p.move(z=s * 0.03 * abs(step))
+    for side, sign in (("L", 1), ("R", -1)):
+        front = max(0.0, step * sign)
+        hind = max(0.0, -step * sign)
+        p.leg("fl." + side, upper=0.8 * front, lower=-1.0 * front, foot=-0.2 * front)
+        p.leg("hl." + side, upper=-0.5 * hind, lower=-0.4 * hind, foot=0.5 * hind)
+        p.rot("ear." + side, x=-0.3, z=sign * 0.2 * abs(step))
+    p.rot("chest", x=0.05, z=0.03 * step)
+    p.rot("neck", x=0.3 + 0.05 * math.sin(t * TAU * 4))
+    p.rot("head", x=0.1 + 0.1 * math.sin(t * TAU * 4), z=0.08 * step)
+    p.rot("jaw", x=-0.2 * max(0.0, math.sin(t * TAU * 4)))
+    _tail(p, t, sway=0.5, speed=4)
+    return p
+
+
+def orangutan_idle(c, t):
+    """Easygoing: the long arms hanging and swinging a little behind a
+    slow sway, the body rocking, the head tipping thoughtfully, the lips
+    pursing now and then."""
+    p = Pose()
+    s = _scale(c)
+    sway = math.sin(t * TAU)
+    breath = math.sin(t * TAU * 2)
+    p.move(z=s * 0.006 * breath)
+    p.rot("chest", x=0.03 * breath, z=0.04 * sway)
+    p.rot("hips", z=-0.025 * sway)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.04 * math.sin(t * TAU - 0.9) + 0.03 * breath, lower=-0.1, foot=-0.15, splay=sign * 0.04 * sway)
+        p.leg("hl." + side, upper=0.02 * sign * sway)
+    p.rot("neck", x=0.05, z=0.1 * sway)
+    p.rot("head", x=-0.02 * breath, z=0.18 * math.sin(t * TAU + 0.8))
+    p.rot("jaw", x=-0.12 * max(0.0, math.sin(t * TAU * 2 - 0.5)) ** 3)
+    return p
+
+
+def orangutan_fidget(c, t):
+    """Scratches: one long arm comes up to scratch the top of its head
+    while the other scratches its side, the head tipping into it, then both
+    arms stretch up high with a yawn and drop."""
+    p = orangutan_idle(c, 0.0)
+    s = _scale(c)
+    scratch = float(keys(t, [(0, 0), (0.15, 1), (0.52, 1), (0.6, 0), (1, 0)]))
+    rub = math.sin(t * TAU * 6) * scratch
+    stretch = float(keys(t, [(0, 0), (0.58, 0), (0.72, 1), (0.86, 1), (0.97, 0), (1, 0)]))
+    p.leg("fl.R", upper=2.6 * scratch + 2.9 * stretch, lower=-1.9 * scratch - 0.3 * stretch + 0.2 * rub, foot=-0.4 * scratch, splay=-0.3 * scratch)
+    p.leg("fl.L", upper=0.9 * scratch + 2.9 * stretch, lower=-1.6 * scratch - 0.3 * stretch - 0.2 * rub, foot=-0.3 * scratch, splay=0.5 * scratch)
+    p.rot("chest", x=0.1 * stretch, z=-0.08 * scratch)
+    p.rot("neck", x=0.1 * stretch)
+    p.rot("head", z=-0.25 * scratch + 0.05 * rub, x=0.3 * stretch)
+    p.rot("jaw", x=-0.7 * stretch)
+    p.move(z=s * 0.04 * stretch)
+    for side in ("L", "R"):
+        p.leg("hl." + side, upper=-0.06 * stretch, lower=0.04 * stretch)
+    return p
+
+
+def orangutan_victory(c, t):
+    """The dance: both long arms up over its head waving from side to side
+    as the whole body sways with them, feet shuffling, mouth open hooting."""
+    p = orangutan_idle(c, 0.0)
+    s = _scale(c)
+    wave = math.sin(t * TAU * 2)
+    sway = math.sin(t * TAU)
+    hop = max(0.0, math.sin(t * TAU * 4)) * 0.4
+    p.move(z=s * 0.08 * hop)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=2.8, lower=-0.4 + 0.25 * wave * sign, foot=-0.3, splay=sign * (0.4 + 0.3 * wave * sign))
+        p.leg("hl." + side, upper=0.1 * sign * sway - 0.15 * hop, lower=-0.15 * hop, foot=0.15 * hop)
+    p.rot("chest", z=0.12 * sway, x=0.05)
+    p.rot("hips", z=-0.08 * sway)
+    p.rot("neck", x=0.15, z=0.1 * sway)
+    p.rot("head", x=0.2, z=-0.15 * sway)
+    p.rot("jaw", x=-0.5 * (0.6 + 0.4 * max(0.0, wave)))
+    return p
+
+
+def unicorn_idle(c, t):
+    """Graceful: the head carried high with the neck arched, nodding
+    gently, a front hoof pawing the ground now and then, the tail swishing
+    in long slow sweeps, ears turning."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    p.move(z=s * 0.004 * breath)
+    p.rot("chest", x=0.012 * breath)
+    p.rot("neck", x=0.22 + 0.03 * math.sin(t * TAU * 2), z=0.08 * math.sin(t * TAU + 0.6))
+    p.rot("head", x=-0.25 + 0.04 * math.sin(t * TAU * 2 + 1.0), z=0.05 * math.sin(t * TAU + 0.6))
+    paw = max(0.0, math.sin(t * TAU * 2 - 0.8)) ** 2 * max(0.0, math.sin(t * TAU))
+    p.leg("fl.L", upper=0.35 * paw, lower=-0.5 * paw, foot=0.2 * paw)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.25 * max(0.0, math.sin(t * TAU * 3 + sign * 0.8)) ** 2, x=-0.1)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.2, z=math.sin(t * TAU - i * 0.6) * 0.3 * (0.5 + 0.4 * i))
+    return p
+
+
+def unicorn_fidget(c, t):
+    """Rears up and paws the air with both front hooves, then drops and
+    tosses its head with a whinny, mane and tail flying."""
+    p = unicorn_idle(c, 0.0)
+    s = _scale(c)
+    up = float(keys(t, [(0, 0), (0.18, 1), (0.52, 1), (0.64, 0), (0.7, 0.05), (0.76, 0), (1, 0)]))
+    paw = math.sin(t * TAU * 4) * up
+    toss = float(keys(t, [(0, 0), (0.66, 0), (0.74, 1), (0.84, 0.3), (0.92, 0.7), (1, 0)]))
+    _rear(c, p, 0.65 * up)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.9 * up + 0.4 * paw * sign, lower=-0.9 * up - 0.3 * paw * sign, foot=-0.3 * up)
+        p.leg("hl." + side, upper=-0.25 * up, lower=-0.15 * up, foot=0.3 * up)
+        p.rot("ear." + side, x=-0.3 * up + 0.3 * toss, z=sign * 0.2 * toss)
+    p.rot("neck", x=0.1 * up + 0.25 * toss, z=0.3 * math.sin(t * TAU * 5) * toss)
+    p.rot("head", x=0.1 * up - 0.1 * toss, z=0.15 * math.sin(t * TAU * 5) * toss)
+    p.rot("jaw", x=-0.45 * toss)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.6 * up - 0.5 * toss, z=math.sin(t * TAU * 5 - i) * 0.35 * (up + toss))
+    return p
+
+
+def unicorn_victory(c, t):
+    """Prances on the spot, knees lifting high in a proud high-step, the
+    head tossing with the horn held up and the tail high, then a little
+    rear, and on."""
+    p = unicorn_idle(c, 0.0)
+    s = _scale(c)
+    prance = float(keys(t, [(0, 1), (0.55, 1), (0.62, 0), (0.9, 0), (0.98, 1), (1, 1)]))
+    rear = float(keys(t, [(0, 0), (0.58, 0), (0.68, 1), (0.86, 1), (0.96, 0), (1, 0)]))
+    step = math.sin(t * TAU * 4) * prance
+    p.move(z=s * 0.035 * abs(step))
+    _rear(c, p, 0.5 * rear)
+    for side, sign in (("L", 1), ("R", -1)):
+        front = max(0.0, step * sign)
+        hind = max(0.0, -step * sign)
+        p.leg("fl." + side, upper=0.9 * front + 0.8 * rear + 0.3 * math.sin(t * TAU * 6) * rear * sign, lower=-1.1 * front - 0.8 * rear, foot=-0.3 * front - 0.3 * rear)
+        p.leg("hl." + side, upper=-0.5 * hind - 0.2 * rear, lower=-0.4 * hind - 0.1 * rear, foot=0.5 * hind + 0.3 * rear)
+        p.rot("ear." + side, x=-0.3, z=sign * 0.15 * abs(step))
+    p.rot("neck", x=0.3 + 0.1 * math.sin(t * TAU * 4) * prance, z=0.12 * math.sin(t * TAU * 2) * prance)
+    p.rot("head", x=-0.15 + 0.15 * math.sin(t * TAU * 4) * prance + 0.15 * rear)
+    p.rot("jaw", x=-0.25 * max(0.0, math.sin(t * TAU * 4)) * prance - 0.3 * rear)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.6, z=math.sin(t * TAU * 6 - i) * 0.35)
+    return p
+
+
 PERSONAS = {
     "yeti": {"idle": yeti_idle, "fidget": yeti_fidget, "victory": yeti_victory},
+    "squirrel": {"idle": squirrel_idle, "fidget": squirrel_fidget, "victory": squirrel_victory},
+    "raccoon": {"idle": raccoon_idle, "fidget": raccoon_fidget, "victory": raccoon_victory},
+    "skunk": {"idle": skunk_idle, "fidget": skunk_fidget, "victory": skunk_victory},
+    "cobra": {"idle": cobra_idle, "fidget": cobra_fidget, "victory": cobra_victory},
+    "camel": {"idle": camel_idle, "fidget": camel_fidget, "victory": camel_victory},
+    "orangutan": {"idle": orangutan_idle, "fidget": orangutan_fidget, "victory": orangutan_victory},
+    "unicorn": {"idle": unicorn_idle, "fidget": unicorn_fidget, "victory": unicorn_victory},
     "lion": {"idle": lion_idle, "fidget": lion_fidget, "victory": lion_victory},
     "tiger": {"idle": tiger_idle, "fidget": tiger_fidget, "victory": tiger_victory},
     "boar": {"idle": boar_idle, "fidget": boar_fidget, "victory": boar_victory},

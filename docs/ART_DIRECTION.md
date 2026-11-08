@@ -306,6 +306,27 @@ Cerberus's heads swing and pant, never agreeing; they squabble, the neck
 whipping and the jaws clacking; and it rears with all three heads thrown
 back howling fire, forelegs pawing the air.
 
+The Ranged animals. The Gray Squirrel sits up twitchy with its paws held
+together and its tail curled over its back; nibbles a nut with its jaw
+racing, then drops to all fours and flicks its tail; and bounces on its
+hind legs with its paws flung up. The Raccoon hunches, rubbing its paws
+together and peering about; washes, rubbing its paws over each other and
+over its face; and rubs its paws with glee, hopping, bottom wiggling. The
+Striped Skunk holds its tail high like a plume and sniffs along; gives
+the warning, stamping its front feet and spinning round to hoist its
+tail straight up; and twirls on the spot, tail up like a flag. The King
+Cobra sways hypnotically with its hood spread, tongue flicking; draws
+back and rises for a mock strike with a hiss; and dances, the whole
+raised body weaving. The Camel chews the cud, jaw grinding round, head
+bobbing; works up a spit, cheeks drawn back, and lets fly, then grumbles;
+and prances with its knees high, nodding. The Orangutan rocks easily with
+its long arms swinging a beat behind, lips pursing; scratches its head
+with one long arm and its side with the other, then stretches both up
+with a yawn; and dances with both arms waving overhead, hooting. The
+Unicorn carries its head high on an arched neck, pawing the ground, tail
+sweeping; rears and paws the air, then tosses its head with a whinny; and
+prances in a proud high-step, horn up, with a little rear.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

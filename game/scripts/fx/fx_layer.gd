@@ -466,6 +466,73 @@ static func _draw_effect(canvas: CanvasItem, fx: Dictionary) -> void:
 				var w := h * 0.35
 				var lean := rng.randf_range(-0.3, 0.3) * h
 				_shard(canvas, base, h, w, lean, edge.darkened(0.35), color.lightened(0.4), Color.WHITE, melt)
+		"blast":
+			# An impact in an element's look (feel.json "elements"; docs/
+			# ART_DIRECTION.md, effects), in layers: a white-hot core flash, the
+			# element's glow swelling and thinning, a shockwave ring racing out
+			# (two for a Mythic's big one) and the element's bits flying out of
+			# it: rocks and drops arc and fall, flames and wisps rise, leaves and
+			# streaks drift, shards and stars spin.
+			var core: Color = fx.get("core", Color.WHITE)
+			var dark: Color = fx.get("dark", color.darkened(0.5))
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			var reach := Ease.out_cubic(clampf(t * 1.6, 0.0, 1.0))
+			var fade := 1.0 - Ease.in_cubic(t)
+			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.7))
+			canvas.draw_circle(Vector2.ZERO, r * (0.35 + 0.65 * reach), Color(color, 0.3 * fade))
+			var flash := 1.0 - clampf(t * 3.0, 0.0, 1.0)
+			if flash > 0.0:
+				canvas.draw_circle(Vector2.ZERO, r * 0.5 * (0.5 + 0.5 * flash), Color(core, 0.9 * flash))
+			for k in int(fx.get("rings", 1)):
+				var kk := Ease.out_cubic(clampf(t * 1.6 - k * 0.3, 0.0, 1.0))
+				if kk <= 0.0:
+					continue
+				var rr := r * (0.3 + 0.8 * kk)
+				var width := maxf(2.5, r * 0.09 * (1.0 - 0.6 * kk))
+				var a := (1.0 - kk) * fade
+				canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 40, Color(dark, 0.6 * a), width + 3.0)
+				canvas.draw_arc(Vector2.ZERO, rr, 0, TAU, 40, Color(core, 0.95 * a), width)
+			canvas.draw_set_transform(Vector2.ZERO)
+			var bits := String(fx.get("bits", "spark"))
+			var count := int(fx.get("count", 7))
+			var push: Vector2 = fx.dir
+			var gravity := 0.0
+			match bits:
+				"rock", "drop":
+					gravity = 1.8
+				"flame", "wisp":
+					gravity = -0.8
+				"leaf", "streak":
+					gravity = 0.35
+			for i in count:
+				var ang := TAU * (i + rng.randf() * 0.6) / maxi(count, 1)
+				var far := r * rng.randf_range(0.6, 1.25)
+				var u := Ease.out_cubic(t)
+				var hop := r * 0.35 * sin(u * PI) if gravity >= 0.0 else 0.0
+				var at := p + Vector2(cos(ang), sin(ang) * 0.6) * far * u + push * r * 0.25 * u + Vector2(0, gravity * r * t * t - hop)
+				var size := r * rng.randf_range(0.1, 0.2) * (1.0 - 0.35 * t)
+				_bit(canvas, bits, at, size, ang + t * 6.0 * (1.0 if i % 2 == 0 else -1.0), dark, color, core, fade)
+		"linger":
+			# The fade an impact leaves on the ground (feel.json "elements"
+			# linger_seconds): a stain of the element's glow thinning away, with
+			# a few of its bits settled in it, flickering out (embers, frost,
+			# drops, leaves).
+			var dark: Color = fx.get("dark", color.darkened(0.5))
+			var fade := (1.0 - Ease.in_cubic(t)) * minf(1.0, t * 6.0)
+			canvas.draw_set_transform(p, 0.0, Vector2(1.0, 0.55))
+			canvas.draw_circle(Vector2.ZERO, r, Color(dark, 0.16 * fade))
+			canvas.draw_circle(Vector2.ZERO, r * 0.7, Color(color, 0.14 * fade))
+			canvas.draw_set_transform(Vector2.ZERO)
+			var rng := RandomNumberGenerator.new()
+			rng.seed = int(fx.seed)
+			var bits := String(fx.get("bits", "spark"))
+			for i in 5:
+				var a := TAU * i / 5.0 + rng.randf()
+				var d := r * rng.randf_range(0.3, 0.9)
+				var at := p + Vector2(cos(a) * d, sin(a) * d * 0.55)
+				var flick := 0.6 + 0.4 * sin(float(fx.age) * 9.0 + i * 1.7)
+				_bit(canvas, bits, at, r * 0.09 * flick, a, dark, color, Color.WHITE, fade * 0.9)
 		"ice_blast":
 			# The Yeti's ground pound (docs/ART_DIRECTION.md, effects). The
 			# build-up is the frost gathering on its fists (style_look.gd); this
@@ -655,6 +722,62 @@ static func _shard(canvas: CanvasItem, base: Vector2, h: float, w: float, lean: 
 	canvas.draw_colored_polygon(PackedVector2Array([base + Vector2(-w * 0.55, -w * 0.1), base + Vector2(lean * 0.9, -h * 0.9), base + Vector2(w * 0.45, -w * 0.1)]), Color(pale, 0.95 * alpha))
 	canvas.draw_line(base + Vector2(-w * 0.2, -w * 0.3), base + Vector2(lean * 0.75, -h * 0.78), Color(shine, 0.9 * alpha), maxf(1.5, w * 0.22))
 
+
+
+## One bit of an element flying out of an impact or lying in its fade
+## (feel.json "elements" bits): `size` across, turned `ang`, in the
+## element's dark, glow and core colors.
+static func _bit(canvas: CanvasItem, kind: String, at: Vector2, size: float, ang: float, dark: Color, glow: Color, core: Color, alpha: float) -> void:
+	if size < 1.0 or alpha <= 0.0:
+		return
+	match kind:
+		"shard":
+			_shard(canvas, at + Vector2(0, size), size * 2.2, size * 0.6, sin(ang) * size * 0.4, dark, glow.lightened(0.4), core, alpha)
+		"flame":
+			# A teardrop of fire, a paler flame inside it.
+			canvas.draw_colored_polygon(PackedVector2Array([at + Vector2(-size * 0.8, size * 0.4), at + Vector2(-size * 0.55, -size * 0.5), at + Vector2(0, -size * 1.7),
+				at + Vector2(size * 0.55, -size * 0.5), at + Vector2(size * 0.8, size * 0.4), at + Vector2(0, size * 0.9)]), Color(glow, alpha))
+			canvas.draw_colored_polygon(PackedVector2Array([at + Vector2(-size * 0.4, size * 0.3), at + Vector2(0, -size * 0.9), at + Vector2(size * 0.4, size * 0.3), at + Vector2(0, size * 0.6)]), Color(core, alpha))
+		"leaf":
+			canvas.draw_set_transform(at, ang, Vector2(1.0, 0.45))
+			canvas.draw_circle(Vector2.ZERO, size, Color(glow, alpha))
+			canvas.draw_line(Vector2(-size * 0.8, 0), Vector2(size * 0.8, 0), Color(dark, alpha), maxf(1.0, size * 0.18))
+			canvas.draw_set_transform(Vector2.ZERO)
+		"rock":
+			# A chunk of earth: a dark lump with a lit facet.
+			var lump := PackedVector2Array()
+			for i in 6:
+				var a := ang + TAU * i / 6.0
+				lump.append(at + Vector2(cos(a), sin(a)) * size * (0.9 if i % 2 == 0 else 1.1))
+			canvas.draw_colored_polygon(lump, Color(dark, alpha))
+			canvas.draw_colored_polygon(PackedVector2Array([lump[0], lump[1], at]), Color(glow, alpha))
+		"drop":
+			var tail := at + Vector2.from_angle(ang) * size * 1.6
+			canvas.draw_colored_polygon(PackedVector2Array([tail, at + Vector2.from_angle(ang + PI / 2) * size * 0.75, at + Vector2.from_angle(ang - PI / 2) * size * 0.75]), Color(glow, alpha))
+			canvas.draw_circle(at, size * 0.78, Color(glow, alpha))
+			canvas.draw_circle(at + Vector2(-size * 0.25, -size * 0.25), size * 0.25, Color(core, alpha * 0.9))
+		"star":
+			var pts := PackedVector2Array()
+			for i in 8:
+				var a := ang + TAU * i / 8.0
+				pts.append(at + Vector2(cos(a), sin(a)) * size * (1.4 if i % 2 == 0 else 0.55))
+			canvas.draw_colored_polygon(pts, Color(glow, alpha))
+			canvas.draw_circle(at, size * 0.4, Color(core, alpha))
+		"wisp":
+			canvas.draw_circle(at, size * 1.5, Color(glow, 0.25 * alpha))
+			canvas.draw_circle(at, size * 0.75, Color(glow.lightened(0.3), 0.8 * alpha))
+		"streak":
+			var along := Vector2.from_angle(ang) * size * 2.2
+			canvas.draw_line(at - along, at + along, Color(glow, 0.5 * alpha), maxf(2.0, size * 0.7))
+			canvas.draw_line(at - along, at + along, Color(core, alpha), maxf(1.0, size * 0.3))
+		"bolt":
+			var across := Vector2.from_angle(ang + PI / 2)
+			var zig := PackedVector2Array([at - Vector2.from_angle(ang) * size * 1.5, at - Vector2.from_angle(ang) * size * 0.5 + across * size * 0.5,
+				at + Vector2.from_angle(ang) * size * 0.5 - across * size * 0.5, at + Vector2.from_angle(ang) * size * 1.5])
+			canvas.draw_polyline(zig, Color(glow, 0.6 * alpha), maxf(2.0, size * 0.6))
+			canvas.draw_polyline(zig, Color(core, alpha), maxf(1.0, size * 0.25))
+		_:
+			canvas.draw_line(at, at + Vector2.from_angle(ang) * size * 1.6, Color(core, alpha), maxf(1.5, size * 0.35))
 
 static func _draw_text(canvas: CanvasItem, center: Vector2, text: String, font_size: int, color: Color, outline := 4) -> void:
 	if font_size < 6:

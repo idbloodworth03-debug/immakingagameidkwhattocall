@@ -176,3 +176,51 @@ func test_slow_frames_keep_animals_in_shape() -> void:
 			check(absf(view.squash) < 1.0, "%.0f frames a second: its squash stays small (%.2f)" % [1.0 / frame_seconds, view.squash])
 			check(view.body.scale.y < 3.0 and view.body.scale.x > 0.2, "%.0f frames a second: no strips or lines (%.2f x %.2f)" % [1.0 / frame_seconds, view.body.scale.x, view.body.scale.y])
 	field.free()
+
+
+## Every attack style's impact has an element look (feel.json "elements"),
+## and plain hits have the "impact" look.
+func test_every_attack_style_has_an_element_look() -> void:
+	var elements: Dictionary = GameData.feel.get("elements", {})
+	var by_style: Dictionary = elements.get("style_elements", {})
+	for id in GameData.styles:
+		if not GameData.styles[id] is Dictionary:
+			continue  # the file's note
+		var kind := String(GameData.styles[id].get("kind", ""))
+		check(by_style.has(kind), "%s's %s has an element" % [id, kind])
+		var el: Dictionary = elements.get(String(by_style.get(kind, "")), {})
+		check(el.has("core") and el.has("glow") and el.has("dark") and el.has("bits"), "%s's element has its colors and bits" % kind)
+	check(elements.has("impact"), "plain hits have the impact look")
+
+
+## An impact bursts in layers (a blast: core, glow, ring, the element's
+## bits) and leaves a fade on the ground; a Mythic's big one has two rings,
+## more bits and shakes the field.
+func test_an_impact_bursts_in_layers_and_leaves_a_mark() -> void:
+	var made := _field()
+	var field: BattleField = made.field
+	var small: Dictionary = field._blast("fire", Vector2(300, 400), 60.0, false)
+	check_eq(String(small.get("kind", "")), "blast", "a blast")
+	check(small.has("core") and small.has("dark") and String(small.get("bits", "")) == "flame", "in fire's look: core, dark edge, flames")
+	check_eq(int(small.get("rings", 0)), 1, "one shockwave ring")
+	var big: Dictionary = field._blast("water", Vector2(300, 500), 80.0, true)
+	check(int(big.get("rings", 0)) >= 2 and int(big.get("count", 0)) > int(small.get("count", 0)), "a Mythic's big one: two rings and more bits")
+	check(field._trauma > 0.0, "and it shakes the field")
+	check(not field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "linger").is_empty(), "the fade stays on the ground")
+	for i in 130:
+		field._process(1.0 / 60.0)
+	check(field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "blast").is_empty(), "the bursts are gone within two seconds")
+	field.free()
+
+
+## A plain hit gets the small layered burst too.
+func test_a_plain_hit_gets_its_layers() -> void:
+	var made := _field()
+	var field: BattleField = made.field
+	field._impact("swipe", Vector2(300, 400), Vector2.RIGHT, 1.0, false)
+	var blasts: Array = field.fx.effects.filter(func(f: Dictionary) -> bool: return f.kind == "blast")
+	check_eq(blasts.size(), 1, "one small blast")
+	if blasts.size() == 1:
+		check_eq(String(blasts[0].bits), "spark", "in the impact look")
+		check(blasts[0].dir == Vector2.RIGHT, "pushed along the hit")
+	field.free()

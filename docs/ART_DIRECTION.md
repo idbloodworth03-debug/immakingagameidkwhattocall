@@ -243,6 +243,31 @@ Pangolin in big overlapping golden-brown scales (surface "scales" with
 large cells); and the Kraken, a smooth coral-red octopus with huge eyes
 and pale suckers. Every animal in the roster is now on the movie look.
 
+**The effects pass** (step 6): every attack and ability effect is built
+from the same three phases and the same layers, in an element's look
+(`game/data/feel.json` "elements"; `fx_layer.gd` "blast" and "linger",
+`battle_field.gd` `_blast`, `style_look.gd` `_gather`). The build-up is on
+the animal: the element's particles drawn in from all round onto its
+fists, horn or mouth with a glow swelling there (the Yeti's frost, the
+Lion's gold breath before a roar, the Unicorn's light at its horn, the
+Kraken's water, the Gorilla's dust). The impact is layered: a white-hot
+core flash, the element's glow swelling and thinning, a shockwave ring
+racing out, and the element's bits flying out of it (ice shards, flames,
+leaves, rocks, drops, stars, wisps, wind streaks, lightning bolts,
+sparks), each kind moving its own way (rocks and drops arc and fall,
+flames and wisps rise, leaves drift, shards and stars spin), with its
+particles. The fade is a stain of the glow on the ground with a few bits
+settled in it, flickering out. Every attack style has its element
+(fire for Cerberus and the Tiger's pounce, frost for the Yeti, light for
+the Lion's roar and the Unicorn's beam, water for the Kraken and the
+Seal, lightning for the Eel and the Macaw's crack, earth for the charges,
+slams and digs, nature for the Panda and the Turtle, venom, wind for the
+birds' strikes, dark for the Condor's feast and the Kraken's ink, stink
+for the Skunk), and plain hits get a small "impact" burst. A Mythic's
+burst is the big one: two shockwave rings, twice the bits, longer, and a
+shake; a slam, a charge's end and a flip get the big one too. In a crowded
+fight the bits are halved. Numbers: `feel.json` "elements".
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

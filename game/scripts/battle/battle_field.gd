@@ -1131,6 +1131,7 @@ func _show_style(e: Dictionary) -> void:
 			var sweep := fx.effect("sweep", at, maxf(at.distance_to(a), at.distance_to(b)) * 1.05, Color.WHITE, Feel.num("styles", "sweep_seconds", 0.3))
 			sweep.a_ang = (a - at).angle()
 			sweep.b_ang = (b - at).angle()
+			_blast("wind", (a + b) / 2.0, 700 * s, false, (b - a).normalized(), false)
 			Sound.play("whoosh", -8.0, 0.1)
 		"pound":
 			# The Yeti's ground pound: a layered ice blast (fx_layer "ice_blast":
@@ -1152,6 +1153,7 @@ func _show_style(e: Dictionary) -> void:
 			# of sparks at the attacker.
 			fx.effect("ring", at, 900 * s, hide.lightened(0.2), 0.35)
 			fx.effect("ring", at, 600 * s, Color.WHITE, 0.25)
+			_blast("light", at, 650 * s, false, Vector2.UP, false)
 			var dir := (to - at).normalized()
 			for i in 8:
 				fx.particle("spark", at, dir.rotated(randf_range(-0.5, 0.5)) * randf_range(320.0, 520.0), 0.32, 8.0, Color.WHITE if i % 2 == 0 else hide.lightened(0.3), 0.0, 3.0)
@@ -1162,6 +1164,7 @@ func _show_style(e: Dictionary) -> void:
 		"shell":
 			if e.on:
 				fx.burst("puff", at, 6, 140.0, 0.4, 8.0, [Color(String(looks.get("shell_light", "#7fb04a"))), Color("#d8e8c8")], -20.0, 2.5)
+				_blast("nature", at, 520 * s, false, Vector2.UP, false)
 				Sound.play("land", -4.0, 0.1)
 			else:
 				Sound.play("pop", -8.0, 0.2)
@@ -1176,11 +1179,13 @@ func _show_style(e: Dictionary) -> void:
 		"rhino_charge":
 			var dust := Color(String(looks.get("charge_dust", "#c9b08a")))
 			fx.effect("dust", to_screen(e.x, e.y), 900 * s, dust, 0.5, "", true)
+			_blast("earth", to_screen(e.x, e.y), 600 * s, false)
 			fx.burst("sparkle", at - Vector2(0, 12), 3, 90.0, 0.4, 8.0, [Color.WHITE, Color("#fff6b0")], 0.0, 3.0)
 			shake(0.1)
 			Sound.play("alert", -6.0)
 		"charge_end":
 			fx.effect("dust", to_screen(e.x, e.y), 700 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.45, "", true)
+			_blast("earth", to_screen(e.x, e.y), 900 * s, true)
 		"slam":
 			# A huge first hit: the Boar's head-on slam, the Tiger's pounce.
 			var target := view_for_uid(int(e.to))
@@ -1191,6 +1196,7 @@ func _show_style(e: Dictionary) -> void:
 			else:
 				fx.effect("dust", to_screen(e.x, e.y), 1100 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.55, "", true)
 			fx.effect("flash", hit_at, 380 * s, Color(1, 1, 1, 0.8), 0.18)
+			_blast("fire" if String(e.kind) == "stalk" else "earth", hit_at, 900 * s, true, (hit_at - at).normalized())
 			fx.burst("spark", hit_at, 10, 360.0, 0.3, 8.0, [Color("#fff6b0"), Color.WHITE], 0.0, 5.0)
 			shake(Feel.num("styles", "slam_shake", 0.14))
 			Sound.play("boom", -8.0, 0.1)
@@ -1200,11 +1206,13 @@ func _show_style(e: Dictionary) -> void:
 			var gold := Color(String(looks.get("pack", "#ffd84a")))
 			var jaws := fx.effect("chomp", hit_at, 560 * s, gold, 0.3)
 			jaws.dir = (hit_at - at).normalized()
+			_blast("light", hit_at, 420 * s, false, jaws.dir, false)
 			fx.burst("spark", hit_at, 5, 220.0, 0.25, 6.0, [gold, Color.WHITE], 0.0, 5.0)
 		"roar":
 			var gold := Color(String(looks.get("roar", "#ffc93c")))
 			fx.effect("ring", to_screen(e.x, e.y), e.radius * s, gold, 0.6, "", true)
 			fx.effect("ring", at, e.radius * s * 0.5, gold.lightened(0.4), 0.45)
+			_blast("light", at, 700 * s, true, Vector2.UP, false)
 			fx.burst("sparkle", at, 8, 220.0, 0.6, 8.0, [gold, Color.WHITE], -40.0, 2.5)
 			Sound.play("alert", -6.0)
 		"venom":
@@ -1212,6 +1220,7 @@ func _show_style(e: Dictionary) -> void:
 			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
 			var green := Color(String(looks.get("venom", "#7ee04a")))
 			fx.burst("puff", hit_at, 6, 120.0, 0.5, 7.0, [green, green.lightened(0.4)], 30.0, 2.5)
+			_blast("venom", hit_at, 420 * s, false)
 			Sound.play("pop", -10.0, 0.2)
 		"triple":
 			# Three heads: three snaps of fire, one after another.
@@ -1224,12 +1233,17 @@ func _show_style(e: Dictionary) -> void:
 				var jaws := fx.effect("chomp", victim.middle() + Vector2((i - 1) * 6.0, (i - 1) * 4.0), 480 * s, fire, 0.3)
 				jaws.dir = (victim.middle() - at).normalized()
 				jaws.age = -i * Feel.num("styles", "bite_stagger_seconds", 0.07)
+				var snap := _blast("fire", victim.middle(), 460 * s, true, jaws.dir, false)
+				if not snap.is_empty():
+					snap.age = jaws.age
 		"pounce":
 			fx.burst("puff", to_screen(e.x, e.y), 5, 140.0, 0.4, 7.0, [Color(String(looks.get("pounce", "#ff9a2e"))), Color("#ffe0b0")], -20.0, 3.0)
+			_blast("fire", to_screen(e.x, e.y), 450 * s, false)
 			Sound.play("whoosh", -6.0, 0.1)
 		"spray":
 			var toward := to_screen(e.tx, e.ty) - Vector2(0, 10)
 			var cone := fx.effect("cone", at, int(e.reach) * s, Color(String(looks.get("spray", "#d6e05a"))), 0.45)
+			_blast("stink", toward, int(e.reach) * s * 0.45, false)
 			cone.dir = (toward - at).normalized()
 			cone.spread = float(e.cone)
 			for i in 5:
@@ -1239,6 +1253,7 @@ func _show_style(e: Dictionary) -> void:
 		"pierce":
 			var beam := fx.effect("rainbow", at, 22.0, Color.WHITE, 0.4)
 			beam.end = to_screen(e.ex, e.ey) - Vector2(0, 12)
+			_blast("light", beam.end, 650 * s, true, (beam.end - at).normalized(), false)
 			Sound.play("zap", -8.0, 0.1)
 		"spit_charge":
 			Sound.play("tick", -10.0, 0.2)
@@ -1250,6 +1265,7 @@ func _show_style(e: Dictionary) -> void:
 			fx.effect("flash", hit_at, 420 * s, Color(white, 0.85), 0.2)
 			fx.effect("ring", hit_at, 700 * s, white, 0.3)
 			fx.effect("feathers", hit_at, 520 * s, Color("#d9c6a5"), 0.6)
+			_blast("wind", hit_at, 650 * s, false, Vector2.DOWN, false)
 			fx.burst("spark", hit_at, 8, 380.0, 0.3, 8.0, [white, Color("#fff6b0")], 0.0, 5.0)
 			shake(Feel.num("styles", "slam_shake", 0.14) * 0.7)
 			Sound.play("whoosh", -6.0, 0.1)
@@ -1259,6 +1275,7 @@ func _show_style(e: Dictionary) -> void:
 			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
 			var blue := Color(String(looks.get("crack", "#3d8bff")))
 			fx.effect("ring", hit_at, 520 * s, blue, 0.3)
+			_blast("lightning", hit_at, 450 * s, false, Vector2.UP, false)
 			fx.burst("spark", hit_at, 7, 260.0, 0.35, 7.0, [blue, Color.WHITE], 200.0, 3.0)
 			Sound.play("pop", -6.0, 0.3)
 		"grab":
@@ -1268,6 +1285,7 @@ func _show_style(e: Dictionary) -> void:
 			var claws := fx.effect("slash", hit_at, 760 * s, Color("#f2c14e"), 0.4)
 			claws.dir = Vector2.DOWN
 			fx.effect("feathers", hit_at, 480 * s, Color("#8a8f99"), 0.6)
+			_blast("wind", hit_at, 450 * s, false, Vector2.DOWN, false)
 			fx.burst("puff", to_screen(e.x, e.y), 5, 140.0, 0.4, 8.0, [Color("#c9b08a"), Color("#e6d3b0")], -20.0, 2.5)
 			Sound.play("whoosh", -4.0, 0.1)
 		"drop":
@@ -1275,6 +1293,7 @@ func _show_style(e: Dictionary) -> void:
 			var ground := to_screen(e.x, e.y)
 			fx.effect("dust", ground, 1000 * s, Color(String(looks.get("charge_dust", "#c9b08a"))), 0.5, "", true)
 			fx.effect("ring", ground, 800 * s, Color("#f3e3c0"), 0.4, "", true)
+			_blast("earth", ground, 850 * s, true)
 			shake(Feel.num("styles", "slam_shake", 0.14))
 			Sound.play("land", -2.0, 0.1)
 		"feast":
@@ -1283,6 +1302,9 @@ func _show_style(e: Dictionary) -> void:
 			wisp.end = at
 			var swell := fx.effect("ring", at, 700 * s, Color(String(looks.get("feast", "#b48cff"))), 0.35)
 			swell.age = -Feel.num("styles", "feast_seconds", 0.45)
+			var gulp := _blast("dark", at, 520 * s, false, Vector2.UP, false)
+			if not gulp.is_empty():
+				gulp.age = swell.age
 			Sound.play("heal", -10.0, 0.2)
 		"fire_line":
 			# The Dragon's fire-breath run: a line of fire along the ground,
@@ -1291,6 +1313,9 @@ func _show_style(e: Dictionary) -> void:
 			line.end = to_screen(e.x2, e.y2)
 			line.reveal = Feel.num("styles", "fire_reveal_seconds", 0.35)
 			line.flame = Color(String(looks.get("flame", "#ffc23a")))
+			var scorch := _blast("fire", line.end, 750 * s, true)
+			if not scorch.is_empty():
+				scorch.age = -float(line.reveal)
 			Sound.play("whoosh", -2.0, 0.05)
 		"dig":
 			# The Fox digs down again: a spray of earth.
@@ -1298,12 +1323,14 @@ func _show_style(e: Dictionary) -> void:
 			fx.effect("dust", ground, 900 * s, Color("#b49a78"), 0.55, "", true)
 			fx.burst("puff", ground, 6, 120.0, 0.45, 9.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 120.0)
 			Sound.play("land", -6.0, 0.15)
+			_blast("earth", ground, 600 * s, false)
 		"flip":
 			# The Pangolin bursts up under a Tank and flips it.
 			var target := view_for_uid(int(e.to))
 			var hit_at := target.middle() if target != null else to_screen(e.x, e.y)
 			fx.effect("dust", to_screen(e.x, e.y), 1300 * s, Color("#b49a78"), 0.6, "", true)
 			fx.effect("flash", hit_at, 420 * s, Color(1, 1, 1, 0.8), 0.2)
+			_blast("earth", to_screen(e.x, e.y), 1000 * s, true)
 			fx.burst("puff", to_screen(e.x, e.y), 8, 200.0, 0.5, 10.0, [Color("#c9b08a"), Color("#e6d3b0")], 160.0, 2.0, 160.0)
 			shake(Feel.num("styles", "slam_shake", 0.14))
 			Sound.play("boom", -6.0, 0.1)
@@ -1317,6 +1344,7 @@ func _show_style(e: Dictionary) -> void:
 			# The Seal flops onto its belly and slides: a spray of water.
 			var water := Color(String(looks.get("water", "#9fdcff")))
 			fx.effect("ring", to_screen(e.x, e.y), 700 * s, water, 0.35, "", true)
+			_blast("water", to_screen(e.x, e.y), 550 * s, false)
 			fx.burst("puff", at, 6, 160.0, 0.45, 8.0, [water, Color.WHITE], 220.0, 2.0, 140.0)
 			Sound.play("whoosh", -4.0, 0.1)
 		"slide_end":
@@ -1332,6 +1360,9 @@ func _show_style(e: Dictionary) -> void:
 				arm.age = -i * Feel.num("styles", "tentacle_stagger_seconds", 0.08)
 				var slam := fx.effect("ring", spot, 900 * s, Color(String(looks.get("water", "#9fdcff"))), 0.4, "", true)
 				slam.age = arm.age - 0.15
+				var splash := _blast("water", spot, 750 * s, true)
+				if not splash.is_empty():
+					splash.age = slam.age
 			shake(Feel.num("styles", "slam_shake", 0.14))
 			Sound.play("boom", -8.0, 0.1)
 		"chain":
@@ -1345,6 +1376,7 @@ func _show_style(e: Dictionary) -> void:
 			bolt.points = points
 			for i in range(1, points.size()):
 				fx.effect("flash", points[i], 300 * s, Color(1, 1, 0.8, 0.8), 0.18)
+				_blast("lightning", points[i], 360 * s, false, Vector2.UP, false)
 			Sound.play("zap", -4.0, 0.1)
 		"chest_beat":
 			# Beating its chest: thumps rippling out.
@@ -1352,12 +1384,14 @@ func _show_style(e: Dictionary) -> void:
 				var thump := fx.effect("ring", at, 500 * s, Color(String(looks.get("shock", "#f3e3c0"))), 0.25)
 				thump.age = -i * 0.15
 			Sound.play("tick", -2.0, 0.1)
+			_blast("earth", at, 420 * s, false, Vector2.UP, false)
 		"shockwave":
 			var ground := to_screen(e.x, e.y)
 			var shock := Color(String(looks.get("shock", "#f3e3c0")))
 			fx.effect("ring", ground, e.radius * s, shock, 0.55, "", true)
 			fx.effect("ring", ground, e.radius * s * 0.7, Color.WHITE, 0.4, "", true)
 			fx.effect("dust", ground, e.radius * s * 0.8, Color("#c9b08a"), 0.6, "", true)
+			_blast("earth", ground, e.radius * s * 0.85, true)
 			shake(Feel.num("styles", "shock_shake", 0.22))
 			Sound.play("boom", -2.0, 0.1)
 		"frost":
@@ -1375,6 +1409,7 @@ func _show_style(e: Dictionary) -> void:
 			# A knockout lights one of Cerberus's heads.
 			var fire := Color(String(looks.get("fire", "#ff6a2a")))
 			fx.burst("spark", at - Vector2(0, 12), 8, 200.0, 0.45, 8.0, [fire, Color(String(looks.get("flame", "#ffc23a")))], -60.0, 3.0)
+			_blast("fire", at - Vector2(0, 12), 420 * s, false, Vector2.UP, false)
 			Sound.play("whoosh", -8.0, 0.2)
 		"fire_breath":
 			# A cone of fire from Cerberus's lit head.
@@ -1388,6 +1423,7 @@ func _show_style(e: Dictionary) -> void:
 			var inner := fx.effect("cone", at, int(e.reach) * s * 0.7, flame, breath * 0.8)
 			inner.dir = cone.dir
 			inner.spread = float(e.cone) * 0.6
+			_blast("fire", toward, int(e.reach) * s * 0.4, true)
 			for i in 8:
 				var u := (i + 1) / 9.0
 				fx.particle("spark", at.lerp(toward, u), cone.dir.rotated(randf_range(-0.4, 0.4)) * 160.0, 0.5, 9.0, flame if i % 2 == 0 else fire, -60.0, 2.0)
@@ -1398,6 +1434,7 @@ func _show_style(e: Dictionary) -> void:
 			if v != null and int(e.amount) > 0:
 				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key)
 				fx.burst("sparkle", at, 6, 140.0, 0.6, 7.0, [Color(String(looks.get("heal_sparkle", "#9dffb0"))), Color.WHITE, Color("#fff176")], -50.0, 2.5)
+				_blast("light", at, 360 * s, false, Vector2.UP, false)
 		"scared":
 			# Panicked by the fire: a "!" and a hop out of it.
 			if v != null:
@@ -1410,6 +1447,7 @@ func _show_style(e: Dictionary) -> void:
 			# Over the animals (the Kraken's big body would hide it on the ground).
 			var cloud := fx.effect("ink_cloud", to_screen(e.x, e.y), e.radius * s, ink, float(e.seconds))
 			cloud.puffs = int(looks.get("ink_puffs", 7))
+			_blast("dark", to_screen(e.x, e.y), e.radius * s * 0.6, true, Vector2.UP, false)
 			fx.burst("puff", to_screen(e.x, e.y), 8, 180.0, 0.5, 11.0, [ink, ink.lightened(0.2)], 0.0, 3.0)
 			Sound.play("pop", -6.0, 0.3)
 		"blind_miss":
@@ -1419,6 +1457,7 @@ func _show_style(e: Dictionary) -> void:
 		"stand_tall":
 			var orange := Color(String(looks.get("panda", "#ff8a3d")))
 			fx.effect("ring", to_screen(e.x, e.y), e.radius * s, orange, 0.6, "", true)
+			_blast("fire", at, 520 * s, false, Vector2.UP, false)
 			fx.burst("sparkle", at - Vector2(0, 14), 6, 160.0, 0.5, 7.0, [orange, Color.WHITE], -30.0, 2.5)
 			Sound.play("alert", -4.0, 0.1)
 
@@ -1593,6 +1632,42 @@ func _land(hit: Dictionary) -> void:
 
 
 ## A hit effect that fits how the attacker fights.
+## An impact in an element's look (feel.json "elements"; docs/ART_DIRECTION.md,
+## effects): the layers of a hit. A "blast" over the animals (a white-hot
+## core flash, the element's glow, a shockwave ring, the element's bits
+## flying out, pushed along `dir`), a burst of its particles, and (`ground`)
+## the fade it leaves on the ground, a "linger". `big` (a Mythic's, a slam):
+## two rings, twice the bits, longer, and a shake.
+func _blast(element: String, at: Vector2, radius: float, big: bool, dir := Vector2.UP, ground := true) -> Dictionary:
+	var el: Dictionary = GameData.feel.get("elements", {}).get(element, {})
+	if el.is_empty():
+		return {}
+	var glow := Color(String(el.get("glow", "#ffffff")))
+	var core := Color(String(el.get("core", "#ffffff")))
+	var life := Feel.num("elements", "blast_seconds_big" if big else "blast_seconds", 0.85 if big else 0.55)
+	var blast := fx.effect("blast", at, radius, glow, life)
+	blast.core = core
+	blast.dark = Color(String(el.get("dark", "#333333")))
+	blast.bits = String(el.get("bits", "spark"))
+	blast.count = Feel.count("elements", "blast_bits_big" if big else "blast_bits", 14 if big else 7)
+	if fx.crowded:
+		blast.count = maxi(3, int(blast.count) / 2)
+	blast.rings = Feel.count("elements", "blast_rings_big", 2) if big else 1
+	blast.dir = dir
+	var particle := String(el.get("particle", "spark"))
+	var rises := particle in ["spark", "sparkle", "glow"]
+	fx.burst(particle, at, 10 if big else 5, 240.0, 0.5, 8.0, [glow, core], -40.0 if rises else 120.0, 2.5)
+	var linger_seconds := Feel.num("elements", "linger_seconds", 1.2)
+	if ground and linger_seconds > 0.0:
+		var linger := fx.effect("linger", at, radius * (0.9 if big else 0.7), glow, linger_seconds * (1.5 if big else 1.0), "", true)
+		linger.dark = blast.dark
+		linger.bits = blast.bits
+		linger.age = -life * 0.5
+	if big:
+		shake(Feel.num("elements", "blast_shake", 0.08))
+	return blast
+
+
 func _impact(style: String, at: Vector2, dir: Vector2, s: float, big: bool) -> void:
 	var effect := {}
 	match style:
@@ -1609,6 +1684,9 @@ func _impact(style: String, at: Vector2, dir: Vector2, s: float, big: bool) -> v
 				shake(Feel.num("combat", "shake_stomp", 0.18))
 		"dive":
 			effect = fx.effect("feathers", at, 500 * s, Color("#f1ede4"), 0.5)
+	# And the layers every hit gets (feel.json "elements" impact): a small
+	# core flash, glow, ring and sparks; a big hit's is bigger.
+	_blast("impact", at, (520 if big else 340) * s, big, dir, false)
 	if not effect.is_empty():
 		effect.dir = dir
 

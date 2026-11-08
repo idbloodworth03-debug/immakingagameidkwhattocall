@@ -232,6 +232,7 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					p.sx = 1.08 + 0.08 * thump
 					p.sy = 1.1 - 0.05 * thump
 					p.lift = 3.0 * thump
+					_gather(dt, _color("charge_dust", "#c9b08a"), "puff", 0.12)
 			"stand_tall":
 				if int(f.memory.get("tall", 0)) > 0:
 					# Reared up tall on its back legs.
@@ -240,6 +241,25 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					p.lift = 6.0
 			"crawl":
 				_follow_zone(f)
+			"roar":
+				var sim := view.field.sim if view.field != null else null
+				var left := int(f.memory.get("roar_at", -1)) - (sim.tick if sim != null else 0)
+				if sim != null and left > 0 and left <= int(sim.tps * 0.6) and _fighting(f):
+					# Drawing breath for its next roar: chest swelling, gold
+					# gathering at its mouth.
+					state = "roar"
+					p.sx = 1.06
+					p.sy = 1.08
+					_gather(dt, _color("roar", "#ffc93c"), "sparkle", 0.72)
+			"pierce":
+				if view.attacking(now):
+					# Light gathering onto its horn before the beam.
+					p.tint = Color(1.0, 1.0, 1.0).lerp(_color("beam", "#fff0a0"), 0.2)
+					_gather(dt, _color("beam", "#fff0a0"), "sparkle", 1.05)
+			"tentacles":
+				if view.attacking(now):
+					# Water swirling up round it as its tentacles rise.
+					_gather(dt, _color("water", "#9fdcff"), "puff", 0.3)
 			"pound":
 				var every := maxi(1, int(f.sp("every", 3)))
 				if int(f.memory.get("pounds", 0)) % every == every - 1:
@@ -334,21 +354,23 @@ func _puffs(dt: float, particle: String, color: Color, spot: Vector2, vel: Vecto
 var _gather_in := 0.0
 
 
-## The build-up to the Yeti's pound: frost gathering on its fists, sparkles
-## drawn in from all round toward its hands and a glow swelling there
-## (feel.json "styles" gather_*).
-func _gather(dt: float, color: Color) -> void:
+## The build-up to a big move (docs/ART_DIRECTION.md, effects): the
+## element's particles drawn in from all round onto the animal (its fists,
+## its horn, its mouth: `height` up its body) and a glow swelling there; the
+## Yeti's frost before a pound, the Lion's gold before a roar, the Unicorn's
+## light at its horn before the beam (feel.json "styles" gather_*).
+func _gather(dt: float, color: Color, particle := "sparkle", height := -1.0) -> void:
 	_gather_in -= dt
 	if _gather_in > 0.0 or view.field == null:
 		return
 	_gather_in = _num("gather_every", 0.05)
 	var h := _height()
-	var hands := view.position + position + Vector2(0.0, -h * _num("gather_height", 0.5))
+	var hands := view.position + position + Vector2(0.0, -h * (height if height >= 0.0 else _num("gather_height", 0.5)))
 	var ring := h * _num("gather_radius", 0.7)
 	var a := randf() * TAU
 	var from := hands + Vector2(cos(a), sin(a) * 0.7) * ring
 	var life := 0.35
-	view.field.fx.particle("sparkle", from, (hands - from) / life, life, 6.0, color, 0.0, 0.0)
+	view.field.fx.particle(particle, from, (hands - from) / life, life, 6.0, color, 0.0, 0.0)
 	if randf() < 0.3:
 		view.field.fx.particle("glow", hands + Vector2(randf_range(-0.2, 0.2) * h, randf_range(-0.1, 0.1) * h), Vector2(0, -10), 0.3, 9.0, Color(color, 0.7), 0.0, 1.0)
 

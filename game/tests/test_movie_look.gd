@@ -128,7 +128,9 @@ const MOVIE := ["yeti", "komodo_dragon", "peregrine_falcon", "brown_bear", "gian
 	"asian_elephant", "black_rhino", "snapping_turtle",
 	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus",
 	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn",
-	"barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon"]
+	"barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon",
+	"electric_eel", "harbor_seal", "red_fox", "mountain_gorilla", "red_panda", "pygmy_three_toed_sloth",
+	"sunda_pangolin", "kraken"]
 
 
 func test_every_movie_look_animal_gets_the_movie_shader() -> void:
@@ -147,17 +149,22 @@ func test_every_movie_look_animal_gets_the_movie_shader() -> void:
 		cleanup()
 
 
-func test_the_other_animals_keep_the_cartoon_look() -> void:
-	var viewer := _viewer("red_fox")
-	if viewer.model() == null:
-		check(false, "the model loaded")
-		return
-	check(not ModelStage.is_movie(viewer.model()), "the fox is not on the movie look yet")
-	var mesh := viewer.model().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
-	check_eq(_shader_name(mesh.material_override), "model_skin.gdshader", "drawn with the cartoon shader")
-	check((mesh.material_override as ShaderMaterial).next_pass != null, "with its outline")
-	var m := ModelStage.new_model("red_fox", 1.5)
-	if m != null:
-		_made.append(m.pivot)
-		check(not m.movie, "and the cartoon look in battle")
-		check_eq(_shader_name(m.skin), "model_skin.gdshader", "with the cartoon shader")
+## Every animal in the roster is on the movie look now; a model is told to
+## be on it by its mesh's name (<id>_movie), so an older model without the
+## suffix would still get the cartoon look.
+func test_the_movie_look_is_told_by_the_mesh_name() -> void:
+	var plain := Node3D.new()
+	var mesh := MeshInstance3D.new()
+	mesh.name = "red_fox"
+	plain.add_child(mesh)
+	_made.append(plain)
+	check(not ModelStage.is_movie(plain), "a mesh without the suffix is the cartoon look")
+	var movie := Node3D.new()
+	var movie_mesh := MeshInstance3D.new()
+	movie_mesh.name = "red_fox_movie"
+	movie.add_child(movie_mesh)
+	_made.append(movie)
+	check(ModelStage.is_movie(movie), "a mesh named <id>_movie is the movie look")
+	for id in GameData.cards:
+		if not GameData.is_tool(id):
+			check(MOVIE.has(id), "%s is on the movie look" % id)

@@ -231,6 +231,18 @@ belly, orange spikes, golden horns and glassy pale-green wings. The birds
 wear feather cards sized to each bird (an eagle's twice a falcon's); the
 Dragon, like the Komodo Dragon, is scales and carries no locks.
 
+**The Specialists closed the rollout** (batch 5): the Electric Eel in
+smooth slate-blue skin with an orange throat; the Harbor Seal in smooth
+spotted blue-gray with a pale belly; the Red Fox in a bold orange-red
+coat with a white ruff and a big brushy tail; the Mountain Gorilla in
+long near-black fur with the silver saddle, a bare face, chest and hands
+with fingers; the Red Panda fluffy rust-orange with its white face
+markings and ringed tail; the Pygmy Three-toed Sloth in shaggy tan fur
+tinted moss green, with its smiling face and long claws; the Sunda
+Pangolin in big overlapping golden-brown scales (surface "scales" with
+large cells); and the Kraken, a smooth coral-red octopus with huge eyes
+and pale suckers. Every animal in the roster is now on the movie look.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

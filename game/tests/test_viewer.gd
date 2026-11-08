@@ -59,8 +59,11 @@ func test_the_model_loads_fits_and_idles() -> void:
 	var meshes := viewer.model().find_children("*", "MeshInstance3D", true, false)
 	check(not meshes.is_empty(), "it has a mesh")
 	var mesh := meshes[0] as MeshInstance3D
-	check(mesh.material_override is ShaderMaterial, "drawn with the cartoon shader")
-	check((mesh.material_override as ShaderMaterial).next_pass != null, "with an outline")
+	check(mesh.material_override is ShaderMaterial, "drawn with the animal shader")
+	if ModelStage.is_movie(viewer.model()):
+		check((mesh.material_override as ShaderMaterial).next_pass == null, "the movie look has no outline in the viewer")
+	else:
+		check((mesh.material_override as ShaderMaterial).next_pass != null, "with an outline")
 	var box := mesh.get_aabb()
 	var biggest := maxf(box.size.x, maxf(box.size.y, box.size.z)) * viewer.model().scale.x
 	check(absf(biggest - float(GameData.viewer.view.model_size)) < 0.05, "scaled to the viewer's size (%.2f)" % biggest)

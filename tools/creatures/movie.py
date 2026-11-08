@@ -768,7 +768,7 @@ def lock_geometry(c, mesh, colors, lod):
             break
     comb = np.asarray(c.design["fur"]["comb"], float)
     comb /= np.linalg.norm(comb)
-    deep, white = (_hex(col["fur_deep"]) if "fur_deep" in col else np.zeros(3)), np.ones(3)
+    deep = _hex(col["fur_deep"]) if "fur_deep" in col else np.zeros(3)
     sides, rings = int(k["sides"]), int(k["rings"])
     out_v, out_f, out_c, out_uv, out_uv2, out_root = [], [], [], [], [], []
     for i in chosen:
@@ -791,7 +791,9 @@ def lock_geometry(c, mesh, colors, lod):
         p2 = p1 + (t - n * k.get("hug", 0.0)) * L * 0.5
         base = np.asarray(colors[i], float)
         root_c = base * (1 - k["root_darken"]) + deep * k["root_darken"]
-        tip_c = base * (1 - k["tip_lighten"]) + white * k["tip_lighten"]
+        # The tip brighter in its own hue (toward white, a brown coat turns
+        # into pale flecks; a white one shows no difference either way).
+        tip_c = np.clip(base * (1 + 0.8 * k["tip_lighten"]), 0, 1)
         vary = 1 + rng.normal(0, k["variation"])
         rnd = float(rng.random())
         start = len(out_v)

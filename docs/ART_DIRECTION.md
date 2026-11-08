@@ -184,10 +184,15 @@ Snapping Turtle with a mossy plated shell (the shell material on the
 shell's faces, the painted scute lines kept) over scaly skin. All keep
 their own markings, re-colored into the bold palette (movie.json "paint":
 "species" with a palette swap). Their models carry fur locks only where
-there is fur (the Bear and Panda: 34k triangles in the viewer and 5.6k in
-battle, from 21k and 3.3k); the skin animals grew only by their toes and
-tusks (4.2k in battle, from 3.3k) and the Turtle not at all. The other
-animals keep the flat cartoon look below until they move over.
+there is fur (the Bear and Panda: about 1,000 fine overlapping locks, 51k
+triangles in the viewer and 6.4k in battle, from 21k and 3.3k; the
+viewer shows one animal at a time, so that is the one place the budget
+is spent); the skin animals grew only by their toes and tusks (4.2k in
+battle, from 3.3k) and the Turtle not at all. The lock tips brighten in
+their own hue, never toward white: on a brown or black coat, white-mixed
+tips read as pale flecks, and short sparse locks read as bumps; a coat
+reads as fur when the locks are long, flat, overlapping and dense. The
+other animals keep the flat cartoon look below until they move over.
 
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and

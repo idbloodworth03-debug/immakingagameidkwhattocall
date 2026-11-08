@@ -1,433 +1,1306 @@
 {
-  "_note": "The 3D animal viewer (Animals tab: tap an animal). view: the 3D window's share of the screen height, its sharpness (render_scale_max: at most this many real pixels per layout pixel), antialiasing (msaa 2 or 4), the camera (fov, pitch and pitch_range in degrees, distance and distance_range in model units, target_height as a share of the animal's height, moving up to zoom_target_height, toward the face, as you zoom all the way in), model_size (the animal's biggest side, in the same units), start_yaw (degrees; 180 faces you), spin_per_pixel and tilt_per_pixel (degrees per finger pixel), spin_friction (how fast a flick slows), tap_pixels and tap_seconds (what counts as a tap), fidget_every (seconds between little idle moments), hint_seconds (how long the how-to hint stays). look: shading for the animal and scenery (key_dir: toward the light, in view space; shade_color multiplies the shaded side; soft: how gently light turns to shade; rim, highlight, vibrance), the outline (outline_px at one real pixel per layout pixel, scaled with the sharpness), the shadow under the animal, and the tap flash. reactions: what a tap plays, in turn (missing ones are skipped). platform: the round stage. habitats: each one's sky (top, bottom), stage (ground, side), named colors, props ([kind, x, z, size, color name, turn in degrees]; x across, z toward you, the animal stands at 0, 0; keep them behind or to the sides), far (the same, far behind), water (a pond or sea round the stage) and drift (little things floating by: snow, pollen, leaves, bubbles, fireflies). movie_look: animals with the movie look (tools/creatures/movie.py; their model's mesh is named <id>_movie) get their own shader (scripts/fx/model_movie.gdshader) lit like the card portraits: a warm key light (key_dir toward it in view space, its color and strength, how far it wraps round the form), a cool fill from the other side, a sky-to-ground ambient so shadows keep their color, a rim of light round the edge, a soft highlight; their fur locks show strands (how many round a lock, how deep the grooves, a soft sheen), their sides in soft shadow (lock_edge) of a cool color (lock_shadow) and less of the rim light than the body's edge (lock_rim), that fade out before they get small enough to shimmer; feather cards (the Peregrine Falcon) are darker at the base (feather_base), lighter at the edge (feather_edge) with a pale shaft (feather_shaft); scaly skin (the Komodo Dragon) shows its scale cells, drawn from the model's own shape (scale_groove: how dark the grooves, scale_dome: how much each scale domes, scale_shadow: the grooves' color); their eyes have a colored iris (its size on the eyeball, the pupil's share of it) and a catchlight (where, how big). They have no outline in the viewer (the rim light separates them from the background, as in the portraits); in battle they keep the dark line and team band. lock_outline_push: in battle, how far back (view units) the dark line and team band round its fur locks are pushed, so they only show round the animal's edge, not round every lock on its body. lid_colors: each one's eyelid color (its face skin).",
-  "view": {
-    "height_share": 0.5,
-    "render_scale_max": 2.0,
-    "msaa": 4,
-    "fov": 30.0,
-    "pitch": 13.0,
-    "pitch_range": [3.0, 34.0],
-    "distance": 4.2,
-    "distance_range": [2.7, 7.0],
-    "target_height": 0.42,
-    "zoom_target_height": 0.68,
-    "model_size": 1.4,
-    "start_yaw": 150.0,
-    "spin_per_pixel": 0.55,
-    "tilt_per_pixel": 0.12,
-    "spin_friction": 5.0,
-    "tap_pixels": 16.0,
-    "tap_seconds": 0.35,
-    "fidget_every": [6.0, 10.0],
-    "hint_seconds": 5.0,
-    "zoom_per_wheel": 0.08
-  },
-  "look": {
-    "key_dir": [-0.45, 0.72, 0.55],
-    "key_color": "#fff6ea",
-    "shade_color": "#a097bd",
-    "soft": 0.5,
-    "rim": 0.2,
-    "rim_width": 0.28,
-    "rim_color": "#fff8ec",
-    "highlight": 0.14,
-    "vibrance": 0.12,
-    "outline_px": 1.8,
-    "outline_color": "#140c09",
-    "prop_outline_px": 1.3,
-    "shadow": 0.38,
-    "shadow_color": "#1a2238",
-    "flash": 0.35,
-    "flash_seconds": 0.25,
-    "silhouette_color": "#1d2f5e",
-    "silhouette_outline": "#0a1430",
-    "bounce": 0.08
-  },
-  "movie_look": {
-    "key_dir": [-0.45, 0.7, 0.55],
-    "key_color": "#fff6ea",
-    "key": 0.95,
-    "wrap": 0.55,
-    "fill_dir": [0.75, 0.15, 0.45],
-    "fill_color": "#b8cdff",
-    "fill": 0.3,
-    "sky_color": "#d2e0ff",
-    "ground_color": "#8f8299",
-    "ambient": 0.42,
-    "rim": 0.32,
-    "rim_width": 0.32,
-    "rim_color": "#f4f8ff",
-    "highlight": 0.1,
-    "vibrance": 0.1,
-    "strands": 12.0,
-    "strand_depth": 0.5,
-    "lock_sheen": 0.08,
-    "lock_edge": 0.55,
-    "lock_rim": 0.35,
-    "lock_shadow": "#7fa8f0",
-    "feather_base": 0.3,
-    "feather_edge": 0.25,
-    "feather_shaft": 0.2,
-    "scale_groove": 0.6,
-    "scale_dome": 0.22,
-    "scale_shadow": "#5a8f4d",
-    "eye_white": "#f8f6ef",
-    "pupil_color": "#05060a",
-    "iris_size": 0.66,
-    "pupil_share": 0.5,
-    "catchlight": [-0.2, 0.24],
-    "catchlight_size": 0.15,
-    "lock_outline_push": 0.25,
-    "lid_colors": {"yeti": "#4f9fe8"}
-  },
-  "reactions": ["fidget", "attack", "victory", "special"],
-  "platform": {
-    "radius": 1.15,
-    "height": 0.2,
-    "lip": 0.035
-  },
-  "habitats": {
-    "forest": {
-      "sky": ["#7cc8ff", "#dff3ff"],
-      "ground": "#6cc04a",
-      "side": "#8a5a32",
-      "colors": {
-        "leaf": "#2f8f3c",
-        "leaf2": "#4fb548",
-        "trunk": "#7a4a26",
-        "rock": "#9aa3ad",
-        "cap": "#e84a3c",
-        "dot": "#fff4e0",
-        "flower": "#ffd23f",
-        "hill": "#4f9e3a",
-        "hill2": "#63b34a"
-      },
-      "props": [
-        ["pine", -0.92, -0.55, 0.8, "leaf", 0],
-        ["pine", 0.95, -0.5, 0.65, "leaf2", 20],
-        ["round_tree", 0.62, -0.92, 0.62, "leaf2", 0],
-        ["bush", -0.55, -0.92, 0.42, "leaf", 0],
-        ["rock", 0.9, 0.35, 0.3, "rock", 30],
-        ["mushroom", -0.92, 0.22, 0.3, "cap", 0],
-        ["mushroom", -0.78, 0.42, 0.2, "cap", 40],
-        ["grass", 0.3, -0.98, 0.32, "leaf2", 0],
-        ["grass", -0.2, -1.0, 0.3, "leaf2", 0],
-        ["flower", 1.0, 0.05, 0.26, "flower", 0],
-        ["flower", -1.0, -0.1, 0.24, "flower", 0]
-      ],
-      "far": [
-        ["hill", -4.5, -10.0, 7.0, "hill", 0],
-        ["hill", 4.8, -11.0, 8.0, "hill2", 0],
-        ["pine", -2.8, -7.0, 2.0, "leaf", 0],
-        ["pine", 3.0, -7.5, 2.4, "leaf", 0],
-        ["pine", 1.6, -8.5, 1.8, "leaf2", 0],
-        ["pine", -1.4, -9.0, 2.2, "leaf2", 0],
-        ["pine", 4.2, -6.5, 1.6, "leaf2", 0],
-        ["pine", -4.0, -6.8, 1.8, "leaf", 0]
-      ],
-      "drift": {
-        "kind": "leaves",
-        "colors": ["#ffb53a", "#7fd04a", "#ff7a2f"],
-        "amount": 14
-      }
-    },
-    "rainforest": {
-      "sky": ["#4cc0a0", "#d8fff0"],
-      "ground": "#3fae4f",
-      "side": "#6e4426",
-      "colors": {
-        "leaf": "#1f8a46",
-        "leaf2": "#35c46a",
-        "trunk": "#6b4424",
-        "rock": "#7f8f86",
-        "flower": "#ff4f9a",
-        "flower2": "#ffb21f",
-        "vine": "#2a9a4a",
-        "hill": "#178a4a",
-        "hill2": "#26a85a"
-      },
-      "props": [
-        ["frond", -0.85, -0.6, 0.85, "leaf2", -30],
-        ["frond", 0.88, -0.55, 0.8, "leaf", 35],
-        ["palm", -0.8, -1.0, 1.05, "leaf2", 0],
-        ["palm", 0.82, -0.98, 0.95, "leaf", 60],
-        ["flower", -0.98, 0.15, 0.32, "flower", 0],
-        ["flower", 0.98, 0.1, 0.3, "flower2", 0],
-        ["bush", 0.12, -1.02, 0.34, "leaf", 0],
-        ["rock", -0.75, 0.48, 0.24, "rock", 10],
-        ["grass", 0.8, 0.44, 0.3, "leaf2", 0]
-      ],
-      "far": [
-        ["round_tree", -4.0, -11.0, 2.8, "hill", 0],
-        ["round_tree", 3.8, -11.5, 3.0, "hill2", 0],
-        ["palm", 2.2, -9.0, 1.7, "leaf", 20],
-        ["palm", -2.3, -9.4, 1.6, "leaf2", -40],
-        ["round_tree", 0.3, -13.0, 3.2, "hill", 0],
-        ["round_tree", -6.0, -10.0, 2.4, "hill2", 0],
-        ["round_tree", 6.2, -10.2, 2.6, "hill", 0]
-      ],
-      "drift": {
-        "kind": "fireflies",
-        "colors": ["#fff36a", "#c8ff6a"],
-        "amount": 16
-      }
-    },
-    "savanna": {
-      "sky": ["#ffb35c", "#fff0c8"],
-      "ground": "#e6b84a",
-      "side": "#a8693a",
-      "colors": {
-        "leaf": "#6f9e2a",
-        "trunk": "#6e4a2a",
-        "rock": "#b8865a",
-        "grass": "#f2cf5c",
-        "grass2": "#d9a83a",
-        "hill": "#d99a4a",
-        "hill2": "#c9883f",
-        "sun": "#fff3b0"
-      },
-      "props": [
-        ["acacia", 0.82, -0.85, 1.0, "leaf", 0],
-        ["grass", -0.85, -0.55, 0.48, "grass", 0],
-        ["grass", -0.4, -1.0, 0.38, "grass2", 0],
-        ["grass", 0.98, -0.15, 0.4, "grass2", 0],
-        ["rock", -0.9, 0.28, 0.34, "rock", 20],
-        ["rock", -0.7, 0.52, 0.2, "rock", 70],
-        ["grass", 0.82, 0.42, 0.3, "grass", 0]
-      ],
-      "far": [
-        ["sun", 2.8, -12.0, 2.0, "sun", 0],
-        ["hill", -4.5, -10.5, 6.5, "hill", 0],
-        ["hill", 4.0, -11.5, 6.0, "hill2", 0],
-        ["acacia", -2.8, -7.0, 2.0, "leaf", 0],
-        ["acacia", 3.2, -8.0, 1.6, "leaf", 0]
-      ],
-      "drift": {
-        "kind": "pollen",
-        "colors": ["#fff3b0", "#ffd36a"],
-        "amount": 14
-      }
-    },
-    "ocean": {
-      "sky": ["#5ab4ff", "#e2f6ff"],
-      "ground": "#f2dc9c",
-      "side": "#c9a86a",
-      "colors": {
-        "rock": "#7f8c99",
-        "shell": "#ffb3a8",
-        "star": "#ff7a3a",
-        "weed": "#2fae7a",
-        "water": "#1f8be0",
-        "shine": "#a8e4ff",
-        "palm": "#3fae4a",
-        "trunk": "#a87a4a"
-      },
-      "props": [
-        ["rock", -0.85, -0.6, 0.46, "rock", 0],
-        ["rock", -0.55, -0.95, 0.28, "rock", 40],
-        ["palm", 0.85, -0.85, 1.0, "palm", 30],
-        ["shell", 0.92, 0.28, 0.22, "shell", 30],
-        ["starfish", -0.92, 0.32, 0.24, "star", 15],
-        ["weed", 0.98, -0.2, 0.4, "weed", 0],
-        ["weed", -0.25, -1.02, 0.3, "weed", 0]
-      ],
-      "far": [
-        ["rock", -3.6, -8.5, 1.6, "rock", 0],
-        ["rock", 4.0, -9.5, 2.0, "rock", 30],
-        ["rock", 0.6, -12.0, 1.2, "rock", 10]
-      ],
-      "water": {
-        "color": "water",
-        "shine": "shine",
-        "radius": 14.0
-      },
-      "drift": {
-        "kind": "bubbles",
-        "colors": ["#e8fbff"],
-        "amount": 12
-      }
-    },
-    "arctic": {
-      "sky": ["#8fd0ff", "#f0fbff"],
-      "ground": "#f4fbff",
-      "side": "#a9d3ee",
-      "colors": {
-        "ice": "#b8e8ff",
-        "ice2": "#8fd3f5",
-        "snow": "#ffffff",
-        "rock": "#8a98a8",
-        "hill": "#e3f4ff",
-        "hill2": "#cfeaff"
-      },
-      "props": [
-        ["ice", -0.85, -0.6, 0.48, "ice", 20],
-        ["ice", -0.5, -0.98, 0.32, "ice2", -15],
-        ["ice", 0.88, -0.5, 0.42, "ice2", 40],
-        ["snow", 0.35, -1.02, 0.42, "snow", 0],
-        ["snow", -0.98, 0.22, 0.3, "snow", 0],
-        ["rock", 0.94, 0.28, 0.24, "rock", 0],
-        ["icicle", 0.72, -0.85, 0.5, "ice", 0]
-      ],
-      "far": [
-        ["peak", -3.6, -11.0, 3.6, "hill", 0],
-        ["peak", 3.2, -12.0, 4.4, "hill2", 0],
-        ["peak", 0.0, -14.0, 4.8, "hill", 0],
-        ["snow", -2.4, -6.5, 1.4, "snow", 0],
-        ["snow", 2.6, -7.0, 1.2, "snow", 0]
-      ],
-      "drift": {
-        "kind": "snow",
-        "colors": ["#ffffff"],
-        "amount": 22
-      }
-    },
-    "wetlands": {
-      "sky": ["#6cc8d8", "#e6fbf6"],
-      "ground": "#5fb85a",
-      "side": "#6e5232",
-      "colors": {
-        "reed": "#4f9a3a",
-        "cattail": "#7a4a26",
-        "lily": "#3fb048",
-        "flower": "#ff8ac0",
-        "rock": "#7d8a80",
-        "water": "#2a9e9a",
-        "shine": "#aef0e2",
-        "tree": "#2f8a4a",
-        "trunk": "#6b4a2a"
-      },
-      "props": [
-        ["reed", -0.85, -0.6, 0.8, "reed", 0],
-        ["reed", -0.62, -0.9, 0.68, "reed", 0],
-        ["reed", 0.9, -0.48, 0.78, "reed", 0],
-        ["round_tree", 0.82, -0.95, 0.75, "tree", 0],
-        ["rock", -0.92, 0.3, 0.26, "rock", 0],
-        ["lily", 1.45, 0.2, 0.35, "lily", 0],
-        ["lily", -1.5, -0.3, 0.3, "lily", 50],
-        ["flower", 1.0, 0.08, 0.25, "flower", 0]
-      ],
-      "far": [
-        ["round_tree", -3.6, -9.0, 2.6, "tree", 0],
-        ["round_tree", 3.6, -9.5, 3.0, "tree", 0],
-        ["reed", -2.0, -5.0, 1.4, "reed", 0],
-        ["reed", 2.2, -5.4, 1.3, "reed", 0]
-      ],
-      "water": {
-        "color": "water",
-        "shine": "shine",
-        "radius": 14.0
-      },
-      "drift": {
-        "kind": "fireflies",
-        "colors": ["#fff36a"],
-        "amount": 14
-      }
-    },
-    "mountains": {
-      "sky": ["#8a9cf0", "#eef0ff"],
-      "ground": "#8fc06a",
-      "side": "#7a6f84",
-      "colors": {
-        "rock": "#9a96a8",
-        "rock2": "#b4b0c2",
-        "snow": "#ffffff",
-        "leaf": "#3f8a52",
-        "trunk": "#6e4a2e",
-        "flower": "#c27aff",
-        "hill": "#a49ad0",
-        "hill2": "#8b80bf"
-      },
-      "props": [
-        ["boulder", -0.85, -0.62, 0.56, "rock", 0],
-        ["boulder", 0.9, -0.52, 0.46, "rock2", 40],
-        ["pine", 0.78, -0.95, 0.78, "leaf", 0],
-        ["pine", -0.95, -0.88, 0.62, "leaf", 30],
-        ["rock", 0.96, 0.28, 0.25, "rock2", 10],
-        ["flower", -0.98, 0.15, 0.26, "flower", 0],
-        ["grass", -0.2, -1.02, 0.28, "leaf", 0]
-      ],
-      "far": [
-        ["peak", -3.4, -10.5, 4.0, "hill", 0],
-        ["peak", 3.0, -11.5, 4.8, "hill2", 0],
-        ["peak", 0.0, -14.0, 5.4, "hill", 0]
-      ],
-      "drift": {
-        "kind": "snow",
-        "colors": ["#ffffff"],
-        "amount": 10
-      }
-    },
-    "plains": {
-      "sky": ["#78c4ff", "#f4fbe6"],
-      "ground": "#9fd05a",
-      "side": "#9a6a3a",
-      "colors": {
-        "grass": "#e8c85a",
-        "grass2": "#8cc44a",
-        "wood": "#a8743f",
-        "flower": "#ff6a5a",
-        "flower2": "#ffffff",
-        "rock": "#a8a090",
-        "hill": "#8cc44a",
-        "hill2": "#a8d45a",
-        "hay": "#f0c84a"
-      },
-      "props": [
-        ["fence", -0.55, -1.0, 0.6, "wood", 0],
-        ["fence", 0.35, -1.04, 0.6, "wood", 0],
-        ["grass", -0.92, -0.45, 0.45, "grass", 0],
-        ["grass", 0.92, -0.45, 0.45, "grass2", 0],
-        ["hay", 0.95, 0.22, 0.3, "hay", 20],
-        ["flower", -0.98, 0.15, 0.26, "flower", 0],
-        ["flower", -0.82, 0.42, 0.22, "flower2", 0],
-        ["rock", 0.75, 0.5, 0.18, "rock", 0]
-      ],
-      "far": [
-        ["hill", -4.6, -10.0, 7.0, "hill", 0],
-        ["hill", 4.6, -10.5, 7.5, "hill2", 0],
-        ["hill", 0.0, -13.0, 8.0, "hill", 0],
-        ["round_tree", 2.8, -7.0, 1.4, "grass2", 0]
-      ],
-      "drift": {
-        "kind": "pollen",
-        "colors": ["#ffffff", "#fff3b0"],
-        "amount": 12
-      }
-    },
-    "city": {
-      "sky": ["#ff9fb0", "#ffe8d6"],
-      "ground": "#9aa3b2",
-      "side": "#5d6676",
-      "colors": {
-        "building": "#5a6a9a",
-        "building2": "#7a6aa8",
-        "window": "#ffe28a",
-        "lamp": "#3a4256",
-        "light": "#fff2b0",
-        "bin": "#3fa85a",
-        "tree": "#4fae4a",
-        "trunk": "#6e4a2e",
-        "box": "#c9944a"
-      },
-      "props": [
-        ["lamp", -0.95, -0.72, 1.0, "lamp", 0],
-        ["bin", 0.95, -0.35, 0.4, "bin", 0],
-        ["box", 0.62, -0.95, 0.32, "box", 25],
-        ["box", 0.9, 0.32, 0.26, "box", -10],
-        ["round_tree", -0.62, -1.02, 0.6, "tree", 0]
-      ],
-      "far": [
-        ["building", -3.4, -10.0, 2.4, "building", 0],
-        ["building", -0.6, -12.0, 3.0, "building2", 0],
-        ["building", 2.4, -10.5, 2.6, "building", 0],
-        ["building", 4.8, -11.5, 2.2, "building2", 0],
-        ["building", -5.4, -11.0, 2.6, "building2", 0]
-      ],
-      "drift": {
-        "kind": "leaves",
-        "colors": ["#ffb3c8", "#ffffff"],
-        "amount": 10
-      }
-    }
+ "_note": "The 3D animal viewer (Animals tab: tap an animal). view: the 3D window's share of the screen height, its sharpness (render_scale_max: at most this many real pixels per layout pixel), antialiasing (msaa 2 or 4), the camera (fov, pitch and pitch_range in degrees, distance and distance_range in model units, target_height as a share of the animal's height, moving up to zoom_target_height, toward the face, as you zoom all the way in), model_size (the animal's biggest side, in the same units), start_yaw (degrees; 180 faces you), spin_per_pixel and tilt_per_pixel (degrees per finger pixel), spin_friction (how fast a flick slows), tap_pixels and tap_seconds (what counts as a tap), fidget_every (seconds between little idle moments), hint_seconds (how long the how-to hint stays). look: shading for the animal and scenery (key_dir: toward the light, in view space; shade_color multiplies the shaded side; soft: how gently light turns to shade; rim, highlight, vibrance), the outline (outline_px at one real pixel per layout pixel, scaled with the sharpness), the shadow under the animal, and the tap flash. reactions: what a tap plays, in turn (missing ones are skipped). platform: the round stage. habitats: each one's sky (top, bottom), stage (ground, side), named colors, props ([kind, x, z, size, color name, turn in degrees]; x across, z toward you, the animal stands at 0, 0; keep them behind or to the sides), far (the same, far behind), water (a pond or sea round the stage) and drift (little things floating by: snow, pollen, leaves, bubbles, fireflies). movie_look: animals with the movie look (tools/creatures/movie.py; their model's mesh is named <id>_movie) get their own shader (scripts/fx/model_movie.gdshader) lit like the card portraits: a warm key light (key_dir toward it in view space, its color and strength, how far it wraps round the form), a cool fill from the other side, a sky-to-ground ambient so shadows keep their color, a rim of light round the edge, a soft highlight; their fur locks show strands (how many round a lock, how deep the grooves, a soft sheen), their sides in soft shadow (lock_edge) of a cool color (lock_shadow) and less of the rim light than the body's edge (lock_rim), that fade out before they get small enough to shimmer; feather cards (the Peregrine Falcon) are darker at the base (feather_base), lighter at the edge (feather_edge) with a pale shaft (feather_shaft); scaly skin (the Komodo Dragon) shows its scale cells, drawn from the model's own shape (scale_groove: how dark the grooves, scale_dome: how much each scale domes, scale_shadow: the grooves' color); their eyes have a colored iris (its size on the eyeball, the pupil's share of it) and a catchlight (where, how big). They have no outline in the viewer (the rim light separates them from the background, as in the portraits); in battle they keep the dark line and team band. lock_outline_push: in battle, how far back (view units) the dark line and team band round its fur locks are pushed, so they only show round the animal's edge, not round every lock on its body. lid_colors: each one's eyelid color (its face skin).",
+ "view": {
+  "height_share": 0.5,
+  "render_scale_max": 2.0,
+  "msaa": 4,
+  "fov": 30.0,
+  "pitch": 13.0,
+  "pitch_range": [
+   3.0,
+   34.0
+  ],
+  "distance": 4.2,
+  "distance_range": [
+   2.7,
+   7.0
+  ],
+  "target_height": 0.42,
+  "zoom_target_height": 0.68,
+  "model_size": 1.4,
+  "start_yaw": 150.0,
+  "spin_per_pixel": 0.55,
+  "tilt_per_pixel": 0.12,
+  "spin_friction": 5.0,
+  "tap_pixels": 16.0,
+  "tap_seconds": 0.35,
+  "fidget_every": [
+   6.0,
+   10.0
+  ],
+  "hint_seconds": 5.0,
+  "zoom_per_wheel": 0.08
+ },
+ "look": {
+  "key_dir": [
+   -0.45,
+   0.72,
+   0.55
+  ],
+  "key_color": "#fff6ea",
+  "shade_color": "#a097bd",
+  "soft": 0.5,
+  "rim": 0.2,
+  "rim_width": 0.28,
+  "rim_color": "#fff8ec",
+  "highlight": 0.14,
+  "vibrance": 0.12,
+  "outline_px": 1.8,
+  "outline_color": "#140c09",
+  "prop_outline_px": 1.3,
+  "shadow": 0.38,
+  "shadow_color": "#1a2238",
+  "flash": 0.35,
+  "flash_seconds": 0.25,
+  "silhouette_color": "#1d2f5e",
+  "silhouette_outline": "#0a1430",
+  "bounce": 0.08
+ },
+ "movie_look": {
+  "key_dir": [
+   -0.45,
+   0.7,
+   0.55
+  ],
+  "key_color": "#fff6ea",
+  "key": 0.95,
+  "wrap": 0.55,
+  "fill_dir": [
+   0.75,
+   0.15,
+   0.45
+  ],
+  "fill_color": "#b8cdff",
+  "fill": 0.3,
+  "sky_color": "#d2e0ff",
+  "ground_color": "#8f8299",
+  "ambient": 0.42,
+  "rim": 0.32,
+  "rim_width": 0.32,
+  "rim_color": "#f4f8ff",
+  "highlight": 0.1,
+  "vibrance": 0.1,
+  "strands": 12.0,
+  "strand_depth": 0.5,
+  "lock_sheen": 0.08,
+  "lock_edge": 0.4,
+  "lock_rim": 0.35,
+  "lock_shadow": "#8fb0e8",
+  "feather_base": 0.3,
+  "feather_edge": 0.25,
+  "feather_shaft": 0.2,
+  "scale_groove": 0.6,
+  "scale_dome": 0.22,
+  "scale_shadow": "#5a8f4d",
+  "eye_white": "#f8f6ef",
+  "pupil_color": "#05060a",
+  "iris_size": 0.66,
+  "pupil_share": 0.5,
+  "catchlight": [
+   -0.2,
+   0.24
+  ],
+  "catchlight_size": 0.15,
+  "lock_outline_push": 0.25,
+  "lid_colors": {
+   "yeti": "#4f9fe8"
   }
+ },
+ "reactions": [
+  "fidget",
+  "attack",
+  "victory",
+  "special"
+ ],
+ "platform": {
+  "radius": 1.15,
+  "height": 0.2,
+  "lip": 0.035
+ },
+ "habitats": {
+  "forest": {
+   "sky": [
+    "#7cc8ff",
+    "#dff3ff"
+   ],
+   "ground": "#6cc04a",
+   "side": "#8a5a32",
+   "colors": {
+    "leaf": "#2f8f3c",
+    "leaf2": "#4fb548",
+    "trunk": "#7a4a26",
+    "rock": "#9aa3ad",
+    "cap": "#e84a3c",
+    "dot": "#fff4e0",
+    "flower": "#ffd23f",
+    "hill": "#4f9e3a",
+    "hill2": "#63b34a"
+   },
+   "props": [
+    [
+     "pine",
+     -0.92,
+     -0.55,
+     0.8,
+     "leaf",
+     0
+    ],
+    [
+     "pine",
+     0.95,
+     -0.5,
+     0.65,
+     "leaf2",
+     20
+    ],
+    [
+     "round_tree",
+     0.62,
+     -0.92,
+     0.62,
+     "leaf2",
+     0
+    ],
+    [
+     "bush",
+     -0.55,
+     -0.92,
+     0.42,
+     "leaf",
+     0
+    ],
+    [
+     "rock",
+     0.9,
+     0.35,
+     0.3,
+     "rock",
+     30
+    ],
+    [
+     "mushroom",
+     -0.92,
+     0.22,
+     0.3,
+     "cap",
+     0
+    ],
+    [
+     "mushroom",
+     -0.78,
+     0.42,
+     0.2,
+     "cap",
+     40
+    ],
+    [
+     "grass",
+     0.3,
+     -0.98,
+     0.32,
+     "leaf2",
+     0
+    ],
+    [
+     "grass",
+     -0.2,
+     -1.0,
+     0.3,
+     "leaf2",
+     0
+    ],
+    [
+     "flower",
+     1.0,
+     0.05,
+     0.26,
+     "flower",
+     0
+    ],
+    [
+     "flower",
+     -1.0,
+     -0.1,
+     0.24,
+     "flower",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "hill",
+     -4.5,
+     -10.0,
+     7.0,
+     "hill",
+     0
+    ],
+    [
+     "hill",
+     4.8,
+     -11.0,
+     8.0,
+     "hill2",
+     0
+    ],
+    [
+     "pine",
+     -2.8,
+     -7.0,
+     2.0,
+     "leaf",
+     0
+    ],
+    [
+     "pine",
+     3.0,
+     -7.5,
+     2.4,
+     "leaf",
+     0
+    ],
+    [
+     "pine",
+     1.6,
+     -8.5,
+     1.8,
+     "leaf2",
+     0
+    ],
+    [
+     "pine",
+     -1.4,
+     -9.0,
+     2.2,
+     "leaf2",
+     0
+    ],
+    [
+     "pine",
+     4.2,
+     -6.5,
+     1.6,
+     "leaf2",
+     0
+    ],
+    [
+     "pine",
+     -4.0,
+     -6.8,
+     1.8,
+     "leaf",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "leaves",
+    "colors": [
+     "#ffb53a",
+     "#7fd04a",
+     "#ff7a2f"
+    ],
+    "amount": 14
+   }
+  },
+  "rainforest": {
+   "sky": [
+    "#4cc0a0",
+    "#d8fff0"
+   ],
+   "ground": "#3fae4f",
+   "side": "#6e4426",
+   "colors": {
+    "leaf": "#1f8a46",
+    "leaf2": "#35c46a",
+    "trunk": "#6b4424",
+    "rock": "#7f8f86",
+    "flower": "#ff4f9a",
+    "flower2": "#ffb21f",
+    "vine": "#2a9a4a",
+    "hill": "#178a4a",
+    "hill2": "#26a85a"
+   },
+   "props": [
+    [
+     "frond",
+     -0.85,
+     -0.6,
+     0.85,
+     "leaf2",
+     -30
+    ],
+    [
+     "frond",
+     0.88,
+     -0.55,
+     0.8,
+     "leaf",
+     35
+    ],
+    [
+     "palm",
+     -0.8,
+     -1.0,
+     1.05,
+     "leaf2",
+     0
+    ],
+    [
+     "palm",
+     0.82,
+     -0.98,
+     0.95,
+     "leaf",
+     60
+    ],
+    [
+     "flower",
+     -0.98,
+     0.15,
+     0.32,
+     "flower",
+     0
+    ],
+    [
+     "flower",
+     0.98,
+     0.1,
+     0.3,
+     "flower2",
+     0
+    ],
+    [
+     "bush",
+     0.12,
+     -1.02,
+     0.34,
+     "leaf",
+     0
+    ],
+    [
+     "rock",
+     -0.75,
+     0.48,
+     0.24,
+     "rock",
+     10
+    ],
+    [
+     "grass",
+     0.8,
+     0.44,
+     0.3,
+     "leaf2",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "round_tree",
+     -4.0,
+     -11.0,
+     2.8,
+     "hill",
+     0
+    ],
+    [
+     "round_tree",
+     3.8,
+     -11.5,
+     3.0,
+     "hill2",
+     0
+    ],
+    [
+     "palm",
+     2.2,
+     -9.0,
+     1.7,
+     "leaf",
+     20
+    ],
+    [
+     "palm",
+     -2.3,
+     -9.4,
+     1.6,
+     "leaf2",
+     -40
+    ],
+    [
+     "round_tree",
+     0.3,
+     -13.0,
+     3.2,
+     "hill",
+     0
+    ],
+    [
+     "round_tree",
+     -6.0,
+     -10.0,
+     2.4,
+     "hill2",
+     0
+    ],
+    [
+     "round_tree",
+     6.2,
+     -10.2,
+     2.6,
+     "hill",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "fireflies",
+    "colors": [
+     "#fff36a",
+     "#c8ff6a"
+    ],
+    "amount": 16
+   }
+  },
+  "savanna": {
+   "sky": [
+    "#ffb35c",
+    "#fff0c8"
+   ],
+   "ground": "#e6b84a",
+   "side": "#a8693a",
+   "colors": {
+    "leaf": "#6f9e2a",
+    "trunk": "#6e4a2a",
+    "rock": "#b8865a",
+    "grass": "#f2cf5c",
+    "grass2": "#d9a83a",
+    "hill": "#d99a4a",
+    "hill2": "#c9883f",
+    "sun": "#fff3b0"
+   },
+   "props": [
+    [
+     "acacia",
+     0.82,
+     -0.85,
+     1.0,
+     "leaf",
+     0
+    ],
+    [
+     "grass",
+     -0.85,
+     -0.55,
+     0.48,
+     "grass",
+     0
+    ],
+    [
+     "grass",
+     -0.4,
+     -1.0,
+     0.38,
+     "grass2",
+     0
+    ],
+    [
+     "grass",
+     0.98,
+     -0.15,
+     0.4,
+     "grass2",
+     0
+    ],
+    [
+     "rock",
+     -0.9,
+     0.28,
+     0.34,
+     "rock",
+     20
+    ],
+    [
+     "rock",
+     -0.7,
+     0.52,
+     0.2,
+     "rock",
+     70
+    ],
+    [
+     "grass",
+     0.82,
+     0.42,
+     0.3,
+     "grass",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "sun",
+     2.8,
+     -12.0,
+     2.0,
+     "sun",
+     0
+    ],
+    [
+     "hill",
+     -4.5,
+     -10.5,
+     6.5,
+     "hill",
+     0
+    ],
+    [
+     "hill",
+     4.0,
+     -11.5,
+     6.0,
+     "hill2",
+     0
+    ],
+    [
+     "acacia",
+     -2.8,
+     -7.0,
+     2.0,
+     "leaf",
+     0
+    ],
+    [
+     "acacia",
+     3.2,
+     -8.0,
+     1.6,
+     "leaf",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "pollen",
+    "colors": [
+     "#fff3b0",
+     "#ffd36a"
+    ],
+    "amount": 14
+   }
+  },
+  "ocean": {
+   "sky": [
+    "#5ab4ff",
+    "#e2f6ff"
+   ],
+   "ground": "#f2dc9c",
+   "side": "#c9a86a",
+   "colors": {
+    "rock": "#7f8c99",
+    "shell": "#ffb3a8",
+    "star": "#ff7a3a",
+    "weed": "#2fae7a",
+    "water": "#1f8be0",
+    "shine": "#a8e4ff",
+    "palm": "#3fae4a",
+    "trunk": "#a87a4a"
+   },
+   "props": [
+    [
+     "rock",
+     -0.85,
+     -0.6,
+     0.46,
+     "rock",
+     0
+    ],
+    [
+     "rock",
+     -0.55,
+     -0.95,
+     0.28,
+     "rock",
+     40
+    ],
+    [
+     "palm",
+     0.85,
+     -0.85,
+     1.0,
+     "palm",
+     30
+    ],
+    [
+     "shell",
+     0.92,
+     0.28,
+     0.22,
+     "shell",
+     30
+    ],
+    [
+     "starfish",
+     -0.92,
+     0.32,
+     0.24,
+     "star",
+     15
+    ],
+    [
+     "weed",
+     0.98,
+     -0.2,
+     0.4,
+     "weed",
+     0
+    ],
+    [
+     "weed",
+     -0.25,
+     -1.02,
+     0.3,
+     "weed",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "rock",
+     -3.6,
+     -8.5,
+     1.6,
+     "rock",
+     0
+    ],
+    [
+     "rock",
+     4.0,
+     -9.5,
+     2.0,
+     "rock",
+     30
+    ],
+    [
+     "rock",
+     0.6,
+     -12.0,
+     1.2,
+     "rock",
+     10
+    ]
+   ],
+   "water": {
+    "color": "water",
+    "shine": "shine",
+    "radius": 14.0
+   },
+   "drift": {
+    "kind": "bubbles",
+    "colors": [
+     "#e8fbff"
+    ],
+    "amount": 12
+   }
+  },
+  "arctic": {
+   "sky": [
+    "#8fd0ff",
+    "#f0fbff"
+   ],
+   "ground": "#f4fbff",
+   "side": "#a9d3ee",
+   "colors": {
+    "ice": "#b8e8ff",
+    "ice2": "#8fd3f5",
+    "snow": "#ffffff",
+    "rock": "#8a98a8",
+    "hill": "#e3f4ff",
+    "hill2": "#cfeaff"
+   },
+   "props": [
+    [
+     "ice",
+     -0.85,
+     -0.6,
+     0.48,
+     "ice",
+     20
+    ],
+    [
+     "ice",
+     -0.5,
+     -0.98,
+     0.32,
+     "ice2",
+     -15
+    ],
+    [
+     "ice",
+     0.88,
+     -0.5,
+     0.42,
+     "ice2",
+     40
+    ],
+    [
+     "snow",
+     0.35,
+     -1.02,
+     0.42,
+     "snow",
+     0
+    ],
+    [
+     "snow",
+     -0.98,
+     0.22,
+     0.3,
+     "snow",
+     0
+    ],
+    [
+     "rock",
+     0.94,
+     0.28,
+     0.24,
+     "rock",
+     0
+    ],
+    [
+     "icicle",
+     0.72,
+     -0.85,
+     0.5,
+     "ice",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "peak",
+     -3.6,
+     -11.0,
+     3.6,
+     "hill",
+     0
+    ],
+    [
+     "peak",
+     3.2,
+     -12.0,
+     4.4,
+     "hill2",
+     0
+    ],
+    [
+     "peak",
+     0.0,
+     -14.0,
+     4.8,
+     "hill",
+     0
+    ],
+    [
+     "snow",
+     -2.4,
+     -6.5,
+     1.4,
+     "snow",
+     0
+    ],
+    [
+     "snow",
+     2.6,
+     -7.0,
+     1.2,
+     "snow",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "snow",
+    "colors": [
+     "#ffffff"
+    ],
+    "amount": 22
+   }
+  },
+  "wetlands": {
+   "sky": [
+    "#6cc8d8",
+    "#e6fbf6"
+   ],
+   "ground": "#5fb85a",
+   "side": "#6e5232",
+   "colors": {
+    "reed": "#4f9a3a",
+    "cattail": "#7a4a26",
+    "lily": "#3fb048",
+    "flower": "#ff8ac0",
+    "rock": "#7d8a80",
+    "water": "#2a9e9a",
+    "shine": "#aef0e2",
+    "tree": "#2f8a4a",
+    "trunk": "#6b4a2a"
+   },
+   "props": [
+    [
+     "reed",
+     -0.85,
+     -0.6,
+     0.8,
+     "reed",
+     0
+    ],
+    [
+     "reed",
+     -0.62,
+     -0.9,
+     0.68,
+     "reed",
+     0
+    ],
+    [
+     "reed",
+     0.9,
+     -0.48,
+     0.78,
+     "reed",
+     0
+    ],
+    [
+     "round_tree",
+     0.82,
+     -0.95,
+     0.75,
+     "tree",
+     0
+    ],
+    [
+     "rock",
+     -0.92,
+     0.3,
+     0.26,
+     "rock",
+     0
+    ],
+    [
+     "lily",
+     1.45,
+     0.2,
+     0.35,
+     "lily",
+     0
+    ],
+    [
+     "lily",
+     -1.5,
+     -0.3,
+     0.3,
+     "lily",
+     50
+    ],
+    [
+     "flower",
+     1.0,
+     0.08,
+     0.25,
+     "flower",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "round_tree",
+     -3.6,
+     -9.0,
+     2.6,
+     "tree",
+     0
+    ],
+    [
+     "round_tree",
+     3.6,
+     -9.5,
+     3.0,
+     "tree",
+     0
+    ],
+    [
+     "reed",
+     -2.0,
+     -5.0,
+     1.4,
+     "reed",
+     0
+    ],
+    [
+     "reed",
+     2.2,
+     -5.4,
+     1.3,
+     "reed",
+     0
+    ]
+   ],
+   "water": {
+    "color": "water",
+    "shine": "shine",
+    "radius": 14.0
+   },
+   "drift": {
+    "kind": "fireflies",
+    "colors": [
+     "#fff36a"
+    ],
+    "amount": 14
+   }
+  },
+  "mountains": {
+   "sky": [
+    "#8a9cf0",
+    "#eef0ff"
+   ],
+   "ground": "#8fc06a",
+   "side": "#7a6f84",
+   "colors": {
+    "rock": "#9a96a8",
+    "rock2": "#b4b0c2",
+    "snow": "#ffffff",
+    "leaf": "#3f8a52",
+    "trunk": "#6e4a2e",
+    "flower": "#c27aff",
+    "hill": "#a49ad0",
+    "hill2": "#8b80bf"
+   },
+   "props": [
+    [
+     "boulder",
+     -0.85,
+     -0.62,
+     0.56,
+     "rock",
+     0
+    ],
+    [
+     "boulder",
+     0.9,
+     -0.52,
+     0.46,
+     "rock2",
+     40
+    ],
+    [
+     "pine",
+     0.78,
+     -0.95,
+     0.78,
+     "leaf",
+     0
+    ],
+    [
+     "pine",
+     -0.95,
+     -0.88,
+     0.62,
+     "leaf",
+     30
+    ],
+    [
+     "rock",
+     0.96,
+     0.28,
+     0.25,
+     "rock2",
+     10
+    ],
+    [
+     "flower",
+     -0.98,
+     0.15,
+     0.26,
+     "flower",
+     0
+    ],
+    [
+     "grass",
+     -0.2,
+     -1.02,
+     0.28,
+     "leaf",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "peak",
+     -3.4,
+     -10.5,
+     4.0,
+     "hill",
+     0
+    ],
+    [
+     "peak",
+     3.0,
+     -11.5,
+     4.8,
+     "hill2",
+     0
+    ],
+    [
+     "peak",
+     0.0,
+     -14.0,
+     5.4,
+     "hill",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "snow",
+    "colors": [
+     "#ffffff"
+    ],
+    "amount": 10
+   }
+  },
+  "plains": {
+   "sky": [
+    "#78c4ff",
+    "#f4fbe6"
+   ],
+   "ground": "#9fd05a",
+   "side": "#9a6a3a",
+   "colors": {
+    "grass": "#e8c85a",
+    "grass2": "#8cc44a",
+    "wood": "#a8743f",
+    "flower": "#ff6a5a",
+    "flower2": "#ffffff",
+    "rock": "#a8a090",
+    "hill": "#8cc44a",
+    "hill2": "#a8d45a",
+    "hay": "#f0c84a"
+   },
+   "props": [
+    [
+     "fence",
+     -0.55,
+     -1.0,
+     0.6,
+     "wood",
+     0
+    ],
+    [
+     "fence",
+     0.35,
+     -1.04,
+     0.6,
+     "wood",
+     0
+    ],
+    [
+     "grass",
+     -0.92,
+     -0.45,
+     0.45,
+     "grass",
+     0
+    ],
+    [
+     "grass",
+     0.92,
+     -0.45,
+     0.45,
+     "grass2",
+     0
+    ],
+    [
+     "hay",
+     0.95,
+     0.22,
+     0.3,
+     "hay",
+     20
+    ],
+    [
+     "flower",
+     -0.98,
+     0.15,
+     0.26,
+     "flower",
+     0
+    ],
+    [
+     "flower",
+     -0.82,
+     0.42,
+     0.22,
+     "flower2",
+     0
+    ],
+    [
+     "rock",
+     0.75,
+     0.5,
+     0.18,
+     "rock",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "hill",
+     -4.6,
+     -10.0,
+     7.0,
+     "hill",
+     0
+    ],
+    [
+     "hill",
+     4.6,
+     -10.5,
+     7.5,
+     "hill2",
+     0
+    ],
+    [
+     "hill",
+     0.0,
+     -13.0,
+     8.0,
+     "hill",
+     0
+    ],
+    [
+     "round_tree",
+     2.8,
+     -7.0,
+     1.4,
+     "grass2",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "pollen",
+    "colors": [
+     "#ffffff",
+     "#fff3b0"
+    ],
+    "amount": 12
+   }
+  },
+  "city": {
+   "sky": [
+    "#ff9fb0",
+    "#ffe8d6"
+   ],
+   "ground": "#9aa3b2",
+   "side": "#5d6676",
+   "colors": {
+    "building": "#5a6a9a",
+    "building2": "#7a6aa8",
+    "window": "#ffe28a",
+    "lamp": "#3a4256",
+    "light": "#fff2b0",
+    "bin": "#3fa85a",
+    "tree": "#4fae4a",
+    "trunk": "#6e4a2e",
+    "box": "#c9944a"
+   },
+   "props": [
+    [
+     "lamp",
+     -0.95,
+     -0.72,
+     1.0,
+     "lamp",
+     0
+    ],
+    [
+     "bin",
+     0.95,
+     -0.35,
+     0.4,
+     "bin",
+     0
+    ],
+    [
+     "box",
+     0.62,
+     -0.95,
+     0.32,
+     "box",
+     25
+    ],
+    [
+     "box",
+     0.9,
+     0.32,
+     0.26,
+     "box",
+     -10
+    ],
+    [
+     "round_tree",
+     -0.62,
+     -1.02,
+     0.6,
+     "tree",
+     0
+    ]
+   ],
+   "far": [
+    [
+     "building",
+     -3.4,
+     -10.0,
+     2.4,
+     "building",
+     0
+    ],
+    [
+     "building",
+     -0.6,
+     -12.0,
+     3.0,
+     "building2",
+     0
+    ],
+    [
+     "building",
+     2.4,
+     -10.5,
+     2.6,
+     "building",
+     0
+    ],
+    [
+     "building",
+     4.8,
+     -11.5,
+     2.2,
+     "building2",
+     0
+    ],
+    [
+     "building",
+     -5.4,
+     -11.0,
+     2.6,
+     "building2",
+     0
+    ]
+   ],
+   "drift": {
+    "kind": "leaves",
+    "colors": [
+     "#ffb3c8",
+     "#ffffff"
+    ],
+    "amount": 10
+   }
+  }
+ }
 }

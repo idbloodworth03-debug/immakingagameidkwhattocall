@@ -221,6 +221,16 @@ and toes; and the Unicorn, a sleek white horse with a pastel-rainbow fur
 mane and tail, a golden horn and hooves. Every fur animal carries the
 dense lock set; the Cobra, like the Komodo Dragon, carries none.
 
+**The Air animals followed** (batch 4, after the Peregrine Falcon): the
+Barn Owl in white and golden tan with its heart face; the Harpy Eagle
+slate black and white with its gray crest and yellow feet; the Hyacinth
+Macaw in bold cobalt with the yellow eye ring and a black beak; the
+California Condor black with the white wing triangles, a bare pink-orange
+head and an ivory beak; and the Dragon in emerald scales with a golden
+belly, orange spikes, golden horns and glassy pale-green wings. The birds
+wear feather cards sized to each bird (an eagle's twice a falcon's); the
+Dragon, like the Komodo Dragon, is scales and carries no locks.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

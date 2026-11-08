@@ -3110,5 +3110,471 @@
   },
   "shade_low": 0.2,
   "portrait_samples": 96
+ },
+ "barn_owl": {
+  "shape": {
+   "head": 1.6,
+   "muzzle": 0.7,
+   "eyes": 2.3,
+   "ears": 1.0,
+   "legs": 0.75,
+   "length": 0.85,
+   "belly": 1.15,
+   "limbs": 1.2
+  },
+  "eyes": {
+   "iris": "#1a1410",
+   "sink": 0.4,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.45
+   ],
+   "brow_lift": 0.9,
+   "brow_forward": 0.25
+  },
+  "colors": {
+   "skin": "#c8883a",
+   "skin_deep": "#8a5a20",
+   "nails": "#2a2420",
+   "mouth": "#8a3a40"
+  },
+  "paint": "species",
+  "palette": {
+   "white": "#f6f1e8",
+   "buff": "#c8883a",
+   "grey": "#7f8aa6",
+   "rim": "#a86a2a",
+   "speck": "#4a3a2a",
+   "beak": "#f2e2c8"
+  },
+  "face_lines": {
+   "eye_line_size": 0.0
+  },
+  "surface": "feathers",
+  "feathers": {
+   "regions": [
+    "torso",
+    "breast",
+    "neck",
+    "head",
+    "wing"
+   ],
+   "count": 600,
+   "size": [
+    0.03,
+    0.017
+   ],
+   "tilt": 14,
+   "jitter": 0.1,
+   "comb": [
+    0.0,
+    -1.0,
+    -0.15
+   ],
+   "follow": 0.1,
+   "seed": 6,
+   "lift_off": 0.0015,
+   "viewer": {
+    "count": 240,
+    "size": [
+     0.045,
+     0.026
+    ],
+    "segments": 4,
+    "tilt": 12,
+    "lift_off": 0.002
+   },
+   "battle": {
+    "count": 40,
+    "size": [
+     0.07,
+     0.04
+    ],
+    "segments": 3,
+    "tilt": 10,
+    "lift_off": 0.003
+   }
+  },
+  "portrait_samples": 192,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
+  }
+ },
+ "harpy_eagle": {
+  "shape": {
+   "head": 1.5,
+   "muzzle": 0.7,
+   "eyes": 2.0,
+   "ears": 1.0,
+   "legs": 0.8,
+   "length": 0.85,
+   "belly": 1.15,
+   "limbs": 1.25
+  },
+  "eyes": {
+   "iris": "#3a2616",
+   "sink": 0.4,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.45
+   ],
+   "brow_lift": 0.9,
+   "brow_forward": 0.25
+  },
+  "colors": {
+   "skin": "#1e2030",
+   "skin_deep": "#101018",
+   "nails": "#1d2433",
+   "mouth": "#8a3a40"
+  },
+  "paint": "species",
+  "palette": {
+   "grey": "#b0b6c4",
+   "black": "#1e2030",
+   "white": "#ffffff",
+   "bar": "#2e3140",
+   "beak": "#1a1a20",
+   "foot": "#ffc83a"
+  },
+  "face_lines": {
+   "eye_line_size": 0.0
+  },
+  "surface": "feathers",
+  "feathers": {
+   "regions": [
+    "torso",
+    "breast",
+    "neck",
+    "head",
+    "wing"
+   ],
+   "count": 700,
+   "size": [
+    0.06,
+    0.032
+   ],
+   "tilt": 14,
+   "jitter": 0.1,
+   "comb": [
+    0.0,
+    -1.0,
+    -0.15
+   ],
+   "follow": 0.1,
+   "seed": 7,
+   "lift_off": 0.0015,
+   "viewer": {
+    "count": 260,
+    "size": [
+     0.085,
+     0.048
+    ],
+    "segments": 4,
+    "tilt": 12,
+    "lift_off": 0.002
+   },
+   "battle": {
+    "count": 44,
+    "size": [
+     0.13,
+     0.075
+    ],
+    "segments": 3,
+    "tilt": 10,
+    "lift_off": 0.003
+   }
+  },
+  "portrait_samples": 96,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
+  }
+ },
+ "hyacinth_macaw": {
+  "shape": {
+   "head": 1.55,
+   "muzzle": 0.7,
+   "eyes": 2.1,
+   "ears": 1.0,
+   "legs": 0.75,
+   "length": 0.85,
+   "belly": 1.15,
+   "limbs": 1.2
+  },
+  "eyes": {
+   "iris": "#1a1410",
+   "sink": 0.4,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.45
+   ],
+   "brow_lift": 0.9,
+   "brow_forward": 0.25
+  },
+  "colors": {
+   "skin": "#1f4fd6",
+   "skin_deep": "#102a80",
+   "nails": "#1d2433",
+   "mouth": "#8a3a40"
+  },
+  "paint": "species",
+  "palette": {
+   "blue": "#1f4fd6",
+   "light": "#3f7af0",
+   "yellow": "#ffd93a",
+   "beak": "#15151a"
+  },
+  "face_lines": {
+   "eye_line_size": 0.0
+  },
+  "surface": "feathers",
+  "feathers": {
+   "regions": [
+    "torso",
+    "breast",
+    "neck",
+    "head",
+    "wing"
+   ],
+   "count": 650,
+   "size": [
+    0.034,
+    0.018
+   ],
+   "tilt": 14,
+   "jitter": 0.1,
+   "comb": [
+    0.0,
+    -1.0,
+    -0.15
+   ],
+   "follow": 0.1,
+   "seed": 8,
+   "lift_off": 0.0015,
+   "viewer": {
+    "count": 240,
+    "size": [
+     0.05,
+     0.028
+    ],
+    "segments": 4,
+    "tilt": 12,
+    "lift_off": 0.002
+   },
+   "battle": {
+    "count": 40,
+    "size": [
+     0.08,
+     0.045
+    ],
+    "segments": 3,
+    "tilt": 10,
+    "lift_off": 0.003
+   }
+  },
+  "portrait_samples": 96,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
+  }
+ },
+ "california_condor": {
+  "shape": {
+   "head": 1.4,
+   "muzzle": 0.7,
+   "eyes": 2.0,
+   "ears": 1.0,
+   "legs": 0.8,
+   "length": 0.85,
+   "belly": 1.15,
+   "limbs": 1.3
+  },
+  "eyes": {
+   "iris": "#5a2a1a",
+   "sink": 0.4,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.45
+   ],
+   "brow_lift": 0.9,
+   "brow_forward": 0.25
+  },
+  "colors": {
+   "skin": "#141418",
+   "skin_deep": "#08080c",
+   "nails": "#2a2a30",
+   "mouth": "#8a3a40"
+  },
+  "paint": "species",
+  "palette": {
+   "black": "#141418",
+   "gloss": "#2e2e3a",
+   "skin": "#ff8a5a",
+   "skin_dark": "#c85a40",
+   "white": "#ffffff",
+   "silver": "#a8a8b4",
+   "ivory": "#f4e8d0",
+   "leg": "#b0a0a0"
+  },
+  "face_lines": {
+   "eye_line_size": 0.0
+  },
+  "surface": "feathers",
+  "feathers": {
+   "regions": [
+    "torso",
+    "breast",
+    "wing"
+   ],
+   "count": 700,
+   "size": [
+    0.075,
+    0.04
+   ],
+   "tilt": 14,
+   "jitter": 0.1,
+   "comb": [
+    0.0,
+    -1.0,
+    -0.15
+   ],
+   "follow": 0.1,
+   "seed": 9,
+   "lift_off": 0.0015,
+   "viewer": {
+    "count": 260,
+    "size": [
+     0.1,
+     0.055
+    ],
+    "segments": 4,
+    "tilt": 12,
+    "lift_off": 0.002
+   },
+   "battle": {
+    "count": 44,
+    "size": [
+     0.15,
+     0.085
+    ],
+    "segments": 3,
+    "tilt": 10,
+    "lift_off": 0.003
+   }
+  },
+  "portrait_samples": 96,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
+  }
+ },
+ "dragon": {
+  "shape": {
+   "head": 1.5,
+   "muzzle": 0.9,
+   "eyes": 2.4,
+   "ears": 1.0,
+   "legs": 0.9,
+   "length": 0.9,
+   "belly": 1.1,
+   "limbs": 1.3
+  },
+  "eyes": {
+   "iris": "#ffb52c",
+   "sink": 0.45,
+   "squash": [
+    0.95,
+    1.0,
+    0.85
+   ],
+   "brow": [
+    1.3,
+    0.55,
+    0.4
+   ],
+   "brow_lift": 1.0,
+   "brow_forward": 0.2
+  },
+  "paint": "species",
+  "palette": {
+   "green": "#22b26a",
+   "dark": "#157a48",
+   "gold": "#ffd870",
+   "spike": "#ff8a30",
+   "wing": "#8fe0b0"
+  },
+  "face_lines": {
+   "eye_line_size": 0.0,
+   "mouth": "#c43a5a"
+  },
+  "colors": {
+   "skin": "#22b26a",
+   "skin_deep": "#157a48",
+   "belly": "#ffd870",
+   "nails": "#2a2a30",
+   "mouth": "#c43a5a",
+   "fur": "#22b26a",
+   "fur_deep": "#157a48",
+   "tongue": "#f04a7a",
+   "horn": "#f0d8a0",
+   "horn_tip": "#fff4d8"
+  },
+  "surface": "scales",
+  "scales": {
+   "cell": 0.03
+  },
+  "shade_low": 0.3,
+  "underside": 0.8,
+  "portrait_samples": 96,
+  "locks": {
+   "viewer": {
+    "count": 0
+   },
+   "battle": {
+    "count": 0
+   }
+  },
+  "claw_scale": 1.5
  }
 }

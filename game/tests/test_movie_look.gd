@@ -127,7 +127,8 @@ func test_the_yeti_has_its_own_animations() -> void:
 const MOVIE := ["yeti", "komodo_dragon", "peregrine_falcon", "brown_bear", "giant_panda", "hippopotamus",
 	"asian_elephant", "black_rhino", "snapping_turtle",
 	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus",
-	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn"]
+	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn",
+	"barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon"]
 
 
 func test_every_movie_look_animal_gets_the_movie_shader() -> void:

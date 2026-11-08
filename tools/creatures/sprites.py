@@ -368,7 +368,8 @@ def _add_eyes(meta, eyes, frames, eye_objects, anchor, ppm):
 
 def _scene_points():
     """World positions of every posed mesh vertex in the scene (body, ears,
-    eyes, horns...), leaving out the ground."""
+    eyes, horns...), leaving out the ground and what is under it, which the
+    ground hides (a perched bird's wingtips)."""
     deps = bpy.context.evaluated_depsgraph_get()
     points = []
     for obj in bpy.context.scene.objects:
@@ -381,7 +382,8 @@ def _scene_points():
         evaluated.to_mesh_clear()
         m = np.array(obj.matrix_world)
         points.append(co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3])
-    return np.concatenate(points)
+    points = np.concatenate(points)
+    return points[points[:, 2] > -0.005]
 
 
 def _fit_camera(cam, points, fill=0.88):
@@ -413,7 +415,7 @@ def render_portrait(creature, out_dir, samples, size=None, with_fur=True):
     sc.cycles.samples = int(S.LOOK["portrait_samples"])
     movie_look = getattr(creature, "style", "") == "movie"
     arm, body, mesh = S.build(creature, with_fur=with_fur and not movie_look)
-    motion.apply(arm, motion.idle(creature, 0.0))
+    motion.apply(arm, motion.portrait_pose(creature))
     lo, hi = mesh.verts.min(axis=0), mesh.verts.max(axis=0)
     if movie_look:
         # Hero art (docs/ART_DIRECTION.md): groomed strands, the material

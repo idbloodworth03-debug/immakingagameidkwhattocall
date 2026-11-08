@@ -327,6 +327,51 @@ Unicorn carries its head high on an arched neck, pawing the ground, tail
 sweeping; rears and paws the air, then tosses its head with a whinny; and
 prances in a proud high-step, horn up, with a little rear.
 
+The Air animals, in the air. The Peregrine Falcon beats quick and crisp,
+its head snapping to scan; barrel-rolls and shakes out its wings; and
+screws upward in a spiralling climb. The Barn Owl beats slow and silent
+with its head swivelling far round; turns its head almost right round to
+look behind, snaps it back and ruffles every feather; and loops slowly
+with its wings spread wide, hooting at the top. The Harpy Eagle beats
+powerfully with a glide between, head proud; screeches with its head
+thrown back, wings flung up and talons clenching; and hangs with its
+wings held high, screeching skyward. The Hyacinth Macaw beats perkily
+with its head bobbing and cocking, squawking; loop-the-loops; and does
+the parrot dance, head bobbing up and down and side to side in time.
+The California Condor soars on flat wide wings, tilting into slow turns;
+banks hard one way and the other and stretches both wings high; and
+circles wide, banked into the turn. The Dragon beats steadily with its
+tail swishing and a sniff of smoke; has a fire hiccup, rearing back and
+bursting out with a jolt, then shaking its head; and loop-the-loops
+roaring fire with a happy wiggle. Birds also get a card portrait of
+their own: perched, the body pitched up (an owl stands nearly upright, a
+condor leans forward: `movie.json` "motion" perch_tilt), wings folded
+down along the flanks, feet on the ground, chest out and head turned to
+us (`motion.py perched`, portrait_view aims the camera), instead of the
+flying dart the camera caught before, which left the Barn Owl's a soft
+smear.
+
+The Specialists close the set. The Electric Eel runs slow waves down its
+body and lifts its flat head to peer; charges up with a crackling shiver
+and lets go with a jolt; and rears its front up and whips side to side.
+The Harbor Seal lolls on its belly, rolling a little; claps its flippers
+barking, then rolls onto its back wriggling; and bounces on its belly
+clapping. The Red Fox stands light on its toes, head cocking, ears
+swivelling; does the mouse pounce, nose-first with its paws together;
+and bounds in a circle after its own brush. The Mountain Gorilla breathes
+slow and heavy, sizing things up; picks at its ear, sniffs the finger,
+scratches and yawns; and beats its chest, then roars with its arms flung
+wide. The Red Panda bounces curiously with its tail curling; stands up
+with its paws raised to look big (the famous threat); and bounces round
+in a circle on its back legs. The Sloth takes a whole loop over one
+breath; stretches and yawns slower than anything; and celebrates in slow
+motion, one arm up, then the other. The Pangolin shuffles shyly with a
+scale-rattling shiver; curls into a ball, rocks and peeks out; and spins
+as a ball, then pops open with its claws up. The Kraken bobs its big
+head with its tentacles curling; blows a bubble that swells and pops;
+and spins in a tentacle dance. With these, every one of the 35 moves
+like itself.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

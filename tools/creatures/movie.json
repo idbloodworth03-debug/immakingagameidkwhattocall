@@ -411,6 +411,15 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "falcon",
+   "portrait_view": [
+    -0.8,
+    1.0,
+    0.45
+   ],
+   "perch_tilt": 1.0
   }
  },
  "brown_bear": {
@@ -3268,6 +3277,15 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "owl",
+   "portrait_view": [
+    -0.8,
+    1.0,
+    0.45
+   ],
+   "perch_tilt": 1.15
   }
  },
  "harpy_eagle": {
@@ -3368,6 +3386,15 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "eagle",
+   "portrait_view": [
+    -0.8,
+    1.0,
+    0.45
+   ],
+   "perch_tilt": 0.95
   }
  },
  "hyacinth_macaw": {
@@ -3466,6 +3493,16 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "macaw",
+   "portrait_view": [
+    -1.0,
+    0.55,
+    0.4
+   ],
+   "perch_tilt": 0.9,
+   "perch_head": 0.35
   }
  },
  "california_condor": {
@@ -3566,6 +3603,15 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "condor",
+   "portrait_view": [
+    -0.8,
+    1.0,
+    0.45
+   ],
+   "perch_tilt": 0.8
   }
  },
  "dragon": {
@@ -3634,7 +3680,10 @@
     "count": 0
    }
   },
-  "claw_scale": 1.5
+  "claw_scale": 1.5,
+  "motion": {
+   "persona": "dragon"
+  }
  },
  "electric_eel": {
   "shape": {
@@ -3695,6 +3744,9 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "eel"
   }
  },
  "harbor_seal": {
@@ -3755,6 +3807,9 @@
    "battle": {
     "count": 0
    }
+  },
+  "motion": {
+   "persona": "seal"
   }
  },
  "red_fox": {
@@ -3897,7 +3952,10 @@
   },
   "shade_low": 0.3,
   "paint_smoothing": 2,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "fox"
+  }
  },
  "mountain_gorilla": {
   "shape": {
@@ -4076,7 +4134,10 @@
    }
   },
   "shade_low": 0.2,
-  "portrait_samples": 128
+  "portrait_samples": 128,
+  "motion": {
+   "persona": "gorilla"
+  }
  },
  "red_panda": {
   "shape": {
@@ -4219,7 +4280,10 @@
   },
   "shade_low": 0.3,
   "paint_smoothing": 2,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "red_panda"
+  }
  },
  "pygmy_three_toed_sloth": {
   "shape": {
@@ -4357,7 +4421,10 @@
    }
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "sloth"
+  }
  },
  "sunda_pangolin": {
   "shape": {
@@ -4422,7 +4489,10 @@
     "count": 0
    }
   },
-  "claw_scale": 1.4
+  "claw_scale": 1.4,
+  "motion": {
+   "persona": "pangolin"
+  }
  },
  "kraken": {
   "shape": {
@@ -4484,6 +4554,9 @@
     "count": 0
    }
   },
-  "paint_smoothing": 2
+  "paint_smoothing": 2,
+  "motion": {
+   "persona": "kraken"
+  }
  }
 }

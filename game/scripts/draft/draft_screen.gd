@@ -31,6 +31,7 @@ static var dev_auto: Dictionary = {}
 var _auto_bot: DraftBot
 var _auto_wait := 0.0
 var _auto_log := 0.0
+var _dev_slow := 0.0  # &slow=: the fights play at this share of full speed (picks at full speed)
 var opponent: Dictionary = {}
 
 var _rng := RandomNumberGenerator.new()
@@ -121,8 +122,7 @@ func _ready() -> void:
 	_build()
 	_field.show_sizes = bool(auto.get("sizes", false))
 	_field.track = String(auto.get("track", "")).split(",", false)
-	if float(auto.get("slow", 0.0)) > 0.0:
-		Engine.time_scale = float(auto.slow)
+	_dev_slow = float(auto.get("slow", 0.0))
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
 	# While the VS screen covers everything, the screen under it isn't drawn.
@@ -1083,6 +1083,9 @@ func _opponent_moves(delta: float) -> void:
 		if duel.phase == "pick" and not duel.ready[0] and _auto_wait <= 0.0 and _score_bar.visible:
 			_auto_bot.pick()
 			_auto_wait = 0.25
+		if _dev_slow > 0.0:
+			# Slow motion for the fights only (frame-by-frame screenshots).
+			Engine.time_scale = _dev_slow if duel.phase == "fight" else 1.0
 		_auto_log -= delta
 		if _auto_log <= 0.0:
 			# (What the match is doing, for the browser's console.)

@@ -150,7 +150,7 @@ func _reset_stats() -> void:
 		"blips": {},
 		"impacts": 0, "impacts_unread": 0, "impact_late": 0.0, "impacts_together": 0,
 		"march_frames": 0, "march_off": 0.0, "march_close": 0, "line_spread": 0.0, "lines": 0,
-		"step_frames": 0, "in_step": 0, "battle_frames": 0, "battle_off": 0.0,
+		"battle_frames": 0, "battle_off": 0.0, "cuts": 0, "blends": 0,
 		"ranged_shots": 0, "volley_shots": 0, "volleys": 0, "volley_land_spread": 0.0,
 		"first_volley": 0.0, "clash": 0.0, "charge": 0.0, "with_volley": 0, "with_clash": 0, "with_charge": 0,
 		"volley_first": 0, "charge_after_clash": 0,
@@ -160,6 +160,8 @@ func _reset_stats() -> void:
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 		"size_sum": 0.0, "size_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
+		"attack_frames": 0, "attack_slide_frames": 0, "snap_turns": 0, "pos_snaps": 0, "attacks_started": 0, "attacks_cut": 0, "seen_views": {},
+		"anim_time": {}, "walk_slide": 0.0, "walk_slide_n": 0,
 	}
 	switched_at.clear()
 var _volley_lands := {}
@@ -549,6 +551,44 @@ func _watch_views(_delta: float) -> void:
 			var vel: Vector2 = v.position - info.pos
 			if vel.length() > 0.3 and info.vel.length() > 0.3 and vel.normalized().dot(info.vel.normalized()) < -0.3:
 				stats.jitter += 1
+			# Animation quality (Battle, part 2): a body sliding while its
+			# attack plays, a turn too sharp to be a turn (a snap), a drawn
+			# position that jumps. Measured on the field (tiles), not the
+			# screen: the camera moves too.
+			var rpos: Vector2 = v.render_pos()
+			var fvel: Vector2 = rpos - Vector2(info.get("rpos", rpos))
+			info.rpos = rpos
+			var tiles_per_s := fvel.length() / 1000.0 * 60.0
+			if anim in UnitView.ATTACK_ANIMS:
+				stats.attack_frames += 1
+				if tiles_per_s > 0.25:
+					stats.attack_slide_frames += 1
+			var turned := absf(wrapf(v.facing - float(info.get("facing", v.facing)), -180.0, 180.0))
+			if turned > 30.0:
+				stats.snap_turns += 1
+			info.facing = v.facing
+			if fvel.length() > 500.0 and v.pop >= 1.0 and v.hop_t >= 1.0:
+				stats.pos_snaps += 1
+			stats.anim_time[anim] = int(stats.anim_time.get(anim, 0)) + 1
+			if anim == "walk" and v.move_dir.length() > 0.0 and tiles_per_s > 0.3:
+				# The feet against the ground: how far the walk cycle says it
+				# went this frame against how far it was drawn going (while
+				# really walking; the last steps of a stop are a held walk).
+				var stride: float = v._walk_tiles * v.size_k * Feel.num("movement", "walk_stride_match", 1.0)
+				var cycle_rate := float(info.get("walk_v", 0.0))
+				if cycle_rate > 0.0:
+					stats.walk_slide += absf(cycle_rate * stride - tiles_per_s) / tiles_per_s
+					stats.walk_slide_n += 1
+					if OS.get_environment("WALK_DEBUG") != "":
+						var dbg: Array = stats.get_or_add("walk_dbg", {}).get_or_add("%s%s" % [v.id, " march" if v._placed and field.marching(v.fighter.team) else ""], [0.0, 0.0, 0])
+						dbg[0] += cycle_rate * stride
+						dbg[1] += tiles_per_s
+						dbg[2] += 1
+						if dbg.size() < 4:
+							dbg.append(0.0)
+						dbg[3] += v.shown_v.length() / 1000.0
+			info.walk_v = wrapf(v.walk - float(info.get("walk", v.walk)), -0.5, 0.5) * 60.0
+			info.walk = v.walk
 			info.vel = vel
 			info.pos = v.position
 			if anim == "walk":
@@ -560,9 +600,10 @@ func _watch_views(_delta: float) -> void:
 				if f.target != null and duel.sim.in_range(f, f.target):
 					stats.pushed_walk += 1
 		else:
-			info = {"dir": dir, "dir_at": now, "anim": anim, "anim_at": now, "pos": v.position, "vel": Vector2.ZERO}
+			info = {"dir": dir, "dir_at": now, "anim": anim, "anim_at": now, "pos": v.position, "vel": Vector2.ZERO, "facing": v.facing, "walk": v.walk, "rpos": v.render_pos()}
 		last[v.key] = info
 		placed.append(v)
+		stats.seen_views[v.key] = v
 	# Animals whose drawn picture is mostly covered by another's (sprites are
 	# much bigger than the circles the fight keeps apart).
 	for a: UnitView in placed:
@@ -675,11 +716,6 @@ func _watch_army() -> void:
 			if not lines.has(key):
 				lines[key] = []
 			lines[key].append(v.render_pos().y)
-			if v._frame_key.begins_with("walk"):
-				stats.step_frames += 1
-				var d := absf(fposmod(v.walk - field.march_walk(f.team) + 0.5, 1.0) - 0.5)
-				if d <= 0.03:
-					stats.in_step += 1
 		elif army.clash_tick >= 0:
 			stats.battle_frames += 1
 			stats.battle_off += off
@@ -700,6 +736,16 @@ func _watch_army() -> void:
 
 func _finish_fight() -> void:
 	stats.fights += 1
+	for v in stats.seen_views.values():
+		if is_instance_valid(v):
+			stats.attacks_started += v.attacks_started
+			stats.attacks_cut += v.attacks_cut
+	stats.seen_views.clear()
+	if field._stage != null:
+		stats.cuts += field._stage.cuts
+		stats.blends += field._stage.blends
+		field._stage.cuts = 0
+		field._stage.blends = 0
 	for vk in _volley_lands:
 		var span: Array = _volley_lands[vk]
 		stats.volleys += 1
@@ -759,6 +805,25 @@ func _thirds() -> String:
 	return " / ".join(parts)
 
 
+func _walk_debug() -> void:
+	var dbg: Dictionary = stats.get("walk_dbg", {})
+	for k in dbg:
+		var d: Array = dbg[k]
+		print("  WALK %-26s feet say %.2f tiles/s, body went %.2f tiles/s, spring speed %.2f (%d frames)" % [k, d[0] / maxi(1, d[2]), d[1] / maxi(1, d[2]), (d[3] if d.size() > 3 else 0.0) / maxi(1, d[2]), d[2]])
+
+
+func _anim_time() -> String:
+	var total := 0
+	for n in stats.anim_time.values():
+		total += int(n)
+	var parts := []
+	var keys: Array = stats.anim_time.keys()
+	keys.sort_custom(func(a, b): return int(stats.anim_time[a]) > int(stats.anim_time[b]))
+	for k in keys:
+		parts.append("%s %.0f%%" % [k, 100.0 * int(stats.anim_time[k]) / maxf(1, total)])
+	return ", ".join(parts)
+
+
 func _size_by_class() -> String:
 	var parts := []
 	for cls in GameData.class_order:
@@ -781,6 +846,7 @@ func _idle_by_class() -> String:
 
 
 func _report() -> void:
+	_walk_debug()
 	var uf := maxf(1.0, float(stats.unit_frames))
 	var secs := uf / 60.0  # animal-seconds watched
 	var lines := [
@@ -805,6 +871,22 @@ func _report() -> void:
 			int(SIZE.x) + 32, int(SCREEN_HEIGHT), int(SIZE.x), int(SIZE.y), stats.size_sum / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("average_target_pct", 6.0)), _biggest("tank"), _biggest("hero"), _biggest(""),
 			100.0 * stats.size_over / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("unit_max_pct", 9.0)), float(GameData.bodies.get("limits", {}).get("hero_max_pct", 10.0)), _size_by_class(), stats.zoom_sum / maxf(1, stats.zoom_n), stats.ppu_max],
 	]
+	var windups: Dictionary = GameData.feel.get("acting", {}).get("windup_scale", {})
+	var scaled := []
+	for cls in windups:
+		if not is_equal_approx(float(windups[cls]), 1.0):
+			scaled.append("%s x%.2f" % [cls, float(windups[cls])])
+	lines.append_array([
+		"Animation (part 2)",
+		"  hard cuts             %.1f animation changes per animal-minute; %d cut hard, %d cross-faded over %.0f ms (%.0f%% of changes last under 0.15 s)" % [stats.anim_changes / secs * 60.0, stats.cuts, stats.blends, Feel.num("acting", "blend_seconds", 0.0) * 1000.0, 100.0 * stats.anim_blips / maxf(1, stats.anim_changes)],
+		"  attacks cut short     %d of %d attacks started over one still playing (%.0f%%)" % [stats.attacks_cut, stats.attacks_started, 100.0 * stats.attacks_cut / maxf(1, stats.attacks_started)],
+		"  sliding while hitting %.1f%% of attack frames the body moves faster than a quarter tile a second" % [100.0 * stats.attack_slide_frames / maxf(1, stats.attack_frames)],
+		"  snap turns            %.2f per animal-minute (more than 30 degrees in one frame)" % [stats.snap_turns / secs * 60.0],
+		"  position snaps        %.2f per animal-minute (the drawn body jumps more than half a tile in one frame, hops aside)" % [stats.pos_snaps / secs * 60.0],
+		"  feet on the ground    walk cycle against the ground covered: %.0f%% off on average" % [100.0 * stats.walk_slide / maxf(1, stats.walk_slide_n)],
+		"  speed scaling         wind-ups stretched by class: %s; stall speed-up to x%.1f (choreography)" % [", ".join(scaled) if not scaled.is_empty() else "none", Feel.num("choreography", "stall_max_speed", 1.0)],
+		"  time in animations    %s" % [_anim_time()],
+	])
 	var lanes: Array = stats.lane_fights
 	var lane_total := maxf(1.0, float(lanes[0] + lanes[1] + lanes[2]))
 	var entropy := 0.0
@@ -823,7 +905,6 @@ func _report() -> void:
 		"Army checks",
 		"  in place on the march %.2f tiles from its place on average; %.0f%% within a quarter tile" % [stats.march_off / maxf(1, stats.march_frames), 100.0 * stats.march_close / maxf(1, stats.march_frames)],
 		"  straight lines        %.2f tiles: the furthest any animal is drawn out of its line while marching, on average" % [stats.line_spread / maxf(1, stats.lines)],
-		"  in step               %.0f%% of marching walk frames on the army's own step" % [100.0 * stats.in_step / maxf(1, stats.step_frames)],
 		"  holding the line      %.2f tiles from its place on average once the fight is on" % [stats.battle_off / maxf(1, stats.battle_frames)],
 		"  volleys               %.0f%% of Ranged shots fired in a volley; %d volleys, each one's shots land within %.2f s of each other on average" % [100.0 * stats.volley_shots / maxf(1, stats.ranged_shots), stats.volleys, stats.volley_land_spread / maxf(1, stats.volleys)],
 		"  the sequence          first volley at %.1f s (%d of %d fights), clash at %.1f s (%d), charge at %.1f s (%d); the volley came before the clash in %d, the charge after it in %d" % [stats.first_volley / maxf(1, stats.with_volley), stats.with_volley, stats.fights, stats.clash / maxf(1, stats.with_clash), stats.with_clash, stats.charge / maxf(1, stats.with_charge), stats.with_charge, stats.volley_first, stats.charge_after_clash],

@@ -82,10 +82,65 @@ func test_a_model_plays_its_views_animation() -> void:
 			"%s has idle, walk and attack" % v.id)
 		v.m_anim = "attack"
 		v.m_phase = 0.5
-		stage._pose(m, v, field.now(), field.field_scale() * 1000.0, Vector3(1, 0, 0), Vector3(0, ModelStage.COS, -ModelStage.SIN), Vector3(0, -ModelStage.SIN, -ModelStage.COS))
+		stage._pose(m, v, field.now(), 0.0, field.field_scale() * 1000.0, Vector3(1, 0, 0), Vector3(0, ModelStage.COS, -ModelStage.SIN), Vector3(0, -ModelStage.SIN, -ModelStage.COS))
 		check_eq(String(m.player.current_animation), "attack", "%s plays the attack" % v.id)
 		check(absf(m.player.current_animation_position - 0.5 * float(m.lengths.attack)) < 0.02, "%s halfway through it" % v.id)
 		break
+
+
+## A change of animation cross-fades (feel.json "acting" blend_seconds):
+## for a moment the pose is between the old animation's and the new one's.
+func test_a_change_of_animation_cross_fades() -> void:
+	var field := _fight()
+	var stage := field._stage
+	var blend := Feel.num("acting", "blend_seconds", 0.12)
+	check(blend >= 0.1 and blend <= 0.15, "blends take 100-150 ms (%.0f ms)" % (blend * 1000.0))
+	var key: Variant = stage._models.keys()[0]
+	var v: UnitView = field._views[key]
+	var m: ModelStage.Model = stage._models[key]
+	var skeleton := m.body.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
+	var bone := maxi(0, skeleton.find_bone("neck"))
+	var args := [field.field_scale() * 1000.0, Vector3(1, 0, 0), Vector3(0, ModelStage.COS, -ModelStage.SIN), Vector3(0, -ModelStage.SIN, -ModelStage.COS)]
+	v.m_anim = "idle"
+	v.m_phase = 0.0
+	stage._pose(m, v, field.now(), 0.0, args[0], args[1], args[2], args[3])
+	var idle_pose := skeleton.get_bone_pose_rotation(bone)
+	v.m_anim = "attack"
+	v.m_phase = 0.5
+	stage._pose(m, v, field.now(), 1.0 / 60.0, args[0], args[1], args[2], args[3])
+	var first := skeleton.get_bone_pose_rotation(bone)
+	for i in 3:
+		stage._pose(m, v, field.now(), 1.0 / 60.0, args[0], args[1], args[2], args[3])
+	var mid := skeleton.get_bone_pose_rotation(bone)
+	for i in 30:
+		stage._pose(m, v, field.now(), 1.0 / 60.0, args[0], args[1], args[2], args[3])
+	var settled := skeleton.get_bone_pose_rotation(bone)
+	var whole := idle_pose.angle_to(settled)
+	check(whole > 0.02, "%s's attack pose differs from its idle (%.1f degrees)" % [v.id, rad_to_deg(whole)])
+	check(idle_pose.angle_to(first) < whole * 0.5, "the first frame is still close to the idle (%.1f of %.1f degrees)" % [rad_to_deg(idle_pose.angle_to(first)), rad_to_deg(whole)])
+	check(idle_pose.angle_to(mid) > whole * 0.15 and idle_pose.angle_to(mid) < whole * 0.95, "a few frames in it is between the two (%.1f of %.1f degrees)" % [rad_to_deg(idle_pose.angle_to(mid)), rad_to_deg(whole)])
+	check(absf(m.player.current_animation_position - 0.5 * float(m.lengths.attack)) < 0.02, "the playhead stays where the view wants it")
+	check(stage.blends >= 1, "the change was a cross-fade, not a cut")
+
+
+## A swing plays to its end: a hit dealt while one is playing lands in it
+## (at its hit frame, or now), never starting another over it.
+func test_a_swing_is_never_cut_short_by_the_next_hit() -> void:
+	var field := _fight()
+	var v: UnitView = field._views.values()[0]
+	var now := field.now() + 5.0
+	var first := v.time_to_strike(now, Vector2.UP)
+	check(first > 0.05, "%s's first hit starts a swing with a wind-up (%.2f s)" % [v.id, first])
+	var started := v.attack_at
+	var windup := v.windup_seconds()
+	check(is_equal_approx(v.time_to_strike(now + windup * 0.5, Vector2.UP), windup * 0.5), "a hit mid wind-up waits for the hit frame")
+	check(v.attack_at == started, "and starts no new swing")
+	var recovery := now + windup + 0.05
+	check(v.attacking(recovery), "the swing is still playing after its hit frame")
+	check_eq(v.time_to_strike(recovery, Vector2.UP), 0.0, "a hit then lands at once")
+	check(v.attack_at == started and v.attacks_cut == 0, "without cutting the swing short")
+	var later := now + v._attack_length() + 0.5
+	check(v.time_to_strike(later, Vector2.UP) > 0.05, "once it's over, the next hit starts a new swing")
 
 
 func test_3d_is_on_everywhere_by_default() -> void:

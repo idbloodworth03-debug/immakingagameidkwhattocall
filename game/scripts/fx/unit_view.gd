@@ -430,7 +430,15 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		var goal := pos + spread
 		if _march > 0.0:
 			goal += _march_offset(now, t)
-		follow(goal, goal_v, dt)
+		# Mid-swing it holds its ground (following its place at only
+		# attack_follow_share of its usual rate, 0: not at all), so a strike
+		# plays out where it started and the body catches up after; it
+		# doesn't slide while hitting.
+		var hold := float(t.attack_follow_share) if attacking(now) and now >= attack_at else 1.0
+		if hold > 0.0:
+			follow(goal, goal_v * hold, dt, hold)
+		else:
+			shown_v = Vector2.ZERO
 	var speed := shown_v.length()
 	if hop_t >= 1.0 and _intent > 0.0 and speed > float(t.walk_min_speed):
 		if moving <= 0.0 and not army and now >= _trip_ready and randf() < float(t.trip_chance):
@@ -442,12 +450,11 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		move_dir = shown_v / speed
 		# The legs keep pace with the ground they cover (within limits, so a
 		# slow giant doesn't play its walk one frame a second).
+		# (Marching in formation too: an animal catching up moves faster
+		# than the army's pace, and its feet must keep up with it.)
 		var cycle := _walk_tiles * 1000.0 * float(t.walk_stride) * size_k
 		var fps := clampf(speed / maxf(cycle, 1.0) * _walk_frames, float(t.walk_min_fps), float(t.walk_max_fps))
 		walk += fps / _walk_frames * dt
-		if _placed and field.marching(team):
-			# Marching in formation: the whole army's feet in step.
-			walk = field.march_walk(team)
 	elif moving > 0.0:
 		moving = maxf(0.0, moving - dt)
 		if moving <= 0.0:
@@ -474,7 +481,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		var next: Array = _upcoming() if to_hit >= 0.0 and to_hit <= _longest_windup else []
 		var windup := _windup_of(String(next[0])) * float(next[1]) if not next.is_empty() else -1.0
 		if to_hit >= 0.0 and to_hit <= windup:
-			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y))
+			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y), now)
 
 
 ## The health it shows: the fight's, plus the damage from hits still on their way.
@@ -485,10 +492,14 @@ func update_hp() -> void:
 
 ## Eases where it's drawn toward `goal` (moving at `goal_v`): a critically
 ## damped spring that keeps up with a steady walk and eases in and out of
-## it, the same at any frame rate.
-func follow(goal: Vector2, goal_v: Vector2, dt: float) -> void:
-	var w := float(_tuning().follow_rate) * _follow_k
-	var e := shown - goal
+## it, the same at any frame rate. The error is taken against where the
+## goal was at the start of the frame (it has moved goal_v * dt since):
+## taken against where it is now, the goal's own step counted twice and
+## the spring's speed came out double the body's real speed, so the feet
+## (paced by that speed) ran twice as fast as the ground.
+func follow(goal: Vector2, goal_v: Vector2, dt: float, rate_k := 1.0) -> void:
+	var w := float(_tuning().follow_rate) * _follow_k * rate_k
+	var e := shown - (goal - goal_v * dt)
 	var ev := shown_v - goal_v
 	var decay := exp(-w * dt)
 	var lead := ev + w * e
@@ -518,7 +529,8 @@ func _turn(toward: Vector2, dt: float) -> void:
 	var off := wrapf(facing - _dir8 * 45.0, -180.0, 180.0)
 	if absf(off) > 22.5 + float(t.turn_hysteresis):
 		_dir8 = posmod(roundi(facing / 45.0), 8)
-		_turn_pinch = 1.0
+		if not modeled:
+			_turn_pinch = 1.0  # (a sprite swaps pictures; a model just turns)
 
 
 func windup_seconds() -> float:
@@ -562,7 +574,18 @@ func _windup_of(anim: String) -> float:
 	return float(_attacks.get(anim, {}).get("windup", _windup))
 
 
-func _start_attack(next: Array, at: float, toward: Vector2) -> void:
+## For the feel report: how many attacks were started over one still
+## playing (its swing cut short), and how many started in all.
+var attacks_started := 0
+var attacks_cut := 0
+
+
+## Starts a swing at `at` (field time; a little before `now` when the hit
+## is sooner than a whole wind-up).
+func _start_attack(next: Array, at: float, toward: Vector2, now := -1.0) -> void:
+	attacks_started += 1
+	if attacking(now if now >= 0.0 else at) and attack_at > -50.0:
+		attacks_cut += 1
 	_force_next = ""
 	_attack_anim = String(next[0])
 	_attack_k = float(next[1])
@@ -588,12 +611,15 @@ func _attack_frame(since: float) -> int:
 
 
 ## Seconds until this animal's strike lands, for a hit the fight just dealt.
-## If no wind-up is showing it starts one now, so every hit is seen coming.
+## While a swing is playing the hit is that swing's: it lands at its hit
+## frame, or now if that's past (the swing goes on to its end, never cut
+## short for another). If no swing is showing one starts now, so every hit
+## is seen coming.
 func time_to_strike(now: float, toward: Vector2) -> float:
 	var since := now - attack_at
 	var windup := windup_seconds()
-	if since < windup and attacking(now):
-		return windup - since
+	if attacking(now):
+		return maxf(0.0, windup - since)
 	if since < windup + float(_tuning().strike_grace_seconds):
 		return 0.0
 	var next := _upcoming()
@@ -716,6 +742,7 @@ class Tune:
 	var class_badge_radius := 0.0
 	var arrive_squash := 0.0
 	var follow_rate := 0.0
+	var attack_follow_share := 1.0
 	var march_wobble := 0.0
 	var march_wobble_seconds := 0.0
 	var turn_speed := 0.0
@@ -819,6 +846,7 @@ static func refresh_tuning() -> void:
 		t.class_badge_radius = Feel.num("characters", "class_badge_radius", 9.0)
 		t.arrive_squash = Feel.num(m, "arrive_squash", 0.1)
 		t.follow_rate = Feel.num(m, "follow_rate", 12.0)
+		t.attack_follow_share = Feel.num(m, "attack_follow_share", 0.15)
 		t.march_wobble = Feel.num(m, "march_wobble_tiles", 0.1)
 		t.march_wobble_seconds = Feel.num(m, "march_wobble_seconds", 2.6)
 		t.turn_speed = Feel.num(m, "turn_degrees_per_second", 720.0)
@@ -989,9 +1017,10 @@ func animate(dt: float, now: float) -> void:
 			frame = 0
 		else:
 			_fidget_next = now + randf_range(1.0, 3.0)
-	# Changing animation: a little squash eases the cut between pictures.
+	# Changing animation: a sprite's cut between pictures is eased with a
+	# little squash (a model cross-fades instead: ModelStage).
 	if anim != _prev_anim:
-		if _prev_anim != "" and not anim in ATTACK_ANIMS:
+		if _prev_anim != "" and not anim in ATTACK_ANIMS and not modeled:
 			squash_v += float(t.transition_squash) * 18.0
 		_prev_anim = anim
 	# Celebrating without a rendered victory: hop, hop, then spin round

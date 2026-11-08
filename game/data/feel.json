@@ -83,8 +83,9 @@
   "defeat_spin_turns": 1.25
  },
  "movement": {
-  "_note": "How animals move on screen. Only the drawing: where an animal is in the fight never changes. It follows its place in the fight like a spring (follow_rate, higher = snappier; each animal's may differ by up to follow_variety, 0 in armies so ranks move as one), easing into and out of a run, and may wander up to march_wobble_tiles while marching (about every march_wobble_seconds; 0: armies march in step). Animals fighting are nudged apart on screen until their pictures are spread_body_share of their height apart (enemies in a scrap spread_enemy_share of that, a flier over an animal on the ground spread_air_share; one straight behind another also steps aside by spread_sideways, so a line staggers), at spread_rate, by at most spread_max_tiles, drifting back at spread_return_rate once there's room. They turn at turn_degrees_per_second toward where they walk or what they fight (a push never turns them), switch to the next of their 8 drawn directions only once turn_hysteresis_degrees past halfway, and pinch a little (turn_squash, for turn_squash_seconds) as they do. They walk only when moving on their own faster than walk_min_speed_tiles a second (for at least walk_hold_seconds); the walk plays as fast as the feet cover the ground (walk_stride_match 1 = exactly), kept between walk_min_fps and walk_max_fps. Stopping gives a small settling bounce (arrive_squash).",
+  "_note": "How animals move on screen. Only the drawing: where an animal is in the fight never changes. It follows its place in the fight like a spring (follow_rate, higher = snappier; each animal's may differ by up to follow_variety, 0 in armies so ranks move as one; mid-swing it follows at only attack_follow_share of that, 0: it holds its ground until the strike is done and catches up after), easing into and out of a run, and may wander up to march_wobble_tiles while marching (about every march_wobble_seconds; 0: armies march in step). Animals fighting are nudged apart on screen until their pictures are spread_body_share of their height apart (enemies in a scrap spread_enemy_share of that, a flier over an animal on the ground spread_air_share; one straight behind another also steps aside by spread_sideways, so a line staggers), at spread_rate, by at most spread_max_tiles, drifting back at spread_return_rate once there's room. They turn at turn_degrees_per_second toward where they walk or what they fight (a push never turns them), switch to the next of their 8 drawn directions only once turn_hysteresis_degrees past halfway, and pinch a little (turn_squash, for turn_squash_seconds) as they do. They walk only when moving on their own faster than walk_min_speed_tiles a second (for at least walk_hold_seconds); the walk plays as fast as the feet cover the ground (walk_stride_match 1 = exactly; a marching army's too, each animal at its own stride), kept between walk_min_fps and walk_max_fps. Stopping gives a small settling bounce (arrive_squash).",
   "follow_rate": 12.0,
+  "attack_follow_share": 0.0,
   "follow_variety": 0.0,
   "march_wobble_tiles": 0.0,
   "march_wobble_seconds": 2.6,
@@ -102,12 +103,12 @@
   "walk_min_speed_tiles": 0.15,
   "walk_hold_seconds": 0.15,
   "walk_stride_match": 1.0,
-  "walk_min_fps": 5.0,
-  "walk_max_fps": 16.0,
+  "walk_min_fps": 2.5,
+  "walk_max_fps": 20.0,
   "arrive_squash": 0.1
  },
  "acting": {
-  "_note": "How animals act, on top of their rendered animations. Each plays its idle and walk at its own pace (up to pace_variety faster or slower). It blinks (blink_seconds, every blink_every seconds) and, standing about with nothing in reach, fidgets now and then (fidget_every; the first after fidget_first). Faces drawn over the eyes: a squint on the wind-up, wide eyes for wide_seconds when hit, dizzy swirls when stunned or knocked out, drowsy lids when slowed, happy eyes when celebrating, a smug look for smug_seconds after a knockout. A hit makes it flinch (flinch_degrees) and bounce (hurt_bounce_pixels over hurt_seconds). Changing animation squashes it a little (transition_squash). Classes move their own way: wind-ups take windup_scale of the sheet's time (a Tank's big slow swing, a Tank Destroyer's quick one); Tanks plod (tank_hop of the walk's hop) with a thump and dust at each step (tank_step_squash); Tank Destroyers lean in (td_lean), crouch and spring at a pounce (td_pounce_pixels) and lunge further (td_lunge); Ranged kick back on every shot (ranged_recoil_pixels); fliers bob (air_bob_pixels at air_bob_speed), swoop (air_swoop_pixels), bank into turns (air_bank_degrees), rise before a dive (air_dive_rise_pixels) and drop into it (air_dive_drop_pixels). The winners celebrate for victory_seconds with bounces of victory_hop_pixels. A knockout poofs, or (defeat_fling_chance) bounces off the screen with a spin over defeat_fling_seconds. Stunned animals wobble (stun_wobble_degrees); slowed ones move at slow_pace with a Zzz every zzz_every seconds. Below sweat_below of their health they sweat (a drop every sweat_every seconds). Setting off, one may trip (trip_chance, for trip_seconds, at most once every trip_cooldown seconds). Specialist traits act too: a Stun animal's stunning blow comes after its rendered wind-up (a chest beat, a hiss, a roar) or, without one, a trembling stare stretching the wind-up by stun_windup_scale; a Slow animal's wind-up is a lazy yawn, slow_windup_scale as long, with drowsy eyes; a Splash animal rises splash_hop_pixels for a belly flop and lands squashed (splash_squash); a Burrow animal sinks into the ground over dig_seconds and pops out with a springy boing over emerge_seconds (emerge_hop_pixels high). Body plans walk their own way: fish wiggle (fish_wiggle_degrees), upright animals waddle (waddle_degrees), snakes ripple, frogs bound, seals and whales slide, shrimp scuttle.",
+  "_note": "How animals act, on top of their rendered animations. Each plays its idle and walk at its own pace (up to pace_variety faster or slower). It blinks (blink_seconds, every blink_every seconds) and, standing about with nothing in reach, fidgets now and then (fidget_every; the first after fidget_first). Faces drawn over the eyes: a squint on the wind-up, wide eyes for wide_seconds when hit, dizzy swirls when stunned or knocked out, drowsy lids when slowed, happy eyes when celebrating, a smug look for smug_seconds after a knockout. A hit makes it flinch (flinch_degrees) and bounce (hurt_bounce_pixels over hurt_seconds). A sprite's change of animation squashes it a little (transition_squash); a 3D model cross-fades into its next animation over blend_seconds instead (no hard cuts). A swing always plays at its own pace, every one the same (windup_scale, stun_windup_scale and slow_windup_scale are 1: how often an animal hits is the pause between swings, never a faster or slower swing). Classes move their own way: Tanks plod (tank_hop of the walk's hop) with a thump and dust at each step (tank_step_squash); Tank Destroyers lean in (td_lean), crouch and spring at a pounce (td_pounce_pixels) and lunge further (td_lunge); Ranged kick back on every shot (ranged_recoil_pixels); fliers bob (air_bob_pixels at air_bob_speed), swoop (air_swoop_pixels), bank into turns (air_bank_degrees), rise before a dive (air_dive_rise_pixels) and drop into it (air_dive_drop_pixels). The winners celebrate for victory_seconds with bounces of victory_hop_pixels. A knockout poofs, or (defeat_fling_chance) bounces off the screen with a spin over defeat_fling_seconds. Stunned animals wobble (stun_wobble_degrees); slowed ones move at slow_pace with a Zzz every zzz_every seconds. Below sweat_below of their health they sweat (a drop every sweat_every seconds). Setting off, one may trip (trip_chance, for trip_seconds, at most once every trip_cooldown seconds). Specialist traits act too: a Stun animal's stunning blow comes after its rendered wind-up (a chest beat, a hiss, a roar) or, without one, a trembling stare stretching the wind-up by stun_windup_scale; a Slow animal's wind-up is a lazy yawn, slow_windup_scale as long, with drowsy eyes; a Splash animal rises splash_hop_pixels for a belly flop and lands squashed (splash_squash); a Burrow animal sinks into the ground over dig_seconds and pops out with a springy boing over emerge_seconds (emerge_hop_pixels high). Body plans walk their own way: fish wiggle (fish_wiggle_degrees), upright animals waddle (waddle_degrees), snakes ripple, frogs bound, seals and whales slide, shrimp scuttle.",
   "pace_variety": 0.08,
   "blink_seconds": 0.13,
   "blink_every": [
@@ -128,10 +129,11 @@
   "hurt_seconds": 0.32,
   "hurt_bounce_pixels": 5.0,
   "transition_squash": 0.05,
+  "blend_seconds": 0.12,
   "windup_scale": {
-   "tank": 1.35,
-   "tank_destroyer": 0.85,
-   "ranged": 1.1,
+   "tank": 1.0,
+   "tank_destroyer": 1.0,
+   "ranged": 1.0,
    "air": 1.0,
    "specialist": 1.0
   },
@@ -159,8 +161,8 @@
   "trip_chance": 0.03,
   "trip_seconds": 0.45,
   "trip_cooldown": 25.0,
-  "stun_windup_scale": 1.8,
-  "slow_windup_scale": 1.5,
+  "stun_windup_scale": 1.0,
+  "slow_windup_scale": 1.0,
   "splash_hop_pixels": 16.0,
   "splash_squash": 0.25,
   "dig_seconds": 0.35,
@@ -178,7 +180,7 @@
   "stall_animals": 4,
   "stall_after_seconds": 3.0,
   "stall_ramp_seconds": 3.0,
-  "stall_max_speed": 2.2,
+  "stall_max_speed": 1.5,
   "final_slow_motion": 0.35,
   "final_zoom": 1.18,
   "final_zoom_in_seconds": 0.2,
@@ -428,7 +430,7 @@
   "beam": "#fff0a0"
  },
  "army": {
-  "_note": "How armies look (Draft Duel). Everyone in a formation marches in step: one walk timing for the whole army, a step every march_stride_tiles of ground it covers, with a thump (stomp_volume_db) and a tiny shake (stomp_shake) on every step; small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Every animal is drawn at its bodies.json size; an elite Specialist elite_scale bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom, nor so close that an animal looks bigger than bodies.json \"limits\" allows), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
+  "_note": "How armies look (Draft Duel). A formation marches with a thump (stomp_volume_db) and a tiny shake (stomp_shake) every march_stride_tiles of ground it covers; each animal's feet keep pace with the ground it covers at its own stride (feel.json movement walk_*; no sliding), and small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Every animal is drawn at its bodies.json size; an elite Specialist elite_scale bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom, nor so close that an animal looks bigger than bodies.json \"limits\" allows), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole. Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
   "march_stride_tiles": 0.6,
   "stomp_volume_db": -16.0,
   "stomp_shake": 0.03,

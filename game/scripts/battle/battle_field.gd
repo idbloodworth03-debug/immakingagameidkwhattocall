@@ -371,13 +371,16 @@ func marching(team: int) -> bool:
 	return sim != null and sim.army != null and int(sim.army.moved_now[team]) > 0
 
 
-## Where in its walk cycle (0-1) a marching army's feet are: one timing for
-## the whole army, keeping pace with the ground it covers.
-func march_walk(team: int) -> float:
+## Where in its walk cycle (0-1) a marching army's feet are, keeping pace
+## with the ground it covers: with `cycle` (field units), an animal's own
+## stride (its legs cover the ground they walk, no sliding); without, the
+## army's shared step (feel.json "army" march_stride_tiles: the stomps).
+func march_walk(team: int, cycle := -1.0) -> float:
 	if sim == null or sim.army == null:
 		return 0.0
 	var marched := float(sim.army.marched[team]) - float(sim.army.moved_now[team]) * (1.0 - blend)
-	return fposmod(marched / maxf(1.0, Feel.num("army", "march_stride_tiles", 0.6) * 1000.0), 1.0)
+	var stride := cycle if cycle > 0.0 else Feel.num("army", "march_stride_tiles", 0.6) * 1000.0
+	return fposmod(marched / maxf(1.0, stride), 1.0)
 
 
 ## A crowded field (feel.json "crowd"): simpler effects, so it stays readable
@@ -788,7 +791,7 @@ func _process(delta: float) -> void:
 	if picked_group >= 0 and picked_views().is_empty():
 		picked_group = -1  # the whole squad is down
 	if _stage != null:
-		_stage.sync(_views, _time)
+		_stage.sync(_views, _time, dt)
 	_remove_finished()
 	_decor.queue_redraw()
 	_ground.queue_redraw()

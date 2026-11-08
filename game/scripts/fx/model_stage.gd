@@ -45,6 +45,11 @@ var _models := {}
 var _pool := {}
 var _settings: Dictionary = {}
 var _drawn_size := Vector2.ZERO
+## For the feel report: animation changes that cross-faded (feel.json
+## "acting" blend_seconds) and ones that cut (a model's first, a missing
+## animation).
+var blends := 0
+var cuts := 0
 
 
 ## One animal's model: a pivot at its feet (the sprite's squash, stretch
@@ -131,8 +136,10 @@ func _draw() -> void:
 
 
 ## Poses every model to match its animal this frame (after the views have
-## animated). New animals get a model, gone ones lose theirs.
-func sync(views: Dictionary, now: float) -> void:
+## animated; `dt` is the frame's time, 0 during hit-stop, which the
+## cross-fades between animations run on). New animals get a model, gone
+## ones lose theirs.
+func sync(views: Dictionary, now: float, dt := 0.0) -> void:
 	if viewport == null or field.size.x <= 0.0:
 		return
 	var stretch := get_viewport().get_final_transform().get_scale().x if get_viewport() != null else 1.0
@@ -171,7 +178,7 @@ func sync(views: Dictionary, now: float) -> void:
 				continue
 			_models[key] = m
 		seen[key] = true
-		_pose(m, v, now, ppu, right, up, forward)
+		_pose(m, v, now, dt, ppu, right, up, forward)
 	for key in _models.keys():
 		if not seen.has(key):
 			_retire(_models[key])
@@ -382,7 +389,7 @@ static func face_toward(m: Model, degrees: float) -> void:
 	m.turn.rotation.y = atan2(-dir.x, -dir.y)
 
 
-func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Vector3, forward: Vector3) -> void:
+func _pose(m: Model, v: UnitView, now: float, dt: float, ppu: float, right: Vector3, up: Vector3, forward: Vector3) -> void:
 	var showing := v.m_visible and v.m_opacity > 0.02
 	m.pivot.visible = showing
 	if not showing:
@@ -397,16 +404,38 @@ func _pose(m: Model, v: UnitView, now: float, ppu: float, right: Vector3, up: Ve
 	m.pivot.basis = Basis(forward, deg_to_rad(v.m_rot)) * squash
 	# Which way it faces (on the stretched ground).
 	face_toward(m, v.m_facing)
-	# Its animation, at the view's point in it.
+	# Its animation, at the view's point in it. A change of animation
+	# cross-fades over blend_seconds (no hard cuts): the player blends from
+	# the pose it was in while we hold its playhead where the view wants it
+	# (seek back a frame, then advance the frame, which also runs the fade).
 	if m.player != null:
 		var anim := v.m_anim
 		if not m.lengths.has(anim):
 			anim = "attack" if anim in ATTACKS and m.lengths.has("attack") else "idle"
 		if m.lengths.has(anim):
+			var length := float(m.lengths[anim])
+			var target := v.m_phase * length
 			if anim != m.anim:
+				var blend := Feel.num("acting", "blend_seconds", 0.12) if m.anim != "" else 0.0
 				m.anim = anim
-				m.player.current_animation = anim
-			m.player.seek(v.m_phase * float(m.lengths[anim]), true)
+				m.player.play(anim, blend)
+				if blend > 0.0:
+					blends += 1
+				else:
+					cuts += 1
+				m.player.seek(target, true)
+			elif dt > 0.0:
+				var back := target - dt
+				if back < 0.0:
+					back = fposmod(back, length) if m.player.get_animation(anim).loop_mode != Animation.LOOP_NONE else 0.0
+				m.player.seek(back, false)
+				m.player.advance(dt)
+				if m.player.current_animation != anim:
+					# It ran off the end of a one-shot animation: hold its last pose.
+					m.player.play(anim)
+					m.player.seek(target, true)
+			else:
+				m.player.seek(target, true)
 	# Its cartoon face (UnitView chooses it, as for the sprite).
 	if v.m_face != m.face:
 		m.face = v.m_face

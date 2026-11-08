@@ -209,6 +209,18 @@ smoothing ("paint_smoothing") and harder stripe edges ("stripes":
 ones. Every Tank Destroyer carries the dense lock set (about 1,000 in the
 viewer, 110 in battle), so their models cost about what the Bear's does.
 
+**The Ranged animals followed** (batch 3): the Gray Squirrel in blue-gray
+with a brown wash and a huge fluffy tail; the Raccoon in a violet-gray
+coat with its black mask, white brows and ringed tail; the Striped Skunk
+glossy black with the white stripe splitting over its back and tail; the
+King Cobra, the first snake on the look, in olive-green scales with
+yellow bands and a cream hood (surface "scales"); the Wild Bactrian Camel
+golden with shaggy darker humps, neck and legs; the Sumatran Orangutan in
+a long bright-orange coat with a gray face, cheek pads, beard, fingers
+and toes; and the Unicorn, a sleek white horse with a pastel-rainbow fur
+mane and tail, a golden horn and hooves. Every fur animal carries the
+dense lock set; the Cobra, like the Komodo Dragon, carries none.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

@@ -126,7 +126,8 @@ func test_the_yeti_has_its_own_animations() -> void:
 ## The animals on the movie look so far (tools/creatures/movie.json).
 const MOVIE := ["yeti", "komodo_dragon", "peregrine_falcon", "brown_bear", "giant_panda", "hippopotamus",
 	"asian_elephant", "black_rhino", "snapping_turtle",
-	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus"]
+	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus",
+	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn"]
 
 
 func test_every_movie_look_animal_gets_the_movie_shader() -> void:

@@ -63,7 +63,7 @@ const STAGES := {
 ## For testing: the animal to open on, and whether slowed down (the website
 ## opened with ?showcase=<id>&slow=1, dev tools on; main_menu.gd).
 static var start_id := ""
-static var start_slow := false
+static var start_slow := 0.0  # a speed under 1: start in slow motion at it (testing)
 static var start_track := ""  # &track=id,id: the field prints where they're drawn (testing)
 
 var field: BattleField
@@ -140,12 +140,12 @@ func _ready() -> void:
 	next.pressed.connect(func() -> void: _show(_index + 1))
 	bottom.add_child(next)
 	column.add_child(bottom)
-	if start_slow:
-		Engine.time_scale = Feel.num("styles", "showcase_slow_speed", 0.3)
+	if start_slow > 0.0:
+		Engine.time_scale = start_slow
 		slow.set_label("Normal")
 	_show(maxi(0, _ids.find(start_id)))
 	start_id = ""
-	start_slow = false
+	start_slow = 0.0
 
 
 ## Sets up the little fight for animal number `index` (wrapping round).

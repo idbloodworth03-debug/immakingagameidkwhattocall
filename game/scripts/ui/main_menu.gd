@@ -105,13 +105,15 @@ func _open_dev_shortcut() -> void:
 		# computer too (?fight=<seed>; &mine=id,id and &theirs=id,id pick
 		# the decks; &sizes=1 marks every animal's height on screen; &track=id,id
 		# prints where those animals are drawn each frame, for frame scripts).
-		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1", "track": _query("track")}
+		# &slow=1 plays it in slow motion (styles showcase_slow_speed; or
+		# &slow=0.1, that fraction of full speed), for frame-by-frame shots.
+		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1", "track": _query("track"), "slow": _slow_of(_query("slow"))}
 		Transition.go.call_deferred("res://scenes/draft.tscn")
 		return
 	var show := _query("showcase")
 	if GameData.cards.has(show) and GameData.styles.has(show):
 		StyleShowcase.start_id = show
-		StyleShowcase.start_slow = _query("slow") == "1"
+		StyleShowcase.start_slow = _slow_of(_query("slow"))
 		StyleShowcase.start_track = _query("track")
 		Transition.go.call_deferred("res://scenes/style_showcase.tscn")
 		return
@@ -120,6 +122,16 @@ func _open_dev_shortcut() -> void:
 		return
 	select_tab(1)
 	_open_viewer_dev.call_deferred(id, _query("pose"))
+
+
+## The speed a &slow= value asks for: 1 is the showcase's slow motion
+## (styles showcase_slow_speed), a fraction under 1 that share of full
+## speed, anything else full speed (0: not slowed).
+static func _slow_of(value: String) -> float:
+	if value == "1":
+		return Feel.num("styles", "showcase_slow_speed", 0.3)
+	var k := value.to_float()
+	return k if k > 0.0 and k < 1.0 else 0.0
 
 
 ## One value from the website's address (?key=value), or, on a computer,

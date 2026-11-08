@@ -121,6 +121,8 @@ func _ready() -> void:
 	_build()
 	_field.show_sizes = bool(auto.get("sizes", false))
 	_field.track = String(auto.get("track", "")).split(",", false)
+	if float(auto.get("slow", 0.0)) > 0.0:
+		Engine.time_scale = float(auto.slow)
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
 	# While the VS screen covers everything, the screen under it isn't drawn.
@@ -396,6 +398,7 @@ func _match_animals() -> Array:
 
 
 func _exit_tree() -> void:
+	Engine.time_scale = 1.0
 	# The match is over: its sprite sheets go (menus load what they show).
 	UnitSprites.keep_only([])
 	Engine.time_scale = 1.0

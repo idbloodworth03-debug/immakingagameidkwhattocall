@@ -5,7 +5,7 @@ extends Node
 ## the dev shortcuts (main_menu.gd) when DEV_SHOT_DIR names a folder:
 ## DEV_SHOT_FROM seconds after the game starts (default 0), one every
 ## DEV_SHOT_EVERY seconds (default 1; 0: every frame), DEV_SHOT_COUNT of
-## them (default 20), as shot_<number>_<seconds>.png; then the game quits
+## them (default 20), as shot_<number>_<seconds>_<engine ms>.png; then the game quits
 ## (DEV_SHOT_QUIT=0 keeps it running).
 
 var dir := ""
@@ -41,6 +41,7 @@ func _process(delta: float) -> void:
 	_next = _age + every
 	_taken += 1
 	var image := get_viewport().get_texture().get_image()
-	image.save_png("%s/shot_%03d_%06.2f.png" % [dir, _taken, _age])
+	# (The engine clock in the name too, to match a TRACK line of the field.)
+	image.save_png("%s/shot_%03d_%06.2f_%d.png" % [dir, _taken, _age, Time.get_ticks_msec()])
 	if _taken >= count and quit:
 		get_tree().quit()

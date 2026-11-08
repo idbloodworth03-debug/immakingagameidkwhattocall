@@ -767,6 +767,8 @@ func _process(delta: float) -> void:
 	_world.position = pan + shake_offset
 	_follow_field(delta)
 	_frame_armies(delta)
+	if not track.is_empty():
+		_print_track()
 	_keep_life()
 	_stomp()
 	_check_crowd()
@@ -1935,6 +1937,25 @@ func banners() -> Array:
 ## tools on): each animal's standing height on screen, marked and labelled
 ## as a share of the screen's height.
 var show_sizes := false
+
+## For testing (the ?fight= and ?showcase= shortcuts' &track=id,id): one
+## line a frame for each of these animals, where it's drawn on the screen
+## (viewport pixels) and what it's doing, for a script to cut frame
+## sequences from screenshots.
+var track: PackedStringArray = []
+
+
+func _print_track() -> void:
+	var vp := get_viewport()
+	if vp == null:
+		return
+	var vs := vp.get_visible_rect().size
+	for v: UnitView in _views.values():
+		if not track.has(v.id) or v.pop < 1.0:
+			continue
+		var at := v.get_global_transform_with_canvas().origin
+		var swinging := v.attacking(_time)
+		print("TRACK t=%.3f ms=%d %s key=%s x=%.1f y=%.1f of %dx%d anim=%s since=%.3f windup=%.2f length=%.2f lunge=%.2f,%.2f alt=%.2f defeat=%.2f" % [_time, Time.get_ticks_msec(), v.id, str(v.key), at.x, at.y, int(vs.x), int(vs.y), v.m_anim, _time - v.attack_at if swinging else -1.0, v.windup_seconds(), v._attack_length(), v.m_lunge.x / 1000.0, v.m_lunge.y / 1000.0, v.m_altitude, v.defeat])
 
 
 func _draw_sizes(canvas: CanvasItem) -> void:

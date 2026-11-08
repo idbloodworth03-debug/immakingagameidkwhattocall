@@ -64,6 +64,7 @@ const STAGES := {
 ## opened with ?showcase=<id>&slow=1, dev tools on; main_menu.gd).
 static var start_id := ""
 static var start_slow := false
+static var start_track := ""  # &track=id,id: the field prints where they're drawn (testing)
 
 var field: BattleField
 var sim: BattleSim
@@ -111,6 +112,8 @@ func _ready() -> void:
 	_line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	column.add_child(_line)
 	field = BattleField.new()
+	field.track = start_track.split(",", false)
+	start_track = ""
 	field.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var arena := GameData.get_arena(Profile.arena_index())
 	field.arena_id = arena.id

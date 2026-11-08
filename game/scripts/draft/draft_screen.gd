@@ -120,6 +120,7 @@ func _ready() -> void:
 	UnitSprites.keep_only(_match_animals())
 	_build()
 	_field.show_sizes = bool(auto.get("sizes", false))
+	_field.track = String(auto.get("track", "")).split(",", false)
 	Sound.play_music("battle")
 	var intro := VersusIntro.create(opponent)
 	# While the VS screen covers everything, the screen under it isn't drawn.

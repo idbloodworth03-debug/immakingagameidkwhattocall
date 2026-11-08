@@ -103,14 +103,16 @@ func _open_dev_shortcut() -> void:
 	if fight != "":
 		# A real Draft Duel against the computer, played for you by the
 		# computer too (?fight=<seed>; &mine=id,id and &theirs=id,id pick
-		# the decks; &sizes=1 marks every animal's height on screen).
-		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1"}
+		# the decks; &sizes=1 marks every animal's height on screen; &track=id,id
+		# prints where those animals are drawn each frame, for frame scripts).
+		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1", "track": _query("track")}
 		Transition.go.call_deferred("res://scenes/draft.tscn")
 		return
 	var show := _query("showcase")
 	if GameData.cards.has(show) and GameData.styles.has(show):
 		StyleShowcase.start_id = show
 		StyleShowcase.start_slow = _query("slow") == "1"
+		StyleShowcase.start_track = _query("track")
 		Transition.go.call_deferred("res://scenes/style_showcase.tscn")
 		return
 	var id := _query("viewer")

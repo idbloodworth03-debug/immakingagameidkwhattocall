@@ -29,6 +29,12 @@ var id := ""
 var team := 0
 var field: BattleField
 var fighter: BattleSim.Fighter
+## Its body on the field (field units: the fighter's radius, half its
+## length and half its width), kept for the moments after its fighter is
+## gone (a body going down).
+var body_radius := 450.0
+var body_half := 450.0
+var body_half_width := 300.0
 var flying := false
 var swarm := false
 ## In an army (Draft Duel): it has a place in a formation, marches in step
@@ -50,6 +56,12 @@ var spread := Vector2.ZERO
 var push := Vector2.ZERO
 var spread_r := 500.0
 var facing := 0.0
+## Following: the last goal (for its speed), and the walking held back
+## during a swing.
+var _last_goal := Vector2.ZERO
+var _has_goal := false
+var _holding := false
+var _hold_walked := Vector2.ZERO
 var stars := 1
 ## Damage already dealt in the fight whose hit hasn't landed on screen yet
 ## (the strike or shot is still on its way), and how many such hits.
@@ -217,6 +229,14 @@ var m_glow := 0.0
 var m_tint := Color.WHITE
 var m_visible := true
 var m_face := ""
+## A flier's height above the ground (field tiles), a real height for the
+## model (feel.json acting air_height_tiles, and its bobs and dives); the
+## sprite is lifted on screen instead.
+var m_altitude := 0.0
+## How far its strike's lunge carries its body this frame, on the field
+## (field units; for the feel report's overlap check).
+var m_lunge := Vector2.ZERO
+var _lunge_cap := INF
 var _frames_of := {}
 
 
@@ -255,6 +275,9 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.flying = f.is_flying()
 	v.swarm = false
 	v.facing = 0.0 if f.team == 0 else 180.0
+	v.body_radius = float(f.radius)
+	v.body_half = float(f.half)
+	v.body_half_width = float(GameData.bodies.get("animals", {}).get(v.id, {}).get("width", 0.6)) * 500.0
 	v.pos = Vector2(f.x, f.y)
 	v.shown = v.pos
 	v._dir8 = posmod(roundi(v.facing / 45.0), 8)
@@ -408,8 +431,9 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		hop_from = render_pos()
 		hop_t = 0.0
 		hop_seconds = float(t.move_hop_seconds) * clampf(jump / 4000.0, 0.5, 1.0)
-	var goal_v := (at - pos) / dt if dt > 0.0 else Vector2.ZERO
 	pos = at
+	# How far it has walked (its own steps, blended between ticks).
+	var walked := Vector2(f.prev_walked).lerp(Vector2(f.walked), field.blend)
 	# Walking on its own (the fight moved it toward something), not shoved
 	# by its neighbors.
 	# Burrowing: dive into the ground; popping up: boing.
@@ -425,20 +449,29 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	if hop_t < 1.0:
 		shown = pos + spread
 		shown_v = Vector2.ZERO
-		goal_v = Vector2.ZERO
+		_has_goal = false
 	elif dt > 0.0:
 		var goal := pos + spread
 		if _march > 0.0:
 			goal += _march_offset(now, t)
-		# Mid-swing it holds its ground (following its place at only
-		# attack_follow_share of its usual rate, 0: not at all), so a strike
-		# plays out where it started and the body catches up after; it
-		# doesn't slide while hitting.
-		var hold := float(t.attack_follow_share) if attacking(now) and now >= attack_at else 1.0
-		if hold > 0.0:
-			follow(goal, goal_v * hold, dt, hold)
+		# Mid-swing it holds its ground: the walking the fight does for it
+		# waits until the swing is done (it catches up after); pushes and
+		# knockbacks still move it, as they move its body in the fight.
+		if attacking(now) and now >= attack_at:
+			if not _holding:
+				# It plants its feet for the strike: no easing out of its walk
+				# under the swing (the body stops where it is, the wind-up
+				# takes over).
+				_holding = true
+				_hold_walked = walked
+				shown_v = Vector2.ZERO
+			goal -= walked - _hold_walked
 		else:
-			shown_v = Vector2.ZERO
+			_holding = false
+		var goal_v := (goal - _last_goal) / dt if _has_goal else Vector2.ZERO
+		_last_goal = goal
+		_has_goal = true
+		follow(goal, goal_v, dt)
 	var speed := shown_v.length()
 	if hop_t >= 1.0 and _intent > 0.0 and speed > float(t.walk_min_speed):
 		if moving <= 0.0 and not army and now >= _trip_ready and randf() < float(t.trip_chance):
@@ -461,19 +494,16 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 			# Arriving: a small settling bounce instead of a slide.
 			squash_v += float(t.arrive_squash) * sqrt(float(t.spring_stiffness)) * 1.6
 	_march = move_toward(_march, 1.0 if moving > 0.0 else 0.0, dt * 2.5)
-	# Facing: where it's walking, else what it's fighting. A push never turns it.
+	# Facing: the fight's (BattleSim Fighter.heading: at what it strikes or
+	# the way it goes, turning at the cartoon pace; a push never turns it),
+	# blended between ticks, so the body on screen points exactly where its
+	# body in the fight does.
 	var has_target := f.target != null and f.target.alive
-	var keep_facing := _placed and not _in_reach
 	var busy := attacking(now)
-	if busy and now >= attack_at:
-		_turn(attack_dir, dt)
-	elif keep_facing and not (has_target and moving > 0.0):
-		# In formation: facing the enemy, even while stepping into place.
-		_turn(Vector2(0, -1) if team == 0 else Vector2(0, 1), dt)
-	elif moving > 0.0:
-		_turn(move_dir, dt)
-	elif has_target:
-		_turn(Vector2(f.target.x - f.x, f.target.y - f.y), dt)
+	if dt > 0.0:
+		var from := atan2(float(f.prev_heading.x), -float(f.prev_heading.y))
+		var to := atan2(float(f.heading.x), -float(f.heading.y))
+		_face(rad_to_deg(lerp_angle(from, to, field.blend)))
 	# Start the attack early enough that the strike lands on the hit (a
 	# little later for some, so a herd doesn't swing in step).
 	if _in_reach and has_target and f.deploy_ticks <= 0 and f.stun <= 0 and not busy:
@@ -517,20 +547,27 @@ func _march_offset(now: float, t: Tune) -> Vector2:
 	return Vector2(sin(p * 0.83 + idle_phase), sin(p * 1.17 + idle_phase * 1.7) * 0.8) * amount
 
 
-func _turn(toward: Vector2, dt: float) -> void:
-	if toward.length() < 1e-3:
-		return
+## Faces `degrees` (clockwise from up). A sprite's drawn direction (one of
+## 8) moves on only once well past halfway to the next, with a pinch.
+func _face(degrees: float) -> void:
 	var t := _tuning()
-	var goal := rad_to_deg(atan2(toward.x, -toward.y))
-	var diff := wrapf(goal - facing, -180.0, 180.0)
-	var rate := float(t.turn_speed) * dt
-	facing = wrapf(facing + clampf(diff, -rate, rate), 0.0, 360.0)
-	# The drawn direction moves on only once well past halfway to the next.
+	facing = wrapf(degrees, 0.0, 360.0)
 	var off := wrapf(facing - _dir8 * 45.0, -180.0, 180.0)
 	if absf(off) > 22.5 + float(t.turn_hysteresis):
 		_dir8 = posmod(roundi(facing / 45.0), 8)
 		if not modeled:
 			_turn_pinch = 1.0  # (a sprite swaps pictures; a model just turns)
+
+
+## Turns toward `toward` at the cartoon pace (an animal with no fight
+## behind it: the animation preview).
+func _turn(toward: Vector2, dt: float) -> void:
+	if toward.length() < 1e-3:
+		return
+	var goal := rad_to_deg(atan2(toward.x, -toward.y))
+	var diff := wrapf(goal - facing, -180.0, 180.0)
+	var rate := float(_tuning().turn_speed) * dt
+	_face(facing + clampf(diff, -rate, rate))
 
 
 func windup_seconds() -> float:
@@ -742,7 +779,6 @@ class Tune:
 	var class_badge_radius := 0.0
 	var arrive_squash := 0.0
 	var follow_rate := 0.0
-	var attack_follow_share := 1.0
 	var march_wobble := 0.0
 	var march_wobble_seconds := 0.0
 	var turn_speed := 0.0
@@ -775,6 +811,8 @@ class Tune:
 	var td_lunge := 0.0
 	var td_pounce_pixels := 0.0
 	var ranged_recoil_pixels := 0.0
+	var air_height_tiles := 0.0
+	var lunge_gap_share := 0.9
 	var air_bob_pixels := 0.0
 	var air_bob_speed := 0.0
 	var air_swoop_pixels := 0.0
@@ -846,7 +884,6 @@ static func refresh_tuning() -> void:
 		t.class_badge_radius = Feel.num("characters", "class_badge_radius", 9.0)
 		t.arrive_squash = Feel.num(m, "arrive_squash", 0.1)
 		t.follow_rate = Feel.num(m, "follow_rate", 12.0)
-		t.attack_follow_share = Feel.num(m, "attack_follow_share", 0.15)
 		t.march_wobble = Feel.num(m, "march_wobble_tiles", 0.1)
 		t.march_wobble_seconds = Feel.num(m, "march_wobble_seconds", 2.6)
 		t.turn_speed = Feel.num(m, "turn_degrees_per_second", 720.0)
@@ -879,6 +916,8 @@ static func refresh_tuning() -> void:
 		t.td_lunge = Feel.num("acting", "td_lunge", 1.9)
 		t.td_pounce_pixels = Feel.num("acting", "td_pounce_pixels", 9.0)
 		t.ranged_recoil_pixels = Feel.num("acting", "ranged_recoil_pixels", 5.0)
+		t.air_height_tiles = Feel.num("acting", "air_height_tiles", 0.9)
+		t.lunge_gap_share = Feel.num("combat", "lunge_gap_share", 0.9)
 		t.air_bob_pixels = Feel.num("acting", "air_bob_pixels", 4.0)
 		t.air_bob_speed = Feel.num("acting", "air_bob_speed", 2.6)
 		t.air_swoop_pixels = Feel.num("acting", "air_swoop_pixels", 5.0)
@@ -1046,6 +1085,21 @@ func animate(dt: float, now: float) -> void:
 	var lean := 0.0
 	var lift := 0.0
 	var air := _style == "air"
+	# A flier's height (screen pixels of lift; a model gets it as a real
+	# height), apart from the hops and bounces every animal has.
+	var air_px := 0.0
+	# A lunge never carries the body into its target: at most the gap to
+	# the target's body (bodies.json footprint), in screen pixels.
+	var lunge_cap := _lunge_cap
+	if f != null and f.target != null and f.target.alive:
+		lunge_cap = float(BattleSim.gap(f, f.target)) * field.field_scale() * float(t.lunge_gap_share)
+		_lunge_cap = lunge_cap  # (kept for the strike's end, once the target is down)
+	if lunge_cap < INF and lunge_cap > 0.0:
+		# And never into anyone else's body either: at most the room ahead
+		# of its nose (teammates beside it at the same target, a body going
+		# down in the way).
+		lunge_cap = minf(lunge_cap, room_ahead() * field.field_scale())
+	var lunge_px := Vector2.ZERO
 	if anim in ["idle", "fidget", "victory"] and defeat < 0.0:
 		# Breathing: a slow squash and stretch, and a gentle bob.
 		var b := sin(now * float(t.breathe_speed) * pace + idle_phase)
@@ -1057,9 +1111,9 @@ func animate(dt: float, now: float) -> void:
 		# Fliers bob as they hover and swoop gently as they fly (in step
 		# with their army while it marches).
 		var bob_phase := 0.0 if anim == "walk" and army else idle_phase
-		lift += (sin(now * float(t.air_bob_speed) * pace + bob_phase) * 0.5 + 0.5) * float(t.air_bob_pixels)
+		air_px += (sin(now * float(t.air_bob_speed) * pace + bob_phase) * 0.5 + 0.5) * float(t.air_bob_pixels)
 		if anim == "walk":
-			lift += (sin(now * 1.7 + bob_phase) * 0.5 + 0.5) * float(t.air_swoop_pixels)
+			air_px += (sin(now * 1.7 + bob_phase) * 0.5 + 0.5) * float(t.air_swoop_pixels)
 	elif anim == "walk":
 		# Little hops in step with the walk cycle: stretched in the air,
 		# squashed on landing, leaning into the run. Tanks plod low and
@@ -1122,11 +1176,11 @@ func animate(dt: float, now: float) -> void:
 					ws *= 1.4
 					var leap := clampf((since / maxf(windup, 0.01) - 0.7) / 0.3, 0.0, 1.0)
 					lift += sin(leap * PI * 0.5) * float(t.td_pounce_pixels)
-					offset += screen_dir * leap * lunge * float(t.td_lunge) * 0.6
+					lunge_px += screen_dir * minf(leap * lunge * float(t.td_lunge) * 0.6, lunge_cap)
 				"ranged":
 					pull *= 1.3
 				"air":
-					lift += w * float(t.air_dive_rise_pixels)
+					air_px += w * float(t.air_dive_rise_pixels)
 			# Traits: a Splash animal rises for a belly flop, a Slow one
 			# stretches in a lazy yawn, the big Stun blow comes with a
 			# trembling stare (when there's no rendered wind-up).
@@ -1153,14 +1207,14 @@ func animate(dt: float, now: float) -> void:
 				"ranged":
 					offset -= screen_dir * strike_t * float(t.ranged_recoil_pixels)
 				"tank_destroyer":
-					offset += screen_dir * strike_t * lunge * float(t.td_lunge)
+					lunge_px += screen_dir * minf(strike_t * lunge * float(t.td_lunge), lunge_cap)
 				"tank":
-					offset += screen_dir * strike_t * lunge * 1.2
+					lunge_px += screen_dir * minf(strike_t * lunge * 1.2, lunge_cap)
 				"air":
-					offset += screen_dir * strike_t * lunge * 1.5
-					lift -= strike_t * float(t.air_dive_drop_pixels)
+					lunge_px += screen_dir * minf(strike_t * lunge * 1.5, lunge_cap)
+					air_px -= strike_t * float(t.air_dive_drop_pixels)
 				_:
-					offset += screen_dir * strike_t * lunge
+					lunge_px += screen_dir * minf(strike_t * lunge, lunge_cap)
 			lean = screen_dir.x * 10.0 * strike_t
 			if _trait == "splash":
 				# Splat: flattened by the belly flop.
@@ -1255,7 +1309,18 @@ func animate(dt: float, now: float) -> void:
 			sx *= shrink
 			sy *= shrink
 			opacity = 1.0 - Ease.in_cubic(d)
+	offset += lunge_px
+	m_lunge = Vector2(lunge_px.x, lunge_px.y / 0.6) / maxf(0.001, field.field_scale())
 	offset.y -= lift
+	# A flier's height: a model flies at a real height above the ground (so
+	# it passes over, not through, and sorts rightly); a sprite is lifted.
+	var altitude := 0.0
+	if air and defeat < 0.0:
+		if modeled:
+			var ppu := maxf(1.0, field.field_scale() * 1000.0)
+			altitude = float(t.air_height_tiles) + air_px / ppu
+		else:
+			offset.y -= float(t.air_height_tiles) * field.field_scale() * 1000.0 * ModelStage.COS + air_px
 	# Its attack style's pose (in its shell, sitting for a snack, charging).
 	var style_pose := look.pose(f, now, dt)
 	sx *= float(style_pose.sx)
@@ -1312,6 +1377,7 @@ func animate(dt: float, now: float) -> void:
 		m_phase = _phase_of(anim, frame, now, pace, since, defeat >= 0.0 or stunned)
 		m_facing = _shown_dir * 45.0 if celebrating and anim != "victory" else facing
 		m_offset = offset
+		m_altitude = altitude
 		m_scale = Vector2(maxf(sx, 0.01), maxf(sy, 0.01))
 		m_rot = rot
 		m_opacity = opacity
@@ -1470,6 +1536,75 @@ func render_pos() -> Vector2:
 	return hop_from.lerp(shown, Ease.in_out_sine(hop_t))
 
 
+## How far its nose can go forward (along its attack) before it would be
+## in another drawn body, field units (INF with nobody ahead).
+func room_ahead() -> float:
+	var dir := attack_dir if attack_dir.length() > 0.0 else Vector2(sin(deg_to_rad(facing)), -cos(deg_to_rad(facing)))
+	var nose := render_pos() + dir * body_half
+	var room := INF
+	for other: UnitView in field.views():
+		if other == self or other.flying != flying or (other.fighter == null and other.defeat < 0.0):
+			continue
+		if other.render_pos().distance_squared_to(nose) > (other.body_half + 2500.0) * (other.body_half + 2500.0):
+			continue
+		var axis := Vector2(sin(deg_to_rad(other.facing)), -cos(deg_to_rad(other.facing))) * maxf(0.0, other.body_half - other.body_half_width)
+		var centre := other.render_pos() + other.m_lunge
+		var closest := Geometry2D.get_closest_point_to_segment(nose, centre - axis, centre + axis)
+		var to := closest - nose
+		# Only what lies ahead counts (behind it, it can't lunge into).
+		if to.dot(dir) <= 0.0:
+			continue
+		room = minf(room, maxf(0.0, to.length() - other.body_half_width - body_half_width))
+	return room
+
+
+## Whether two animals' drawn bodies overlap (the feel report and tests):
+## each body a capsule on the field (half its length along its facing, half
+## its width round it, bodies.json) where it's drawn, lunge and all;
+## overlapping is more than a tenth of the thinner body into the other
+## (touching is fine).
+static func bodies_overlap(a: UnitView, b: UnitView) -> bool:
+	if not a.m_visible or not b.m_visible:
+		return false  # underground (a Burrow animal): no body on show
+	if a.flying and b.flying and absf(a.m_altitude - b.m_altitude) * 1000.0 >= a.body_half_width + b.body_half_width:
+		return false  # one flies over the other
+	if a.body_gone() or b.body_gone():
+		return false  # knocked flying off the field: no longer a body on the ground
+	var pa := a.render_pos() + a.m_lunge
+	var pb := b.render_pos() + b.m_lunge
+	# (A knockout's poof shrinks the body away.)
+	var ka := a.body_shrink()
+	var kb := b.body_shrink()
+	var da := _spine_axis(a) * maxf(0.0, a.body_half - a.body_half_width) * ka
+	var db := _spine_axis(b) * maxf(0.0, b.body_half - b.body_half_width) * kb
+	var closest := Geometry2D.get_closest_points_between_segments(pa - da, pa + da, pb - db, pb + db)
+	var d: float = closest[0].distance_to(closest[1])
+	var wa := a.body_half_width * ka
+	var wb := b.body_half_width * kb
+	return d < wa + wb - 0.1 * minf(wa, wb)
+
+
+## Whether its body has left the ground for good: flung off the field by
+## a knockout (it flies off, spinning, over the heads of the others).
+func body_gone() -> bool:
+	return defeat > 0.1 and _defeat_kind == "fling"
+
+
+## How much of its body is left on the ground: a knockout's poof shrinks
+## it away (1 while fine).
+func body_shrink() -> float:
+	if defeat <= 0.0 or _defeat_kind == "fling":
+		return 1.0
+	return 1.0 - Ease.in_cubic(defeat)
+
+
+## The way a body's long side runs: along its facing, or across it for a
+## flier (its wings), as the fight has it (BattleSim.spine).
+static func _spine_axis(v: UnitView) -> Vector2:
+	var along := Vector2(sin(deg_to_rad(v.facing)), -cos(deg_to_rad(v.facing)))
+	return Vector2(-along.y, along.x) if v.flying else along
+
+
 ## A pack's stars show over one of its animals only, not all of them.
 func shows_stars() -> bool:
 	return not swarm or not (key is String) or String(key).ends_with("/0")
@@ -1477,12 +1612,18 @@ func shows_stars() -> bool:
 
 ## Where the top of its head is now, relative to its feet, for bars and stars.
 func head() -> Vector2:
-	return body.position + Vector2(0, -UnitSprites.top(id) * body.k * body.scale.y)
+	return body.position + Vector2(0, -UnitSprites.top(id) * body.k * body.scale.y - altitude_px())
 
 
-## Where the middle of its body is, for hit sparks.
+## Where the middle of its body is, for hit sparks and shots to fly at.
 func middle() -> Vector2:
-	return position + body.position + Vector2(0, -UnitSprites.top(id) * body.k * 0.45)
+	return position + body.position + Vector2(0, -UnitSprites.top(id) * body.k * 0.45 - altitude_px())
+
+
+## A model flier's height above the ground as it shows on screen (pixels
+## up; 0 on the ground).
+func altitude_px() -> float:
+	return m_altitude * field.field_scale() * 1000.0 * ModelStage.COS if modeled else 0.0
 
 
 # --- Drawing the shadow and ring ---------------------------------------------
@@ -1495,7 +1636,7 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 	var s := field.field_scale()
 	var f := fighter
 	var radius := (f.radius if f != null else 450) * s
-	var lift := -body.position.y
+	var lift := -body.position.y + altitude_px()
 	var fade := 1.0
 	if defeat >= 0.0:
 		fade = 1.0 - defeat

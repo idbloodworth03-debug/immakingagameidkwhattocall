@@ -39,6 +39,21 @@ class Fighter:
 	var prev_x := 0               # position last tick, for smooth drawing
 	var prev_y := 0
 	var radius := 450
+	## Half its body's length (bodies.json footprint): a strike reaches from here.
+	var half := 0
+	var shooter := false          # a shot flies from its body to its target's body (not nose to nose)
+	## Half its body's width (bodies.json width): how thick its spine is.
+	var hw := 300
+	## Which way its body points (thousandths of a unit vector): turning at
+	## the drawn animal's pace toward its target in reach, else the way it
+	## goes (`wants`), else up the field.
+	var heading := Vector2i(0, -1000)
+	var prev_heading := Vector2i(0, -1000)
+	var wants := Vector2i(0, -1000)
+	## How far it has walked in all (its own steps, not pushes or
+	## knockbacks), so the screen can hold the walking part of a swing.
+	var walked := Vector2i.ZERO
+	var prev_walked := Vector2i.ZERO
 	var hp := 0
 	var max_hp := 0
 	var damage := 0
@@ -129,6 +144,19 @@ var targeting: Targeting
 ## animals may stand before being nudged apart, and how hard.
 var personal_space := 0
 var space_push_pct := 25
+## Bodies going down ([x, y, radius, until tick]): they keep their room
+## for body_down_ticks (battle_rules.json spacing body_down_seconds, the
+## knockout on screen), so nobody walks through one.
+var corpses: Array = []
+var body_down_ticks := 16
+## A swing (battle_rules.json "swing"): a fighter stands still from
+## windup_ticks before its blow until recovery_ticks after it.
+var windup_ticks := 6
+var recovery_ticks := 6
+## How far a body turns a tick (battle_rules.json spacing
+## turn_degrees_per_tick), as the rotation's cosine and sine in thousandths.
+var turn_cos := 809
+var turn_sin := 588
 ## The field's size this fight, and the line between the two halves.
 var width := WIDTH
 var height := HEIGHT
@@ -152,6 +180,13 @@ func _init(levels: Array, seed_value: int, battle_rules: Dictionary = {}) -> voi
 	var spacing: Dictionary = rules.get("spacing", {})
 	personal_space = roundi(float(spacing.get("personal_space", 0.0)) * TILE)
 	space_push_pct = int(spacing.get("push_pct", 25))
+	body_down_ticks = roundi(float(spacing.get("body_down_seconds", 0.8)) * tps)
+	var turn := deg_to_rad(float(spacing.get("turn_degrees_per_tick", 36)))
+	turn_cos = roundi(cos(turn) * 1000.0)
+	turn_sin = roundi(sin(turn) * 1000.0)
+	var swing: Dictionary = rules.get("swing", {})
+	windup_ticks = roundi(float(swing.get("windup_seconds", 0.3)) * tps)
+	recovery_ticks = roundi(float(swing.get("recovery_seconds", 0.3)) * tps)
 	for team_index in 2:
 		var team := Team.new()
 		team.levels = levels[team_index]
@@ -218,6 +253,8 @@ func step() -> void:
 	for f in fighters:
 		f.prev_x = f.x
 		f.prev_y = f.y
+		f.prev_heading = f.heading
+		f.prev_walked = f.walked
 	if army != null:
 		army.before_tick(self)
 	for f in fighters.duplicate():
@@ -266,7 +303,7 @@ func _update(f: Fighter) -> void:
 		if f.cooldown <= 0:
 			attack(f, f.target)
 			f.cooldown = f.hit_ticks * 100
-	else:
+	elif not mid_swing(f):
 		move_toward_point(f, Vector2i(f.target.x, f.target.y), current_speed(f))
 
 
@@ -401,8 +438,54 @@ func _find_target(f: Fighter) -> Fighter:
 	return best if best != null else nearest
 
 
+## Whether `t` is within `f`'s reach: for a melee animal, the gap between
+## the ends of their bodies (nose to nose, bodies.json footprint) is at
+## most its reach; for a shooter, the gap between their bodies' circles
+## (its shot flies from its body to the target's) is at most its range.
 func in_range(f: Fighter, t: Fighter) -> bool:
-	return edge_distance(f, t) <= f.attack_range
+	return reach_gap(f, t) <= f.attack_range
+
+
+## The gap `f`'s reach is measured over to `t`: nose to nose for a melee
+## animal, body to body for a shooter.
+static func reach_gap(f: Fighter, t: Fighter) -> int:
+	return edge_distance(f, t) if f.shooter else gap(f, t)
+
+
+## How far `f`'s reach starts from its middle (half its body for a melee
+## animal; its body's circle for a shooter), and how far `t`'s body
+## extends toward it, the same way.
+static func reach_from(f: Fighter) -> int:
+	return f.radius if f.shooter else f.half
+
+
+static func reach_to(f: Fighter, t: Fighter) -> int:
+	return t.radius if f.shooter else t.half
+
+
+## How far `f`'s body reaches out to each side of the way it faces: its
+## room's circle on the ground, half its wingspan in the air (a flier's
+## long side runs across its heading).
+static func side_room(f: Fighter) -> int:
+	return f.half if f.flying else f.radius
+
+
+## The gap between the ends of two bodies (nose to nose), field units.
+static func gap(a: Fighter, b: Fighter) -> int:
+	return maxi(0, dist(a, b) - a.half - b.half)
+
+
+## Whether `f` is in the middle of a swing and stands still for it: its
+## blow was recovery_ticks ago or less, or is counting down to land within
+## windup_ticks with its target in reach (the strike plays out where it
+## started). With the target out of reach it walks after it as before.
+func mid_swing(f: Fighter) -> bool:
+	if tick - int(f.memory.get("blow", -1000)) < recovery_ticks:
+		return true
+	var t := f.target
+	if t == null or not t.alive or f.cooldown <= 0 or f.cooldown > windup_ticks * 100:
+		return false
+	return in_range(f, t)
 
 
 func current_speed(f: Fighter) -> int:
@@ -422,12 +505,15 @@ func move_toward_point(f: Fighter, goal: Vector2i, step_size: int) -> void:
 	if d == 0 or step_size <= 0:
 		return
 	var moved := mini(step_size, d)
+	f.wants = Vector2i(dx * 1000 / d, dy * 1000 / d)
+	var from := Vector2i(f.x, f.y)
 	if d <= step_size:
 		f.x = goal.x
 		f.y = goal.y
 	else:
 		f.x += dx * step_size / d
 		f.y += dy * step_size / d
+	f.walked += Vector2i(f.x, f.y) - from
 	f.memory.run = int(f.memory.get("run", 0)) + moved
 	BattleAbilities.on_moved(self, f)
 
@@ -457,7 +543,8 @@ func _move_burrowed(f: Fighter) -> void:
 			events.append({"type": "emerge", "uid": f.uid, "x": f.x, "y": f.y})
 			BattleStyles.on_emerge(self, f)
 		return
-	var behind := TILE if back.team == 1 else -TILE
+	# Just behind it, clear of its body (and its own).
+	var behind := maxi(TILE, back.half + f.half + TILE / 10) * (1 if back.team == 1 else -1)
 	var goal := Vector2i(back.x, clampi(back.y - behind, f.radius, height - f.radius))
 	# Its style may pick the spot (the Fox by the Ranged, the Pangolin under
 	# a Tank).
@@ -480,6 +567,8 @@ func _separate() -> void:
 	var flying: Array = []
 	var grid := {}
 	for f in fighters:
+		if f.alive and f.kind == "unit":
+			_turn_body(f)
 		if f.alive and f.kind == "unit" and not f.memory.get("burrowing", false):
 			var key: int = (f.x / SEPARATE_CELL) * 4096 + f.y / SEPARATE_CELL
 			if not grid.has(key):
@@ -498,37 +587,119 @@ func _separate() -> void:
 					for j in grid[key]:
 						if j > i and flying[i] == flying[j]:
 							_push_apart(a, walkers[j])
+	# Round the bodies going down, too.
+	corpses = corpses.filter(func(c): return int(c[3]) > tick)
+	for c in corpses:
+		var cs := spine(int(c[0]), int(c[1]), int(c[4]), int(c[5]), c[6], false)
+		for i in walkers.size():
+			var f: Fighter = walkers[i]
+			if flying[i]:
+				continue
+			if absi(f.x - int(c[0])) >= f.half + int(c[4]) or absi(f.y - int(c[1])) >= f.half + int(c[4]):
+				continue
+			var body := f.hw + int(c[5])
+			for pf: Vector2i in spine(f.x, f.y, f.half, f.hw, f.heading, false):
+				for pc: Vector2i in cs:
+					var dx := pf.x - pc.x
+					var dy := pf.y - pc.y
+					if absi(dx) >= body or absi(dy) >= body:
+						continue
+					var d := isqrt(dx * dx + dy * dy)
+					if d >= body:
+						continue
+					if d == 0:
+						dx = 1 if f.uid % 2 == 0 else -1
+						d = 1
+					var push := body - d + 1
+					f.x += dx * push / d
+					f.y += dy * push / d
 	for f in walkers:
 		f.x = clampi(f.x, f.radius, width - f.radius)
 		f.y = clampi(f.y, f.radius, height - f.radius)
 
 
-## Two animals too close: an overlap is pushed apart at once, and within
-## personal space they're nudged apart gently (push_pct of the gap a tick).
+## Turns `f`'s body toward what it wants to face (its target in reach, or
+## the way it goes) by at most turn_degrees_per_tick, as the drawn animal
+## turns, so its spine sweeps round at the same pace. Whole numbers only.
+func _turn_body(f: Fighter) -> void:
+	var t := f.target
+	var in_reach := t != null and t.alive and in_range(f, t)
+	if in_reach:
+		var d := dist(f, t)
+		if d > 0:
+			f.wants = Vector2i((t.x - f.x) * 1000 / d, (t.y - f.y) * 1000 / d)
+	elif army != null and not army.at_war() and f.memory.has("slot") and not f.memory.get("free", false) and not f.memory.get("charging", false) and f.stun <= 0:
+		# In its place in the formation: facing the enemy's side, even while
+		# stepping into place.
+		f.wants = Vector2i(0, -1000) if f.team == 0 else Vector2i(0, 1000)
+	var h := f.heading
+	var w := f.wants
+	var cross := h.x * w.y - h.y * w.x
+	var dot := h.x * w.x + h.y * w.y
+	# Within a tick's turn of it (the cosine of the angle between them is at
+	# least the turn's): there.
+	if dot >= turn_cos * 1000:
+		f.heading = w
+		return
+	var sign := 1 if cross > 0 or (cross == 0 and (f.uid % 2 == 0)) else -1
+	var nx := (h.x * turn_cos - sign * h.y * turn_sin) / 1000
+	var ny := (sign * h.x * turn_sin + h.y * turn_cos) / 1000
+	var n := isqrt(nx * nx + ny * ny)
+	if n > 0:
+		f.heading = Vector2i(nx * 1000 / n, ny * 1000 / n)
+
+
+## An animal's body on the field as three circles along its spine (nose,
+## middle, tail; a flier's across its wings), each half its width wide
+## (bodies.json footprint and width), pointing where it heads or strikes.
+static func spine(x: int, y: int, half: int, hw: int, heading: Vector2i, is_flying: bool) -> Array:
+	var s := half - hw
+	if s <= hw / 2:
+		return [Vector2i(x, y)]
+	var axis := Vector2i(-heading.y, heading.x) if is_flying else heading
+	return [Vector2i(x - axis.x * s / 1000, y - axis.y * s / 1000), Vector2i(x, y), Vector2i(x + axis.x * s / 1000, y + axis.y * s / 1000)]
+
+
+## Two animals too close: their bodies (spine circles) overlapping are
+## pushed apart at once, and within personal space they're nudged apart
+## gently (push_pct of the gap a tick).
 func _push_apart(a: Fighter, b: Fighter) -> void:
-	var body := a.radius + b.radius
+	var reach := a.half + b.half + personal_space
+	if absi(b.x - a.x) >= reach or absi(b.y - a.y) >= reach:
+		return
+	var body := a.hw + b.hw
 	var min_d := body + personal_space
-	var dx := b.x - a.x
-	var dy := b.y - a.y
-	if absi(dx) >= min_d or absi(dy) >= min_d:
-		return
-	var d := isqrt(dx * dx + dy * dy)
-	if d >= min_d:
-		return
-	if d == 0:
-		dx = 1 if (a.uid + b.uid) % 2 == 0 else -1
-		dy = 0
-		d = 1
-	var push := 0
-	if d < body:
-		push = (body - d) / 2 + 1
-	push += (min_d - maxi(d, body)) * space_push_pct / 200
-	if push <= 0:
-		return
-	a.x -= dx * push / d
-	a.y -= dy * push / d
-	b.x += dx * push / d
-	b.y += dy * push / d
+	var ca := spine(a.x, a.y, a.half, a.hw, a.heading, a.flying)
+	var cb := spine(b.x, b.y, b.half, b.hw, b.heading, b.flying)
+	# One ploughing through (a Rhino's charge) isn't pushed back: the other
+	# takes the whole shove.
+	var plow_a := int(a.memory.get("charge_state", 0)) == 1
+	var plow_b := int(b.memory.get("charge_state", 0)) == 1
+	var share_a := 0 if plow_a and not plow_b else (2 if plow_b and not plow_a else 1)
+	var share_b := 2 - share_a
+	for pa: Vector2i in ca:
+		for pb: Vector2i in cb:
+			var dx := pb.x - pa.x
+			var dy := pb.y - pa.y
+			if absi(dx) >= min_d or absi(dy) >= min_d:
+				continue
+			var d := isqrt(dx * dx + dy * dy)
+			if d >= min_d:
+				continue
+			if d == 0:
+				dx = 1 if (a.uid + b.uid) % 2 == 0 else -1
+				dy = 0
+				d = 1
+			var push := 0
+			if d < body:
+				push = (body - d) / 2 + 1
+			push += (min_d - maxi(d, body)) * space_push_pct / 200
+			if push <= 0:
+				continue
+			a.x -= dx * push * share_a / d
+			a.y -= dy * push * share_a / d
+			b.x += dx * push * share_b / d
+			b.y += dy * push * share_b / d
 
 
 # --- Fighting --------------------------------------------------------------
@@ -556,6 +727,10 @@ func attack(f: Fighter, t: Fighter, pct := 100) -> void:
 	f.stealthed = false
 	f.memory.attacked = true
 	f.memory.last_combat = tick
+	f.memory.blow = tick
+	var hd := dist(f, t)
+	if hd > 0:
+		f.wants = Vector2i((t.x - f.x) * 1000 / hd, (t.y - f.y) * 1000 / hd)
 	targeting.struck(self, f, t)
 	var hit := {
 		"type": "hit", "from": f.uid, "from_kind": f.kind, "to": t.uid, "to_kind": t.kind,
@@ -621,6 +796,8 @@ func _defeat(t: Fighter, source: Fighter) -> void:
 	t.alive = false
 	t.hp = 0
 	events.append({"type": "death", "uid": t.uid, "kind": t.kind, "team": t.team, "x": t.x, "y": t.y})
+	if t.is_unit() and not t.is_flying():
+		corpses.append([t.x, t.y, t.radius, tick + body_down_ticks, t.half, t.hw, t.heading])
 	if t.is_unit():
 		teams[t.team].defeated += 1
 		BattleAbilities.on_defeated(self, t, source)
@@ -689,8 +866,10 @@ func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	for i in made.size():
 		var f: Fighter = made[i]
 		var offset := formation(i, count)
-		f.x = clampi(x + offset.x, f.radius, width - f.radius)
-		f.y = clampi(y + offset.y, f.radius, height - f.radius)
+		# (Wider for big bodies, so a group's animals stand clear of each other.)
+		var room := maxf(1.0, float(2 * side_room(f) + TILE / 10) / 800.0)
+		f.x = clampi(x + roundi(offset.x * room), f.radius, width - f.radius)
+		f.y = clampi(y + roundi(offset.y * room), f.radius, height - f.radius)
 		f.prev_x = f.x
 		f.prev_y = f.y
 		BattleArmy.apply_share(f, squad, bite)
@@ -732,7 +911,10 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 	f.hit_ticks = maxi(1, roundi(float(stats.hit_speed) * tps))
 	f.cooldown = f.hit_ticks * 50
 	var tiles := float(stats.range)
-	f.attack_range = melee if tiles <= 1.0 else roundi(tiles * TILE)
+	# A melee animal hits as far as its strike reaches beyond its body
+	# (bodies.json reach); a shooter as far as its card says.
+	f.attack_range = unit_reach(card) if tiles <= 1.0 else roundi(tiles * TILE)
+	f.shooter = tiles > 1.0
 	f.speed = int(rules.speed_values.get(stats.speed, 60)) * TILE / (60 * tps)
 	# Its class decides what it can hit, whether it flies, and (for Ranged)
 	# how far it reaches at least.
@@ -746,6 +928,11 @@ func _make_unit(team: int, card: Dictionary, level: int, x: int, y: int) -> Figh
 	if info.has("range"):
 		f.attack_range = maxi(f.attack_range, roundi(float(info.range) * TILE))
 	f.radius = unit_radius(card)
+	f.half = unit_half(card)
+	f.hw = unit_half_width(card)
+	f.heading = Vector2i(0, -1000) if team == 0 else Vector2i(0, 1000)
+	f.prev_heading = f.heading
+	f.wants = f.heading
 	f.deploy_ticks = deploy_ticks
 	f.x = clampi(x, f.radius, width - f.radius)
 	f.y = clampi(y, f.radius, height - f.radius)
@@ -802,6 +989,7 @@ func clone() -> BattleSim:
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
 	copy.zones = zones.duplicate(true)
+	copy.corpses = corpses.duplicate(true)
 	copy.army = army.copy() if army != null else null
 	copy.teams = []
 	for t in teams:
@@ -837,10 +1025,42 @@ static func group_size(card: Dictionary) -> int:
 	return int(BattleArmy.squad_of(String(card.get("id", ""))).units)
 
 
-## How much room an animal takes on the field: its class's squad's
-## (classes.json "squads" radius).
+## How much room an animal takes on the field: a circle between its body's
+## width and its length (bodies.json footprint and width: the square root
+## of the two, halved), so a line of bodies stands clear and nothing walks
+## through one; its class's squad radius (classes.json "squads") when it
+## has no body.
 static func unit_radius(card: Dictionary) -> int:
+	var body: Dictionary = GameData.bodies.get("animals", {}).get(String(card.get("id", "")), {})
+	if body.has("footprint"):
+		return roundi(sqrt(float(body.footprint) * float(body.get("width", body.footprint))) * TILE / 2.0)
 	return int(BattleArmy.squad_of(String(card.get("id", ""))).radius)
+
+
+## Half an animal's body width (bodies.json width, field units).
+static func unit_half_width(card: Dictionary) -> int:
+	var body: Dictionary = GameData.bodies.get("animals", {}).get(String(card.get("id", "")), {})
+	if body.has("width"):
+		return roundi(float(body.width) * TILE / 2.0)
+	return unit_radius(card)
+
+
+## Half an animal's body length (bodies.json footprint, field units): a
+## strike is measured from its body's end.
+static func unit_half(card: Dictionary) -> int:
+	var body: Dictionary = GameData.bodies.get("animals", {}).get(String(card.get("id", "")), {})
+	if body.has("footprint"):
+		return roundi(float(body.footprint) * TILE / 2.0)
+	return unit_radius(card)
+
+
+## How far a melee animal's strike reaches beyond its body (bodies.json
+## reach; the rules' melee_range when it has none), field units.
+static func unit_reach(card: Dictionary) -> int:
+	var body: Dictionary = GameData.bodies.get("animals", {}).get(String(card.get("id", "")), {})
+	if body.has("reach") and not body.get("shooter", false):
+		return roundi(float(body.reach) * TILE)
+	return roundi(float(GameData.battle_rules.get("melee_range", 0.7)) * TILE)
 
 
 ## Where each animal of a group stands, relative to its spot.

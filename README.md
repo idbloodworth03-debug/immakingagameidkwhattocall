@@ -145,7 +145,8 @@ about while there's an enemy they could fight, which should be close to
 zero, SIZE: how big the animals are drawn as a share of an iPhone
 screen's height, with the field laid out as on the phone, and Animation:
 hard cuts, swings cut short, sliding while hitting, snap turns and the feet
-against the ground), from bot-vs-bot fights through the real battle view:
+against the ground, and BODIES: how often two drawn bodies overlap, and
+how often a striking body does, which should be near zero), from bot-vs-bot fights through the real battle view:
 `small` is 4
 cards a side, `big` 22, then how many fights (`HERD_A=lion,tiger HERD_B=...`
 for given herds; `IDLE_LOG=1` prints every idle moment):
@@ -227,7 +228,7 @@ files in `game/data/`:
 - **Fight tuning** (speeds, melee range, hit luck): `battle_rules.json`
 - **Draft Duel tuning** (wins needed, picks, deck size, army size, options, tools, stars, the War Horn, how the field grows for big armies, how the computer weighs its picks): `draft_rules.json`
 - **Armies** (squad sizes and each animal's share of a card, the formation): `classes.json`; the march, volleys, clash and charge: `battle_rules.json` ("army"); how armies look (in-step marching, camera, banners): `feel.json` ("army")
-- **How big each animal is drawn in battle** (its longest side in tiles) and how big any may look on the screen (a share of the screen's height: a typical animal about 6%, Tanks at most 9%, Mythic heroes 10%; the camera never zooms in past that): `bodies.json`
+- **Each animal's body in battle**: how big it's drawn (its longest side in tiles), its footprint (its true size on the ground: its room in the fight, so bodies never overlap), its reach (how far its strike extends: a melee animal's range, nose to nose, and where it stands to hit; a shooter's card range is measured body to body, as before), and how big any may look on the screen (a share of the screen's height: a typical animal about 6%, Tanks at most 9%, Mythic heroes 10%; the camera never zooms in past that): `bodies.json`
 - **Starting cards** for new players (also their first deck): `progression.json` (`starting_cards`); deck size: `draft_rules.json` (`deck_size`)
 - **Classes** (counters, squads, formation, Specialist traits): `classes.json`; each animal's class and trait are in `animals.json`
 - **Habitats** (flavor: names, icons, colors): `habitats.json`

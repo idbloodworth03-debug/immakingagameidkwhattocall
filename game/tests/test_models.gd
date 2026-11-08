@@ -287,8 +287,14 @@ func _play(field: BattleField, seconds: float) -> void:
 
 func test_tapping_a_squad_shows_what_it_is_doing() -> void:
 	var field := _fight()
-	_play(field, 6.0)
-	var army: Array = field._views.values().filter(func(v): return v.team == 0 and v.fighter != null and v.fighter.target != null)
+	# Into the fight, until one of ours is going for someone (how soon
+	# depends on the fight; the Fox is underground for a while).
+	var army: Array = []
+	for i in 24:
+		_play(field, 0.5)
+		army = field._views.values().filter(func(v): return v.team == 0 and v.fighter != null and v.fighter.target != null and v.fighter.target.alive)
+		if not army.is_empty():
+			break
 	check(not army.is_empty(), "animals of ours going for someone")
 	if army.is_empty():
 		return

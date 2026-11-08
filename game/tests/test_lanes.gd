@@ -88,7 +88,11 @@ func _play(seconds: float) -> Dictionary:
 			if steps == 0:
 				out.own_lane += 1
 			var fresh := int(f.memory.get("locked", -1)) == sim.tick and String(f.memory.get("locked_why", "")) != "threat"
-			if fresh and f.attack_range < army.shooter_reach and not army.crosses(f):
+			# (A charging Tank Destroyer goes for the enemy Tanks wherever they
+			# are, and an ability's own pick, like Fearless taking the biggest
+			# enemy in reach, is its own rule: battle_rules.json army, styles.json.)
+			var own_rule: bool = f.memory.get("charging", false) or BattleStyles.prefer_target(sim, f) == t
+			if fresh and not own_rule and f.attack_range < army.shooter_reach and not army.crosses(f):
 				out.fresh += 1
 				# A fighter picking outside its lane or deep past the line: only
 				# if its own lane had nobody near the line it could take on.
@@ -105,7 +109,16 @@ func _play(seconds: float) -> Dictionary:
 								print("LANEDBG %s why=%s charging=%s steps=%d past=%d tgt=%s alt=%s(%d,%d) alt_score=%d tgt_score=%d" % [f.card.id, f.memory.get("locked_why"), f.memory.get("charging", false), steps, army.past_line(sim, f.team, t), t.card.id, e.card.id, army.lane_steps(sim, f, e), army.past_line(sim, f.team, e), army._score(sim, f, e, Vector2i(f.x, f.y), true), army._score(sim, f, t, Vector2i(f.x, f.y), true)])
 							break
 			if f.attack_range < army.shooter_reach and not army.crosses(f) and army.past_line(sim, f.team, t) > army.line_reach + T:
-				out.deep += 1
+				# On an enemy deep past the line: the rule allows it only when
+				# there's nobody else, so it only counts against the fighter
+				# while its own lane has someone near the line it could take on
+				# (the last enemies left in a lane are chased down wherever they
+				# stand).
+				for e: BattleSim.Fighter in sim.fighters:
+					if e.team != f.team and e.alive and e.is_unit() and sim.can_target(f, e) and army.room(sim, f, e) \
+							and army.lane_steps(sim, f, e) == 0 and army.past_line(sim, f.team, e) <= army.line_reach:
+						out.deep += 1
+						break
 			if f.cls == "ranged" and not army.crosses(f):
 				out.ranged += 1
 				var y := int(army.line[BattleArmy.lane_at(sim, f.x) + 1])
@@ -120,7 +133,7 @@ func test_fighters_keep_to_their_lane_and_the_line() -> void:
 	check(float(out.own_lane) / out.picks > 0.7, "mostly fighting in their own lane (%.0f%%)" % [100.0 * out.own_lane / out.picks])
 	check(out.fresh > 20, "fighters pick targets (%d)" % out.fresh)
 	check_eq(out.left_lane_wrongly, 0, "a fighter only picks outside its lane, or deep past the line, when its own lane has nobody near the line it can take on")
-	check(float(out.deep) / out.picks < 0.05, "fighters seldom end up on an enemy deep past the battle line (%.1f%%)" % [100.0 * out.deep / out.picks])
+	check(float(out.deep) / out.picks < 0.03, "fighters seldom stay on an enemy deep past the battle line while their own lane has someone near it to take on (%.1f%%)" % [100.0 * out.deep / out.picks])
 
 
 func test_ranged_stay_behind_the_line() -> void:

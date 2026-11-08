@@ -697,7 +697,8 @@ static func burrow_goal(sim: BattleSim, f: BattleSim.Fighter) -> Variant:
 				prey = _nearest_any(sim, f, func(e): return e.cls == "ranged")
 			if prey == null:
 				return null
-			var behind := T * 7 / 10 * (-1 if prey.team == 1 else 1)
+			# Right behind it, clear of its body (and its own).
+			var behind := maxi(T * 7 / 10, prey.half + f.half + T / 10) * (-1 if prey.team == 1 else 1)
 			return Vector2i(prey.x, clampi(prey.y + behind, prey.radius, sim.height - prey.radius))
 		"flip":
 			var tank := _nearest_any(sim, f, func(e): return e.cls == "tank")
@@ -1415,7 +1416,8 @@ static func _rhino_charge(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 	for e: BattleSim.Fighter in sim.fighters:
 		if e.team == f.team or not e.alive or not e.is_unit() or e.is_flying() or e.memory.get("burrowing", false) or hit.has(e.uid):
 			continue
-		var reach := f.radius + e.radius + T / 10
+		# Anyone its nose reaches (its body's half length, bodies.json).
+		var reach := f.half + e.radius + T / 10
 		var ex := e.x - f.x
 		var ey := e.y - f.y
 		if ex * ex + ey * ey > reach * reach:

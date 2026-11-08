@@ -871,10 +871,16 @@ func _spread_views(dt: float) -> void:
 	var list: Array[UnitView] = []
 	var grid := {}
 	var settle := Feel.num(m, "spread_return_rate", 1.0) * 1000.0 * dt
+	var fixed := {}
 	for v: UnitView in _views.values():
-		if v.defeat >= 0.0 or v.doomed or v.fighter == null or v.fighter.memory.get("burrowing", false) or v.hop_t < 1.0:
+		var dying := v.defeat >= 0.0 or v.doomed
+		if (not dying and (v.fighter == null or v.fighter.memory.get("burrowing", false))) or v.hop_t < 1.0:
 			continue
-		if v.army and (v.walking_in() or (v._placed and not v._in_reach)):
+		if dying:
+			# A body going down still takes its room: the living are nudged
+			# clear of it, it isn't moved itself.
+			fixed[v] = true
+		elif v.army and (v.walking_in() or (v._placed and not v._in_reach)):
 			# In its place in the formation: lines stay clean, no nudging.
 			v.spread = v.spread.move_toward(Vector2.ZERO, settle)
 			continue
@@ -910,13 +916,21 @@ func _spread_views(dt: float) -> void:
 					var side := 1.0 if (a.uid + b.uid) % 2 == 0 else -1.0
 					n = (n + Vector2(side * sideways * (1.0 - absf(n.x)), 0.0)).normalized()
 					var share := (want - dist) * 0.5
-					a.push += n * share
-					b.push -= n * share
+					if fixed.has(a) and fixed.has(b):
+						continue
+					if fixed.has(a):
+						b.push -= n * share * 2.0
+					elif fixed.has(b):
+						a.push += n * share * 2.0
+					else:
+						a.push += n * share
+						b.push -= n * share
 	var k := 1.0 - exp(-dt * Feel.num(m, "spread_rate", 8.0))
 	var back := exp(-dt * Feel.num(m, "spread_return_rate", 1.0))
 	var most := Feel.num(m, "spread_max_tiles", 1.0) * 1000.0
 	for v in list:
-		v.spread = ((v.spread + v.push * k) * back).limit_length(most)
+		if not fixed.has(v):
+			v.spread = ((v.spread + v.push * k) * back).limit_length(most)
 		v.push = Vector2.ZERO
 
 

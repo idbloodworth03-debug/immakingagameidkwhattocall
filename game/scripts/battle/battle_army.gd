@@ -97,6 +97,8 @@ var slots := 2
 var slots_by_class := {}
 var slot_turn := 50
 var wait_gap := 600
+var slot_gap_pct := 85
+var formation_gap := 100
 var spot_ticks := 3
 var detour_ticks := 8
 ## Reach (field units) from which an animal counts as a shooter: it needs no
@@ -145,6 +147,11 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	slots_by_class = e.get("slots_by_class", {})
 	slot_turn = int(e.get("slot_degrees", 50))
 	wait_gap = roundi(float(e.get("wait_gap", 0.6)) * T)
+	# A fighter stands slot_gap_pct of its reach from its target's body (its
+	# strike lands there, with a little to spare); a line gives each body
+	# its footprint and formation_gap between.
+	slot_gap_pct = int(e.get("slot_gap_pct", 85))
+	formation_gap = roundi(float(rules.get("spacing", GameData.battle_rules.get("spacing", {})).get("formation_gap", 0.1)) * T)
 	spot_ticks = maxi(1, roundi(float(w.get("spot_seconds", 0.15)) * tps))
 	detour_ticks = maxi(1, roundi(float(w.get("detour_seconds", 0.4)) * tps))
 	shooter_reach = roundi(float(w.get("shooter_reach", 1.5)) * T)
@@ -221,7 +228,7 @@ static func apply_share(f: BattleSim.Fighter, squad: Dictionary, bite: int) -> v
 	f.max_hp = maxi(1, f.max_hp * int(squad.hp_pct) / 100)
 	f.hp = f.max_hp
 	f.damage = maxi(1, f.damage * int(squad.damage_pct) * bite / 10000)
-	f.radius = int(squad.radius)
+	# (Its room is its body's, bodies.json footprint: BattleSim.unit_radius.)
 	f.memory.squad_units = int(squad.units)
 
 
@@ -240,7 +247,9 @@ func spawn_squad(sim: BattleSim, team: int, card_id: String, order: int) -> Arra
 		f.memory.hero = squad.hero
 		f.memory.back = squad.back
 		f.memory.elite = squad.elite
-		f.memory.spacing = int(squad.spacing)
+		# Room in the line for its body (its class's spacing, or its footprint
+		# and a gap, battle_rules.json spacing formation_gap, if that's more).
+		f.memory.spacing = maxi(int(squad.spacing), 2 * BattleSim.side_room(f) + formation_gap)
 		f.memory.line_max = int(squad.line_max)
 		f.memory.leash = int(squad.leash)
 		f.memory.order = order * 16 + i
@@ -565,9 +574,9 @@ func before_tick(sim: BattleSim) -> void:
 			var fighting := f.target != null and f.target.alive and sim.in_range(f, f.target)
 			if f.memory.rank == front_rank[team]:
 				var near := _nearest_enemy(sim, f)
-				if fighting or (near != null and BattleSim.edge_distance(f, near) <= engage):
+				if fighting or (near != null and BattleSim.gap(f, near) <= engage):
 					holding[team] = true
-					if clash_tick < 0 and near != null and near.memory.get("rank", "") == front_rank[1 - team] and BattleSim.edge_distance(f, near) <= engage:
+					if clash_tick < 0 and near != null and near.memory.get("rank", "") == front_rank[1 - team] and BattleSim.gap(f, near) <= engage:
 						clash_tick = sim.tick
 						sim.events.append({"type": "clash", "x": (f.x + near.x) / 2, "y": (f.y + near.y) / 2})
 			if f.cls == "ranged" and fighting:
@@ -695,6 +704,8 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 			sim.attack(f, t)
 			f.cooldown = f.hit_ticks * 100
 		return
+	if t != null and sim.mid_swing(f) and not charging:
+		return  # mid-swing: it stands still for its strike
 	if t != null:
 		var goal := Vector2i(t.x, t.y)
 		var speed := sim.current_speed(f)
@@ -728,7 +739,7 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 			# A shooter closes in, but stays behind the battle line (when it
 			# can hit its target from there).
 			var at_line := int(line[lane_at(sim, goal.x) + 1])
-			if at_line >= 0 and past_line(sim, f.team, t) + ranged_gap <= f.attack_range + t.radius:
+			if at_line >= 0 and past_line(sim, f.team, t) + ranged_gap <= f.attack_range + BattleSim.reach_to(f, t):
 				goal.y = maxi(goal.y, at_line + ranged_gap) if f.team == 0 else mini(goal.y, at_line - ranged_gap)
 		if charging:
 			speed = speed * charge_pct / 100
@@ -747,7 +758,10 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 		if near != null and BattleSim.edge_distance(f, near) > T:
 			_go(sim, f, Vector2i(near.x, near.y), sim.current_speed(f))
 			return
-	# Nothing to fight: to its place, in step with the army.
+	# Nothing to fight: to its place, in step with the army (once its swing
+	# is done).
+	if sim.mid_swing(f):
+		return
 	var step := maxi(sim.current_speed(f), pace * catch_up_pct / 100)
 	sim.move_toward_point(f, place, step)
 
@@ -845,7 +859,7 @@ func _take(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
 	for k in cap:
 		if used.has(k):
 			continue
-		var dir := _slot_dir(f.team, k, cap)
+		var dir := _slot_dir(f.team, k, cap, BattleSim.side_room(f), _ring(f, t))
 		var dx := t.x + dir.x - f.x
 		var dy := t.y + dir.y - f.y
 		if dx * dx + dy * dy < best_d:
@@ -857,10 +871,15 @@ func _take(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> void:
 
 
 ## The way (thousandths of a tile) from an enemy to slot `k` of its `cap`
-## for `team`'s fighters: spread evenly, slot_degrees apart, facing their
+## for `team`'s fighters: spread evenly, slot_degrees apart (or as far
+## apart as `body` radii on a ring of `ring` need to stand clear of each
+## other, if that's more: big bodies round a small target), facing their
 ## own side of the field.
-func _slot_dir(team: int, k: int, cap: int) -> Vector2i:
-	var degrees := float((k * 2 - (cap - 1)) * slot_turn) / 2.0
+func _slot_dir(team: int, k: int, cap: int, body := 0, ring := 0) -> Vector2i:
+	var turn := float(slot_turn)
+	if body > 0 and ring > 0:
+		turn = maxf(turn, rad_to_deg(2.0 * asin(minf(0.99, float(body) / float(ring)))))
+	var degrees := float((k * 2 - (cap - 1)) * turn) / 2.0
 	var toward := 1000 if team == 0 else -1000
 	var a := deg_to_rad(degrees)
 	return Vector2i(-roundi(toward * sin(a)), roundi(toward * cos(a)))
@@ -869,9 +888,16 @@ func _slot_dir(team: int, k: int, cap: int) -> Vector2i:
 ## Where `f` stands to fight `t` from its slot (no check for room: before
 ## the war, held back by its leash anyway).
 func _slot_spot(f: BattleSim.Fighter, t: BattleSim.Fighter) -> Vector2i:
-	var dir := _slot_dir(f.team, int(f.memory.get("engage_k", 0)), cap_of(t))
-	var ring := t.radius + f.radius + f.attack_range / 2
+	var ring := _ring(f, t)
+	var dir := _slot_dir(f.team, int(f.memory.get("engage_k", 0)), cap_of(t), BattleSim.side_room(f), ring)
 	return Vector2i(t.x + dir.x * ring / 1000, t.y + dir.y * ring / 1000)
+
+
+## How far from `t`'s middle `f` stands to strike it: the two half bodies,
+## nose to nose, and slot_gap_pct of its reach between (where its strike
+## lands).
+func _ring(f: BattleSim.Fighter, t: BattleSim.Fighter) -> int:
+	return t.half + f.half + f.attack_range * slot_gap_pct / 100
 
 
 ## Where `f` waits for a slot on `t` to come free: just outside its reach,
@@ -884,7 +910,7 @@ func _wait_spot(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> V
 		dx = 0
 		dy = 1000 if f.team == 0 else -1000
 		d = 1000
-	var ring := t.radius + f.radius + f.attack_range + wait_gap
+	var ring := t.half + f.half + f.attack_range + wait_gap
 	return Vector2i(clampi(t.x + dx * ring / d, f.radius, sim.width - f.radius), clampi(t.y + dy * ring / d, f.radius, sim.height - f.radius))
 
 
@@ -911,7 +937,7 @@ func _score(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, place: V
 		score += lane_steps(sim, f, t) * (fighter_lane_cost if fighter else shooter_lane_cost)
 	if not crosses(f) and t.is_unit():
 		var past := past_line(sim, f.team, t)
-		if (fighter and past > line_reach) or (not fighter and past + ranged_gap > f.attack_range + t.radius):
+		if (fighter and past > line_reach) or (not fighter and past + ranged_gap > f.attack_range + BattleSim.reach_to(f, t)):
 			score += line_cost
 	return score
 
@@ -989,7 +1015,7 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 	# The closest with no free slot, for when every enemy is full.
 	var spare: BattleSim.Fighter = null
 	var spare_score := 1 << 40
-	var reach := leash + f.attack_range + f.radius
+	var reach := leash + f.attack_range + BattleSim.reach_from(f)
 	var war := at_war() and not charging
 	var prefer_reach := roundi(float(prefer.get("tiles", 0)) * T)
 	for t: BattleSim.Fighter in sim.fighters:
@@ -1003,7 +1029,7 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 			# Too far from its place to reach (squared distances: cheap).
 			var dx := t.x - place.x
 			var dy := t.y - place.y
-			var r := reach + t.radius
+			var r := reach + BattleSim.reach_to(f, t)
 			if dx * dx + dy * dy > r * r:
 				continue
 		if free:
@@ -1053,7 +1079,7 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 func _reachable(f: BattleSim.Fighter, t: BattleSim.Fighter, place: Vector2i, leash: int) -> bool:
 	var dx := t.x - place.x
 	var dy := t.y - place.y
-	var r := leash + f.attack_range + t.radius + f.radius
+	var r := leash + f.attack_range + BattleSim.reach_to(f, t) + BattleSim.reach_from(f)
 	return dx * dx + dy * dy <= r * r
 
 
@@ -1124,7 +1150,7 @@ func _spot(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> Vector
 	var ux := f.x - t.x
 	var uy := f.y - t.y
 	if int(f.memory.get("engage_on", -1)) == t.uid:
-		var dir := _slot_dir(f.team, int(f.memory.get("engage_k", 0)), cap_of(t))
+		var dir := _slot_dir(f.team, int(f.memory.get("engage_k", 0)), cap_of(t), BattleSim.side_room(f), _ring(f, t))
 		ux = dir.x
 		uy = dir.y
 	else:
@@ -1135,7 +1161,7 @@ func _spot(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> Vector
 		else:
 			ux = ux * 1000 / d
 			uy = uy * 1000 / d
-	var ring := t.radius + f.radius + f.attack_range / 2
+	var ring := _ring(f, t)
 	var flying := f.is_flying()
 	# Only those close enough to the target to be in the way of a spot.
 	var near := []

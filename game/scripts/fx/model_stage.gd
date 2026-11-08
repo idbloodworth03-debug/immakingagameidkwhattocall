@@ -397,6 +397,9 @@ func _pose(m: Model, v: UnitView, now: float, dt: float, ppu: float, right: Vect
 	# Where: its feet on the field, then the sprite's offset in the camera's plane.
 	var at := ground(v.render_pos())
 	at += right * (v.m_offset.x / ppu) + up * (-v.m_offset.y / ppu)
+	# A flier: a real height above the ground (it sorts with the others
+	# in depth, never cuts through one it passes over).
+	at += Vector3.UP * v.m_altitude
 	m.pivot.position = at
 	# Squash, stretch and lean, as the sprite has them on screen.
 	var camera_frame := Basis(right, up, -forward)

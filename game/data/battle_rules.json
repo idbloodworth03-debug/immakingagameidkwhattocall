@@ -10,18 +10,22 @@
     "threat_forget_seconds": 2.0
   },
   "engagement": {
-    "_note": "Engagement slots (scripts/battle/battle_army.gd): only so many fighters (reach under army.war.shooter_reach) may attack one enemy at once: `slots`, or its class's in slots_by_class (a Tank is bigger). Each takes one of the enemy's slots, evenly spaced slot_degrees apart round it on its own side, and stands there. An enemy with no free slot is passed over for the next closest with one; only when every enemy is full does a fighter wait wait_gap tiles outside its reach for a slot to come free. Shooters take no slot.",
+    "_note": "Engagement slots (scripts/battle/battle_army.gd): only so many fighters (reach under army.war.shooter_reach) may attack one enemy at once: `slots`, or its class's in slots_by_class (a Tank is bigger). Each takes one of the enemy's slots, evenly spaced slot_degrees apart round it on its own side, and stands there, slot_gap_pct of its reach (bodies.json) from the enemy's body: where its strike lands, with a little to spare. An enemy with no free slot is passed over for the next closest with one; only when every enemy is full does a fighter wait wait_gap tiles outside its reach for a slot to come free. Shooters take no slot.",
     "slots": 2,
     "slots_by_class": {
       "tank": 3
     },
     "slot_degrees": 50,
-    "wait_gap": 0.6
+    "wait_gap": 0.6,
+    "slot_gap_pct": 85
   },
   "spacing": {
-    "_note": "Personal space (scripts/battle/battle_sim.gd): animals at the same height never overlap (an overlap is pushed apart at once), and within personal_space tiles of each other (edge to edge) they're nudged apart by push_pct of the gap each tick, gently, so nobody stacks up.",
+    "_note": "Personal space (scripts/battle/battle_sim.gd): animals at the same height never overlap (each body is three circles along its spine, nose, middle and tail, half its width wide, pointing at what it strikes or the way it goes, turning at most turn_degrees_per_tick a tick as the drawn animal turns; an overlap is pushed apart at once), and within personal_space tiles of each other (edge to edge) they're nudged apart by push_pct of the gap each tick, gently, so nobody stacks up. Every animal's room is its body's footprint (bodies.json), at all times; a line in a formation gives each its footprint and formation_gap tiles between (or its class's spacing, if that's more); a body going down keeps its room for body_down_seconds (the knockout on screen, which comes a little after the fight's and takes a moment), so nobody walks through it.",
     "personal_space": 0.12,
-    "push_pct": 25
+    "turn_degrees_per_tick": 36,
+    "push_pct": 25,
+    "formation_gap": 0.2,
+    "body_down_seconds": 1.6
   },
   "lanes": {
     "_note": "Lanes and the battle line (scripts/battle/battle_army.gd), once the war is on. The field is three lanes (left, middle, right); each squad has one (its place in the formation: classes.json formation). A fighter goes for an enemy in its own lane (or within slack tiles of it) first: one in another lane counts fighter_lane_cost tiles further per lane away, so it only leaves for the next lane when its own has nobody it can take on; a shooter's count shooter_lane_cost tiles further (it mostly shoots in its lane). In each lane the battle line is halfway between the two sides' front animals on the ground, and moves at most line_pace tiles a minute, so it pushes back and forth. A fighter doesn't go for an enemy more than line_reach tiles past it (one further counts line_cost tiles further: only when there's nobody else); Ranged stay ranged_gap tiles behind it, going only for enemies they can hit from there. Flankers (these animals) roam free of lanes and the line; Air flies over the line (air_flies_over) but keeps to its lane.",
@@ -44,6 +48,11 @@
   "ticks_per_second": 20,
   "deploy_seconds": 1.0,
   "melee_range": 0.7,
+  "swing": {
+    "_note": "A fighter stands still through its own swing: from windup_seconds before its blow (its target in reach, the blow coming) until recovery_seconds after it, so the strike plays out where it started (scripts/battle/battle_sim.gd mid_swing; the screen holds the drawn body through a swing too, unit_view.gd). With its target out of reach it walks after it as ever; only after a blow does it wait recovery_seconds before following a target that stepped away.",
+    "windup_seconds": 0.3,
+    "recovery_seconds": 0.3
+  },
   "speed_values": {
     "slow": 45,
     "medium": 60,
@@ -52,11 +61,11 @@
   },
   "damage_variance_pct": 25,
   "army": {
-    "_note": "Armies in Draft Duel (scripts/battle/battle_army.gd). Each army's front line starts start_gap tiles from the middle and marches at march_pace (tiles per minute) with everyone in step; an animal out of its place catches up at catch_up_pct of the pace (or its own speed if faster). The front holds while its first rank has an enemy within engage tiles, and never comes closer than contact_gap tiles to the enemy's front line (the lines meet, they don't pass through each other). Ranged ranks stop to shoot while an enemy is in reach and fire together every volley_seconds (each shot carries the damage of the time between volleys), the first volley first_volley_seconds after one comes into reach. clash: the moment the front lines meet. charge_after_seconds after the clash, Tank Destroyers charge the enemy Tanks (charge_speed_pct of their speed, no leash) and go back to their line once none are left. When animals fall, the ranks close up every repack_seconds. From the clash on, it's all-out war (see war, below): nobody keeps its place. lane_pct: how much an enemy off to the side of an animal's place counts as further away (keeps lines fighting straight across). damage_pct: every army animal's bite, as a share of its card's (with its squad's share on top): sets how long fights take.",
+    "_note": "Armies in Draft Duel (scripts/battle/battle_army.gd). Each army's front line starts start_gap tiles from the middle and marches at march_pace (tiles per minute) with everyone in step; an animal out of its place catches up at catch_up_pct of the pace (or its own speed if faster). The front holds while its first rank has an enemy within engage tiles (nose to nose, bodies.json), and never comes closer than contact_gap tiles to the enemy's front line (the lines meet, they don't pass through each other). Ranged ranks stop to shoot while an enemy is in reach and fire together every volley_seconds (each shot carries the damage of the time between volleys), the first volley first_volley_seconds after one comes into reach. clash: the moment the front lines meet. charge_after_seconds after the clash, Tank Destroyers charge the enemy Tanks (charge_speed_pct of their speed, no leash) and go back to their line once none are left. When animals fall, the ranks close up every repack_seconds. From the clash on, it's all-out war (see war, below): nobody keeps its place. lane_pct: how much an enemy off to the side of an animal's place counts as further away (keeps lines fighting straight across). damage_pct: every army animal's bite, as a share of its card's (with its squad's share on top): sets how long fights take.",
     "start_gap": 4.0,
     "march_pace": 45,
     "catch_up_pct": 170,
-    "engage": 1.1,
+    "engage": 0.55,
     "volley_seconds": 2.0,
     "first_volley_seconds": 0.5,
     "charge_after_seconds": 0.8,

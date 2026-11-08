@@ -151,6 +151,7 @@ func _reset_stats() -> void:
 		"impacts": 0, "impacts_unread": 0, "impact_late": 0.0, "impacts_together": 0,
 		"march_frames": 0, "march_off": 0.0, "march_close": 0, "line_spread": 0.0, "lines": 0,
 		"battle_frames": 0, "battle_off": 0.0, "cuts": 0, "blends": 0,
+		"body_frames": 0, "body_overlap_frames": 0, "strike_frames": 0, "strike_overlap_frames": 0,
 		"ranged_shots": 0, "volley_shots": 0, "volleys": 0, "volley_land_spread": 0.0,
 		"first_volley": 0.0, "clash": 0.0, "charge": 0.0, "with_volley": 0, "with_clash": 0, "with_charge": 0,
 		"volley_first": 0, "charge_after_clash": 0,
@@ -160,7 +161,7 @@ func _reset_stats() -> void:
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 		"size_sum": 0.0, "size_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
-		"attack_frames": 0, "attack_slide_frames": 0, "snap_turns": 0, "pos_snaps": 0, "attacks_started": 0, "attacks_cut": 0, "seen_views": {},
+		"attack_frames": 0, "attack_slide_frames": 0, "air_attack_frames": 0, "air_attack_slide_frames": 0, "attack_dbg": {}, "snap_turns": 0, "pos_snaps": 0, "attacks_started": 0, "attacks_cut": 0, "seen_views": {},
 		"anim_time": {}, "walk_slide": 0.0, "walk_slide_n": 0,
 	}
 	switched_at.clear()
@@ -560,9 +561,28 @@ func _watch_views(_delta: float) -> void:
 			info.rpos = rpos
 			var tiles_per_s := fvel.length() / 1000.0 * 60.0
 			if anim in UnitView.ATTACK_ANIMS:
-				stats.attack_frames += 1
-				if tiles_per_s > 0.25:
-					stats.attack_slide_frames += 1
+				# (On the ground; a flier's dive moves its body by design.)
+				if v.flying:
+					stats.air_attack_frames += 1
+					if tiles_per_s > 0.25:
+						stats.air_attack_slide_frames += 1
+				else:
+					stats.attack_frames += 1
+					if tiles_per_s > 0.25:
+						stats.attack_slide_frames += 1
+				if OS.get_environment("ATTACK_DEBUG") != "":
+					# Who slides while hitting, and why: a flier's dive, a push
+					# by a body, a body still walking into place.
+					var spos := Vector2i(v.fighter.x, v.fighter.y) if v.fighter != null else Vector2i.ZERO
+					var walking: bool = v.fighter != null and v.fighter.walked != v.fighter.prev_walked
+					var why := "flying" if v.flying else ("walking" if walking else ("pushed" if spos != Vector2i(info.get("spos", spos)) else "drawn only"))
+					info.spos = spos
+					var key := "%s %s %s" % [v.id, anim, why]
+					var d: Array = stats.attack_dbg.get(key, [0, 0])
+					d[0] += 1
+					if tiles_per_s > 0.25:
+						d[1] += 1
+					stats.attack_dbg[key] = d
 			var turned := absf(wrapf(v.facing - float(info.get("facing", v.facing)), -180.0, 180.0))
 			if turned > 30.0:
 				stats.snap_turns += 1
@@ -622,19 +642,91 @@ func _watch_views(_delta: float) -> void:
 				by_enemy = true
 		if by_enemy:
 			stats.covered_frames += 1
-	# Animals drawn on top of each other (the same height: both on the
-	# ground, or both flying).
-	var s := field.field_scale()
-	for i in placed.size():
-		for j in range(i + 1, placed.size()):
-			var a: UnitView = placed[i]
-			var b: UnitView = placed[j]
+	# Bodies overlapping (the same height: both on the ground, or both
+	# flying): their footprints (bodies.json, the fight's radii) where
+	# they're drawn, with a strike's lunge on top; any frame with one, and
+	# the frames an attacking body overlaps another (what a clipping strike
+	# looks like). Bodies going down count too: the living keep clear.
+	var bodies: Array = []
+	for v: UnitView in field.views():
+		if v.fighter == null and v.defeat < 0.0:
+			continue
+		if v.fighter != null and v.fighter.memory.get("burrowing", false):
+			continue
+		bodies.append(v)
+	var any_overlap := false
+	var attack_overlap := {}
+	for i in bodies.size():
+		var a: UnitView = bodies[i]
+		for j in range(i + 1, bodies.size()):
+			var b: UnitView = bodies[j]
 			if a.flying != b.flying:
 				continue
 			stats.pair_checks += 1
-			var r := (a.fighter.radius + b.fighter.radius) * s
-			if a.position.distance_to(b.position) < r * 0.7:
+			if UnitView.bodies_overlap(a, b):
 				stats.overlap_pairs += 1
+				any_overlap = true
+				if OS.get_environment("BODY_DEBUG") != "":
+					var why := "other"
+					if a.defeat >= 0.0 or b.defeat >= 0.0:
+						why = "one dying"
+					elif a.flying:
+						why = "fliers"
+					elif a.fighter.target == b.fighter or b.fighter.target == a.fighter:
+						why = "fighter and its target"
+					elif a.team == b.team:
+						why = "teammates"
+					# Do their bodies overlap in the fight too (its spines: three
+					# circles along the body, BattleSim.spine), or only as drawn?
+					var sim_over := false
+					if a.fighter != null and b.fighter != null:
+						var fa: BattleSim.Fighter = a.fighter
+						var fb: BattleSim.Fighter = b.fighter
+						var sa := BattleSim.spine(fa.x, fa.y, fa.half, fa.hw, fa.heading, fa.flying)
+						var sb := BattleSim.spine(fb.x, fb.y, fb.half, fb.hw, fb.heading, fb.flying)
+						var seg := Geometry2D.get_closest_points_between_segments(Vector2(sa[0]), Vector2(sa[-1]), Vector2(sb[0]), Vector2(sb[-1]))
+						sim_over = seg[0].distance_to(seg[1]) < fa.hw + fb.hw - 0.1 * minf(fa.hw, fb.hw)
+					var key := "%s%s" % [why, " (in the fight too)" if sim_over else " (drawn only)"]
+					if why == "one dying" and int(stats.get("dying_dumps", 0)) < 24 and stats.frames % 4 == 0:
+						stats.dying_dumps = int(stats.get("dying_dumps", 0)) + 1
+						var dying: UnitView = a if a.defeat >= 0.0 else b
+						var live: UnitView = b if a.defeat >= 0.0 else a
+						var live_f: BattleSim.Fighter = live.fighter
+						print("  BODY DYING %s %.2f (%s, fighter %s) under %s(%s, target %s, walked %s) drawn %.2f tiles apart (lunge %.2f); rooms %.2f+%.2f, halves %.2f+%.2f, widths %.2f+%.2f" % [dying.id, dying.defeat, dying._defeat_kind, "gone" if dying.fighter == null else ("alive" if dying.fighter.alive else "dead"), live.id, live.m_anim, (live_f.target.card.id if live_f.target != null else "-") if live_f != null else "?", (live_f.walked != live_f.prev_walked) if live_f != null else "?", (a.render_pos() - b.render_pos()).length() / 1000.0, live.m_lunge.length() / 1000.0, dying.body_radius / 1000.0, live.body_radius / 1000.0, dying.body_half / 1000.0, live.body_half / 1000.0, dying.body_half_width / 1000.0, live.body_half_width / 1000.0])
+					var tally: Dictionary = stats.get_or_add("body_why", {})
+					tally[key] = int(tally.get(key, 0)) + 1
+					if (a.defeat < 0.0 and a.attacking(field.now())) or (b.defeat < 0.0 and b.attacking(field.now())):
+						var striking: Dictionary = stats.get_or_add("strike_why", {})
+						var who := "%s striking %s" % [a.id if a.attacking(field.now()) and a.defeat < 0.0 else b.id, b.id if a.attacking(field.now()) and a.defeat < 0.0 else a.id]
+						striking["%s: %s" % [why, who]] = int(striking.get("%s: %s" % [why, who], 0)) + 1
+					var pair := "%s/%s" % [a.id, b.id] if a.id <= b.id else "%s/%s" % [b.id, a.id]
+					var pairs: Dictionary = stats.get_or_add("body_pairs", {})
+					pairs[pair] = int(pairs.get(pair, 0)) + 1
+				if a.attacking(field.now()) and a.defeat < 0.0:
+					attack_overlap[a] = true
+				if b.attacking(field.now()) and b.defeat < 0.0:
+					attack_overlap[b] = true
+	stats.body_frames += 1
+	if any_overlap:
+		stats.body_overlap_frames += 1
+	if OS.get_environment("BODY_DEBUG") != "":
+		# How far the drawn body sits from its place in the fight.
+		for v: UnitView in bodies:
+			if v.fighter == null:
+				continue
+			var off: float = v.render_pos().distance_to(Vector2(v.fighter.x, v.fighter.y)) / 1000.0
+			var state := "striking" if v.attacking(field.now()) else ("hopping" if v.hop_t < 1.0 else "walking/standing")
+			var d: Array = stats.get_or_add("diverge", {}).get_or_add(state, [0.0, 0.0, 0])
+			d[0] += off
+			d[1] = maxf(d[1], off)
+			d[2] += 1
+	for v: UnitView in bodies:
+		if v.defeat < 0.0 and v.attacking(field.now()):
+			stats.strike_frames += 1
+			if attack_overlap.has(v):
+				stats.strike_overlap_frames += 1
+
+
 
 
 ## How big the animals are drawn (bodies.json "limits"): each
@@ -805,6 +897,27 @@ func _thirds() -> String:
 	return " / ".join(parts)
 
 
+func _body_debug() -> void:
+	if not stats.has("body_why"):
+		return
+	print("  BODY overlaps by cause: ", _top(stats.body_why, 12))
+	print("  BODY overlaps while striking: ", _top(stats.get("strike_why", {}), 12))
+	print("  BODY overlaps by pair: ", _top(stats.body_pairs, 10))
+	for state in stats.get("diverge", {}):
+		var d: Array = stats.diverge[state]
+		print("  BODY drawn vs fight position, %s: %.3f tiles on average, %.2f at most (%d frames)" % [state, d[0] / maxi(1, d[2]), d[1], d[2]])
+
+
+func _attack_debug() -> void:
+	var dbg: Dictionary = stats.get("attack_dbg", {})
+	var keys: Array = dbg.keys()
+	keys.sort_custom(func(a, b): return int(dbg[a][1]) > int(dbg[b][1]))
+	for k in keys:
+		var d: Array = dbg[k]
+		if int(d[1]) > 0:
+			print("  ATTACK %-44s slid in %4d of %4d attack frames (%.0f%%)" % [k, d[1], d[0], 100.0 * d[1] / maxi(1, d[0])])
+
+
 func _walk_debug() -> void:
 	var dbg: Dictionary = stats.get("walk_dbg", {})
 	for k in dbg:
@@ -847,6 +960,8 @@ func _idle_by_class() -> String:
 
 func _report() -> void:
 	_walk_debug()
+	_attack_debug()
+	_body_debug()
 	var uf := maxf(1.0, float(stats.unit_frames))
 	var secs := uf / 60.0  # animal-seconds watched
 	var lines := [
@@ -855,7 +970,8 @@ func _report() -> void:
 		"  animation changes     %.2f per animal-second; %.0f%% last under 0.15 s (flicker)" % [stats.anim_changes / secs, 100.0 * stats.anim_blips / maxf(1, stats.anim_changes)],
 		"  jitter                %.1f%% of animal-frames reverse direction on screen" % [100.0 * stats.jitter / uf],
 		"  walking               %.0f%% of frames; %.0f%% of those sideways/backwards (sliding), %.0f%% while in range (pushed)" % [100.0 * stats.walk_frames / uf, 100.0 * stats.strafe_frames / maxf(1, stats.walk_frames), 100.0 * stats.pushed_walk / maxf(1, stats.walk_frames)],
-		"  overlaps              %.1f%% of pairs overlap as circles; %.0f%% of animal-frames have their picture mostly covered by a teammate, %.0f%% only by an enemy it's fighting (screen nudge %.2f tiles on average)" % [100.0 * stats.overlap_pairs / maxf(1, stats.pair_checks), 100.0 * stats.covered_by_team / uf, 100.0 * stats.covered_frames / uf, stats.spread / uf / 1000.0],
+		"  overlaps              %.1f%% of pairs overlap as bodies (footprints where they're drawn); %.0f%% of animal-frames have their picture mostly covered by a teammate, %.0f%% only by an enemy it's fighting (screen nudge %.2f tiles on average)" % [100.0 * stats.overlap_pairs / maxf(1, stats.pair_checks), 100.0 * stats.covered_by_team / uf, 100.0 * stats.covered_frames / uf, stats.spread / uf / 1000.0],
+		"  BODIES                %.2f%% of frames any two bodies overlap; %.2f%% of striking frames the striking body overlaps another (should be near 0)" % [100.0 * stats.body_overlap_frames / maxf(1, stats.body_frames), 100.0 * stats.strike_overlap_frames / maxf(1, stats.strike_frames)],
 		"  hit-stop              the whole fight is frozen %.0f%% of the time, %.1f freezes per second" % [100.0 * stats.frozen_frames / maxf(1, stats.frames), stats.freezes / maxf(0.1, stats.frames / 60.0)],
 		"  clutter               %.0f%% of animal-frames flashing white, %.1f damage numbers on screen on average (%.1f in busy spots), %.1f spark bursts, %.0f%% of animal-frames show a health bar" % [100.0 * stats.flash_frames / uf, float(stats.number_frames) / maxf(1, stats.frames), float(stats.busy_numbers) / maxf(1, stats.frames), float(stats.spark_frames) / maxf(1, stats.frames), 100.0 * stats.bar_frames / uf],
 		"  new effects           %.1f damage numbers a second pop up in busy spots, %.1f elsewhere; %.1f spark bursts a second" % [stats.new_numbers_busy / maxf(0.1, stats.fight_seconds), stats.new_numbers_calm / maxf(0.1, stats.fight_seconds), stats.new_sparks / maxf(0.1, stats.fight_seconds)],
@@ -880,7 +996,7 @@ func _report() -> void:
 		"Animation (part 2)",
 		"  hard cuts             %.1f animation changes per animal-minute; %d cut hard, %d cross-faded over %.0f ms (%.0f%% of changes last under 0.15 s)" % [stats.anim_changes / secs * 60.0, stats.cuts, stats.blends, Feel.num("acting", "blend_seconds", 0.0) * 1000.0, 100.0 * stats.anim_blips / maxf(1, stats.anim_changes)],
 		"  attacks cut short     %d of %d attacks started over one still playing (%.0f%%)" % [stats.attacks_cut, stats.attacks_started, 100.0 * stats.attacks_cut / maxf(1, stats.attacks_started)],
-		"  sliding while hitting %.1f%% of attack frames the body moves faster than a quarter tile a second" % [100.0 * stats.attack_slide_frames / maxf(1, stats.attack_frames)],
+		"  sliding while hitting %.1f%% of attack frames on the ground the body moves faster than a quarter tile a second (fliers' attacks move by design: %.0f%% of theirs)" % [100.0 * stats.attack_slide_frames / maxf(1, stats.attack_frames), 100.0 * stats.air_attack_slide_frames / maxf(1, stats.air_attack_frames)],
 		"  snap turns            %.2f per animal-minute (more than 30 degrees in one frame)" % [stats.snap_turns / secs * 60.0],
 		"  position snaps        %.2f per animal-minute (the drawn body jumps more than half a tile in one frame, hops aside)" % [stats.pos_snaps / secs * 60.0],
 		"  feet on the ground    walk cycle against the ground covered: %.0f%% off on average" % [100.0 * stats.walk_slide / maxf(1, stats.walk_slide_n)],

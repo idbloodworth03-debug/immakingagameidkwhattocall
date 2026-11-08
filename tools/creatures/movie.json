@@ -600,7 +600,11 @@
    "viewer": 11000
   },
   "shade_low": 0.25,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "bear",
+   "victory_rear": 0.95
+  }
  },
  "giant_panda": {
   "shape": {
@@ -787,7 +791,10 @@
    "viewer": 11000
   },
   "shade_low": 0.2,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "panda"
+  }
  },
  "hippopotamus": {
   "shape": {
@@ -875,7 +882,11 @@
    }
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "hippo",
+   "gape": 1.1
+  }
  },
  "asian_elephant": {
   "shape": {
@@ -963,7 +974,10 @@
    }
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "elephant"
+  }
  },
  "black_rhino": {
   "shape": {
@@ -1066,6 +1080,9 @@
    "inset": 0.3,
    "smile": 10,
    "corner": 0.065
+  },
+  "motion": {
+   "persona": "rhino"
   }
  },
  "snapping_turtle": {
@@ -1143,7 +1160,10 @@
    "corner": 0.028
   },
   "shade_low": 0.3,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "turtle"
+  }
  },
  "lion": {
   "shape": {
@@ -1322,7 +1342,10 @@
    "viewer": 11000
   },
   "shade_low": 0.25,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "lion"
+  }
  },
  "tiger": {
   "shape": {
@@ -1502,6 +1525,9 @@
   "stripes": {
    "edge": 0.08,
    "width": 1.15
+  },
+  "motion": {
+   "persona": "tiger"
   }
  },
  "wild_boar": {
@@ -1643,7 +1669,10 @@
    "viewer": 11000
   },
   "shade_low": 0.25,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "boar"
+  }
  },
  "wolf_pack": {
   "shape": {
@@ -1833,7 +1862,10 @@
    "viewer": 11000
   },
   "shade_low": 0.25,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "wolf"
+  }
  },
  "honey_badger": {
   "shape": {
@@ -1987,7 +2019,10 @@
    "viewer": 11000
   },
   "shade_low": 0.2,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "badger"
+  }
  },
  "cerberus": {
   "shape": {
@@ -2164,7 +2199,10 @@
    "viewer": 11000
   },
   "shade_low": 0.25,
-  "portrait_samples": 96
+  "portrait_samples": 96,
+  "motion": {
+   "persona": "cerberus"
+  }
  },
  "gray_squirrel": {
   "shape": {

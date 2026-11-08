@@ -407,6 +407,10 @@ def bake(creature, arm):
     arm.animation_data.action = None
     _rest(arm)
     for pb in roots:
+        # _rest put every bone back in XYZ mode; the glTF exporter writes a
+        # bone's rotation in its current mode, so the roots must stay in
+        # quaternion mode or their baked rotation (a rear, a roll) is lost.
+        pb.rotation_mode = "QUATERNION"
         pb.rotation_quaternion = (1, 0, 0, 0)
 
 

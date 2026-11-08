@@ -168,3 +168,22 @@ func test_the_movie_look_is_told_by_the_mesh_name() -> void:
 	for id in GameData.cards:
 		if not GameData.is_tool(id):
 			check(MOVIE.has(id), "%s is on the movie look" % id)
+
+
+## The Tanks have personas like the Yeti's (tools/creatures/motion.py
+## PERSONAS, movie.json "motion"): their models carry their own idle,
+## fidget and victory.
+const PERSONAS := ["brown_bear", "giant_panda", "hippopotamus", "asian_elephant", "black_rhino", "snapping_turtle",
+	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus"]
+
+
+func test_the_persona_animals_have_their_own_animations() -> void:
+	for id in PERSONAS:
+		var viewer := _viewer(id)
+		if viewer.model() == null:
+			check(false, "%s's model loaded" % id)
+			continue
+		var player := viewer.model().find_children("*", "AnimationPlayer", true, false)[0] as AnimationPlayer
+		for anim in ["idle", "fidget", "victory"]:
+			check(player.has_animation(anim) and player.get_animation(anim).length > 0.5, "%s has a %s" % [id, anim])
+		cleanup()

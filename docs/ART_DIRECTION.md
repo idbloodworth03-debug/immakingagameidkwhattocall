@@ -268,6 +268,44 @@ burst is the big one: two shockwave rings, twice the bits, longer, and a
 shake; a slam, a charge's end and a flip get the big one too. In a crowded
 fight the bits are halved. Numbers: `feel.json` "elements".
 
+**Personas, class by class** (after the effects pass; `motion.py`
+PERSONAS, picked in `movie.json` "motion"): each animal gets its own idle,
+fidget and victory on the animation principles in section 7, the Yeti's
+being the model. The Tanks first. The Brown Bear hangs its head low and
+swings it, sniffing the air at the top of each swing; sits back on its
+haunches to scratch its belly in lazy circles; and rears up to its full
+height roaring and boxing the air before thumping back down. The Giant
+Panda sways dozily and chews; plops onto its bottom, rubs its tummy and
+rolls onto its back kicking; and sits up clapping its paws over its head.
+The Hippo breathes slow and heavy with its ears and tail flicking; yawns
+the famous yawn, held a long beat and snapped shut with a head shake; and
+stamps and roars with its bottom wiggling. The Elephant shifts its weight
+with its ears flapping and trunk swinging; trumpets with the trunk curled
+back over its forehead and a stamp; and rears with the trunk straight up
+and the ears flared. The Rhino holds its horn low and scrapes a hoof;
+paws the ground three times, snorts twice and shakes its head; and hops
+with its horn tossed up and its tail straight up. The Snapping Turtle's
+head creeps out of its shell and back; it pulls right in and shoots out
+with a snap and a hop; and stands tall on straight legs snapping at the
+air. Each idle loops, each fidget starts and ends on the idle, and each
+victory loops, so the game can play them whenever it likes.
+
+The Tank Destroyers next. The Lion stands tall and surveys the field,
+its mane settling with a shake; does a cat stretch with a huge yawn and
+shakes out its mane; and rears with a paw raised to roar with its head
+thrown back, then sits proudly. The Tiger stands coiled and low, scanning,
+its tail lashing; sits to lick a paw and wipe its face; and pounces on the
+spot, claws out and jaws wide. The Wild Boar snuffles along the ground
+rooting with a hoof; digs with its snout and tosses its head up with a
+snort; and bucks, hind legs kicked high, squealing. The Wolf stands alert,
+ears pricked, checking one way then the other; sits and howls, muzzle
+straight up; and howls in triumph, then prances. The Honey Badger shifts
+restlessly, nose twitching, head jerking about; sits and scratches behind
+its ear with a hind leg; and hops with both paws up in a cocky strut.
+Cerberus's heads swing and pant, never agreeing; they squabble, the neck
+whipping and the jaws clacking; and it rears with all three heads thrown
+back howling fire, forelegs pawing the air.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

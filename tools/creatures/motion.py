@@ -1140,8 +1140,807 @@ def yeti_victory(c, t):
     return p
 
 
+
+# --- The Tanks' personas (docs/ART_DIRECTION.md, animation) ----------------------------
+
+def bear_idle(c, t):
+    """Big and unhurried: slow deep breaths, the head hung low and swinging
+    from side to side the way a bear's does, a sniff up at the air at the
+    top of each swing, the weight rolling from paw to paw."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    swing = math.sin(t * TAU + 0.5)
+    p.move(z=s * 0.008 * breath)
+    p.rot("chest", x=0.03 * breath, z=0.035 * swing)
+    p.rot("hips", z=-0.02 * swing)
+    # The head hangs low and swings wide; it lifts to sniff as it passes the middle.
+    sniff = max(0.0, math.cos(t * TAU * 2)) ** 3
+    p.rot("neck", x=-0.12 + 0.08 * sniff, z=0.22 * swing)
+    p.rot("head", x=-0.05 + 0.22 * sniff, z=0.15 * swing)
+    p.rot("jaw", x=-0.05 * sniff)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.03 * sign * swing, lower=-0.02 * sign * swing)
+        p.rot("ear." + side, z=sign * 0.1 * max(0.0, math.sin(t * TAU * 2 + sign)))
+    _tail(p, t, sway=0.1)
+    return p
+
+
+def bear_fidget(c, t):
+    """Sits back on its haunches, scratches its belly with a front paw in
+    big lazy circles while it looks about, then rocks forward back onto
+    all fours with a shake."""
+    p = bear_idle(c, 0.0)
+    s = _scale(c)
+    sit = float(keys(t, [(0, 0), (0.18, 1), (0.74, 1), (0.9, 0), (1, 0)]))
+    scratch = float(keys(t, [(0, 0), (0.25, 1), (0.68, 1), (0.8, 0), (1, 0)]))
+    rub = math.sin(t * TAU * 5) * scratch
+    shake = math.sin(t * TAU * 9) * float(keys(t, [(0, 0), (0.84, 0), (0.9, 1), (0.98, 0), (1, 0)]))
+    _rear(c, p, 0.55 * sit)
+    p.move(z=-s * 0.22 * sit)
+    for side, sign in (("L", 1), ("R", -1)):
+        # Hind legs fold under it; the left paw rests, the right one scratches.
+        p.leg("hl." + side, upper=0.9 * sit, lower=-1.3 * sit, foot=0.6 * sit)
+        if side == "R":
+            p.leg("fl.R", upper=1.1 * sit + 0.15 * rub, lower=-1.5 * sit - 0.25 * rub, foot=-0.3 * sit, splay=-0.25 * sit)
+        else:
+            p.leg("fl.L", upper=0.5 * sit, lower=-0.6 * sit, foot=-0.2 * sit, splay=0.2 * sit)
+    look = math.sin(t * TAU * 1.5) * scratch
+    p.rot("chest", x=0.1 * sit, y=0.1 * shake)
+    p.rot("neck", x=0.2 * sit, z=0.3 * look)
+    p.rot("head", x=0.15 * sit, z=0.2 * look, y=0.3 * shake)
+    p.rot("jaw", x=-0.12 * scratch * max(0.0, math.sin(t * TAU * 2.5)))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.5 * shake)
+    return p
+
+
+def bear_victory(c, t):
+    """Rears up to its full height roaring, boxing the air with alternating
+    paws, then drops back down onto all fours with a thump that bounces it,
+    and rises again."""
+    p = bear_idle(c, 0.0)
+    s = _scale(c)
+    up = float(keys(t, [(0, 0), (0.18, 1), (0.6, 1), (0.72, 0), (0.78, 0.08), (0.86, 0), (1, 0)]))
+    box = math.sin(t * TAU * 3) * float(keys(t, [(0, 0), (0.2, 1), (0.6, 1), (0.7, 0), (1, 0)]))
+    thump = float(keys(t, [(0, 0), (0.68, 0), (0.74, 1), (0.82, -0.3), (0.9, 0), (1, 0)]))
+    _rear(c, p, c.motion.get("victory_rear", 0.95) * up)
+    p.move(z=-s * 0.08 * max(thump, 0.0))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=1.0 * up + 0.5 * box * sign, lower=-0.9 * up - 0.4 * box * sign, foot=-0.35 * up,
+              splay=sign * 0.15 * up)
+        p.leg("hl." + side, upper=-0.25 * up + 0.3 * max(thump, 0.0), lower=-0.2 * up - 0.4 * max(thump, 0.0), foot=0.35 * up)
+    p.rot("chest", x=-0.08 * up - 0.15 * max(thump, 0.0))
+    p.rot("neck", x=-0.2 * up + 0.1 * thump)
+    p.rot("head", x=0.45 * up - 0.2 * thump, y=0.08 * box)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.9 * up))
+    return p
+
+
+def panda_idle(c, t):
+    """Lazy and round: a slow tummy breath that rocks it back a little, the
+    head tipping from side to side as if it's dozing off, ears wiggling, a
+    slow blink-and-chew at the bottom of each breath."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    tip = math.sin(t * TAU * 0.5 + 1.0) if t < 1.0 else math.sin(1.0)
+    tip = math.sin(t * TAU + 1.0)
+    p.move(z=s * 0.006 * breath)
+    p.rot("chest", x=0.05 * breath)
+    p.rot("hips", x=-0.02 * breath)
+    p.rot("neck", x=0.05 - 0.04 * breath, z=0.08 * tip)
+    p.rot("head", z=0.18 * tip, x=-0.08 * max(0.0, -breath))
+    chew = max(0.0, math.sin(t * TAU * 3)) * max(0.0, -breath)
+    p.rot("jaw", x=-0.12 * chew)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.12 * max(0.0, math.sin(t * TAU * 2 + sign * 0.7)))
+        p.leg("fl." + side, upper=0.02 * breath)
+    _tail(p, t, sway=0.05)
+    return p
+
+
+def panda_fidget(c, t):
+    """Plops down onto its bottom, rubs its tummy with both paws, rolls
+    back onto its back with its legs in the air kicking, then rolls forward
+    and heaves itself back up."""
+    p = panda_idle(c, 0.0)
+    s = _scale(c)
+    sit = float(keys(t, [(0, 0), (0.14, 1.1), (0.2, 1), (0.8, 1), (0.92, 0), (1, 0)]))
+    roll = float(keys(t, [(0, 0), (0.4, 0), (0.52, 1), (0.68, 1), (0.8, 0), (1, 0)]))
+    rub = math.sin(t * TAU * 4) * float(keys(t, [(0, 0), (0.2, 1), (0.42, 1), (0.5, 0), (1, 0)]))
+    kick = math.sin(t * TAU * 6) * roll
+    # Leaning right back on its rump for the roll (a full roll would stand
+    # the barrel on end).
+    _rear(c, p, 0.55 * sit + 0.35 * roll)
+    p.move(z=-s * 0.3 * sit)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.9 * sit - 0.3 * roll + 0.3 * kick * sign, lower=-1.2 * sit + 0.4 * roll, foot=0.5 * sit)
+        p.leg("fl." + side, upper=1.1 * sit + 0.2 * rub * sign + 0.6 * roll, lower=-1.6 * sit + 0.3 * roll - 0.2 * rub * sign,
+              foot=-0.3 * sit, splay=sign * (0.15 * sit + 0.3 * roll))
+    p.rot("chest", x=0.1 * sit)
+    p.rot("neck", x=0.25 * sit - 0.2 * roll)
+    p.rot("head", x=0.2 * sit + 0.1 * kick, z=0.1 * rub)
+    p.rot("jaw", x=-0.25 * roll * max(0.0, math.sin(t * TAU * 2)))
+    return p
+
+
+def panda_victory(c, t):
+    """Sits up and claps its front paws together over its head, bouncing on
+    its bottom with its head wobbling and its mouth open, happy."""
+    p = panda_idle(c, 0.0)
+    s = _scale(c)
+    sit = float(keys(t, [(0, 0.85), (0.1, 1), (0.9, 1), (1, 0.85)]))
+    clap = math.sin(t * TAU * 3)
+    bounce = max(0.0, math.sin(t * TAU * 3))
+    _rear(c, p, 0.7 * sit)
+    p.move(z=-s * 0.26 * sit + s * 0.07 * bounce)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.95 * sit, lower=-1.25 * sit, foot=0.55 * sit)
+        # Paws up overhead, meeting and parting.
+        p.leg("fl." + side, upper=2.4 * sit, lower=-0.5 * sit - 0.2 * bounce, foot=-0.3,
+              splay=sign * (0.45 - 0.4 * (0.5 + 0.5 * clap)) * sit)
+    p.rot("chest", x=0.05 * sit, z=0.05 * clap)
+    p.rot("neck", x=0.2 * sit)
+    p.rot("head", x=0.2 * sit, z=0.2 * clap)
+    p.rot("jaw", x=-c.motion.get("gape", 0.5) * (0.5 + 0.3 * bounce))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.25 * bounce)
+    return p
+
+
+def hippo_idle(c, t):
+    """Heavy and placid: a slow deep breath that lifts the whole barrel, the
+    tiny ears flicking, the tail flicking, the jaw working as if chewing,
+    the head drifting low from side to side."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    drift = math.sin(t * TAU + 0.8)
+    p.move(z=s * 0.012 * breath)
+    p.rot("chest", x=0.025 * breath)
+    p.rot("neck", x=-0.04 + 0.02 * breath, z=0.1 * drift)
+    p.rot("head", x=0.02 * breath, z=0.08 * drift)
+    chew = max(0.0, math.sin(t * TAU * 2 + 0.4))
+    p.rot("jaw", x=-0.1 * chew)
+    for side, sign in (("L", 1), ("R", -1)):
+        flick = max(0.0, math.sin(t * TAU * 3 + sign * 1.2)) ** 4
+        p.rot("ear." + side, z=sign * 0.5 * flick, x=-0.2 * flick)
+    _tail(p, t, sway=0.3, speed=2)
+    return p
+
+
+def hippo_fidget(c, t):
+    """The famous yawn: the head lifts and the jaw swings open wider and
+    wider, holds there a long beat, then snaps shut with a head shake that
+    flaps the ears."""
+    p = hippo_idle(c, 0.0)
+    gape = c.motion.get("gape", 1.1)
+    yawn = float(keys(t, [(0, 0), (0.12, 0.35), (0.34, 1), (0.66, 1), (0.76, 0), (1, 0)]))
+    lift = float(keys(t, [(0, 0), (0.3, 1), (0.66, 1), (0.8, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 10) * float(keys(t, [(0, 0), (0.74, 0), (0.8, 1), (0.94, 0), (1, 0)]))
+    p.rot("neck", x=0.25 * lift)
+    p.rot("head", x=0.3 * lift, y=0.25 * shake, z=0.1 * shake)
+    p.rot("jaw", x=-gape * yawn)
+    p.rot("chest", x=0.05 * lift, y=0.05 * shake)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * (0.3 * lift + 0.6 * shake), x=-0.3 * lift)
+        p.leg("fl." + side, upper=-0.08 * lift, lower=0.06 * lift)
+    return p
+
+
+def hippo_victory(c, t):
+    """Stamps its front feet in turn with its mouth gaping in a roar, its
+    bottom wiggling and its stubby tail whirring."""
+    p = hippo_idle(c, 0.0)
+    s = _scale(c)
+    gape = c.motion.get("gape", 1.1)
+    stamp = math.sin(t * TAU * 2)
+    wiggle = math.sin(t * TAU * 4)
+    p.move(z=s * 0.03 * abs(stamp))
+    for side, sign in (("L", 1), ("R", -1)):
+        lift = max(0.0, stamp * sign)
+        p.leg("fl." + side, upper=0.6 * lift, lower=-0.7 * lift, foot=-0.2 * lift)
+        p.rot("ear." + side, z=sign * 0.4 * abs(wiggle), x=-0.3)
+    p.rot("hips", z=0.08 * wiggle, y=0.04 * wiggle)
+    p.rot("chest", x=0.06, z=-0.04 * wiggle)
+    p.rot("neck", x=0.3)
+    p.rot("head", x=0.25, z=0.05 * stamp)
+    p.rot("jaw", x=-gape * (0.75 + 0.25 * math.sin(t * TAU * 2)))
+    _tail(p, t, sway=0.5, speed=6)
+    return p
+
+
+def elephant_idle(c, t):
+    """Stately: a slow weight shift from side to side, the great ears
+    flapping slowly to keep cool, the trunk swinging and curling, the head
+    nodding a little with each step of the sway."""
+    p = Pose()
+    s = _scale(c)
+    sway = math.sin(t * TAU)
+    breath = math.sin(t * TAU * 2)
+    p.move(z=s * 0.004 * breath)
+    p.rot("chest", z=0.025 * sway, x=0.012 * breath)
+    p.rot("hips", z=-0.015 * sway)
+    p.rot("neck", x=0.02 * breath, z=0.05 * sway)
+    p.rot("head", x=-0.04 * sway * sway, z=0.04 * sway)
+    for side, sign in (("L", 1), ("R", -1)):
+        flap = 0.5 + 0.5 * math.sin(t * TAU + sign * 0.6)
+        p.rot("ear." + side, z=sign * 0.35 * flap, x=-0.1 * flap)
+        p.leg("fl." + side, upper=0.02 * sign * sway)
+    _trunk(p, x=0.25 + 0.3 * math.sin(t * TAU * 2 + 1.0), z=0.35 * math.sin(t * TAU))
+    _tail(p, t, sway=0.25, speed=2)
+    return p
+
+
+def elephant_fidget(c, t):
+    """Trumpets: the head comes up, the ears flare wide, the trunk reaches
+    up and curls back over the forehead, and a front foot lifts and stamps
+    down as the call ends."""
+    p = elephant_idle(c, 0.0)
+    s = _scale(c)
+    up = float(keys(t, [(0, 0), (0.25, 1), (0.62, 1), (0.8, 0), (1, 0)]))
+    stamp = float(keys(t, [(0, 0), (0.3, 0), (0.45, 1), (0.6, 1), (0.66, -0.15), (0.72, 0), (1, 0)]))
+    p.rot("neck", x=0.3 * up)
+    p.rot("head", x=0.35 * up)
+    p.rot("chest", x=0.06 * up)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.9 * up, x=-0.35 * up)
+    p.leg("fl.R", upper=0.8 * max(stamp, 0.0), lower=-0.9 * max(stamp, 0.0), foot=-0.3 * max(stamp, 0.0))
+    p.move(z=-s * 0.03 * max(-stamp, 0.0) * 4.0)
+    _trunk(p, x=2.2 * up, z=0.15 * math.sin(t * TAU * 4) * up)
+    p.rot("jaw", x=-0.35 * up)
+    return p
+
+
+def elephant_victory(c, t):
+    """Rears up a little with the trunk straight up in the air, ears flared,
+    trumpeting, then comes down with a stamp and a bounce, and up again."""
+    p = elephant_idle(c, 0.0)
+    s = _scale(c)
+    up = float(keys(t, [(0, 0), (0.22, 1), (0.58, 1), (0.7, 0), (0.76, 0.06), (0.84, 0), (1, 0)]))
+    land = float(keys(t, [(0, 0), (0.66, 0), (0.72, 1), (0.8, -0.2), (0.88, 0), (1, 0)]))
+    _rear(c, p, c.motion.get("victory_rear", 0.4) * up)
+    p.move(z=-s * 0.06 * max(land, 0.0))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.7 * up + 0.2 * math.sin(t * TAU * 3) * sign * up, lower=-0.6 * up, foot=-0.2 * up)
+        p.leg("hl." + side, upper=-0.2 * up + 0.25 * max(land, 0.0), lower=-0.15 * up - 0.3 * max(land, 0.0), foot=0.3 * up)
+        p.rot("ear." + side, z=sign * 0.85 * up, x=-0.3 * up)
+    p.rot("neck", x=0.15 * up - 0.1 * land)
+    p.rot("head", x=0.3 * up - 0.15 * land)
+    p.rot("jaw", x=-0.4 * up)
+    _trunk(p, x=2.4 * up, z=0.2 * math.sin(t * TAU * 5) * up)
+    _tail(p, t, sway=0.3, speed=3)
+    return p
+
+
+def rhino_idle(c, t):
+    """Grumpy and solid: the head held low swinging its horn a little, a
+    front hoof scraping at the ground now and then, ears swivelling, the
+    tail flicking at flies."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    swing = math.sin(t * TAU + 0.4)
+    p.move(z=s * 0.006 * breath)
+    p.rot("chest", x=0.02 * breath)
+    p.rot("neck", x=-0.1, z=0.1 * swing)
+    p.rot("head", x=-0.05 + 0.03 * breath, z=0.08 * swing)
+    scrape = max(0.0, math.sin(t * TAU * 2 - 0.5)) ** 2
+    p.leg("fl.R", upper=0.18 * scrape, lower=-0.25 * scrape, foot=0.15 * scrape)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.25 * max(0.0, math.sin(t * TAU * 3 + sign * 0.9)) ** 3)
+    _tail(p, t, sway=0.35, speed=3)
+    return p
+
+
+def rhino_fidget(c, t):
+    """Paws the ground three times with a front hoof, snorts twice with the
+    head jerking up and the ears pinning back, then shakes its head."""
+    p = rhino_idle(c, 0.0)
+    s = _scale(c)
+    paw_env = float(keys(t, [(0, 0), (0.08, 1), (0.5, 1), (0.58, 0), (1, 0)]))
+    paw = math.sin(t * TAU * 6) * paw_env
+    snort = float(keys(t, [(0, 0), (0.55, 0), (0.6, 1), (0.66, 0.2), (0.72, 1), (0.8, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 9) * float(keys(t, [(0, 0), (0.82, 0), (0.88, 1), (0.98, 0), (1, 0)]))
+    p.leg("fl.R", upper=0.35 * paw_env + 0.3 * paw, lower=-0.45 * paw_env - 0.3 * paw, foot=0.2 * paw_env + 0.3 * paw)
+    p.rot("chest", x=-0.03 * paw_env + 0.05 * snort)
+    p.rot("neck", x=-0.1 * paw_env + 0.35 * snort, z=0.0)
+    p.rot("head", x=-0.1 * paw_env + 0.3 * snort, y=0.3 * shake, z=0.1 * shake)
+    p.rot("jaw", x=-0.15 * snort)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, x=0.5 * snort, z=sign * 0.5 * shake)
+    p.move(z=-s * 0.01 * paw_env)
+    return p
+
+
+def rhino_victory(c, t):
+    """Tosses its horn up and hops, both front legs kicking out, the tail
+    straight up, with a snort at the top of each hop."""
+    p = rhino_idle(c, 0.0)
+    s = _scale(c)
+    hop = max(0.0, math.sin(t * TAU * 2))
+    crouch = max(0.0, -math.sin(t * TAU * 2))
+    toss = float(keys(t, [(0, 0), (0.2, 1), (0.45, 0.2), (0.7, 1), (0.95, 0.2), (1, 0)]))
+    p.move(z=s * 0.25 * hop - s * 0.06 * crouch)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.6 * hop - 0.15 * crouch, lower=-0.4 * hop - 0.3 * crouch, foot=-0.3 * hop, splay=sign * 0.1 * hop)
+        p.leg("hl." + side, upper=-0.3 * hop + 0.3 * crouch, lower=-0.25 * hop - 0.45 * crouch, foot=0.35 * hop + 0.4 * crouch)
+        p.rot("ear." + side, x=-0.3 * toss, z=sign * 0.2 * hop)
+    p.rot("chest", x=0.1 * hop - 0.08 * crouch)
+    p.rot("neck", x=0.3 * toss + 0.1 * hop)
+    p.rot("head", x=0.35 * toss)
+    p.rot("jaw", x=-0.2 * toss)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.6, z=0.3 * math.sin(t * TAU * 4 - i))
+    return p
+
+
+def turtle_idle(c, t):
+    """Slow and ancient: the head creeping out of the shell and back in, a
+    slow look from side to side, the feet shifting under the shell, the
+    beak opening a crack and closing."""
+    p = Pose()
+    s = _scale(c)
+    out = 0.5 + 0.5 * math.sin(t * TAU)
+    look = math.sin(t * TAU * 2 + 0.5)
+    p.rot("neck", x=-0.45 + 0.45 * out, z=0.15 * look * out)
+    p.rot("head", x=0.3 - 0.3 * out, z=0.1 * look * out)
+    p.rot("jaw", x=-0.08 * max(0.0, math.sin(t * TAU * 3)))
+    p.move(z=s * 0.01 * math.sin(t * TAU * 2))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.05 * sign * math.sin(t * TAU), lower=-0.03 * sign * math.sin(t * TAU))
+    _tail(p, t, sway=0.15)
+    return p
+
+
+def turtle_fidget(c, t):
+    """Pulls its head right back into its shell and waits there, then shoots
+    it out again with a snap of its beak and a little hop."""
+    p = turtle_idle(c, 0.0)
+    s = _scale(c)
+    tuck = float(keys(t, [(0, 0), (0.15, 1), (0.55, 1), (0.62, -0.3), (0.72, 0), (1, 0)]))
+    snap = float(keys(t, [(0, 0), (0.58, 0), (0.63, 1), (0.68, 0), (0.73, 0.6), (0.78, 0), (1, 0)]))
+    hop = max(0.0, math.sin(max(0.0, (t - 0.58) / 0.2) * math.pi)) if 0.58 <= t <= 0.78 else 0.0
+    p.rot("neck", x=-0.8 * max(tuck, 0.0) + 0.4 * max(-tuck, 0.0))
+    p.rot("head", x=0.55 * max(tuck, 0.0) - 0.2 * max(-tuck, 0.0))
+    p.rot("jaw", x=-0.9 * snap)
+    p.move(y=-s * 0.08 * max(tuck, 0.0), z=s * 0.12 * hop)
+    for side in ("L", "R"):
+        # The legs draw in under the shell too, then brace for the hop.
+        p.leg("fl." + side, upper=-0.3 * max(tuck, 0.0) + 0.25 * hop, lower=0.5 * max(tuck, 0.0) - 0.3 * hop)
+        p.leg("hl." + side, upper=0.3 * max(tuck, 0.0) - 0.2 * hop, lower=-0.4 * max(tuck, 0.0) - 0.3 * hop, foot=0.2 * hop)
+    return p
+
+
+def turtle_victory(c, t):
+    """Stands up tall on straight legs with its head stretched right out,
+    snapping its beak in the air twice, and bobs up and down."""
+    p = turtle_idle(c, 0.0)
+    s = _scale(c)
+    tall = float(keys(t, [(0, 0.7), (0.15, 1), (0.85, 1), (1, 0.7)]))
+    bob = math.sin(t * TAU * 2)
+    snap = max(0.0, math.sin(t * TAU * 4)) ** 3
+    p.move(z=s * (0.25 * tall + 0.05 * bob))
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=-0.35 * tall, lower=0.1 * tall, foot=0.1 * bob * sign)
+        p.leg("hl." + side, upper=-0.35 * tall, lower=0.25 * tall, foot=-0.2 * tall)
+    p.rot("chest", x=0.1 * tall)
+    p.rot("neck", x=0.5 * tall + 0.1 * bob)
+    p.rot("head", x=-0.1 * tall + 0.15 * bob, z=0.15 * math.sin(t * TAU))
+    p.rot("jaw", x=-0.8 * snap)
+    _tail(p, t, sway=0.3, speed=3)
+    return p
+
+
+
+# --- The Tank Destroyers' personas -------------------------------------------------
+
+def lion_idle(c, t):
+    """Regal: stands tall and still, the head turning slowly to survey the
+    field, the mane settling with a little shake at the end of each turn,
+    the tail tip flicking."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    turn = math.sin(t * TAU * 0.5 * 2)
+    p.move(z=s * 0.005 * breath)
+    p.rot("chest", x=0.02 * breath)
+    p.rot("neck", x=0.12 + 0.02 * breath, z=0.25 * turn)
+    shake = math.sin(t * TAU * 6) * max(0.0, math.cos(t * TAU)) ** 6
+    p.rot("head", x=0.05, z=0.15 * turn, y=0.12 * shake)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.15 * max(0.0, math.sin(t * TAU * 2 + sign)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.1, z=math.sin(t * TAU * (2 + i) - i) * 0.12 * (0.4 + 0.5 * i))
+    return p
+
+
+def lion_fidget(c, t):
+    """A cat stretch: the front legs slide forward, chest to the ground and
+    rump high, a huge yawn, then it pushes back up and shakes out its mane."""
+    p = lion_idle(c, 0.0)
+    s = _scale(c)
+    stretch = float(keys(t, [(0, 0), (0.2, 1), (0.6, 1), (0.78, 0), (1, 0)]))
+    yawn = float(keys(t, [(0, 0), (0.28, 0), (0.42, 1), (0.6, 0.9), (0.7, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 10) * float(keys(t, [(0, 0), (0.8, 0), (0.86, 1), (0.97, 0), (1, 0)]))
+    p.move(y=s * 0.1 * stretch, z=-s * 0.12 * stretch)
+    p.rot("chest", x=-0.35 * stretch, y=0.08 * shake)
+    p.rot("hips", x=0.25 * stretch)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.9 * stretch, lower=-0.15 * stretch, foot=0.3 * stretch)
+        p.leg("hl." + side, upper=-0.2 * stretch, lower=0.15 * stretch, foot=-0.1 * stretch)
+        p.rot("ear." + side, z=sign * 0.5 * shake, x=-0.3 * yawn)
+    p.rot("neck", x=0.25 * stretch + 0.15 * yawn, y=0.1 * shake)
+    p.rot("head", x=0.25 * yawn, y=0.35 * shake, z=0.1 * shake)
+    p.rot("jaw", x=-c.motion.get("gape", 0.8) * yawn)
+    return p
+
+
+def lion_victory(c, t):
+    """The roar: it rears up a little with a front paw raised, throws its
+    head back and roars with its mane flying, then settles into a proud sit
+    for a beat, and roars again."""
+    p = lion_idle(c, 0.0)
+    s = _scale(c)
+    roar = float(keys(t, [(0, 0), (0.12, 1), (0.42, 1), (0.52, 0), (1, 0)]))
+    sit = float(keys(t, [(0, 0), (0.5, 0), (0.62, 1), (0.9, 1), (1, 0)]))
+    _rear(c, p, 0.35 * roar + 0.45 * sit)
+    p.move(z=-s * 0.18 * sit)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.85 * sit - 0.1 * roar, lower=-1.1 * sit, foot=0.5 * sit)
+        if side == "R":
+            p.leg("fl.R", upper=1.2 * roar + 0.3 * sit, lower=-1.3 * roar - 0.2 * sit, foot=-0.4 * roar)
+        else:
+            p.leg("fl.L", upper=0.25 * roar + 0.2 * sit, lower=-0.3 * roar - 0.1 * sit)
+        p.rot("ear." + side, x=-0.4 * roar, z=sign * 0.15 * roar)
+    p.rot("chest", x=0.1 * roar)
+    p.rot("neck", x=0.3 * roar + 0.1 * sit)
+    p.rot("head", x=0.45 * roar - 0.05 * sit, y=0.15 * math.sin(t * TAU * 8) * roar)
+    p.rot("jaw", x=-c.motion.get("gape", 0.8) * roar)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.5 * roar, z=0.3 * math.sin(t * TAU * 5 - i) * roar)
+    return p
+
+
+def tiger_idle(c, t):
+    """Coiled and watchful: standing a little low, the head scanning slowly
+    side to side, ears swivelling, the tail lashing in long slow arcs."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    scan = math.sin(t * TAU + 0.3)
+    p.move(z=s * 0.004 * breath - s * 0.02)
+    p.rot("chest", x=0.015 * breath)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.06, lower=-0.08)
+        p.leg("hl." + side, upper=0.08, lower=-0.1, foot=0.04)
+        p.rot("ear." + side, z=sign * 0.3 * max(0.0, math.sin(t * TAU * 3 + sign * 0.5)) ** 2)
+    p.rot("neck", x=-0.08, z=0.3 * scan)
+    p.rot("head", x=0.02 * breath, z=0.2 * scan)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=0.1, z=math.sin(t * TAU * 2 - i * 0.9) * 0.45 * (0.5 + 0.4 * i))
+    return p
+
+
+def tiger_fidget(c, t):
+    """Grooms: sits back, lifts a front paw, licks it and wipes it over its
+    face and ear in small circles, then shakes its head and drops back
+    down into its crouch."""
+    p = tiger_idle(c, 0.0)
+    s = _scale(c)
+    sit = float(keys(t, [(0, 0), (0.15, 1), (0.78, 1), (0.92, 0), (1, 0)]))
+    wipe_env = float(keys(t, [(0, 0), (0.2, 1), (0.7, 1), (0.8, 0), (1, 0)]))
+    wipe = math.sin(t * TAU * 5) * wipe_env
+    shake = math.sin(t * TAU * 10) * float(keys(t, [(0, 0), (0.78, 0), (0.84, 1), (0.95, 0), (1, 0)]))
+    _rear(c, p, 0.45 * sit)
+    p.move(z=-s * 0.2 * sit)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.85 * sit, lower=-1.15 * sit, foot=0.5 * sit)
+        p.rot("ear." + side, z=sign * (0.3 * wipe_env + 0.5 * shake), x=-0.2 * wipe_env)
+    p.leg("fl.R", upper=1.5 * sit + 0.25 * wipe, lower=-1.9 * sit - 0.3 * wipe, foot=-0.5 * sit, splay=-0.3 * sit)
+    p.leg("fl.L", upper=0.3 * sit, lower=-0.35 * sit)
+    p.rot("neck", x=0.1 * sit)
+    p.rot("head", x=-0.15 * wipe_env + 0.1 * wipe, z=-0.3 * wipe_env, y=0.35 * shake)
+    p.rot("jaw", x=-0.12 * wipe_env * max(0.0, math.sin(t * TAU * 5)))
+    return p
+
+
+def tiger_victory(c, t):
+    """Pounces on the spot: a crouch, a spring with the claws out and the
+    jaws wide, a landing in a low crouch, and again."""
+    p = tiger_idle(c, 0.0)
+    s = _scale(c)
+    crouch = max(0.0, -math.sin(t * TAU * 2))
+    leap = max(0.0, math.sin(t * TAU * 2))
+    p.move(z=s * 0.4 * leap - s * 0.1 * crouch, y=s * 0.05 * leap)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.9 * leap - 0.25 * crouch, lower=-0.6 * leap - 0.45 * crouch, foot=-0.5 * leap + 0.1 * crouch,
+              splay=sign * 0.2 * leap)
+        p.leg("hl." + side, upper=-0.5 * leap + 0.45 * crouch, lower=-0.3 * leap - 0.6 * crouch, foot=0.5 * leap + 0.5 * crouch)
+        p.rot("ear." + side, x=0.5 * leap, z=sign * 0.1 * leap)
+    p.rot("chest", x=0.2 * leap - 0.15 * crouch)
+    p.rot("hips", x=-0.1 * leap)
+    p.rot("neck", x=0.15 * leap - 0.15 * crouch)
+    p.rot("head", x=0.25 * leap)
+    p.rot("jaw", x=-c.motion.get("gape", 0.75) * leap)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.4 * leap + 0.2 * crouch, z=0.2 * math.sin(t * TAU * 4 - i))
+    return p
+
+
+def boar_idle(c, t):
+    """Snuffling: the head low with the snout bobbing along the ground, a
+    front hoof rooting, the ears twitching, the tail wiggling."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    p.move(z=s * 0.005 * breath)
+    p.rot("chest", x=0.02 * breath)
+    p.rot("neck", x=-0.28 + 0.03 * breath, z=0.1 * math.sin(t * TAU + 0.5))
+    snuffle = math.sin(t * TAU * 4)
+    p.rot("head", x=-0.1 + 0.06 * snuffle, z=0.08 * math.sin(t * TAU * 2))
+    p.rot("jaw", x=-0.06 * max(0.0, snuffle))
+    root = max(0.0, math.sin(t * TAU * 2 - 1.0)) ** 2
+    p.leg("fl.L", upper=0.2 * root, lower=-0.25 * root, foot=0.15 * root)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.2 * max(0.0, math.sin(t * TAU * 3 + sign * 0.8)) ** 2)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.3, z=math.sin(t * TAU * 5 - i) * 0.3)
+    return p
+
+
+def boar_fidget(c, t):
+    """Digs with its snout, the head shoving side to side in the dirt with
+    the front hooves scraping, then tosses its head up with a snort and
+    shakes the dirt off."""
+    p = boar_idle(c, 0.0)
+    s = _scale(c)
+    dig_env = float(keys(t, [(0, 0), (0.1, 1), (0.55, 1), (0.62, 0), (1, 0)]))
+    dig = math.sin(t * TAU * 7) * dig_env
+    toss = float(keys(t, [(0, 0), (0.6, 0), (0.68, 1), (0.8, 0.5), (0.9, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 11) * float(keys(t, [(0, 0), (0.78, 0), (0.84, 1), (0.96, 0), (1, 0)]))
+    p.move(z=-s * 0.08 * dig_env)
+    p.rot("chest", x=-0.15 * dig_env + 0.08 * toss)
+    p.rot("neck", x=-0.35 * dig_env + 0.55 * toss, z=0.3 * dig)
+    p.rot("head", x=-0.15 * dig_env + 0.35 * toss, z=0.2 * dig, y=0.3 * shake)
+    p.rot("jaw", x=-0.3 * toss)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.25 * dig_env + 0.2 * dig * sign, lower=-0.3 * dig_env - 0.2 * dig * sign, foot=0.2 * dig_env)
+        p.rot("ear." + side, z=sign * 0.5 * shake, x=-0.4 * toss)
+    return p
+
+
+def boar_victory(c, t):
+    """Bucks: a hop with the hind legs kicked up high behind it, squealing,
+    lands, and bucks again, its tail spinning."""
+    p = boar_idle(c, 0.0)
+    s = _scale(c)
+    buck = max(0.0, math.sin(t * TAU * 2))
+    land = max(0.0, -math.sin(t * TAU * 2))
+    p.move(z=s * 0.22 * buck - s * 0.05 * land)
+    p.rot("chest", x=-0.25 * buck + 0.08 * land)
+    p.rot("hips", x=-0.3 * buck)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.2 * buck - 0.1 * land, lower=-0.35 * buck - 0.3 * land, foot=0.1 * land)
+        p.leg("hl." + side, upper=-0.9 * buck + 0.2 * land, lower=0.6 * buck - 0.4 * land, foot=-0.3 * buck + 0.3 * land)
+        p.rot("ear." + side, x=-0.4 * buck, z=sign * 0.3 * buck)
+    p.rot("neck", x=0.4 * buck + 0.1)
+    p.rot("head", x=0.3 * buck)
+    p.rot("jaw", x=-0.5 * buck)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.6, z=math.sin(t * TAU * 8 - i) * 0.4)
+    return p
+
+
+def wolf_idle(c, t):
+    """Alert: ears pricked and swivelling, the head turning sharply to
+    check one way then the other, a sniff, the tail held out and swaying."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    p.move(z=s * 0.005 * breath)
+    p.rot("chest", x=0.02 * breath)
+    look = float(keys(t, [(0, 0), (0.2, 0), (0.28, 1), (0.48, 1), (0.56, -1), (0.76, -1), (0.84, 0), (1, 0)]))
+    sniff = max(0.0, math.sin(t * TAU * 3)) ** 4 * (1.0 - abs(look))
+    p.rot("neck", x=0.1 + 0.08 * sniff, z=0.35 * look)
+    p.rot("head", x=0.05 + 0.1 * sniff, z=0.25 * look)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, x=-0.25, z=sign * (0.1 + 0.25 * max(0.0, look * sign)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=0.15, z=math.sin(t * TAU * 2 - i * 0.7) * 0.2 * (0.5 + 0.4 * i))
+    return p
+
+
+def wolf_fidget(c, t):
+    """Sits and howls: the rump drops, the muzzle lifts straight up and the
+    jaws open for a long howl with the chest swelling, then it stands and
+    shakes."""
+    p = wolf_idle(c, 0.0)
+    s = _scale(c)
+    sit = float(keys(t, [(0, 0), (0.14, 1), (0.78, 1), (0.9, 0), (1, 0)]))
+    howl = float(keys(t, [(0, 0), (0.22, 1), (0.66, 1), (0.76, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 10) * float(keys(t, [(0, 0), (0.86, 0), (0.9, 1), (0.98, 0), (1, 0)]))
+    _rear(c, p, 0.4 * sit)
+    p.move(z=-s * 0.2 * sit)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("hl." + side, upper=0.85 * sit, lower=-1.1 * sit, foot=0.5 * sit)
+        p.leg("fl." + side, upper=0.15 * sit, lower=-0.15 * sit)
+        p.rot("ear." + side, x=0.4 * howl, z=sign * 0.5 * shake)
+    p.rot("chest", x=0.08 * howl, y=0.08 * shake)
+    p.rot("neck", x=0.55 * howl)
+    p.rot("head", x=0.5 * howl, y=0.3 * shake)
+    p.rot("jaw", x=-0.6 * howl * (0.8 + 0.2 * math.sin(t * TAU * 6)))
+    return p
+
+
+def wolf_victory(c, t):
+    """A howl of triumph with the chest up, the tail wagging hard, then a
+    prance on the spot with the front paws lifted high in turn."""
+    p = wolf_idle(c, 0.0)
+    s = _scale(c)
+    howl = float(keys(t, [(0, 0), (0.1, 1), (0.42, 1), (0.52, 0), (1, 0)]))
+    prance = float(keys(t, [(0, 0), (0.5, 0), (0.58, 1), (0.92, 1), (1, 0)]))
+    step = math.sin(t * TAU * 4) * prance
+    _rear(c, p, 0.2 * howl)
+    p.move(z=s * 0.05 * abs(step))
+    for side, sign in (("L", 1), ("R", -1)):
+        lift = max(0.0, step * sign)
+        p.leg("fl." + side, upper=0.8 * lift + 0.2 * howl, lower=-0.9 * lift - 0.2 * howl, foot=-0.3 * lift)
+        p.leg("hl." + side, upper=-0.1 * howl, lower=-0.1 * howl, foot=0.2 * howl)
+        p.rot("ear." + side, x=0.35 * howl - 0.3 * prance, z=sign * 0.15 * prance)
+    p.rot("chest", x=0.1 * howl)
+    p.rot("neck", x=0.5 * howl + 0.1 * prance)
+    p.rot("head", x=0.45 * howl + 0.05 * step)
+    p.rot("jaw", x=-0.6 * howl - 0.25 * prance * max(0.0, math.sin(t * TAU * 4)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.45, z=math.sin(t * TAU * 6 - i) * 0.45)
+    return p
+
+
+def badger_idle(c, t):
+    """Restless and cocky: low to the ground, the nose twitching and the
+    head jerking to look about, a shuffle of the feet, the tail flicking."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU)
+    p.move(z=s * 0.004 * breath - s * 0.01)
+    jerk = float(keys(t, [(0, 0), (0.1, 0), (0.14, 1), (0.3, 1), (0.34, -0.6), (0.5, -0.6), (0.54, 0.3), (0.66, 0.3), (0.7, 0), (1, 0)]))
+    p.rot("neck", x=-0.05, z=0.3 * jerk)
+    p.rot("head", x=0.05 * math.sin(t * TAU * 6), z=0.2 * jerk)
+    p.rot("jaw", x=-0.05 * max(0.0, math.sin(t * TAU * 6)))
+    shuffle = math.sin(t * TAU * 2)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.06 * max(0.0, shuffle * sign), lower=-0.08 * max(0.0, shuffle * sign))
+        p.rot("ear." + side, z=sign * 0.15 * max(0.0, math.sin(t * TAU * 4 + sign)))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.1, z=math.sin(t * TAU * 4 - i) * 0.25)
+    return p
+
+
+def badger_fidget(c, t):
+    """Sits and scratches behind its ear with a hind leg, fast, then shakes
+    all over and drops back down."""
+    p = badger_idle(c, 0.0)
+    s = _scale(c)
+    sit = float(keys(t, [(0, 0), (0.14, 1), (0.74, 1), (0.88, 0), (1, 0)]))
+    scratch = math.sin(t * TAU * 9) * float(keys(t, [(0, 0), (0.18, 1), (0.6, 1), (0.68, 0), (1, 0)]))
+    shake = math.sin(t * TAU * 12) * float(keys(t, [(0, 0), (0.74, 0), (0.8, 1), (0.94, 0), (1, 0)]))
+    _rear(c, p, 0.45 * sit)
+    p.move(z=-s * 0.18 * sit)
+    p.leg("hl.L", upper=0.85 * sit, lower=-1.1 * sit, foot=0.5 * sit)
+    # The right hind leg comes up to scratch behind the ear.
+    p.leg("hl.R", upper=1.6 * sit + 0.2 * scratch, lower=-0.9 * sit - 0.3 * scratch, foot=0.2 * sit, splay=-0.5 * sit)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.2 * sit, lower=-0.2 * sit)
+        p.rot("ear." + side, z=sign * (0.25 * abs(scratch) + 0.5 * shake))
+    p.rot("chest", y=0.1 * shake, z=-0.1 * sit)
+    p.rot("neck", x=0.1 * sit, z=-0.2 * sit)
+    p.rot("head", x=-0.1 * sit + 0.05 * scratch, z=-0.25 * sit, y=0.35 * shake)
+    return p
+
+
+def badger_victory(c, t):
+    """A cocky strut: hops with both front paws up in the air, head bobbing,
+    then lands and swaggers, shoulders rolling, mouth open."""
+    p = badger_idle(c, 0.0)
+    s = _scale(c)
+    hop = max(0.0, math.sin(t * TAU * 3))
+    swagger = math.sin(t * TAU * 3 + 1.0)
+    _rear(c, p, 0.3 * hop)
+    p.move(z=s * 0.2 * hop)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=1.3 * hop, lower=-1.2 * hop, foot=-0.3 * hop, splay=sign * 0.3 * hop)
+        p.leg("hl." + side, upper=-0.3 * hop, lower=-0.3 * hop, foot=0.4 * hop)
+        p.rot("ear." + side, x=-0.3, z=sign * 0.2 * hop)
+    p.rot("chest", z=0.08 * swagger, y=0.1 * swagger)
+    p.rot("neck", x=0.2 + 0.1 * hop, z=-0.1 * swagger)
+    p.rot("head", x=0.2 * hop, z=0.15 * swagger)
+    p.rot("jaw", x=-c.motion.get("gape", 0.8) * (0.3 + 0.5 * hop))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.5, z=math.sin(t * TAU * 6 - i) * 0.3)
+    return p
+
+
+def cerberus_idle(c, t):
+    """Three heads, never quite agreeing: the heads swing one way and the
+    other as they look about, jaws parting to pant, the body hunkered and
+    breathing heavy, the tail lashing."""
+    p = Pose()
+    s = _scale(c)
+    breath = math.sin(t * TAU * 2)
+    look = math.sin(t * TAU + 0.4)
+    p.move(z=s * 0.005 * breath)
+    p.rot("chest", x=0.02 * breath)
+    p.rot("neck", x=-0.05 + 0.03 * breath, z=0.28 * look)
+    p.rot("head", x=0.05 * breath, z=0.15 * look, y=0.08 * math.sin(t * TAU * 3))
+    pant = max(0.0, math.sin(t * TAU * 4))
+    p.rot("jaw", x=-0.18 * pant)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, z=sign * 0.2 * max(0.0, math.sin(t * TAU * 3 + sign * 0.7)) ** 2)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=0.1, z=math.sin(t * TAU * 3 - i * 0.8) * 0.4 * (0.5 + 0.4 * i))
+    return p
+
+
+def cerberus_fidget(c, t):
+    """The heads squabble: they snap at one another, the neck whipping left
+    and right with the jaws clacking, then all three shake it off together."""
+    p = cerberus_idle(c, 0.0)
+    s = _scale(c)
+    env = float(keys(t, [(0, 0), (0.1, 1), (0.62, 1), (0.7, 0), (1, 0)]))
+    whip = math.sin(t * TAU * 5) * env
+    snap = max(0.0, math.sin(t * TAU * 10)) ** 2 * env
+    shake = math.sin(t * TAU * 11) * float(keys(t, [(0, 0), (0.74, 0), (0.8, 1), (0.95, 0), (1, 0)]))
+    p.rot("chest", z=0.08 * whip, y=0.08 * shake)
+    p.rot("neck", x=0.1 * env, z=0.5 * whip)
+    p.rot("head", z=0.3 * whip, x=0.1 * snap, y=0.35 * shake)
+    p.rot("jaw", x=-0.7 * snap)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("ear." + side, x=0.4 * env, z=sign * 0.5 * shake)
+        p.leg("fl." + side, upper=0.1 * env * sign * whip, lower=-0.1 * env * sign * whip)
+    p.move(z=-s * 0.03 * env)
+    return p
+
+
+def cerberus_victory(c, t):
+    """Rears up on its hind legs with all three heads thrown back howling
+    fire, forelegs pawing the air, then drops into a bounce and rears
+    again."""
+    p = cerberus_idle(c, 0.0)
+    s = _scale(c)
+    up = float(keys(t, [(0, 0), (0.18, 1), (0.6, 1), (0.72, 0), (0.78, 0.06), (0.86, 0), (1, 0)]))
+    paw = math.sin(t * TAU * 4) * up
+    land = float(keys(t, [(0, 0), (0.68, 0), (0.74, 1), (0.84, 0), (1, 0)]))
+    _rear(c, p, c.motion.get("victory_rear", 0.8) * up)
+    p.move(z=-s * 0.08 * land)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=0.9 * up + 0.35 * paw * sign, lower=-0.8 * up - 0.3 * paw * sign, foot=-0.3 * up, splay=sign * 0.15 * up)
+        p.leg("hl." + side, upper=-0.25 * up + 0.3 * land, lower=-0.2 * up - 0.4 * land, foot=0.35 * up)
+        p.rot("ear." + side, x=0.5 * up)
+    p.rot("chest", x=-0.05 * up - 0.12 * land)
+    p.rot("neck", x=0.4 * up - 0.1 * land, z=0.1 * math.sin(t * TAU * 3) * up)
+    p.rot("head", x=0.4 * up - 0.15 * land, y=0.1 * math.sin(t * TAU * 7) * up)
+    p.rot("jaw", x=-c.motion.get("gape", 0.8) * (0.9 * up))
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=-0.4 * up, z=math.sin(t * TAU * 5 - i) * 0.35)
+    return p
+
+
 PERSONAS = {
     "yeti": {"idle": yeti_idle, "fidget": yeti_fidget, "victory": yeti_victory},
+    "lion": {"idle": lion_idle, "fidget": lion_fidget, "victory": lion_victory},
+    "tiger": {"idle": tiger_idle, "fidget": tiger_fidget, "victory": tiger_victory},
+    "boar": {"idle": boar_idle, "fidget": boar_fidget, "victory": boar_victory},
+    "wolf": {"idle": wolf_idle, "fidget": wolf_fidget, "victory": wolf_victory},
+    "badger": {"idle": badger_idle, "fidget": badger_fidget, "victory": badger_victory},
+    "cerberus": {"idle": cerberus_idle, "fidget": cerberus_fidget, "victory": cerberus_victory},
+    "bear": {"idle": bear_idle, "fidget": bear_fidget, "victory": bear_victory},
+    "panda": {"idle": panda_idle, "fidget": panda_fidget, "victory": panda_victory},
+    "hippo": {"idle": hippo_idle, "fidget": hippo_fidget, "victory": hippo_victory},
+    "elephant": {"idle": elephant_idle, "fidget": elephant_fidget, "victory": elephant_victory},
+    "rhino": {"idle": rhino_idle, "fidget": rhino_fidget, "victory": rhino_victory},
+    "turtle": {"idle": turtle_idle, "fidget": turtle_fidget, "victory": turtle_victory},
 }
 
 ATTACKS.update({"slam": slam, "rake": rake, "lob": lob, "handstand": handstand, "leap": leap,

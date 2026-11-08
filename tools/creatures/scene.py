@@ -79,13 +79,15 @@ def build(creature, with_fur=False, fur_quality=1.0):
     return arm, body, mesh
 
 
-def even_colors(colors, faces):
+def even_colors(colors, faces, rounds=None):
     """Evens out painted vertex colors over the mesh (look.json
     color_smoothing): a few rounds of moving each vertex's color toward its
     neighbors' average. Marching cubes leaves long thin triangles, and a color
     border (a white bib, a dark ear tip) painted vertex by vertex comes out
     streaky along them; evened out, it is a clean, even edge."""
-    rounds = int(LOOK.get("color_smoothing", 0))
+    # `rounds` overrides look.json (a creature's color_smoothing: fewer
+    # rounds keep a tiger's stripes crisp).
+    rounds = int(LOOK.get("color_smoothing", 0)) if rounds is None else int(rounds)
     if rounds <= 0 or len(faces) == 0:
         return np.asarray(colors)
     from scipy import sparse
@@ -148,7 +150,7 @@ def _part(creature, part, arm, index, with_fur=False, fur_quality=1.0):
         poly.use_smooth = True
     obj = bpy.data.objects.new(me.name, me)
     bpy.context.scene.collection.objects.link(obj)
-    _set_colors(me, even_colors(creature.paint(mesh, creature), mesh.faces))
+    _set_colors(me, even_colors(creature.paint(mesh, creature), mesh.faces, getattr(creature, "color_smoothing", None)))
     obj.data.materials.append(bpy.data.materials.get(creature.name + "_fur") or _fur_material(creature))
     if with_fur and part.get("fur"):
         import fur
@@ -193,7 +195,7 @@ def _body(creature, mesh, arm):
     body = bpy.data.objects.new(creature.name + "_body", me)
     bpy.context.scene.collection.objects.link(body)
 
-    _set_colors(me, _face_paint(creature, mesh, even_colors(creature.paint(mesh, creature), mesh.faces)))
+    _set_colors(me, _face_paint(creature, mesh, even_colors(creature.paint(mesh, creature), mesh.faces, getattr(creature, "color_smoothing", None))))
     # Extra per-vertex numbers the material can use (fur length, shine).
     for key, values in getattr(creature, "vertex_data", lambda m, c: {})(mesh, creature).items():
         a = me.attributes.new(key, "FLOAT", "POINT")

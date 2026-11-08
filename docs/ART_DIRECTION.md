@@ -194,6 +194,21 @@ tips read as pale flecks, and short sparse locks read as bumps; a coat
 reads as fur when the locks are long, flat, overlapping and dense. The
 other animals keep the flat cartoon look below until they move over.
 
+**The Tank Destroyers followed** (batch 2): the Lion in a golden coat
+with a deeper, shaggier mane; the Tiger with bold black stripes over
+orange and a white chin; the Wild Boar in a coarse grizzled coat with a
+dark bristle crest, tusks and a pink snout; the Wolf Pack in a thick
+blue-gray coat with a cream chest; the Honey Badger black with its silver
+cape; and Cerberus, brown with three heads and a glowing red collar. Three
+things learned here, all settings in `movie.json`: a coat's "length" is
+the length of its *longest* part (parts are shares of it, so a lion's
+mane sets the number and its coat is a third of it; the real-time locks
+follow with "contrast"); markings stay crisp with fewer rounds of paint
+smoothing ("paint_smoothing") and harder stripe edges ("stripes":
+{"edge", "width"}); and dark coats need a little less shine than light
+ones. Every Tank Destroyer carries the dense lock set (about 1,000 in the
+viewer, 110 in battle), so their models cost about what the Bear's does.
+
 **Animals are 3D cartoons.** Like Clash Royale, the game is 2D but its
 characters are 3D models rendered into sprites, so they look solid and
 lit. They are cartoons of the real animals: big heads with big googly

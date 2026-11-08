@@ -57,6 +57,10 @@ def load(species):
         # in the bold palette: its colors swapped for the design's.
         if hasattr(module, "COLORS"):
             module.COLORS.update(design.get("palette", {}))
+        import paint as P
+        stripes = design.get("stripes", {})
+        P.Painter.stripe_edge = float(stripes.get("edge", 0.25))
+        P.Painter.stripe_width = float(stripes.get("width", 1.0))
         c.bare_regions = set(design.get("bare", []))
         c.palette = dict(c.palette or {}, **design.get("face_lines", {}))
     else:
@@ -65,6 +69,10 @@ def load(species):
     # Its own animations (motion.py: a persona's idle, fidget and victory,
     # an attack built for it).
     c.motion = dict(c.motion, **design.get("motion", {}))
+    if "paint_smoothing" in design:
+        # Rounds of evening out the paint (scene.py even_colors; look.json
+        # color_smoothing otherwise): fewer keep crisp markings crisp.
+        c.color_smoothing = design["paint_smoothing"]
     return c
 
 
@@ -777,7 +785,10 @@ def lock_geometry(c, mesh, colors, lod):
         if np.linalg.norm(t) < 1e-3:
             t = np.cross(n, (1.0, 0.0, 0.0))
         t /= np.linalg.norm(t)
-        L = k["length"] * (0.45 + 0.55 * share[i]) * (1 + rng.normal(0, 0.15))
+        # How much shorter the short parts are than the longest (contrast
+        # 0.55: a coat's face and legs; 0.85: a lion's coat next to its mane).
+        kc = float(k.get("contrast", 0.55))
+        L = k["length"] * ((1 - kc) + kc * share[i]) * (1 + rng.normal(0, 0.15))
         W = k["width"] * (1 + rng.normal(0, 0.12))
         ang = rng.normal(0, 0.25)
         side0 = np.cross(n, t)

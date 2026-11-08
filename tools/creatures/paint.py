@@ -11,6 +11,11 @@ from scene import hex_color
 class Painter:
     # Cartoon coats: no speckle or noise, so color areas stay clean.
     clean = False
+    # Stripes: how soft a band's edge is and how wide the bands are, as
+    # shares of the species' own (a movie design's "stripes": {"edge",
+    # "width"}, set in movie.py; 0.25 and 1.0 are the species as drawn).
+    stripe_edge = 0.25
+    stripe_width = 1.0
 
     def __init__(self, mesh, colors):
         self.mesh = mesh
@@ -82,10 +87,11 @@ class Painter:
         x = coord_fn(self.v) * frequency
         if wobble:
             x = x + wobble * self.noise(frequency * 1.2, seed)
+        width = width * self.stripe_width
         w = np.full(len(self.v), width)
         if breakup:
             w = width * np.clip(1 + breakup * self.noise(frequency * 2.0, seed + 1), 0.0, 2.0)
-        band = self.smooth(np.cos(x * 2 * np.pi), 1 - w * 2, 0.25)
+        band = self.smooth(np.cos(x * 2 * np.pi), 1 - w * 2, self.stripe_edge)
         m = band if mask is None else band * mask
         self.blend(name, m * strength)
 

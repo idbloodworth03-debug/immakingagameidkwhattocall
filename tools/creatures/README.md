@@ -117,7 +117,12 @@ mane grows with its face).
    (`&pose=attack:0.6` holds a pose), and with `?showcase=<id>&slow=1` to
    its attack showcase, slowed down. Every number
    is in `movie.json`; `cartoon.load(id)` gives any listed animal the movie
-   look. `FRAME=head FUR=0 python preview.py yeti head.png` checks a face
+   look. A coat's `length` is its longest part's (the parts in `lengths`
+   are shares of it: a lion's mane 3.2 means the coat is a third of the
+   mane); the locks' `contrast` says how much shorter the short parts come
+   out in the real-time models. Markings stay crisp with `paint_smoothing`
+   (rounds, instead of look.json's) and `stripes: {edge, width}` (harder
+   edges and wider bands than the species draws). `FRAME=head FUR=0 python preview.py yeti head.png` checks a face
    fast (`FUR=0`: no strands; `FRAME=head`: a close-up). Its animations
    can be its own too (`movie.json` "motion"): a persona in `motion.py`
    PERSONAS gives it its own idle, fidget and victory (the Yeti breathes

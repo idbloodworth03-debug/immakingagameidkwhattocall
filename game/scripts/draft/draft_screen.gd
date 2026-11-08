@@ -127,7 +127,8 @@ func _ready() -> void:
 	_pick_view.visible = false
 	intro.leaving.connect(func() -> void:
 		_score_bar.visible = true
-		_show_view("pick"))
+		# (The computer may have started the fight under it: ?fight=.)
+		_show_view("fight" if duel.phase == "fight" else "pick"))
 	intro.z_index = OVER_FIELD
 	add_child(intro)
 
@@ -1074,7 +1075,8 @@ func _opponent_moves(delta: float) -> void:
 	if _auto_bot != null:
 		# Testing: the computer picks for you too (?fight=<seed>).
 		_auto_wait -= delta
-		if duel.phase == "pick" and not duel.ready[0] and _auto_wait <= 0.0:
+		# (Once the VS screen has gone, as a person would.)
+		if duel.phase == "pick" and not duel.ready[0] and _auto_wait <= 0.0 and _score_bar.visible:
 			_auto_bot.pick()
 			_auto_wait = 0.25
 		_auto_log -= delta

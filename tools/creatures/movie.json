@@ -1,5 +1,5 @@
 {
- "_note": "The animated-movie look (docs/ART_DIRECTION.md, 'Style guide'), one design per animal that has moved to it; any animal not listed keeps the flat cartoon look. shape: proportions on top of the real animal (cartoon.py's head, muzzle, eyes, ears, legs, length, belly, limbs). eyes: iris color, how deep they sit in the head (share of their radius), the brow above them. colors: the bold palette per body part (fur, its deeper shade where the clumps part, bare skin, palms and soles, nails, horns). fur: the coat (materials kind), the hero render's strand density and length (meters, the longest), length per body part (meters at 1.0), where the fur parts to bare skin, and the comb; groom: the coat's settings for this animal (bigger locks for a shaggy yeti); under: how much of the deeper shade shows under the fur. locks: the real-time models' sculpted fur clumps, per level of detail (viewer, battle): how many, how long and wide (meters), sides round each and rings along it, how much they lift off the skin and curl back to it (lift, hug), how flat (thickness as a share of width) and how the end is shaped (tip: point, a soft point like a clump of hair, or round; end: how far along the last ring is), the root-to-tip shading, color variation, and the baked soft shadow between clumps. face: the bare face mask on the head (the head's parts facing `forward` from the skull, blending in between `from` and `to`). digits: fingers and toes grown out of each paw along its length (count, spacing, length and root/tip radius in meters, curl toward the palm, which side the palm faces), each with a glossy nail (radius, length). horns: swept out (out, back, up), their length and thickness. mouth: a carved grin where the face's surface lies in direction `dir` from the skull, its half width, depth and gap (radii), sunk `inset` of its depth. nose: on the face in direction `dir`, its radii and how deep it sits (share). ears: false hides the ears in the fur. face below: the bare face stops below this (the direction's height) so the chin and throat keep their fur. portrait_samples: Cycles samples for its card portrait. muzzle: a rounded muzzle on the face (in direction dir from the skull; radii; out: how far it stands out, a share of its depth) that the nose and mouth sit on. mouth smile: the corners turned up (degrees), from `corner` meters either side of the middle. tail: false takes the tail away. colors nose: the nose. shade_low: how much of the deeper shade the fur and skin take toward the feet. body_triangles: the real-time body's triangles per level of detail (less where the locks cover it). surface: 'fur' (the default: the coat as strands and locks), 'scales' (scales all over: hero art as the scales material, the real-time models' shader draws the cells; scales cell: their size in meters) or 'skin'. belly: the underside's color (underside: how far up it reaches); tongue: a tongue's color. spots: markings on top of the skin (color, about one per cell x cell, radius; on_top: 1 only on the back, 0 everywhere), from the species' own pattern in the bold palette. claw_scale: the claws bigger. paint 'species': keep the species' own markings, with its colors swapped for `palette`; face_lines: eye ring color and size. surface 'feathers': the body under feather cards (feathers: which body parts, how many, their size in meters, tilt off the body, comb direction, follow: the body's curve). feathers lift_off: the roots this far off the skin (meters). feathers viewer / battle: the real-time models' bigger, fewer cards (count, size, segments along each, tilt, lift_off). motion: its own animations (motion.py): persona (its idle, fidget and victory), attack (one built for it) and any motion setting. surface 'skin' (a hippo, an elephant): bare skin all over, skin wrinkles: how many wrinkle folds per meter and how deep; 'shell' (a turtle): the shell regions take the shell material, the rest scales (shell cell: the scales' size; plate: the shell plates' size). tusk: the tusks' color (ivory). fur comb: which way the strands lie, in the animal's space (an upright animal's coat hangs down, a four-legged animal's runs backward along the body: straight down would push the strands on its back into the body).",
+ "_note": "The animated-movie look (docs/ART_DIRECTION.md, 'Style guide'), one design per animal that has moved to it; any animal not listed keeps the flat cartoon look. shape: proportions on top of the real animal (cartoon.py's head, muzzle, eyes, ears, legs, length, belly, limbs). eyes: iris color, how deep they sit in the head (share of their radius), the brow above them. colors: the bold palette per body part (fur, its deeper shade where the clumps part, bare skin, palms and soles, nails, horns). fur: the coat (materials kind), the hero render's strand density and length (meters, the longest), length per body part (meters at 1.0), where the fur parts to bare skin, and the comb; groom: the coat's settings for this animal (bigger locks for a shaggy yeti); under: how much of the deeper shade shows under the fur. locks: the real-time models' sculpted fur clumps, per level of detail (viewer, battle): how many, how long and wide (meters), sides round each and rings along it, how much they lift off the skin and curl back to it (lift, hug), how flat (thickness as a share of width) and how the end is shaped (tip: point, a soft point like a clump of hair, or round; end: how far along the last ring is), the root-to-tip shading, color variation, and the baked soft shadow between clumps. face: the bare face mask on the head (the head's parts facing `forward` from the skull, blending in between `from` and `to`). digits: fingers and toes grown out of each paw along its length (count, spacing, length and root/tip radius in meters, curl toward the palm, which side the palm faces), each with a glossy nail (radius, length). horns: swept out (out, back, up), their length and thickness. mouth: a carved grin where the face's surface lies in direction `dir` from the skull, its half width, depth and gap (radii), sunk `inset` of its depth. nose: on the face in direction `dir`, its radii and how deep it sits (share). ears: false hides the ears in the fur. face below: the bare face stops below this (the direction's height) so the chin and throat keep their fur. portrait_samples: Cycles samples for its card portrait. muzzle: a rounded muzzle on the face (in direction dir from the skull; radii; out: how far it stands out, a share of its depth) that the nose and mouth sit on. mouth smile: the corners turned up (degrees), from `corner` meters either side of the middle. tail: false takes the tail away. colors nose: the nose. shade_low: how much of the deeper shade the fur and skin take toward the feet. body_triangles: the real-time body's triangles per level of detail (less where the locks cover it). surface: 'fur' (the default: the coat as strands and locks), 'scales' (scales all over: hero art as the scales material, the real-time models' shader draws the cells; scales cell: their size in meters) or 'skin'. belly: the underside's color (underside: how far up it reaches); tongue: a tongue's color. spots: markings on top of the skin (color, about one per cell x cell, radius; on_top: 1 only on the back, 0 everywhere), from the species' own pattern in the bold palette. claw_scale: the claws bigger. paint 'species': keep the species' own markings, with its colors swapped for `palette`; face_lines: eye ring color and size. surface 'feathers': the body under feather cards (feathers: which body parts, how many, their size in meters, tilt off the body, comb direction, follow: the body's curve). feathers lift_off: the roots this far off the skin (meters). feathers viewer / battle: the real-time models' bigger, fewer cards (count, size, segments along each, tilt, lift_off). motion: its own animations (motion.py): persona (its idle, fidget and victory), attack (one built for it) and any motion setting. surface 'skin' (a hippo, an elephant): bare skin all over, skin wrinkles: how many wrinkle folds per meter and how deep; 'shell' (a turtle): the shell regions take the shell material, the rest scales (shell cell: the scales' size; plate: the shell plates' size). tusk: the tusks' color (ivory). fur comb: which way the strands lie, in the animal's space (an upright animal's coat hangs down, a four-legged animal's runs backward along the body: straight down would push the strands on its back into the body). Chibi proportions (docs/ART_DIRECTION.md, 'Readability'): shape also takes head_lift and head_forward (how far the grown head is raised and brought forward, as a share of its height, on a stretched neck thickened by neck), skull_round (0-1, the skull's ellipsoids rounded off toward balls) and jaw (the jaw shrunk toward its hinge). ear_shape: round ears (a flattened ball of these radii on each ear bone, `along` its length) instead of the cartoon's plates. muzzle may set its paint region (a bear's tan snout) and blend. species: the species' own joints (J) and sizes (R) changed for this design only (a chibi falcon's plumper body and stubbier wings, a cobra's shorter coil and bigger hood). scales may also tune look.json's groove, dome and shade_variation (a chibi's calmer scales).",
  "yeti": {
   "shape": {
    "head": 1.4,
@@ -313,14 +313,15 @@
  },
  "peregrine_falcon": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.7,
-   "eyes": 2.0,
+   "head": 2.4,
+   "muzzle": 0.85,
+   "eyes": 2.5,
    "ears": 1.0,
    "legs": 0.75,
    "length": 0.85,
    "belly": 1.15,
-   "limbs": 1.2
+   "limbs": 1.2,
+   "skull_round": 0.45
   },
   "eyes": {
    "iris": "#2a1a0e",
@@ -346,12 +347,12 @@
   },
   "paint": "species",
   "palette": {
-   "slate": "#3f6fb5",
-   "dark": "#1b2a44",
-   "tips": "#24365e",
-   "cream": "#fff1d2",
+   "slate": "#68717d",
+   "dark": "#151a22",
+   "tips": "#3c434d",
+   "cream": "#f4f0e8",
    "white": "#ffffff",
-   "bar": "#2c3e66",
+   "bar": "#262b33",
    "yellow": "#ffc83a",
    "beak": "#5b7190"
   },
@@ -413,39 +414,76 @@
    }
   },
   "motion": {
-   "persona": "falcon",
-   "portrait_view": [
-    -0.8,
-    1.0,
-    0.45
-   ],
-   "perch_tilt": 1.0
+   "persona": "falcon"
+  },
+  "species": {
+   "R": {
+    "body": [
+     0.052,
+     0.072,
+     0.05
+    ],
+    "breast": [
+     0.054,
+     0.052,
+     0.054
+    ],
+    "chord": [
+     0.11,
+     0.12,
+     0.11,
+     0.05
+    ]
+   },
+   "J": {
+    "elbow": [
+     -0.095,
+     0.035,
+     0.026
+    ],
+    "wrist": [
+     -0.16,
+     0.05,
+     0.022
+    ],
+    "wing_tip": [
+     -0.25,
+     -0.035,
+     0.016
+    ],
+    "tail_end": [
+     0,
+     -0.17,
+     -0.004
+    ]
+   }
   }
  },
  "brown_bear": {
   "shape": {
-   "head": 1.45,
-   "muzzle": 0.75,
-   "eyes": 1.9,
-   "ears": 1.15,
-   "legs": 0.72,
-   "length": 0.85,
-   "belly": 1.3,
-   "limbs": 1.55
+   "head": 2.4,
+   "muzzle": 0.7,
+   "eyes": 3.0,
+   "ears": 0.8,
+   "legs": 0.5,
+   "length": 0.5,
+   "belly": 1.1,
+   "limbs": 1.55,
+   "head_lift": 0.6,
+   "head_forward": 0.3,
+   "neck": 1.3,
+   "skull_round": 0.5,
+   "jaw": 0.75
   },
   "eyes": {
    "iris": "#6a3c1a",
-   "sink": 0.4,
+   "sink": 0.25,
    "squash": [
     0.95,
     1.0,
     0.82
    ],
-   "brow": [
-    1.3,
-    0.55,
-    0.45
-   ],
+   "brow": null,
    "brow_lift": 0.9,
    "brow_forward": 0.22
   },
@@ -592,18 +630,18 @@
   },
   "mouth": {
    "dir": [
-    0.0,
-    1.0,
-    -0.5
+    0,
+    1,
+    -0.62
    ],
    "radii": [
-    0.085,
-    0.05,
-    0.006
+    0.12,
+    0.06,
+    0.012
    ],
    "inset": 0.3,
-   "smile": 10,
-   "corner": 0.055
+   "smile": 18,
+   "corner": 0.075
   },
   "body_triangles": {
    "viewer": 11000
@@ -613,6 +651,42 @@
   "motion": {
    "persona": "bear",
    "victory_rear": 0.95
+  },
+  "ear_shape": {
+   "radii": [
+    0.15,
+    0.065,
+    0.14
+   ],
+   "along": 0.3
+  },
+  "muzzle": {
+   "dir": [
+    0,
+    1,
+    -0.45
+   ],
+   "radii": [
+    0.19,
+    0.15,
+    0.13
+   ],
+   "out": 0.55,
+   "region": "snout",
+   "blend": 0.04
+  },
+  "nose": {
+   "dir": [
+    0,
+    1,
+    -0.15
+   ],
+   "radii": [
+    0.08,
+    0.055,
+    0.055
+   ],
+   "sink": 0.4
   }
  },
  "giant_panda": {
@@ -2644,14 +2718,15 @@
  },
  "king_cobra": {
   "shape": {
-   "head": 1.3,
-   "muzzle": 0.8,
-   "eyes": 2.6,
+   "head": 2.35,
+   "muzzle": 0.55,
+   "eyes": 2.7,
    "ears": 1.0,
    "legs": 1.0,
    "length": 1.0,
    "belly": 1.0,
-   "limbs": 1.0
+   "limbs": 1.0,
+   "skull_round": 0.45
   },
   "eyes": {
    "iris": "#f7b52c",
@@ -2671,28 +2746,31 @@
   },
   "paint": "species",
   "palette": {
-   "olive": "#7a8a2a",
-   "band": "#f2dc62",
-   "cream": "#f8eebc",
-   "dark": "#3a3c18"
+   "olive": "#5c5a2e",
+   "band": "#d8cc7a",
+   "cream": "#efe3b4",
+   "dark": "#2f2d18"
   },
   "face_lines": {
    "eye_line_size": 0.0,
    "mouth": "#c43a5a"
   },
   "colors": {
-   "skin": "#7a8a2a",
-   "skin_deep": "#3a3c18",
+   "skin": "#5c5a2e",
+   "skin_deep": "#2f2d18",
    "belly": "#f8eebc",
-   "fur": "#7a8a2a",
-   "fur_deep": "#3a3c18",
+   "fur": "#5c5a2e",
+   "fur_deep": "#2f2d18",
    "nails": "#1d2433",
    "mouth": "#c43a5a",
    "tongue": "#f04a7a"
   },
   "surface": "scales",
   "scales": {
-   "cell": 0.018
+   "cell": 0.03,
+   "groove": 0.02,
+   "dome": 0.3,
+   "shade_variation": 0.03
   },
   "shade_low": 0.3,
   "underside": 0.8,
@@ -2707,6 +2785,100 @@
   "portrait_samples": 96,
   "motion": {
    "persona": "cobra"
+  },
+  "species": {
+   "R": {
+    "hood": [
+     0.18,
+     0.065,
+     0.17
+    ],
+    "body": [
+     0.02,
+     0.035,
+     0.045,
+     0.05,
+     0.052,
+     0.045,
+     0.028,
+     0.028
+    ],
+    "snout": [
+     0.03,
+     0.022
+    ],
+    "jaw": [
+     0.024,
+     0.016
+    ],
+    "skull": [
+     0.04,
+     0.04,
+     0.03
+    ]
+   },
+   "J": {
+    "tail_end": [
+     0.08,
+     -0.26,
+     0.02
+    ],
+    "tail_mid": [
+     -0.1,
+     -0.2,
+     0.03
+    ],
+    "tail_base": [
+     0.07,
+     -0.12,
+     0.04
+    ],
+    "pelvis": [
+     -0.05,
+     -0.03,
+     0.045
+    ],
+    "spine_mid": [
+     0.03,
+     0.06,
+     0.05
+    ],
+    "withers": [
+     0,
+     0.12,
+     0.12
+    ],
+    "neck_base": [
+     0,
+     0.15,
+     0.3
+    ],
+    "head_base": [
+     0,
+     0.17,
+     0.4
+    ],
+    "skull": [
+     0,
+     0.2,
+     0.42
+    ],
+    "snout_tip": [
+     0,
+     0.27,
+     0.41
+    ],
+    "jaw_hinge": [
+     0,
+     0.205,
+     0.4
+    ],
+    "chin": [
+     0,
+     0.26,
+     0.395
+    ]
+   }
   }
  },
  "wild_bactrian_camel": {

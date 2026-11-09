@@ -777,7 +777,9 @@ func _watch_size(v: UnitView) -> void:
 		print("  SIZE OVER %s %.1f%% %s scale=%.2f,%.2f defeat=%.2f" % [v.id, pct, v.m_anim, v.m_scale.x, v.m_scale.y, v.defeat])
 	var limits: Dictionary = GameData.bodies.get("limits", {})
 	var limit := float(limits.get("hero_max_pct", 10.0)) if hero else float(limits.get("unit_max_pct", 9.0))
-	if pct > limit:
+	# (Standing at most its limit; its tallest poses at most pose_allowance
+	# times that.)
+	if pct > limit * float(limits.get("pose_allowance", 1.0)):
 		stats.size_over += 1
 
 

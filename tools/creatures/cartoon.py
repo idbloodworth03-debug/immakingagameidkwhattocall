@@ -28,6 +28,11 @@ LEGS = 0.75       # leg length; thickness stays, so they get stubby
 LENGTH = 0.72     # body length
 BELLY = 1.1       # torso thickness
 LIMBS = 1.35      # leg thickness
+HEAD_LIFT = 0.0   # how far the grown head is raised (a share of its height): a chibi's head sits up on its shoulders
+HEAD_FORWARD = 0.0  # how far it comes forward (a share of its height)
+NECK = 1.0        # neck thickness, as the head lifts on it
+SKULL_ROUND = 0.0  # 0-1: how far the skull's ellipsoids round off toward balls (a chibi's round head)
+JAW = 1.0         # jaw size, shrunk toward its hinge (a small chin under a round face)
 
 TORSO_REGIONS = ("torso", "chest", "belly", "rump", "shoulder", "thigh")
 
@@ -49,11 +54,13 @@ def cartoonify(c):
     {"head": 1.3} for an animal whose head is already big, or
     {"face_mane": True} for a mane that frames the face and so grows with it.
     c.after_cartoon(c), if set, runs at the end (see add_cartoon_eyes)."""
-    global HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS
+    global HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS, HEAD_LIFT, HEAD_FORWARD, NECK, SKULL_ROUND, JAW
     defaults = dict(HEAD=HEAD, MUZZLE=MUZZLE, EYES=EYES, EARS=EARS, LEGS=LEGS, LENGTH=LENGTH, BELLY=BELLY,
-                    LIMBS=LIMBS)
+                    LIMBS=LIMBS, HEAD_LIFT=HEAD_LIFT, HEAD_FORWARD=HEAD_FORWARD, NECK=NECK, SKULL_ROUND=SKULL_ROUND,
+                    JAW=JAW)
     tuned = {k.upper(): v for k, v in (getattr(c, "cartoon", None) or {}).items() if k != "face_mane"}
-    HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS = (tuned.get(k, v) for k, v in defaults.items())
+    HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS, HEAD_LIFT, HEAD_FORWARD, NECK, SKULL_ROUND, JAW = (
+        tuned.get(k, v) for k, v in defaults.items())
     try:
         _cartoonify(c)
         # A species with more than one head adds the other heads' eyes here,
@@ -62,7 +69,8 @@ def cartoonify(c):
         if hook is not None:
             hook(c)
     finally:
-        HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS = defaults.values()
+        HEAD, MUZZLE, EYES, EARS, LEGS, LENGTH, BELLY, LIMBS, HEAD_LIFT, HEAD_FORWARD, NECK, SKULL_ROUND, JAW = (
+            defaults.values())
 
 
 def _cartoonify(c):
@@ -174,6 +182,11 @@ def _cartoonify(c):
         r = c.mouth["radii"]
         c.mouth = dict(c.mouth, radii=(r[0] * HEAD, r[1] * HEAD, r[2]))
 
+    if SKULL_ROUND or JAW != 1.0:
+        _round_face(c)
+    if HEAD_LIFT or HEAD_FORWARD:
+        _lift_head(c, heads)
+
     _googly_eyes(c, EYES)
 
     # Smooth skin instead of hair, in brighter colors, painted as the real
@@ -190,6 +203,73 @@ def _cartoonify(c):
         return _vivid(_smooth_colors(mesh, _clean(paint, real, original)))
     c.paint = painted
     c.palette = dict(c.palette or {}, eye_line_size=0.0)
+
+
+def _round_face(c):
+    """A chibi face: the skull's ellipsoids rounded off toward balls (each
+    keeping its biggest radius), and the jaw shrunk toward its hinge so a
+    small chin sits under a round face."""
+    for s in _all_shapes(c):
+        if s.bone == "head" and s.kind == "ellipsoid" and not s.subtract and SKULL_ROUND:
+            r = np.asarray(s.radii, float)
+            s.radii = r + (r.max() - r) * SKULL_ROUND
+    if JAW != 1.0 and any(b.name == "jaw" for b in c.bones):
+        hinge = np.asarray(c.joint(_bone(c, "jaw").head), float)
+
+        def shrink(p):
+            return hinge + (np.array(p, float) - hinge) * JAW
+        _warp(c, shrink, bones={"jaw"}, joints={_bone(c, "jaw").tail})
+        for s in _all_shapes(c):
+            if s.bone == "jaw" and not s.subtract:
+                _thicken(s, JAW)
+
+
+def _lift_head(c, heads):
+    """Raises the grown head (and brings it forward) on its neck: a chibi's
+    big head sits up on its shoulders, where a tilted camera sees its face,
+    not its back. The neck stretches to meet it (thickened by NECK)."""
+    head_bone = _bone(c, "head")
+    lo, hi = _extent([s for s in _all_shapes(c) if s.bone == "head"])
+    height = float(hi[2] - lo[2])
+    shift = np.array([0.0, HEAD_FORWARD * height, HEAD_LIFT * height])
+    joints = {j for b in c.bones if b.name in heads for j in (b.head, b.tail)} | {"skull"}
+    _warp(c, lambda p: np.array(p, float) + shift, bones=heads, joints=joints)
+    neck = [b for b in c.bones if b.name.startswith("neck")]
+    if not neck:
+        return
+    start = np.asarray(c.joint(neck[0].head), float)
+    end = np.asarray(c.joint(head_bone.head), float) - shift   # where the neck met the head before
+    span = end - start
+    length2 = max(float(span @ span), 1e-9)
+
+    def stretch(p):
+        p = np.array(p, float)
+        t = np.clip(((p - start) @ span) / length2, 0.0, 1.0)
+        return p + np.asarray(t)[..., None] * shift if p.ndim > 1 else p + float(t) * shift
+    names = {b.name for b in neck}
+    _warp(c, stretch, bones=names, joints={b.tail for b in neck} - joints)
+    for s in _all_shapes(c):
+        if s.bone in names:
+            _thicken(s, NECK)
+
+
+def _extent(shapes):
+    """The box round some shapes (ellipsoids and cones, with their radii)."""
+    lo = np.full(3, np.inf)
+    hi = np.full(3, -np.inf)
+    for s in shapes:
+        if s.kind == "ellipsoid":
+            r = np.asarray(s.radii, float).max()
+            for p in (s.a,):
+                lo = np.minimum(lo, np.asarray(p) - r)
+                hi = np.maximum(hi, np.asarray(p) + r)
+        elif s.kind in ("cone", "plate"):
+            for p, r in ((s.a, s.ra), (s.b, s.rb)):
+                lo = np.minimum(lo, np.asarray(p) - r)
+                hi = np.maximum(hi, np.asarray(p) + r)
+    if not np.all(np.isfinite(lo)):
+        return np.zeros(3), np.zeros(3)
+    return lo, hi
 
 
 def _googly_eyes(c, boost):
@@ -269,7 +349,9 @@ def _real_points(mesh, before):
     weight = np.zeros(len(v))
     for i, s in enumerate(mesh.shapes):
         old = before.get(id(s))
-        if old is None or s.subtract:
+        # (A shape made after the cartoon, like a design's round ear, may
+        # reuse the memory, and so the id, of one it replaced.)
+        if old is None or s.subtract or old.kind != s.kind:
             continue
         w = mesh.shape_weights[:, i]
         idx = np.nonzero(w > 1e-4)[0]

@@ -2361,6 +2361,58 @@ def unicorn_victory(c, t):
 
 # --- The Air animals' personas ------------------------------------------------------
 
+# --- Hero card poses (docs/ART_DIRECTION.md, "Readability"): each animal's
+# signature move, frozen at its most telling moment, facing the camera. ----
+
+def _mirror_pose(p):
+    """The same pose with left and right swapped (a card's camera sees the
+    animal's left side: its signature move goes on the near paw)."""
+    out = Pose()
+    for name, value in p.items():
+        if name.endswith(".L"):
+            out[name[:-2] + ".R"] = value
+        elif name.endswith(".R"):
+            out[name[:-2] + ".L"] = value
+        else:
+            out[name] = value
+    return out
+
+
+def hero_bear(c):
+    """Reared up mid-swipe, the near front paw high, roaring."""
+    p = _mirror_pose(swipe(c, 0.3))
+    p.rot("jaw", x=-0.25)
+    p.rot("head", x=0.12)
+    return p
+
+
+def hero_falcon(c):
+    """A stoop: diving, wings tucked back along the body, the face toward
+    us and the talons out ahead."""
+    p = Pose()
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("wing_upper." + side, x=0.35, z=0.35 * sign)
+        p.rot("wing_lower." + side, x=0.1, z=0.25 * sign)
+        p.rot("wing_hand." + side, z=0.2 * sign)
+        p.rot("leg." + side, x=1.0)
+    p["root_rot"] = (-0.35, -0.25, 0.15)
+    p.rot("neck", x=0.3, z=0.25)
+    p.rot("head", x=0.2, z=0.3)
+    p.rot("jaw", x=-0.3)
+    return p
+
+
+def hero_cobra(c):
+    """Up on its coils with the hood spread, leaning toward us, hissing."""
+    p = serpent_idle(c, 0.0)
+    p["root_rot"] = (0.0, 0.0, 0.3)
+    p.rot("neck", x=0.15)
+    p.rot("neck2", x=-0.1, z=0.25)
+    p.rot("head", x=0.05, z=0.3)
+    p.rot("jaw", x=-0.45)
+    return p
+
+
 def perched(c):
     """A bird's card portrait pose: standing with its body pitched up
     (`motion["perch_tilt"]`, radians nose-up; an owl stands nearly upright,
@@ -3131,7 +3183,7 @@ PERSONAS = {
     "sloth": {"idle": sloth_idle, "fidget": sloth_fidget, "victory": sloth_victory},
     "pangolin": {"idle": pangolin_idle, "fidget": pangolin_fidget, "victory": pangolin_victory},
     "kraken": {"idle": kraken_idle, "fidget": kraken_fidget, "victory": kraken_victory},
-    "falcon": {"idle": falcon_idle, "fidget": falcon_fidget, "victory": falcon_victory, "portrait": perched},
+    "falcon": {"idle": falcon_idle, "fidget": falcon_fidget, "victory": falcon_victory, "portrait": hero_falcon},
     "owl": {"idle": owl_idle, "fidget": owl_fidget, "victory": owl_victory, "portrait": perched},
     "eagle": {"idle": eagle_idle, "fidget": eagle_fidget, "victory": eagle_victory, "portrait": perched},
     "macaw": {"idle": macaw_idle, "fidget": macaw_fidget, "victory": macaw_victory, "portrait": perched},
@@ -3140,7 +3192,7 @@ PERSONAS = {
     "squirrel": {"idle": squirrel_idle, "fidget": squirrel_fidget, "victory": squirrel_victory},
     "raccoon": {"idle": raccoon_idle, "fidget": raccoon_fidget, "victory": raccoon_victory},
     "skunk": {"idle": skunk_idle, "fidget": skunk_fidget, "victory": skunk_victory},
-    "cobra": {"idle": cobra_idle, "fidget": cobra_fidget, "victory": cobra_victory},
+    "cobra": {"idle": cobra_idle, "fidget": cobra_fidget, "victory": cobra_victory, "portrait": hero_cobra},
     "camel": {"idle": camel_idle, "fidget": camel_fidget, "victory": camel_victory},
     "orangutan": {"idle": orangutan_idle, "fidget": orangutan_fidget, "victory": orangutan_victory},
     "unicorn": {"idle": unicorn_idle, "fidget": unicorn_fidget, "victory": unicorn_victory},
@@ -3150,7 +3202,7 @@ PERSONAS = {
     "wolf": {"idle": wolf_idle, "fidget": wolf_fidget, "victory": wolf_victory},
     "badger": {"idle": badger_idle, "fidget": badger_fidget, "victory": badger_victory},
     "cerberus": {"idle": cerberus_idle, "fidget": cerberus_fidget, "victory": cerberus_victory},
-    "bear": {"idle": bear_idle, "fidget": bear_fidget, "victory": bear_victory},
+    "bear": {"idle": bear_idle, "fidget": bear_fidget, "victory": bear_victory, "portrait": hero_bear},
     "panda": {"idle": panda_idle, "fidget": panda_fidget, "victory": panda_victory},
     "hippo": {"idle": hippo_idle, "fidget": hippo_fidget, "victory": hippo_victory},
     "elephant": {"idle": elephant_idle, "fidget": elephant_fidget, "victory": elephant_victory},

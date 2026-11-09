@@ -82,6 +82,7 @@ func test_a_model_plays_its_views_animation() -> void:
 			"%s has idle, walk and attack" % v.id)
 		v.m_anim = "attack"
 		v.m_phase = 0.5
+		ModelStage.angle()
 		stage._pose(m, v, field.now(), 0.0, field.field_scale() * 1000.0, Vector3(1, 0, 0), Vector3(0, ModelStage.COS, -ModelStage.SIN), Vector3(0, -ModelStage.SIN, -ModelStage.COS))
 		check_eq(String(m.player.current_animation), "attack", "%s plays the attack" % v.id)
 		check(absf(m.player.current_animation_position - 0.5 * float(m.lengths.attack)) < 0.02, "%s halfway through it" % v.id)
@@ -100,6 +101,7 @@ func test_a_change_of_animation_cross_fades() -> void:
 	var m: ModelStage.Model = stage._models[key]
 	var skeleton := m.body.find_children("*", "Skeleton3D", true, false)[0] as Skeleton3D
 	var bone := maxi(0, skeleton.find_bone("neck"))
+	ModelStage.angle()
 	var args := [field.field_scale() * 1000.0, Vector3(1, 0, 0), Vector3(0, ModelStage.COS, -ModelStage.SIN), Vector3(0, -ModelStage.SIN, -ModelStage.COS)]
 	v.m_anim = "idle"
 	v.m_phase = 0.0

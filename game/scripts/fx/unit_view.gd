@@ -1358,7 +1358,7 @@ func animate(dt: float, now: float) -> void:
 			var ppu := maxf(1.0, field.field_scale() * 1000.0)
 			altitude = float(t.air_height_tiles) + air_px / ppu
 		else:
-			offset.y -= float(t.air_height_tiles) * field.field_scale() * 1000.0 * ModelStage.COS + air_px
+			offset.y -= float(t.air_height_tiles) * field.field_scale() * 1000.0 * ModelStage.cos_down() + air_px
 	if modeled and defeat < 0.0:
 		# However it squashes, stretches and hops, a 3D model never stands
 		# more than model_stretch_max taller than itself: the camera keeps
@@ -1668,7 +1668,7 @@ func middle() -> Vector2:
 ## A model flier's height above the ground as it shows on screen (pixels
 ## up; 0 on the ground).
 func altitude_px() -> float:
-	return m_altitude * field.field_scale() * 1000.0 * ModelStage.COS if modeled else 0.0
+	return m_altitude * field.field_scale() * 1000.0 * ModelStage.cos_down() if modeled else 0.0
 
 
 # --- Drawing the shadow and ring ---------------------------------------------

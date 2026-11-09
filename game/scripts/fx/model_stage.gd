@@ -28,9 +28,27 @@ const FACES := {
 	"drowsy": [0.0, 0.62, 1.0, 0.0, 0.0], "smug": [0.0, 0.5, 1.0, 0.0, 0.0], "wide": [0.0, 0.0, 0.68, 0.0, 0.0],
 	"happy": [0.0, 0.0, 1.0, 1.0, 0.0], "dizzy": [0.0, 0.0, 1.0, 0.0, 1.0],
 }
-## The camera's 50-degree look down (as the sprites and arenas were rendered).
-const SIN := 0.76604444
-const COS := 0.64278761
+## The camera's look down at the field (feel.json "camera" tilt_degrees:
+## how far it leans from straight down; the arenas are rendered from the
+## same angle): SIN and COS of its angle below level, read once.
+static var SIN := 0.0
+static var COS := 0.0
+
+
+## Reads the camera's angle from the data the first time it's needed.
+static func angle() -> void:
+	if SIN > 0.0:
+		return
+	var down := deg_to_rad(90.0 - Feel.num("camera", "tilt_degrees", 40.0))
+	SIN = sin(down)
+	COS = cos(down)
+
+
+## The cosine of the camera's look down (how much of a height shows on the
+## screen), for the 2D layers that lift things off the ground.
+static func cos_down() -> float:
+	angle()
+	return COS
 
 static var _scenes := {}
 static var _index := {}
@@ -157,6 +175,7 @@ func sync(views: Dictionary, now: float, dt := 0.0) -> void:
 		return
 	# The camera: the screen's middle over the field point under it.
 	aim(camera, field.screen_to_field(field.size / 2.0), ppu, field.size.y)
+	angle()
 	var forward := Vector3(0.0, -SIN, -COS)
 
 	var right := Vector3(1, 0, 0)
@@ -272,6 +291,7 @@ static func natural_box(id: String) -> Dictionary:
 		var ts := tile_scale(id)
 		if not first:
 			info.longest = maxf(box.size.x, maxf(box.size.y, box.size.z)) * ts
+			angle()
 			info.up = (box.size.y * COS + box.size.z * SIN) * ts
 			# The tallest it stands on the screen in a fight, its real outline
 			# in its tallest pose (bodies.json pose_up, measured from its
@@ -377,6 +397,7 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 ## field point `middle` (field units) is the view's middle, at `ppu` screen
 ## pixels a tile, `view_height` pixels tall.
 static func aim(cam: Camera3D, middle: Vector2, ppu: float, view_height: float) -> void:
+	angle()
 	var forward := Vector3(0.0, -SIN, -COS)
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
@@ -387,12 +408,14 @@ static func aim(cam: Camera3D, middle: Vector2, ppu: float, view_height: float) 
 
 ## A field point (field units) in the 3D layer, on the ground.
 static func ground(at: Vector2) -> Vector3:
+	angle()
 	return Vector3(at.x / 1000.0, 0.0, at.y / 1000.0 / SIN)
 
 
 ## Turns the model to face `degrees` (clockwise from up on screen), on the
 ## stretched ground.
 static func face_toward(m: Model, degrees: float) -> void:
+	angle()
 	var f := deg_to_rad(degrees)
 	var dir := Vector2(sin(f), -cos(f) / SIN)
 	m.turn.rotation.y = atan2(-dir.x, -dir.y)
@@ -509,6 +532,7 @@ static func model_height_units(m: Model) -> float:
 	var points: Dictionary = _outline_points(m)
 	if (points.verts as PackedVector3Array).is_empty():
 		return _box_height_units(m)
+	angle()
 	var up := Vector3(0, COS, -SIN)
 	var g := m.skeleton.global_transform
 	# Each bind's whole transform for this pose, once: then each point is
@@ -537,6 +561,7 @@ static func model_height_units(m: Model) -> float:
 ## The bounding box's height along the camera's up (for a model with no
 ## skeleton).
 static func _box_height_units(m: Model) -> float:
+	angle()
 	var up := Vector3(0, COS, -SIN)
 	var lo := INF
 	var hi := -INF

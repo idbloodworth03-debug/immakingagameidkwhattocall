@@ -292,19 +292,41 @@ func _frame_armies(delta: float, snap := false) -> void:
 			_arena.queue_redraw()
 		return
 	var a := "army"
-	var box := Rect2()
-	var first := true
+	# Once the armies are at war it frames where the fighting is (feel.json
+	# "army" camera_fight_*): the animals with an enemy close by, not the
+	# whole army spread over the field; before that (the line-up, the
+	# march), everyone.
+	var standing: Array = []
 	for f: BattleSim.Fighter in sim.fighters:
-		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
-			continue
-		var p := Vector2(f.x, f.y)
-		if first:
-			box = Rect2(p, Vector2.ZERO)
-			first = false
-		else:
-			box = box.expand(p)
-	if first:
+		if f.alive and f.is_unit() and (frame_team < 0 or f.team == frame_team):
+			standing.append(f)
+	if standing.is_empty():
 		return
+	var framed := standing
+	if frame_team < 0 and sim.army.at_war():
+		var reach := Feel.num(a, "camera_fight_reach_tiles", 3.0) * 1000.0
+		var fighting: Array = []
+		for f: BattleSim.Fighter in standing:
+			if f.target != null and f.target.alive and f.target.is_unit() and BattleSim.edge_distance(f, f.target) <= reach:
+				fighting.append(f)
+		if fighting.size() >= 2:
+			framed = fighting
+	var box := Rect2(Vector2(framed[0].x, framed[0].y), Vector2.ZERO)
+	var weight := Vector2.ZERO
+	for f: BattleSim.Fighter in framed:
+		box = box.expand(Vector2(f.x, f.y))
+		weight += Vector2(f.x, f.y)
+	# No wider than camera_fight_max_tiles while fighting: round the middle
+	# of the fighting.
+	if framed != standing:
+		var widest := Feel.num(a, "camera_fight_max_tiles", 10.0) * 1000.0
+		var mid := weight / float(framed.size())
+		if box.size.x > widest:
+			box.position.x = clampf(mid.x - widest / 2.0, box.position.x, box.end.x - widest)
+			box.size.x = widest
+		if box.size.y > widest:
+			box.position.y = clampf(mid.y - widest / 2.0, box.position.y, box.end.y - widest)
+			box.size.y = widest
 	var margin := (camera_margin if camera_margin >= 0.0 else Feel.num(a, "camera_margin_tiles", 2.2)) * 1000.0
 	box = box.grow(margin)
 	# Room above for the animals' heads and banners.
@@ -341,14 +363,13 @@ func _frame_armies(delta: float, snap := false) -> void:
 	_arena.queue_redraw()
 
 
-## The zoom past which an animal on the field would look bigger than
+## The zoom past which an animal on the field would stand bigger than
 ## bodies.json "limits" allows (a share of the screen's height: unit_max_pct
-## for any animal, hero_max_pct for a Mythic hero), from the tallest each
-## one stands in a fight at its drawn size (ModelStage.natural_box
-## "tallest": its real outline in its tallest pose, bodies.json pose_up;
-## the margin is for the touch of squash and stretch on top). So animals
-## never get bigger than that, even in a small fight. INF with nothing on
-## the field.
+## for any animal, hero_max_pct for a Mythic hero), from its standing height
+## at its drawn size (ModelStage.natural_box "up": its box at rest; the
+## margin is for the touch of squash and stretch on top). Its tallest poses
+## (an attack, a celebration: bodies.json pose_up) rise above that by at
+## most pose_allowance. INF with nothing on the field.
 func _size_zoom_cap(base: float) -> float:
 	if sim == null:
 		return INF
@@ -361,7 +382,10 @@ func _size_zoom_cap(base: float) -> float:
 	for f: BattleSim.Fighter in sim.fighters:
 		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
 			continue
-		var up := float(ModelStage.natural_box(f.card.id).tallest) * UnitView.draw_k(f)
+		# Its standing height (its box at rest on the screen): an attack or a
+		# celebration may rise above the limit for a moment, by at most
+		# bodies.json limits pose_allowance.
+		var up := float(ModelStage.natural_box(f.card.id).up) * UnitView.draw_k(f)
 		if up <= 0.0:
 			continue
 		var limit := hero_max if f.memory.get("hero", false) else unit_max
@@ -456,7 +480,7 @@ func unit_height_share(v: UnitView) -> float:
 ## margin): at least 1. A style that grows a body (a Condor's feasts) grows
 ## it only into this room, rather than the camera pulling back for it.
 func size_room(f: BattleSim.Fighter) -> float:
-	var up := float(ModelStage.natural_box(f.card.id).tallest) * UnitView.draw_k(f)
+	var up := float(ModelStage.natural_box(f.card.id).up) * UnitView.draw_k(f)
 	if up <= 0.0:
 		return INF
 	var limits: Dictionary = GameData.bodies.get("limits", {})

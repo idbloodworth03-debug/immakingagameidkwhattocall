@@ -42,8 +42,22 @@ def wants(species):
 
 def load(species):
     module = importlib.import_module(species)
-    c = module.make()
     design = copy.deepcopy(DESIGNS[species])
+    # The design may reshape the species itself (its joints J and sizes R,
+    # e.g. a chibi bird's plumper body and stubbier wings), for this build
+    # only.
+    kept = {}
+    for key, changes in design.get("species", {}).items():
+        table = getattr(module, key, None)
+        if isinstance(table, dict):
+            kept[key] = dict(table)
+            table.update({k: tuple(v) if isinstance(v, list) else v for k, v in changes.items()})
+    try:
+        c = module.make()
+    finally:
+        for key, table in kept.items():
+            getattr(module, key).clear()
+            getattr(module, key).update(table)
     c.cartoon = dict(design["shape"])
     cartoon.cartoonify(c)
     c.style = "movie"
@@ -92,6 +106,18 @@ def _face(c, design):
         ears = {b.name for b in c.bones if b.name.startswith("ear")}
         c.parts = [p for p in c.parts if p.get("bone") not in ears]
         c.shapes = [s for s in c.shapes if s.bone not in ears]
+    k = design.get("ear_shape")
+    if k:
+        # Round ears (a bear's, a mouse's): a flattened ball on each ear
+        # bone, facing forward, instead of the cartoon's thick plate.
+        r = np.asarray(k["radii"], float)
+        for b in [b for b in c.bones if b.name.startswith("ear")]:
+            base, tip = c.joint(b.head), c.joint(b.tail)
+            centre = base + (tip - base) * float(k.get("along", 0.5))
+            for part in c.parts:
+                if part.get("bone") == b.name:
+                    part["shapes"] = [ellipsoid(tuple(centre), tuple(r), "ear", b.name, blend=0.01)]
+            c.shapes = [sh for sh in c.shapes if sh.bone != b.name]
     if "skull" not in c.joints:
         return
     skull = c.joint("skull")
@@ -101,7 +127,8 @@ def _face(c, design):
         d /= np.linalg.norm(d)
         r = np.asarray(k["radii"], float)
         p = surface_point(c.shapes, skull, d, sink=0.0)
-        c.shapes.append(ellipsoid(tuple(p - d * r[1] * (1 - k["out"])), tuple(r), "face", "head", blend=0.025))
+        c.shapes.append(ellipsoid(tuple(p - d * r[1] * (1 - k["out"])), tuple(r), k.get("region", "face"), "head",
+                                  blend=float(k.get("blend", 0.025))))
     k = design.get("nose")
     if k:
         d = np.asarray(k["dir"], float)
@@ -359,7 +386,8 @@ def dress(c, arm, body, mesh, quality=1.0, size=1.0):
         sc = design.get("scales", {})
         body.data.materials.clear()
         body.data.materials.append(M.scales_material(M.rgba(col["skin"]), "movie_scales", color_attribute="Col",
-                                                     cell=sc.get("cell")))
+                                                     cell=sc.get("cell"), groove=sc.get("groove"), dome=sc.get("dome"),
+                                                     shade_variation=sc.get("shade_variation")))
     elif surface == "shell":
         _shell_dress(c, body, mesh, design)
     else:

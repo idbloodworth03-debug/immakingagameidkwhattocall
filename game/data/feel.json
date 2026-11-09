@@ -130,8 +130,8 @@
   "hurt_bounce_pixels": 5.0,
   "transition_squash": 0.05,
   "blend_seconds": 0.12,
-    "model_squash_share": 0.35,
-    "model_stretch_max": 0.05,
+  "model_squash_share": 0.35,
+  "model_stretch_max": 0.05,
   "windup_scale": {
    "tank": 1.0,
    "tank_destroyer": 1.0,
@@ -229,10 +229,11 @@
   "team_outline_depth": 0.06
  },
  "camera": {
-  "_note": "The fight's camera. When the field grows for bigger herds (draft_rules.json \"field\"), the camera zooms out to it over about zoom_seconds. When the view already reaches the far fence (the line-up, a fight at the back), it eases on past it by up to scenery_back_tiles so the crowd behind the fence shows (data/arena_life.json); from scenery_reach_tiles away it doesn't.",
+  "_note": "The fight's camera. When the field grows for bigger herds (draft_rules.json \"field\"), the camera zooms out to it over about zoom_seconds. When the view already reaches the far fence (the line-up, a fight at the back), it eases on past it by up to scenery_back_tiles so the crowd behind the fence shows (data/arena_life.json); from scenery_reach_tiles away it doesn't. tilt_degrees: how far the battle camera leans from looking straight down (0: top-down; 40: it looks down at 50 degrees from level, as the sprites were drawn). The 3D animals, the arena pictures (tools/creatures/arena.py) and anything lifted off the ground (fliers' height) use it; the ground itself keeps square tiles on the screen at any tilt (the field is stretched to match).",
   "zoom_seconds": 0.8,
   "scenery_back_tiles": 2.2,
-  "scenery_reach_tiles": 3.0
+  "scenery_reach_tiles": 3.0,
+  "tilt_degrees": 52.0
  },
  "celebrations": {
   "_note": "Big moments. After each fight the new score pops up over the field (score_pop_size) and flies into the score bar. A 3-star animal gets a slow-motion zoom (zoom in, hold, zoom out, with the field's animation slowed by star3_slow_motion; never so far that an animal looks bigger than bodies.json limits allow), stars, confetti and a bouncy 3 STARS!, then keeps a gold glow (gold_glow) with a sparkle every gold_sparkle_seconds. Flawless: winning a round without losing an animal. Comeback Victory: winning the match after being 2 rounds down.",
@@ -433,23 +434,23 @@
   "beam": "#fff0a0"
  },
  "army": {
-  "_note": "How armies look (Draft Duel). A formation marches with a thump (stomp_volume_db) and a tiny shake (stomp_shake) every march_stride_tiles of ground it covers; each animal's feet keep pace with the ground it covers at its own stride (feel.json movement walk_*; no sliding), and small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Every animal is drawn at its bodies.json size; an elite Specialist elite_scale bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom, nor so close that an animal looks bigger than bodies.json \"limits\" allows), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole, at banner_alpha; once the armies are at war (the melee) they fade to banner_war_alpha over banner_fade_seconds, so the fighting animals under them read clearly (a tapped squad's shows in full). Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps).",
+  "_note": "How armies look (Draft Duel). A formation marches with a thump (stomp_volume_db) and a tiny shake (stomp_shake) every march_stride_tiles of ground it covers; each animal's feet keep pace with the ground it covers at its own stride (feel.json movement walk_*; no sliding), and small random differences are kept only for standing about (breathing, fidgets, blinks, expressions). Every animal is drawn at its bodies.json size; an elite Specialist elite_scale bigger. Before a fight the armies stand in formation for lineup_seconds, then FIGHT!. The camera frames every animal still standing with camera_margin_tiles around them (and camera_head_room_tiles more above, for their heads and banners) (never closer than camera_min_tiles across or camera_max_zoom, nor so close that an animal looks bigger than bodies.json \"limits\" allows), easing over camera_seconds. Squad banners: a flag banner_width x banner_height pixels on a banner_pole pixels pole, at banner_alpha; once the armies are at war (the melee) they fade to banner_war_alpha over banner_fade_seconds, so the fighting animals under them read clearly (a tapped squad's shows in full). Volleys fly slower and higher than single shots (volley_tiles_per_second, between volley_min_seconds and volley_max_seconds, volley_arc times the usual arc). Every other shot in an army fight flies at least over_allies_arc times the usual arc, so it plainly goes over the teammates in between. The clash shakes the field (clash_shake) and freezes it for clash_hitstop_seconds; the War Horn shakes it war_horn_shake. While picking, new squads march in from walk_in_tiles behind the army at walk_in_tiles_per_second (walk_in_steps_per_second steps). Once the armies are at war the camera frames where the fighting is: the animals with an enemy within camera_fight_reach_tiles (edge to edge), at most camera_fight_max_tiles across round the middle of the fighting, so it tightens in as they clash; during the line-up and the march it frames everyone.",
   "march_stride_tiles": 0.6,
   "stomp_volume_db": -16.0,
   "stomp_shake": 0.03,
   "elite_scale": 1.14,
   "lineup_seconds": 1.2,
-  "camera_margin_tiles": 1.4,
-  "camera_min_tiles": 8.5,
-  "camera_head_room_tiles": 1.2,
-  "camera_max_zoom": 2.0,
+  "camera_margin_tiles": 0.8,
+  "camera_min_tiles": 6.0,
+  "camera_head_room_tiles": 0.6,
+  "camera_max_zoom": 3.0,
   "camera_seconds": 0.9,
   "banner_width_pixels": 22.0,
   "banner_height_pixels": 17.0,
   "banner_pole_pixels": 22.0,
   "banner_alpha": 1.0,
-    "banner_war_alpha": 0.3,
-    "banner_fade_seconds": 0.6,
+  "banner_war_alpha": 0.3,
+  "banner_fade_seconds": 0.6,
   "volley_tiles_per_second": 9.0,
   "volley_min_seconds": 0.45,
   "volley_max_seconds": 0.85,
@@ -460,7 +461,9 @@
   "war_horn_shake": 0.3,
   "walk_in_tiles": 5.0,
   "walk_in_tiles_per_second": 2.6,
-  "walk_in_steps_per_second": 1.8
+  "walk_in_steps_per_second": 1.8,
+  "camera_fight_reach_tiles": 2.5,
+  "camera_fight_max_tiles": 8.0
  },
  "readability": {
   "_note": "Telling who's doing what in a fight. When an animal turns on an enemy biting it up close (the targeting rules' threat response, battle_rules.json \"targeting\"), a cartoon \"!\" pops over its head for alert_seconds: alert_size pixels tall, alert_color, popping in with alert_pop overshoot. Not shown for ordinary target changes. Who's shooting at whom: every shot trails a streak in the shooter's team color (blue yours, red the enemy's) over the last shot_trail_seconds of its flight, up to shot_trail_width pixels wide and shot_trail_alpha strong, with a ring of it shot_ring_scale times the shot's size (shot_ring_px wide) round the shot, and its landing sparks take the team color too. The animals' own team bands: \"models\" team_outline_px (3D) and \"characters\" team_outline_texels (sprites). Seeing what a squad is doing: a quick tap on its banner (within squad_banner_tap_px) or one of its animals picks it (the same again, or a tap on nothing, lets go; a hold still shows info, and a tool being aimed takes the tap). Its animals glow on the ground (squad_glow_alpha strong, squad_glow_scale times their size, pulsing at squad_pulse_speed) and their 3D band grows squad_band_boost_px wider and brighter; its flag gets a ring; for squad_lines_seconds, dashed lines (squad_line_px wide, squad_dash_px dashes) run from each to the enemy it's going for, with a target ring (squad_marker_px) on that enemy. The fight never pauses or slows for it.",

@@ -128,10 +128,10 @@ func test_every_animals_tallest_pose_is_in_data_and_true() -> void:
 		check(absf(measured - data) <= 0.03, "%s's tallest pose is %.3f of its box (bodies.json pose_up %.3f)" % [id, measured, data])
 
 
-## In a real fight through the real view, no animal ever gets over its
-## limit on screen, mid-stride, mid-swing or hit (its model's pose and the
-## touch of squash and stretch on top, feel.json acting
-## model_squash_share, stay inside bodies.json limits camera_margin_pct).
+## In a real fight through the real view, no animal ever rises over its
+## limit times pose_allowance (bodies.json "limits") on screen, mid-stride,
+## mid-swing or hit (its model's pose and the touch of squash and stretch
+## on top, feel.json acting model_squash_share).
 func test_no_animal_gets_over_its_limit_in_a_fight() -> void:
 	var levels := {}
 	for card in GameData.card_order:
@@ -172,7 +172,9 @@ func test_no_animal_gets_over_its_limit_in_a_fight() -> void:
 		for v: UnitView in field.views():
 			if v.fighter == null or v.defeat >= 0.0 or v.pop < 1.0:
 				continue
-			var over := field.unit_height_share(v) * 100.0 - _limit_of(v)
+			# (Standing it keeps to its limit; an attack or a celebration may
+			# rise above it by at most bodies.json limits pose_allowance.)
+			var over := field.unit_height_share(v) * 100.0 - _limit_of(v) * float(GameData.bodies.limits.get("pose_allowance", 1.0))
 			if over > float(worst.get(v.id, -100.0)):
 				worst[v.id] = over
 	check(frames > 300, "the fight ran a while (%d frames)" % frames)

@@ -33,7 +33,11 @@ import motion
 import cartoon
 import scene as S
 
-ELEVATION = 50.0
+# The battle camera's angle above level: the game's (game/data/feel.json
+# "camera" tilt_degrees is how far it leans from straight down), so sprites,
+# arenas and the game's 3D models are all seen from the same angle.
+ELEVATION = 90.0 - float(json.load(open(os.path.join(HERE, "..", "..", "game", "data", "feel.json")))
+                         .get("camera", {}).get("tilt_degrees", 40.0))
 PIXELS_PER_TILE = int(S.LOOK["sprite_pixels_per_tile"])
 DIRECTIONS = [0, 45, 90, 135, 180]      # degrees clockwise from "facing up the screen"
 PADDING = int(S.LOOK["padding"])        # empty pixels around each frame in the sheet
@@ -430,12 +434,15 @@ def render_portrait(creature, out_dir, samples, size=None, with_fur=True):
         S.outline(float(S.LOOK["outline"]["portrait_pixels"]) * size / 512.0)
     center = (lo + hi) / 2 + np.array(arm["rest_offset"])
     radius = float(np.linalg.norm(hi - lo)) / 2
-    d = np.array(creature.motion.get("portrait_view", (-0.75, 1.0, 0.55)), float)
+    # One camera for every card (look.json "hero_portrait"): the same
+    # three-quarter front view, lens and framing, so the set reads as one game.
+    hero = S.LOOK.get("hero_portrait", {})
+    d = np.array(creature.motion.get("portrait_view", hero.get("view", (-0.75, 1.0, 0.55))), float)
     d /= np.linalg.norm(d)
-    cam = S.perspective_camera(tuple(center + d * radius * 3.1), tuple(center), lens=85)
+    cam = S.perspective_camera(tuple(center + d * radius * 3.1), tuple(center), lens=float(hero.get("lens", 85)))
     sc.render.resolution_x = size
     sc.render.resolution_y = size
-    _fit_camera(cam, _scene_points())
+    _fit_camera(cam, _scene_points(), fill=float(hero.get("fill", 0.88)))
     import tempfile
     path = os.path.join(tempfile.gettempdir(), f"_{creature.name}_portrait.png")
     sc.render.filepath = path

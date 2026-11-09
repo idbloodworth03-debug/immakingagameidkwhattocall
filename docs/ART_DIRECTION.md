@@ -123,6 +123,43 @@ animal.
   strong clear shapes, the Mythics' the biggest, all bright and solid and
   60 fps on an iPhone with big armies.
 
+## Readability: chibi proportions, a tilted camera, hero cards
+
+The best mobile games in this genre (Clash Royale's Merge Tactics, Clash
+Mini, Squad Busters, Brawl Stars) make every character readable at a glance
+on a phone. The rules (pipeline test on the Brown Bear, Peregrine Falcon and
+King Cobra first, then every animal):
+
+- **Chibi proportions**: about 2-3 heads tall, a big round head, a short
+  body, big expressive eyes and face, the animal's real features and
+  personality exaggerated. `tools/creatures/movie.json` shape: head (size),
+  head_lift and head_forward (the big head sits up on the shoulders, where a
+  tilted camera sees the face), neck, skull_round (a round head), jaw (a small
+  chin), legs, length; ear_shape (round ears), muzzle (a muzzle in its own
+  paint, a bear's tan snout), nose, mouth; species (the animal's own joints
+  and sizes for its design only: a falcon's plumper body and stubbier wings,
+  a cobra's shorter coil and bigger hood).
+- **Silhouette, colors and one signature feature**: filled in solid black,
+  the animal is still recognizable; 2-3 main colors and one exaggerated
+  signature (the bear's round head and ears, the falcon's dark helmet and
+  yellow eye rings on a blue-gray back, the cobra's hood).
+- **A tilted battle camera**: `game/data/feel.json` camera tilt_degrees (how
+  far it leans from straight down: 52, so it looks down 38 degrees from
+  level and sees fronts and faces, not backs). The arenas, sprites and the
+  game's 3D models all use it (`sprites.py` ELEVATION reads it).
+- **Bigger animals**: `game/data/bodies.json` limits: a typical animal
+  stands about average_target_pct (8%) of the phone screen's height, the
+  biggest Tanks unit_max_pct (11%) and a Mythic hero hero_max_pct (12%); an
+  attack or a celebration may rise pose_allowance (1.4) above that for a
+  moment. Once the armies are at war the camera frames where the fighting
+  is (feel.json army camera_fight_*).
+- **Hero cards**: every card portrait from the same camera (look.json
+  hero_portrait: a three-quarter front view, the same lens and framing), the
+  same studio lights, the animal facing us with an expression in a
+  signature pose showing its attack style (motion.py hero_*: the bear
+  reared up mid-swipe roaring, the falcon diving at us, the cobra hissing
+  with its hood up), filling about 70-80% of the card.
+
 ## Where the look is now
 
 **The Yeti is the first animal on the animated-movie look** (the style

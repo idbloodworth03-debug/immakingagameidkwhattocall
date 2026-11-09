@@ -9,7 +9,7 @@
   "tile_scale": 0.92265
  },
  "brown_bear": {
-  "tile_scale": 1.12017
+  "tile_scale": 1.21166
  },
  "california_condor": {
   "tile_scale": 0.67057
@@ -45,7 +45,7 @@
   "tile_scale": 1.16071
  },
  "king_cobra": {
-  "tile_scale": 2.40232
+  "tile_scale": 2.71648
  },
  "komodo_dragon": {
   "tile_scale": 1.1659
@@ -60,7 +60,7 @@
   "tile_scale": 2.048
  },
  "peregrine_falcon": {
-  "tile_scale": 1.26005
+  "tile_scale": 2.43059
  },
  "pygmy_three_toed_sloth": {
   "tile_scale": 2.7741

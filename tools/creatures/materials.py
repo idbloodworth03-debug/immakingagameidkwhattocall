@@ -285,12 +285,13 @@ def _voronoi(nt, scale, feature="F1"):
     return v
 
 
-def scales_material(color, name="scales", color_attribute=None, cell=None):
+def scales_material(color, name="scales", color_attribute=None, cell=None, **tuned):
     """Domed scales with deep grooves between, each a shade different. With
     `color_attribute`, the scales take the skin's paint as their color
     (markings stay where they're painted); `cell`: the scale size in meters
-    (look.json's by default)."""
-    k = MAT["scales"]
+    (look.json's by default); `tuned`: any of look.json's scales settings for
+    this animal (a chibi's calmer groove, dome or shade_variation)."""
+    k = dict(MAT["scales"], **{key: v for key, v in tuned.items() if v is not None})
     m, nt, out = _new_material(name)
     b = _principled(nt)
     tex = nt.nodes.new("ShaderNodeTexCoord")

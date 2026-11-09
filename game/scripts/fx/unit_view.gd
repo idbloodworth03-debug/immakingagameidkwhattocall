@@ -34,6 +34,8 @@ var fighter: BattleSim.Fighter
 ## gone (a body going down).
 var body_radius := 450.0
 var body_half := 450.0
+var body_across := false  # its long side runs across (wings, spread arms)
+var body_nose := 0.0       # how far its front is from its middle (BattleSim nose)
 var body_half_width := 300.0
 var flying := false
 var swarm := false
@@ -62,6 +64,8 @@ var _last_goal := Vector2.ZERO
 var _has_goal := false
 var _holding := false
 var _hold_walked := Vector2.ZERO
+var _hold_pos := Vector2.ZERO  # its body's place in the fight as its swing began
+var _hold_at := Vector2.ZERO   # where it was drawn as its swing began
 var stars := 1
 ## Damage already dealt in the fight whose hit hasn't landed on screen yet
 ## (the strike or shot is still on its way), and how many such hits.
@@ -277,6 +281,8 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 	v.facing = 0.0 if f.team == 0 else 180.0
 	v.body_radius = float(f.radius)
 	v.body_half = float(f.half)
+	v.body_across = f.across
+	v.body_nose = float(f.nose)
 	v.body_half_width = float(GameData.bodies.get("animals", {}).get(v.id, {}).get("width", 0.6)) * 500.0
 	v.pos = Vector2(f.x, f.y)
 	v.shown = v.pos
@@ -413,7 +419,12 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 			field.fx.burst_upgrade(self)
 		stars = new_stars
 		_placed = in_formation()
-		_in_reach = f.target != null and f.target.alive and sim.in_range(f, f.target)
+		# In reach, and free to strike (in an army, holding one of its
+		# target's slots; not running from a Dragon's fire, nor busy with
+		# its style, which takes its turn in the fight): only then does a
+		# swing start.
+		_in_reach = f.target != null and f.target.alive and sim.in_range(f, f.target) and (sim.army == null or sim.army.has_slot(f, f.target)) \
+			and int(f.memory.get("scared_until", -1)) <= sim.tick and not BattleStyles.busy(sim, f)
 		_burrowing = bool(f.memory.get("burrowing", false))
 		var run := int(f.memory.get("run", 0))
 		if run > _last_run:
@@ -445,6 +456,16 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 			field.fx.burst("puff", position, 6, 110.0, 0.45, 8.0, [Color("#c9b08a"), Color("#e6d3b0")], 200.0, 2.0, 110.0)
 		else:
 			_emerge_at = now
+	# Start the attack early enough that the strike lands on the hit (a
+	# little later for some, so a herd doesn't swing in step). Before this
+	# frame's step: a swing's first frame holds its ground like the rest.
+	var has_target := f.target != null and f.target.alive
+	if _in_reach and has_target and f.deploy_ticks <= 0 and f.stun <= 0 and not attacking(now):
+		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
+		var next: Array = _upcoming() if to_hit >= 0.0 and to_hit <= _longest_windup else []
+		var windup := _windup_of(String(next[0])) * float(next[1]) if not next.is_empty() else -1.0
+		if to_hit >= 0.0 and to_hit <= windup:
+			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y), now)
 	_intent -= dt
 	if hop_t < 1.0:
 		shown = pos + spread
@@ -457,17 +478,32 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		# Mid-swing it holds its ground: the walking the fight does for it
 		# waits until the swing is done (it catches up after); pushes and
 		# knockbacks still move it, as they move its body in the fight.
+		var jumped := false
 		if attacking(now) and now >= attack_at:
 			if not _holding:
-				# It plants its feet for the strike: no easing out of its walk
-				# under the swing (the body stops where it is, the wind-up
-				# takes over).
+				jumped = true
+				# It plants its feet for the strike where it's drawn: no easing
+				# out of its walk under the swing, nor creeping the last bit
+				# of the way it was still catching up (it does that after).
 				_holding = true
 				_hold_walked = walked
+				_hold_pos = pos
+				_hold_at = shown if (shown - goal).length() <= float(BattleSim.TILE) * 0.35 else goal
 				shown_v = Vector2.ZERO
-			goal -= walked - _hold_walked
+			# Where it stood as its swing began, moved only by what moves its
+			# body in the fight other than its own steps (a knockback; the
+			# fight holds a striker firm through its whole swing, so the
+			# crowd doesn't shove it).
+			goal = _hold_at + (pos - _hold_pos) - (walked - _hold_walked)
 		else:
+			jumped = _holding
 			_holding = false
+		if jumped:
+			# Where it's led jumps (to where it plants its feet, or back to its
+			# body after the swing): a jump, not a speed. Taken as one, the
+			# spring would jolt the body back as it plants its feet, and
+			# fling it after its body as the swing ends.
+			_last_goal = goal
 		var goal_v := (goal - _last_goal) / dt if _has_goal else Vector2.ZERO
 		_last_goal = goal
 		_has_goal = true
@@ -498,20 +534,10 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 	# the way it goes, turning at the cartoon pace; a push never turns it),
 	# blended between ticks, so the body on screen points exactly where its
 	# body in the fight does.
-	var has_target := f.target != null and f.target.alive
-	var busy := attacking(now)
 	if dt > 0.0:
 		var from := atan2(float(f.prev_heading.x), -float(f.prev_heading.y))
 		var to := atan2(float(f.heading.x), -float(f.heading.y))
 		_face(rad_to_deg(lerp_angle(from, to, field.blend)))
-	# Start the attack early enough that the strike lands on the hit (a
-	# little later for some, so a herd doesn't swing in step).
-	if _in_reach and has_target and f.deploy_ticks <= 0 and f.stun <= 0 and not busy:
-		var to_hit := (float(f.cooldown) / 100.0 - field.blend) / float(sim.tps)
-		var next: Array = _upcoming() if to_hit >= 0.0 and to_hit <= _longest_windup else []
-		var windup := _windup_of(String(next[0])) * float(next[1]) if not next.is_empty() else -1.0
-		if to_hit >= 0.0 and to_hit <= windup:
-			_start_attack(next, now - (windup - to_hit) + randf() * float(t.impact_jitter_seconds), Vector2(f.target.x - f.x, f.target.y - f.y), now)
 
 
 ## The health it shows: the fight's, plus the damage from hits still on their way.
@@ -859,6 +885,7 @@ class Tune:
 	var windup_pull_pixels := 0.0
 	var windup_squash := 0.0
 	var model_squash_share := 1.0
+	var model_stretch_max := 0.05
 
 
 static func _tuning() -> Tune:
@@ -966,6 +993,7 @@ static func refresh_tuning() -> void:
 		t.windup_pull_pixels = Feel.num("combat", "windup_pull_pixels", 4.0)
 		t.windup_squash = Feel.num("combat", "windup_squash", 0.12)
 		t.model_squash_share = Feel.num("acting", "model_squash_share", 0.35)
+		t.model_stretch_max = Feel.num("acting", "model_stretch_max", 0.05)
 
 
 
@@ -1331,6 +1359,12 @@ func animate(dt: float, now: float) -> void:
 			altitude = float(t.air_height_tiles) + air_px / ppu
 		else:
 			offset.y -= float(t.air_height_tiles) * field.field_scale() * 1000.0 * ModelStage.COS + air_px
+	if modeled and defeat < 0.0:
+		# However it squashes, stretches and hops, a 3D model never stands
+		# more than model_stretch_max taller than itself: the camera keeps
+		# its tallest pose under bodies.json limits with only a little to
+		# spare (a hit's rebound, a hop, a star's pop).
+		sy = minf(sy, 1.0 + float(t.model_stretch_max))
 	# Its attack style's pose (in its shell, sitting for a snack, charging).
 	var style_pose := look.pose(f, now, dt)
 	sx *= float(style_pose.sx)
@@ -1550,14 +1584,14 @@ func render_pos() -> Vector2:
 ## in another drawn body, field units (INF with nobody ahead).
 func room_ahead() -> float:
 	var dir := attack_dir if attack_dir.length() > 0.0 else Vector2(sin(deg_to_rad(facing)), -cos(deg_to_rad(facing)))
-	var nose := render_pos() + dir * body_half
+	var nose := render_pos() + dir * body_nose
 	var room := INF
 	for other: UnitView in field.views():
 		if other == self or other.flying != flying or (other.fighter == null and other.defeat < 0.0):
 			continue
 		if other.render_pos().distance_squared_to(nose) > (other.body_half + 2500.0) * (other.body_half + 2500.0):
 			continue
-		var axis := Vector2(sin(deg_to_rad(other.facing)), -cos(deg_to_rad(other.facing))) * maxf(0.0, other.body_half - other.body_half_width)
+		var axis := _spine_axis(other) * maxf(0.0, other.body_half - other.body_half_width)
 		var centre := other.render_pos() + other.m_lunge
 		var closest := Geometry2D.get_closest_point_to_segment(nose, centre - axis, centre + axis)
 		var to := closest - nose
@@ -1608,11 +1642,12 @@ func body_shrink() -> float:
 	return 1.0 - Ease.in_cubic(defeat)
 
 
-## The way a body's long side runs: along its facing, or across it for a
-## flier (its wings), as the fight has it (BattleSim.spine).
+## The way a body's long side runs: along its facing, or across it (a
+## flier's wings, an upright animal's spread arms), as the fight has it
+## (BattleSim.spine).
 static func _spine_axis(v: UnitView) -> Vector2:
 	var along := Vector2(sin(deg_to_rad(v.facing)), -cos(deg_to_rad(v.facing)))
-	return Vector2(-along.y, along.x) if v.flying else along
+	return Vector2(-along.y, along.x) if v.body_across else along
 
 
 ## A pack's stars show over one of its animals only, not all of them.

@@ -68,6 +68,14 @@ func _num(key: String, fallback: float) -> float:
 	return Feel.num("styles", key, fallback)
 
 
+## How much bigger its style draws `f` for good (a Condor grown by its
+## feasts), before the size limits (BattleField.size_room).
+static func growth(f: BattleSim.Fighter) -> float:
+	if f.style_kind == "feast":
+		return 1.0 + int(f.memory.get("feasts", 0)) * Feel.num("styles", "feast_grow", 0.05)
+	return 1.0
+
+
 func _color(key: String, fallback: String) -> Color:
 	return Color(String(GameData.feel.get("styles", {}).get(key, fallback)))
 
@@ -191,7 +199,8 @@ func pose(f: BattleSim.Fighter, now: float, dt: float) -> Dictionary:
 					p.lift = maxf(_height() * _num("carry_lift", 0.75), below * 1.15)
 					p.sy = 1.04
 			"feast":
-				var grow := 1.0 + int(f.memory.get("feasts", 0)) * _num("feast_grow", 0.05)
+				# (Only as far as the size limits leave it room.)
+				var grow := minf(growth(f), view.field.size_room(f) if view.field != null else 1.0)
 				p.sx = grow
 				p.sy = grow
 				if int(f.memory.get("feasts", 0)) > 0:

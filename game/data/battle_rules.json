@@ -49,9 +49,11 @@
   "deploy_seconds": 1.0,
   "melee_range": 0.7,
   "swing": {
-    "_note": "A fighter stands still through its own swing: from windup_seconds before its blow (its target in reach, the blow coming) until recovery_seconds after it, so the strike plays out where it started (scripts/battle/battle_sim.gd mid_swing; the screen holds the drawn body through a swing too, unit_view.gd). With its target out of reach it walks after it as ever; only after a blow does it wait recovery_seconds before following a target that stepped away.",
+    "_note": "A fighter stands still through its own swing: from windup_seconds before its blow (its target in reach, the blow coming) until recovery_seconds after it, so the strike plays out where it started (scripts/battle/battle_sim.gd mid_swing; the screen holds the drawn body through a swing too, unit_view.gd). With its target out of reach it walks after it as ever; only after a blow does it wait recovery_seconds before following a target that stepped away. It holds its ground against the crowd's shoves a little longer, from firm_before_seconds before the blow until firm_after_seconds after it: at least the longest drawn wind-up and follow-through of any animal's attack (art/units/<id>/sheet.json: the hit's share of the clip; 0.38 s and 0.36 s now), so nothing shoves a body while its swing plays on the screen (only who gets shoved; where it walks, and when, is as before). The slower stunning and drowsy wind-ups run a little past it.",
     "windup_seconds": 0.3,
-    "recovery_seconds": 0.3
+    "recovery_seconds": 0.3,
+    "firm_before_seconds": 0.4,
+    "firm_after_seconds": 0.4
   },
   "speed_values": {
     "slow": 45,

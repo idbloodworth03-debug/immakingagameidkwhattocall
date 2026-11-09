@@ -48,8 +48,8 @@ func test_squads_spread_over_three_lanes() -> void:
 
 ## Plays a big fight and checks the lane and line rules every tick of the
 ## war; returns the shares of the checks that held.
-func _play(seconds: float) -> Dictionary:
-	var m := _armies(BIG_A, BIG_B, 6)
+func _play(seconds: float, seed_value := 6) -> Dictionary:
+	var m := _armies(BIG_A, BIG_B, seed_value)
 	var sim := m.sim
 	var army: BattleArmy = sim.army
 	var out := {"own_lane": 0, "picks": 0, "fresh": 0, "left_lane_wrongly": 0, "deep": 0, "ranged": 0, "ranged_past": 0,
@@ -128,10 +128,16 @@ func _play(seconds: float) -> Dictionary:
 
 
 func test_fighters_keep_to_their_lane_and_the_line() -> void:
-	var out := _play(40.0)
-	check(out.picks > 1000, "a real fight (%d checks)" % out.picks)
+	# Three fights together: one alone swings a lot (a crowd spilling into
+	# the next lane early changes the whole fight).
+	var out := {}
+	for seed_value in [6, 7, 8]:
+		var one := _play(40.0, seed_value)
+		for key in one:
+			out[key] = int(out.get(key, 0)) + int(one[key])
+	check(out.picks > 3000, "real fights (%d checks)" % out.picks)
 	check(float(out.own_lane) / out.picks > 0.7, "mostly fighting in their own lane (%.0f%%)" % [100.0 * out.own_lane / out.picks])
-	check(out.fresh > 20, "fighters pick targets (%d)" % out.fresh)
+	check(out.fresh > 60, "fighters pick targets (%d)" % out.fresh)
 	check_eq(out.left_lane_wrongly, 0, "a fighter only picks outside its lane, or deep past the line, when its own lane has nobody near the line it can take on")
 	check(float(out.deep) / out.picks < 0.03, "fighters seldom stay on an enemy deep past the battle line while their own lane has someone near it to take on (%.1f%%)" % [100.0 * out.deep / out.picks])
 

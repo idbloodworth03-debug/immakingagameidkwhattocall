@@ -687,6 +687,7 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 		# keeps on with the army.
 		place = place_of(f, false)
 	var waiting := t != null and not has_slot(f, t)
+	sim.note_swing(f, t != null and sim.in_range(f, t) and not waiting)
 	if t != null and sim.in_range(f, t) and not waiting:
 		if f.cls == "ranged" and not free and not BattleStyles.own_rhythm(f):
 			# Ranged fire together, on the volley clock; each shot carries
@@ -704,8 +705,8 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 			sim.attack(f, t)
 			f.cooldown = f.hit_ticks * 100
 		return
-	if t != null and sim.mid_swing(f) and not charging:
-		return  # mid-swing: it stands still for its strike
+	if t != null and sim.mid_swing(f):
+		return  # mid-swing: it stands still for its strike (charging too)
 	if t != null:
 		var goal := Vector2i(t.x, t.y)
 		var speed := sim.current_speed(f)
@@ -897,7 +898,7 @@ func _slot_spot(f: BattleSim.Fighter, t: BattleSim.Fighter) -> Vector2i:
 ## nose to nose, and slot_gap_pct of its reach between (where its strike
 ## lands).
 func _ring(f: BattleSim.Fighter, t: BattleSim.Fighter) -> int:
-	return t.half + f.half + f.attack_range * slot_gap_pct / 100
+	return t.nose + f.nose + f.attack_range * slot_gap_pct / 100
 
 
 ## Where `f` waits for a slot on `t` to come free: just outside its reach,
@@ -910,7 +911,7 @@ func _wait_spot(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> V
 		dx = 0
 		dy = 1000 if f.team == 0 else -1000
 		d = 1000
-	var ring := t.half + f.half + f.attack_range + wait_gap
+	var ring := t.nose + f.nose + f.attack_range + wait_gap
 	return Vector2i(clampi(t.x + dx * ring / d, f.radius, sim.width - f.radius), clampi(t.y + dy * ring / d, f.radius, sim.height - f.radius))
 
 
@@ -1220,11 +1221,13 @@ func _go(sim: BattleSim, f: BattleSim.Fighter, goal: Vector2i, speed: int) -> vo
 			continue
 		var ox := o.x - f.x
 		var oy := o.y - f.y
+		# (Its whole body in the way, whichever way it faces: half its
+		# length out from its middle.)
 		var along := (ox * dx + oy * dy) / d
-		if along <= 0 or along > look + o.radius:
+		if along <= 0 or along > look + o.half:
 			continue
 		var side := (oy * dx - ox * dy) / d
-		if absi(side) >= f.radius + o.radius:
+		if absi(side) >= f.radius + o.half:
 			continue
 		if along < block_along:
 			block = o
@@ -1250,7 +1253,7 @@ func _go(sim: BattleSim, f: BattleSim.Fighter, goal: Vector2i, speed: int) -> vo
 		else:
 			turn = -1 if block_side > 0 else 1
 		f.memory.detour = turn
-	var clear := f.radius + block.radius + avoid_margin
+	var clear := f.half + block.half + avoid_margin
 	var way := Vector2i(block.x - dy * turn * clear / d, block.y + dx * turn * clear / d)
 	way.x = clampi(way.x, f.radius, sim.width - f.radius)
 	way.y = clampi(way.y, f.radius, sim.height - f.radius)

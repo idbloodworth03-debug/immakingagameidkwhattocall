@@ -703,7 +703,17 @@ static func burrow_goal(sim: BattleSim, f: BattleSim.Fighter) -> Variant:
 		"flip":
 			var tank := _nearest_any(sim, f, func(e): return e.cls == "tank")
 			if tank != null:
-				return Vector2i(tank.x, tank.y)
+				# Right beside it, on the side it comes from, clear of its body
+				# (it pops up there and flips it).
+				var dx := f.x - tank.x
+				var dy := f.y - tank.y
+				var d := BattleSim.isqrt(dx * dx + dy * dy)
+				if d == 0:
+					dx = 0
+					dy = 1000 if tank.team == 0 else -1000
+					d = 1000
+				var off := tank.half + f.half + T / 10
+				return Vector2i(clampi(tank.x + dx * off / d, f.radius, sim.width - f.radius), clampi(tank.y + dy * off / d, f.radius, sim.height - f.radius))
 	return null
 
 
@@ -862,14 +872,15 @@ static func _tentacles(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighte
 		sim.events.append({"type": "ink", "uid": f.uid, "x": x, "y": y, "radius": ink_r, "seconds": seconds})
 
 
-## Drags `e` up to `distance` toward `f` (not into it).
+## Drags `e` up to `distance` toward `f` (not into it: it stops short of
+## its body, whichever way either faces).
 static func _pull(sim: BattleSim, e: BattleSim.Fighter, f: BattleSim.Fighter, distance: int) -> void:
 	if not e.alive or steady(e):
 		return
 	var dx := f.x - e.x
 	var dy := f.y - e.y
 	var d := BattleSim.isqrt(dx * dx + dy * dy)
-	var room := d - f.radius - e.radius
+	var room := d - f.half - e.half
 	if d == 0 or room <= 0:
 		return
 	var step := mini(distance, room)
@@ -1417,7 +1428,7 @@ static func _rhino_charge(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 		if e.team == f.team or not e.alive or not e.is_unit() or e.is_flying() or e.memory.get("burrowing", false) or hit.has(e.uid):
 			continue
 		# Anyone its nose reaches (its body's half length, bodies.json).
-		var reach := f.half + e.radius + T / 10
+		var reach := f.nose + e.radius + T / 10
 		var ex := e.x - f.x
 		var ey := e.y - f.y
 		if ex * ex + ey * ey > reach * reach:

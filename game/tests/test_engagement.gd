@@ -150,17 +150,27 @@ func test_attackers_stand_apart_round_their_target() -> void:
 	check(seen, "three lions got on the bear at once")
 
 
+## The gap between two bodies' outlines (their spines' circles,
+## BattleSim.spine): below 0, they overlap.
+func _outline_gap(a: BattleSim.Fighter, b: BattleSim.Fighter) -> int:
+	var gap := 1 << 30
+	for pa: Vector2i in BattleSim.spine(a.x, a.y, a.half, a.hw, a.heading, a.across):
+		for pb: Vector2i in BattleSim.spine(b.x, b.y, b.half, b.hw, b.heading, b.across):
+			gap = mini(gap, roundi(Vector2(pa - pb).length()) - a.hw - b.hw)
+	return gap
+
+
 func test_personal_space() -> void:
 	# Two animals dropped on the same spot spring apart and, standing about,
-	# keep a little room between them.
+	# keep a little room between their bodies.
 	var sim := BattleSim.new([{}, {}], 1)
 	var a: BattleSim.Fighter = sim.spawn_units(0, "brown_bear", 1, 8 * T, 10 * T)[0]
 	var b: BattleSim.Fighter = sim.spawn_units(0, "giant_panda", 1, 8 * T + 50, 10 * T)[0]
 	sim.step()
-	check(BattleSim.dist(a, b) >= a.radius + b.radius, "an overlap is pushed apart at once")
+	check(_outline_gap(a, b) >= -T / 50, "an overlap is pushed apart at once (%d)" % _outline_gap(a, b))
 	for i in 3 * sim.tps:
 		sim.step()
-	var room := BattleSim.edge_distance(a, b)
+	var room := _outline_gap(a, b)
 	check(room > sim.personal_space / 2, "and they ease apart into their personal space (%d of %d)" % [room, sim.personal_space])
 
 

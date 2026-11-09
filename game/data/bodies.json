@@ -1,5 +1,5 @@
 {
- "_note": "Each animal's body in battle (scripts/battle/battle_sim.gd, battle_army.gd, scripts/fx/unit_view.gd, model_stage.gd, battle_field.gd). size: how big it's drawn, its longest side in field tiles (a bird's wingspan, an upright animal's height), whatever its model's own proportions; a Mythic's is its hero size. footprint and width: its true body size on the ground, tiles (its length nose to tail, or wingtip to wingtip, and how wide it is). A strike is measured nose to nose: a melee animal hits when the gap between its body's end and its target's is within its reach, and stands at its slot that far from its target's body. A shot is measured body to body (the circles): a shooter's card range means what it did before bodies had footprints. The room it takes in the fight at all times (spacing in a line, being pushed apart, knockbacks, a body going down) is a circle between its width and its length (the square root of the two, across), so a line of bodies stands clear and nothing walks through one; the fight's radius is half of that. reach: how far its strike extends beyond its body, tiles (jaws, a paw, a horn, a trunk, tentacles): it hits from that far, stands that far from its target's body (its slot), and its lunge never carries its body past the target's footprint; a shooter's (shooter true: its card's or its class's range is over a tile) is that range, as before. Fliers' bodies run across their heading (wingtip to wingtip) and one flying over another is no overlap; a Burrow animal underground has no body on show. pose_up: the tallest it stands on the screen in a fight (its real outline in its tallest pose of idle, walk, attack and fidget, posed by its skeleton) as a share of its bounding box's height at rest: about 0.85 for most (a box is taller than the animal in it), more for a bird whose wings rise as it flaps or a Yeti whose fidget rears up (measured from the models: ModelStage.tallest_share; tests/test_sizes.gd keeps it true). limits: how big animals may look on the screen, as a share of the screen's height: average_target_pct is what a typical animal should be in a normal fight (Clash Royale's are 5-7%), unit_max_pct the most any animal may be (the biggest Tanks) and hero_max_pct the most a Mythic hero may be; the camera never zooms in past them for any animal's tallest pose (battle_field.gd; it stops camera_margin_pct short, for the touch of squash and stretch and the lean on top), the feel report measures them (tests/feel_report.gd SIZE) and tests/test_sizes.gd fails if one is over. Elite Specialists are drawn feel.json army elite_scale bigger.",
+ "_note": "Each animal's body in battle (scripts/battle/battle_sim.gd, battle_army.gd, scripts/fx/unit_view.gd, model_stage.gd, battle_field.gd). size: how big it's drawn, its longest side in field tiles (a bird's wingspan, an upright animal's height), whatever its model's own proportions; a Mythic's is its hero size. footprint and width: its true body size on the ground, tiles (its length nose to tail, or wingtip to wingtip, and how wide it is). A strike is measured nose to nose: a melee animal hits when the gap between its body's end and its target's is within its reach, and stands at its slot that far from its target's body. A shot is measured body to body (the circles): a shooter's card range means what it did before bodies had footprints. The room it takes in the fight at all times (spacing in a line, being pushed apart, knockbacks, a body going down) is a circle between its width and its length (the square root of the two, across), so a line of bodies stands clear and nothing walks through one; the fight's radius is half of that. reach: how far its strike extends beyond its body, tiles (jaws, a paw, a horn, a trunk, tentacles): it hits from that far, stands that far from its target's body (its slot), and its lunge never carries its body past the target's footprint; a shooter's (shooter true: its card's or its class's range is over a tile) is that range, as before. Fliers' bodies run across their heading (wingtip to wingtip) and one flying over another is no overlap; a Burrow animal underground has no body on show. across: its long side runs across the way it faces, not nose to tail (an upright animal with its arms spread: the Orangutan, the Gorilla, the Yeti; a flier's wings always do): its body's room runs across too, and its reach is measured from its front, half its width out. pose_up: the tallest it stands on the screen in a fight (its real outline in its tallest pose of idle, walk, attack, fidget and victory, posed by its skeleton) as a share of its bounding box's height at rest: about 0.85 for most (a box is taller than the animal in it), more for a bird whose wings rise as it flaps (2 or more for the Condor and the Falcon, wings raised high to celebrate) (measured from the models: ModelStage.tallest_share; tests/test_sizes.gd keeps it true). limits: how big animals may look on the screen, as a share of the screen's height: average_target_pct is what a typical animal should be in a normal fight (Clash Royale's are 5-7%), unit_max_pct the most any animal may be (the biggest Tanks) and hero_max_pct the most a Mythic hero may be; the camera never zooms in past them for any animal's tallest pose (battle_field.gd; it stops camera_margin_pct short, for the touch of squash and stretch and the lean on top), the feel report measures them (tests/feel_report.gd SIZE) and tests/test_sizes.gd fails if one is over. Elite Specialists are drawn feel.json army elite_scale bigger.",
  "limits": {
   "average_target_pct": 6.0,
   "unit_max_pct": 9.0,
@@ -13,7 +13,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.37,
-   "pose_up": 0.932
+   "pose_up": 0.935
   },
   "gray_squirrel": {
    "size": 0.98,
@@ -37,7 +37,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.62,
-   "pose_up": 1.627
+   "pose_up": 2.133
   },
   "wild_boar": {
    "size": 1.37,
@@ -69,7 +69,7 @@
    "reach": 0.45,
    "shooter": false,
    "width": 1.0,
-   "pose_up": 0.853
+   "pose_up": 0.861
   },
   "lion": {
    "size": 1.62,
@@ -77,7 +77,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.48,
-   "pose_up": 0.884
+   "pose_up": 0.931
   },
   "tiger": {
    "size": 1.62,
@@ -109,7 +109,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.87,
-   "pose_up": 0.864
+   "pose_up": 0.878
   },
   "california_condor": {
    "size": 2.05,
@@ -117,7 +117,7 @@
    "reach": 0.6,
    "shooter": false,
    "width": 0.7,
-   "pose_up": 1.658
+   "pose_up": 2.742
   },
   "striped_skunk": {
    "size": 1.05,
@@ -149,7 +149,8 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.66,
-   "pose_up": 1.080
+   "pose_up": 1.080,
+   "across": true
   },
   "harpy_eagle": {
    "size": 1.85,
@@ -173,7 +174,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.43,
-   "pose_up": 0.849
+   "pose_up": 0.868
   },
   "dragon": {
    "size": 2.5,
@@ -197,7 +198,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 1.05,
-   "pose_up": 0.875
+   "pose_up": 0.902
   },
   "honey_badger": {
    "size": 1.22,
@@ -221,7 +222,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.77,
-   "pose_up": 0.899
+   "pose_up": 0.920
   },
   "mountain_gorilla": {
    "size": 2.15,
@@ -229,7 +230,8 @@
    "reach": 0.55,
    "shooter": false,
    "width": 0.67,
-   "pose_up": 0.847
+   "pose_up": 0.954,
+   "across": true
   },
   "komodo_dragon": {
    "size": 1.75,
@@ -245,7 +247,7 @@
    "reach": 0.3,
    "shooter": false,
    "width": 0.3,
-   "pose_up": 0.879
+   "pose_up": 1.050
   },
   "electric_eel": {
    "size": 1.48,
@@ -253,7 +255,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.57,
-   "pose_up": 1.039
+   "pose_up": 1.051
   },
   "pygmy_three_toed_sloth": {
    "size": 1.22,
@@ -269,7 +271,8 @@
    "reach": 0.55,
    "shooter": false,
    "width": 0.87,
-   "pose_up": 0.994
+   "pose_up": 0.994,
+   "across": true
   },
   "cerberus": {
    "size": 1.83,
@@ -277,7 +280,7 @@
    "reach": 0.55,
    "shooter": false,
    "width": 0.96,
-   "pose_up": 0.865
+   "pose_up": 0.903
   },
   "kraken": {
    "size": 1.72,
@@ -285,7 +288,7 @@
    "reach": 0.75,
    "shooter": false,
    "width": 1.44,
-   "pose_up": 0.855
+   "pose_up": 0.916
   }
  }
 }

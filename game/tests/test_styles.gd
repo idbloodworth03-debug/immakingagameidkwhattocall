@@ -575,7 +575,8 @@ func test_sunda_pangolin_flips_a_tank_then_curls_up() -> void:
 	bear.max_hp = 99999
 	bear.hp = 99999
 	check(_until(sim, 10.0, func(): return not pangolin.memory.get("burrowing", false)), "it comes up")
-	check(BattleSim.dist(pangolin, bear) <= T * 3 / 2, "under the bear (the Tank), not by the squirrel")
+	check(BattleSim.dist(pangolin, bear) <= bear.half + pangolin.half + T / 2 and BattleSim.dist(pangolin, bear) < BattleSim.dist(pangolin, squirrel), "right by the bear (the Tank), not by the squirrel")
+	check(BattleSim.dist(pangolin, bear) >= bear.half + pangolin.half - T / 4, "and clear of its body (it doesn't come up inside it)")
 	check(bear.stun > 0 and int(bear.memory.get("flipped_until", -1)) > sim.tick, "the bear is flipped and stunned")
 	check(bear.hp < 99999, "and hurt")
 	# Hit: it curls into a ball, taking half.

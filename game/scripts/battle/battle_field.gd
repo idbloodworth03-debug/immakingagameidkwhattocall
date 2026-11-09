@@ -447,7 +447,30 @@ func views() -> Array:
 func unit_height_share(v: UnitView) -> float:
 	if _stage == null or not v.modeled:
 		return 0.0
-	return _stage.height_px(v.key) / maxf(1.0, screen_height())
+	# (A close-up's push-in makes it bigger on the screen too.)
+	return _stage.height_px(v.key) * _world.scale.y / maxf(1.0, screen_height())
+
+
+## How much bigger than its tallest pose `f` may be drawn at the camera's
+## zoom now and still keep within bodies.json "limits" (with the camera's
+## margin): at least 1. A style that grows a body (a Condor's feasts) grows
+## it only into this room, rather than the camera pulling back for it.
+func size_room(f: BattleSim.Fighter) -> float:
+	var up := float(ModelStage.natural_box(f.card.id).tallest) * UnitView.draw_k(f)
+	if up <= 0.0:
+		return INF
+	var limits: Dictionary = GameData.bodies.get("limits", {})
+	var short := 1.0 - float(limits.get("camera_margin_pct", 4.0)) / 100.0
+	var limit := float(limits.get("hero_max_pct", 10.0) if f.memory.get("hero", false) else limits.get("unit_max_pct", 9.0)) / 100.0 * short
+	var drawn := up * _scale() * 1000.0 * _world.scale.y / maxf(1.0, screen_height())
+	return maxf(1.0, limit / maxf(0.0001, drawn))
+
+
+## How far a close-up may push in (a zoom on top of the camera's) before an
+## animal on the field would look bigger than bodies.json "limits" allows:
+## at least 1 (no push-in at all).
+func close_up_room() -> float:
+	return maxf(1.0, _size_zoom_cap(_base_scale()) / maxf(0.001, _zoom))
 
 
 ## The screen's height in the field's pixels (the window's, or a stand-in
@@ -649,7 +672,7 @@ func celebrate(key: Variant) -> bool:
 	if v == null:
 		return false
 	var c := "celebrations"
-	_focus = {"view": v, "age": 0.0, "zoom": Feel.num(c, "star3_zoom", 1.45), "slow": Feel.num(c, "star3_slow_motion", 0.3),
+	_focus = {"view": v, "age": 0.0, "zoom": minf(Feel.num(c, "star3_zoom", 1.45), close_up_room()), "slow": Feel.num(c, "star3_slow_motion", 0.3),
 		"in": Feel.num(c, "star3_zoom_in_seconds", 0.28), "hold": Feel.num(c, "star3_hold_seconds", 0.9),
 		"out": Feel.num(c, "star3_zoom_out_seconds", 0.4)}
 	return true
@@ -675,7 +698,7 @@ func finish_fight(winner: int) -> float:
 	if last != null:
 		var slow := Feel.num(c, "final_slow_motion", 0.35)
 		var hold := maxf(0.0, at - _time) / slow + Feel.num(c, "final_hold_seconds", 0.5)
-		_focus = {"view": last, "age": 0.0, "zoom": Feel.num(c, "final_zoom", 1.18), "slow": slow,
+		_focus = {"view": last, "age": 0.0, "zoom": minf(Feel.num(c, "final_zoom", 1.18), close_up_room()), "slow": slow,
 			"in": Feel.num(c, "final_zoom_in_seconds", 0.2), "hold": maxf(0.2, hold), "out": Feel.num(c, "final_zoom_out_seconds", 0.4)}
 		wait = float(_focus.in) + float(_focus.hold)
 	if winner >= 0:
@@ -1701,7 +1724,7 @@ func _land(hit: Dictionary) -> void:
 	for after in hit.after:
 		_show(after)
 	if log_impacts:
-		impact_log.append({"time": _time, "team": attacker.team if attacker != null else -1, "read": bool(hit.get("read", false)), "late": _time - float(hit.sim_at), "volley": int(e.get("volley", -1))})
+		impact_log.append({"time": _time, "team": attacker.team if attacker != null else -1, "id": attacker.id if attacker != null else "", "read": bool(hit.get("read", false)), "late": _time - float(hit.sim_at), "volley": int(e.get("volley", -1))})
 
 
 ## A hit effect that fits how the attacker fights.

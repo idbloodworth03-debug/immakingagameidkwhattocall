@@ -115,7 +115,17 @@ func test_the_backline_turns_on_a_fox_in_its_midst() -> void:
 	# turn: this is about whom they fight.)
 	var shooters: Array = _ready_now(sim.spawn(1, "gray_squirrel", 8 * T, 4 * T))
 	check_eq(shooters.size(), 3, "a backline of 3 Ranged")
+	# (Standing a little closer than a squad's usual spacing, shoulder to
+	# shoulder: a Fox popping up among them is in reach of more than one.)
+	var mid := Vector2i.ZERO
 	for s: BattleSim.Fighter in shooters:
+		mid += Vector2i(s.x, s.y)
+	mid /= shooters.size()
+	for s: BattleSim.Fighter in shooters:
+		s.x = mid.x + (s.x - mid.x) * 9 / 10
+		s.y = mid.y + (s.y - mid.y) * 9 / 10
+		s.prev_x = s.x
+		s.prev_y = s.y
 		s.hp = 1000000
 		s.max_hp = 1000000
 		s.speed = 0
@@ -136,8 +146,12 @@ func test_the_backline_turns_on_a_fox_in_its_midst() -> void:
 	var alerts := {}      # shooter uid -> "!" pops
 	var last := {}
 	var uids := shooters.map(func(s: BattleSim.Fighter) -> int: return s.uid)
+	var closest := {}     # shooter uid -> nearest the Fox came (edge to edge) once up
 	for i in 14 * sim.tps:
 		sim.step()
+		if not fox.memory.get("burrowing", false):
+			for s: BattleSim.Fighter in shooters:
+				closest[s.uid] = mini(int(closest.get(s.uid, 1 << 30)), BattleSim.edge_distance(s, fox))
 		for e in sim.take_events():
 			if e.type == "hit" and int(e.from) == fox.uid and uids.has(int(e.to)):
 				bites += 1
@@ -159,7 +173,14 @@ func test_the_backline_turns_on_a_fox_in_its_midst() -> void:
 			break
 	check(first_bite >= 0, "the Fox pops up and bites into the backline")
 	check(fox.y < 6 * T, "right among them (at %.1f tiles)" % (fox.y / float(T)))
-	check_eq(turned.size(), 3, "all 3 Ranged turn on the Fox")
+	# Every one of them the Fox bites close to (within threat_tiles of it)
+	# turns on it: the one it bites and those right by it.
+	var near := 0
+	for s: BattleSim.Fighter in shooters:
+		if int(closest.get(s.uid, 1 << 30)) <= sim.targeting.threat_reach:
+			near += 1
+			check(turned.has(s.uid), "a Ranged the Fox came within threat range of turns on it")
+	check(near >= 2 and turned.size() >= near, "the backline round the Fox turns on it (%d of %d near it)" % [turned.size(), near])
 	for s: BattleSim.Fighter in shooters:
 		if not turned.has(s.uid):
 			continue

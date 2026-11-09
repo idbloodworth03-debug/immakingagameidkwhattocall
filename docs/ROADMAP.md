@@ -103,6 +103,7 @@
 - [x] Sorting: Level, Rarity, Class and Biome on Your Deck, the bans, the Animals tab and inside a match (see GAME_DESIGN.md, Sorting)
 - [x] Card show: the rarer the card, the more it shows off; a Mythic moment when one is offered, picked or freed (see GAME_DESIGN.md, Card show)
 - [x] Stronger Mythics: frost, fire breath, a healing beam, scattering flames and ink (see GAME_DESIGN.md, attack styles); the computer bans at most one of your Mythics a match
+- [x] Battle look for every animal: sizes from the real outlines with a camera cap, footprints and reach in data (no clipping), swings that plant their feet and play to the end, a per-animal table in the feel report (size, overlap while striking, sliding, unread hits)
 
 ## Phase 3: Online play
 

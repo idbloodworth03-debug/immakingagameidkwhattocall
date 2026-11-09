@@ -161,7 +161,7 @@ func _reset_stats() -> void:
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 		"size_sum": 0.0, "size_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
-		"attack_frames": 0, "attack_slide_frames": 0, "air_attack_frames": 0, "air_attack_slide_frames": 0, "attack_dbg": {}, "snap_turns": 0, "pos_snaps": 0, "attacks_started": 0, "attacks_cut": 0, "seen_views": {},
+		"attack_frames": 0, "attack_slide_frames": 0, "air_attack_frames": 0, "air_attack_slide_frames": 0, "design_attack_frames": 0, "design_attack_slide_frames": 0, "attack_dbg": {}, "snap_turns": 0, "pos_snaps": 0, "attacks_started": 0, "attacks_cut": 0, "seen_views": {},
 		"anim_time": {}, "walk_slide": 0.0, "walk_slide_n": 0,
 	}
 	switched_at.clear()
@@ -506,6 +506,11 @@ func _watch_views(_delta: float) -> void:
 		stats.impacts += 1
 		if not hit.read:
 			stats.impacts_unread += 1
+		if String(hit.get("id", "")) != "":
+			var tally := _per(String(hit.id))
+			tally.hits += 1
+			if not hit.read:
+				tally.unread += 1
 		stats.impact_late += float(hit.late)
 		landed[hit.team] = int(landed.get(hit.team, 0)) + 1
 	for team in landed:
@@ -566,10 +571,20 @@ func _watch_views(_delta: float) -> void:
 					stats.air_attack_frames += 1
 					if tiles_per_s > 0.25:
 						stats.air_attack_slide_frames += 1
+				elif (v.fighter != null and BattleStyles.busy(field.sim, v.fighter)) or v.hop_t < 1.0:
+					# A move that carries its body by design (a Seal's
+					# belly-slide, a Rhino's charge; a hop to a new place, laid
+					# out for the next round or knocked back): counted apart.
+					stats.design_attack_frames += 1
+					if tiles_per_s > 0.25:
+						stats.design_attack_slide_frames += 1
 				else:
 					stats.attack_frames += 1
+					var tally := _per(v.id)
+					tally.att += 1
 					if tiles_per_s > 0.25:
 						stats.attack_slide_frames += 1
+						tally.slid += 1
 				if OS.get_environment("ATTACK_DEBUG") != "":
 					# Who slides while hitting, and why: a flier's dive, a push
 					# by a body, a body still walking into place.
@@ -599,6 +614,9 @@ func _watch_views(_delta: float) -> void:
 				if cycle_rate > 0.0:
 					stats.walk_slide += absf(cycle_rate * stride - tiles_per_s) / tiles_per_s
 					stats.walk_slide_n += 1
+					var feet := _per(v.id)
+					feet.feet += absf(cycle_rate * stride - tiles_per_s) / tiles_per_s
+					feet.feet_n += 1
 					if OS.get_environment("WALK_DEBUG") != "":
 						var dbg: Array = stats.get_or_add("walk_dbg", {}).get_or_add("%s%s" % [v.id, " march" if v._placed and field.marching(v.fighter.team) else ""], [0.0, 0.0, 0])
 						dbg[0] += cycle_rate * stride
@@ -682,8 +700,8 @@ func _watch_views(_delta: float) -> void:
 					if a.fighter != null and b.fighter != null:
 						var fa: BattleSim.Fighter = a.fighter
 						var fb: BattleSim.Fighter = b.fighter
-						var sa := BattleSim.spine(fa.x, fa.y, fa.half, fa.hw, fa.heading, fa.flying)
-						var sb := BattleSim.spine(fb.x, fb.y, fb.half, fb.hw, fb.heading, fb.flying)
+						var sa := BattleSim.spine(fa.x, fa.y, fa.half, fa.hw, fa.heading, fa.across)
+						var sb := BattleSim.spine(fb.x, fb.y, fb.half, fb.hw, fb.heading, fb.across)
 						var seg := Geometry2D.get_closest_points_between_segments(Vector2(sa[0]), Vector2(sa[-1]), Vector2(sb[0]), Vector2(sb[-1]))
 						sim_over = seg[0].distance_to(seg[1]) < fa.hw + fb.hw - 0.1 * minf(fa.hw, fb.hw)
 					var key := "%s%s" % [why, " (in the fight too)" if sim_over else " (drawn only)"]
@@ -723,8 +741,11 @@ func _watch_views(_delta: float) -> void:
 	for v: UnitView in bodies:
 		if v.defeat < 0.0 and v.attacking(field.now()):
 			stats.strike_frames += 1
+			var tally := _per(v.id)
+			tally.strike += 1
 			if attack_overlap.has(v):
 				stats.strike_overlap_frames += 1
+				tally.strike_over += 1
 
 
 
@@ -914,6 +935,41 @@ func _body_debug() -> void:
 		print("  BODY drawn vs fight position, %s: %.3f tiles on average, %.2f at most (%d frames)" % [state, d[0] / maxi(1, d[2]), d[1], d[2]])
 
 
+## One animal's running tally for the PER ANIMAL table.
+func _per(id: String) -> Dictionary:
+	return stats.get_or_add("per", {}).get_or_add(id, {"frames": 0, "att": 0, "slid": 0, "strike": 0, "strike_over": 0, "feet": 0.0, "feet_n": 0, "hits": 0, "unread": 0})
+
+
+## Every animal's line: how big it stands (its average and its tallest, and
+## its limit), how often its striking body overlaps another, how often it
+## slides while hitting on the ground, how far its feet are off the ground
+## they cover, and how many of its hits land without a visible wind-up.
+func _per_animal() -> String:
+	var per: Dictionary = stats.get("per", {})
+	if per.is_empty():
+		return ""
+	var ids: Array = per.keys()
+	ids.sort_custom(func(a: String, b: String) -> bool:
+		var ca := GameData.class_order.find(GameData.class_of(a))
+		var cb := GameData.class_order.find(GameData.class_of(b))
+		return ca < cb if ca != cb else a < b)
+	var limits: Dictionary = GameData.bodies.get("limits", {})
+	var lines := ["  PER ANIMAL            %-22s %-15s %13s %9s %9s %8s %9s %7s" % ["", "class", "size (peak)", "limit", "overlap", "slides", "feet off", "unread"]]
+	for id: String in ids:
+		var t: Dictionary = per[id]
+		var size: Dictionary = stats.size_by_id.get(id, {})
+		var avg := float(size.get("sum", 0.0)) / maxi(1, int(size.get("n", 0)))
+		var hero: bool = bool(size.get("hero", false))
+		var limit := float(limits.get("hero_max_pct", 10.0)) if hero else float(limits.get("unit_max_pct", 9.0))
+		lines.append("  PER ANIMAL            %-22s %-15s %5.1f%% (%4.1f%%) %8.0f%% %8.1f%% %8.1f%% %8.0f%% %6.0f%%" % [id, GameData.class_of(id), avg, float(size.get("max", 0.0)), limit,
+			100.0 * int(t.strike_over) / maxi(1, int(t.strike)), 100.0 * int(t.slid) / maxi(1, int(t.att)),
+			100.0 * float(t.feet) / maxi(1, int(t.feet_n)), 100.0 * int(t.unread) / maxi(1, int(t.hits))])
+		if OS.get_environment("PER_RAW") != "":
+			# (The counts, for adding up several reports.)
+			lines.append("  PER RAW %s %d %d %d %d %.3f %d %d %d %.3f %d %.3f %d" % [id, int(t.att), int(t.slid), int(t.strike), int(t.strike_over), float(t.feet), int(t.feet_n), int(t.hits), int(t.unread), float(size.get("sum", 0.0)), int(size.get("n", 0)), float(size.get("max", 0.0)), 1 if hero else 0])
+	return "\n".join(lines)
+
+
 func _attack_debug() -> void:
 	var dbg: Dictionary = stats.get("attack_dbg", {})
 	var keys: Array = dbg.keys()
@@ -1002,7 +1058,7 @@ func _report() -> void:
 		"Animation (part 2)",
 		"  hard cuts             %.1f animation changes per animal-minute; %d cut hard, %d cross-faded over %.0f ms (%.0f%% of changes last under 0.15 s)" % [stats.anim_changes / secs * 60.0, stats.cuts, stats.blends, Feel.num("acting", "blend_seconds", 0.0) * 1000.0, 100.0 * stats.anim_blips / maxf(1, stats.anim_changes)],
 		"  attacks cut short     %d of %d attacks started over one still playing (%.0f%%)" % [stats.attacks_cut, stats.attacks_started, 100.0 * stats.attacks_cut / maxf(1, stats.attacks_started)],
-		"  sliding while hitting %.1f%% of attack frames on the ground the body moves faster than a quarter tile a second (fliers' attacks move by design: %.0f%% of theirs)" % [100.0 * stats.attack_slide_frames / maxf(1, stats.attack_frames), 100.0 * stats.air_attack_slide_frames / maxf(1, stats.air_attack_frames)],
+		"  sliding while hitting %.1f%% of attack frames on the ground the body moves faster than a quarter tile a second (moving by design and counted apart: fliers' dives %.0f%% of theirs, slides, charges and hops %.0f%%)" % [100.0 * stats.attack_slide_frames / maxf(1, stats.attack_frames), 100.0 * stats.air_attack_slide_frames / maxf(1, stats.air_attack_frames), 100.0 * stats.design_attack_slide_frames / maxf(1, stats.design_attack_frames)],
 		"  snap turns            %.2f per animal-minute (more than 30 degrees in one frame)" % [stats.snap_turns / secs * 60.0],
 		"  position snaps        %.2f per animal-minute (the drawn body jumps more than half a tile in one frame, hops aside)" % [stats.pos_snaps / secs * 60.0],
 		"  feet on the ground    walk cycle against the ground covered: %.0f%% off on average" % [100.0 * stats.walk_slide / maxf(1, stats.walk_slide_n)],
@@ -1037,6 +1093,9 @@ func _report() -> void:
 	for b in blips.slice(0, 4):
 		top.append("%s %d" % [b, stats.blips[b]])
 	lines.append("  flicker kinds         " + ", ".join(top))
+	var per := _per_animal()
+	if per != "":
+		lines.append(per)
 	for line in lines:
 		print(line)
 	var out := OS.get_environment("OUT")

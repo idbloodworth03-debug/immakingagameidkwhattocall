@@ -603,7 +603,7 @@ static func _outline_points(m: Model) -> Dictionary:
 
 ## How much taller than its bounding box at rest (natural_box "up") an
 ## animal stands on the screen at most in a fight's animations (idle, walk,
-## its attacks, fidget): its real outline, posed, at the poses of each
+## its attacks, fidget, its victory): its real outline, posed, at the poses of each
 ## animation every twelfth of the way through. Measured from a model
 ## (manual, in the scene tree) for bodies.json "pose_up".
 static func tallest_share(m: Model) -> float:
@@ -611,7 +611,7 @@ static func tallest_share(m: Model) -> float:
 	if m.player == null or box <= 0.0:
 		return 1.0
 	var tallest := model_height_units(m) / maxf(0.0001, m.body.scale.y)
-	for anim in ["idle", "walk", "attack", "attack2", "special", "fidget"]:
+	for anim in ["idle", "walk", "attack", "attack2", "special", "fidget", "victory"]:
 		if not m.player.has_animation(anim):
 			continue
 		var length := m.player.get_animation(anim).length

@@ -46,17 +46,26 @@ def _after(c):
 def make():
     c = quadruped("cerberus", J, R, paint=paint, tiles_long=1.8)
     sk, tip = np.asarray(J["skull"], float), np.asarray(J["snout_tip"], float)
+    # The two side heads, as big as the middle one (a design's R skull sizes
+    # all three) and side_spread apart from it, each on a neck of its own.
+    k = R["skull"][0] / 0.11
+    spread = R.get("side_spread", SIDE[1][0])
+    # (A design may shorten the side heads' snouts, R side_snout_k, and give
+    # them bigger floppy ears, R side_ear_k.)
+    sn = R.get("side_snout_k", 1.0)
+    ek = k * R.get("side_ear_k", 1.0)
     for off in SIDE:
-        o = np.asarray(off)
+        o = np.asarray(off) * np.array([spread / SIDE[1][0], 1.0, 1.0])
         hs, ht = sk + o, tip + o + (np.sign(o[0]) * 0.03, 0, 0)
+        st = hs + (ht - hs) * k ** 0.5 * sn
         c.shapes.append(ellipsoid(tuple(hs), R["skull"], "side_skull", "neck", blend=0.05))
-        c.shapes.append(cone(hs + (0, 0.06, -0.03), ht, 0.065, 0.04, "side_snout", "neck", blend=0.04))
+        c.shapes.append(cone(hs + (0, 0.06 * k, -0.03 * k), st, 0.065 * k, 0.04 * k, "side_snout", "neck", blend=0.04))
         c.shapes.append(cone(np.asarray(J["neck_base"], float) + o * 0.3, hs, 0.12, 0.1, "torso", "neck", blend=0.06))
         for side in (1, -1):
-            eb = hs + (side * 0.08, -0.02, 0.06)
-            c.shapes.append(ellipsoid(tuple(eb + (side * 0.03, -0.01, -0.06)), (0.03, 0.05, 0.08), "side_ear", "neck", blend=0.02,
-                                      roll=side * 0.3))
-        c.extras.append(Extra("ellipsoid", "nose", "neck", center=tuple(ht + (0, 0.02, 0.01)), radii=(0.025, 0.018, 0.018)))
+            eb = hs + (side * 0.08 * k, -0.02, 0.06 * k)
+            c.shapes.append(ellipsoid(tuple(eb + (side * 0.03 * ek / k, -0.01, -0.06 * ek)), (0.03 * ek, 0.05 * ek, 0.08 * ek), "side_ear", "neck",
+                                      blend=0.02, roll=side * 0.3))
+        c.extras.append(Extra("ellipsoid", "nose", "neck", center=tuple(st + (0, 0.02, 0.01)), radii=(0.025, 0.018, 0.018)))
     # Red studded collars.
     for x in (0.0, -0.2, 0.2):
         center = np.asarray(J["neck_base"], float) + (x, 0.06, 0.06)

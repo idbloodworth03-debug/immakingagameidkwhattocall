@@ -58,10 +58,12 @@ def make():
     c = quadruped("dragon", J, R, paint=paint, tiles_long=2.8)
     c.voxel = 0.009
     sk = np.asarray(J["skull"], float)
+    # Two curved horns (a design may make them bigger: R horn_k).
+    hk = R.get("horn_k", 1.0)
     for side in (1, -1):
         base = sk + np.array([side * 0.06, -0.03, 0.08])
-        c.extras.append(Extra("cone", "horn", "head", center=tuple(base), tip=tuple(base + np.array([side * 0.03, -0.12, 0.1])),
-                              radius=0.025, tip_radius=0.004, color="#f2e2b8"))
+        c.extras.append(Extra("cone", "horn", "head", center=tuple(base), tip=tuple(base + np.array([side * 0.03, -0.12, 0.1]) * hk),
+                              radius=0.025 * hk ** 0.5, tip_radius=0.004, color="#f2e2b8"))
     # Spikes down the back and a spade at the tail tip.
     path = [np.asarray(J[k], float) for k in ("neck_base", "withers", "spine_mid", "pelvis", "tail_base", "tail_mid")]
     bones = ["neck", "chest", "hips", "hips", "tail1", "tail2"]
@@ -70,7 +72,10 @@ def make():
         c.shapes.append(plate(at + (0, 0.06, 0.08), at + (0, -0.06, 0.08), top + (0, -0.04, 0.04), 0.016, 0.012, "spike", bone, blend=0.02))
     end = np.asarray(J["tail_end"], float)
     c.shapes.append(plate(end + (-0.07, 0, 0), end + (0.07, 0, 0), end + (0, -0.12, -0.03), 0.012, 0.02, "spike", "tail3", blend=0.02))
-    add_wings(c, WING_J, WING_R, feathers=False)
+    # (A design may make the wings bigger: R wing_k, from the shoulder.)
+    wk = R.get("wing_k", 1.0)
+    sh = np.asarray(WING_J["shoulder"], float)
+    add_wings(c, {k: tuple(sh + (np.asarray(v, float) - sh) * wk) for k, v in WING_J.items()}, WING_R, feathers=False)
     add_face(c, eye_dir=(-0.7, 0.6, 0.3), eye_radius=0.022, eye_sink=0.008, nose_radius=0.012, iris="#e8a020", pupil="round")
     c.cartoon = {"head": 1.5}
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.35, "bump": 0.1, "roughness": 0.45, "specular": 0.4}

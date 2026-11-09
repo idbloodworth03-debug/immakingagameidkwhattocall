@@ -2110,11 +2110,11 @@
  "cerberus": {
   "shape": {
    "head": 1.0,
-   "muzzle": 0.8,
-   "eyes": 1.9,
-   "ears": 1.1,
-   "legs": 0.8,
-   "length": 0.85,
+   "muzzle": 0.65,
+   "eyes": 2.2,
+   "ears": 1.8,
+   "legs": 0.65,
+   "length": 0.7,
    "belly": 1.0,
    "limbs": 1.35
   },
@@ -2137,8 +2137,8 @@
   "paint": "species",
   "palette": {
    "brown": "#6a4030",
-   "tan": "#d09060",
-   "dark": "#2c1f19",
+   "tan": "#c88a58",
+   "dark": "#24170f",
    "collar": "#ff3b3b",
    "stud": "#ffd04a"
   },
@@ -2285,18 +2285,51 @@
   "portrait_samples": 96,
   "motion": {
    "persona": "cerberus"
+  },
+  "species": {
+   "R": {
+    "skull": [
+     0.16,
+     0.16,
+     0.145
+    ],
+    "side_spread": 0.34,
+    "snout_base": 0.095,
+    "snout_end": 0.07,
+    "ear_width": 0.12,
+    "ear_round": 0.05,
+    "side_snout_k": 0.7,
+    "side_ear_k": 1.8
+   },
+   "J": {
+    "snout_tip": [
+     0,
+     0.86,
+     0.81
+    ],
+    "chin": [
+     0,
+     0.8,
+     0.77
+    ]
+   }
   }
  },
  "gray_squirrel": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.8,
-   "eyes": 2.1,
-   "ears": 1.2,
-   "legs": 0.8,
-   "length": 0.85,
-   "belly": 1.0,
-   "limbs": 1.3
+   "head": 2.3,
+   "muzzle": 0.75,
+   "eyes": 2.5,
+   "ears": 1.1,
+   "legs": 0.6,
+   "length": 0.6,
+   "belly": 1.1,
+   "limbs": 1.4,
+   "head_lift": 0.45,
+   "head_forward": 0.25,
+   "neck": 1.2,
+   "skull_round": 0.5,
+   "jaw": 0.8
   },
   "eyes": {
    "iris": "#3a2616",
@@ -2316,20 +2349,20 @@
   },
   "paint": "species",
   "palette": {
-   "gray": "#6a7fa3",
-   "brown": "#56688c",
-   "white": "#ffffff",
-   "dark": "#262028"
+   "gray": "#827f7a",
+   "brown": "#8c6c52",
+   "white": "#f4f1ea",
+   "dark": "#2a2420"
   },
   "face_lines": {
    "eye_line_size": 0.0,
    "mouth": "#a03848"
   },
   "colors": {
-   "skin": "#6a7fa3",
-   "skin_deep": "#3a4660",
-   "fur": "#6a7fa3",
-   "fur_deep": "#3a4660",
+   "skin": "#827f7a",
+   "skin_deep": "#55524e",
+   "fur": "#827f7a",
+   "fur_deep": "#4a4744",
    "nails": "#2a2420",
    "nose": "#1a1614",
    "mouth": "#a03848"
@@ -2356,8 +2389,8 @@
     "front_paw": 0.3,
     "hind_lower": 0.6,
     "hind_paw": 0.3,
-    "tail": 2.2,
-    "tail_tip": 2.6
+    "tail": 2.6,
+    "tail_tip": 3.0
    },
    "comb": [
     0.0,
@@ -2428,6 +2461,28 @@
   "portrait_samples": 96,
   "motion": {
    "persona": "squirrel"
+  },
+  "species": {
+   "R": {
+    "tail": [
+     0.018,
+     0.04,
+     0.044,
+     0.03
+    ]
+   },
+   "J": {
+    "tail_mid": [
+     0,
+     -0.15,
+     0.16
+    ],
+    "tail_end": [
+     0,
+     -0.09,
+     0.235
+    ]
+   }
   }
  },
  "raccoon": {
@@ -2883,14 +2938,16 @@
  },
  "wild_bactrian_camel": {
   "shape": {
-   "head": 1.3,
-   "muzzle": 1.0,
-   "eyes": 1.9,
+   "head": 1.9,
+   "muzzle": 0.85,
+   "eyes": 2.5,
    "ears": 1.0,
-   "legs": 0.9,
-   "length": 0.9,
+   "legs": 0.75,
+   "length": 0.8,
    "belly": 1.0,
-   "limbs": 1.2
+   "limbs": 1.2,
+   "head_lift": 0.2,
+   "skull_round": 0.4
   },
   "eyes": {
    "iris": "#5a3a1a",
@@ -2910,9 +2967,9 @@
   },
   "paint": "species",
   "palette": {
-   "sand": "#e2a94c",
-   "shag": "#9a6428",
-   "light": "#f6dfa6"
+   "sand": "#d9a85a",
+   "shag": "#8f5e2a",
+   "light": "#f3dca4"
   },
   "face_lines": {
    "eye_line_size": 0.0,
@@ -3020,6 +3077,20 @@
   "portrait_samples": 96,
   "motion": {
    "persona": "camel"
+  },
+  "species": {
+   "R": {
+    "hump": [
+     0.18,
+     0.16,
+     0.27
+    ],
+    "hump_at": [
+     0.16,
+     -0.22
+    ],
+    "hump_z": 1.18
+   }
   }
  },
  "sumatran_orangutan": {
@@ -3353,14 +3424,15 @@
  },
  "barn_owl": {
   "shape": {
-   "head": 1.6,
+   "head": 2.1,
    "muzzle": 0.7,
-   "eyes": 2.3,
+   "eyes": 2.1,
    "ears": 1.0,
    "legs": 0.75,
-   "length": 0.85,
+   "length": 0.75,
    "belly": 1.15,
-   "limbs": 1.2
+   "limbs": 1.2,
+   "skull_round": 0.4
   },
   "eyes": {
    "iris": "#1a1410",
@@ -3386,12 +3458,12 @@
   },
   "paint": "species",
   "palette": {
-   "white": "#f6f1e8",
-   "buff": "#c8883a",
-   "grey": "#7f8aa6",
-   "rim": "#a86a2a",
-   "speck": "#4a3a2a",
-   "beak": "#f2e2c8"
+   "white": "#fbf8f2",
+   "buff": "#c9a06a",
+   "grey": "#b0a89a",
+   "rim": "#9c5f2a",
+   "speck": "#5a4a3a",
+   "beak": "#efe0c8"
   },
   "face_lines": {
    "eye_line_size": 0.0
@@ -3451,25 +3523,27 @@
    }
   },
   "motion": {
-   "persona": "owl",
-   "portrait_view": [
-    -0.8,
-    1.0,
-    0.45
-   ],
-   "perch_tilt": 1.15
+   "persona": "owl"
+  },
+  "species": {
+   "R": {
+    "face_k": 1.25,
+    "face_lobes": 0.9,
+    "face_heart": 1.0
+   }
   }
  },
  "harpy_eagle": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.7,
-   "eyes": 2.0,
+   "head": 2.3,
+   "muzzle": 0.8,
+   "eyes": 2.4,
    "ears": 1.0,
    "legs": 0.8,
-   "length": 0.85,
-   "belly": 1.15,
-   "limbs": 1.25
+   "length": 0.8,
+   "belly": 1.2,
+   "limbs": 1.3,
+   "skull_round": 0.4
   },
   "eyes": {
    "iris": "#3a2616",
@@ -3495,12 +3569,13 @@
   },
   "paint": "species",
   "palette": {
-   "grey": "#b0b6c4",
-   "black": "#1e2030",
-   "white": "#ffffff",
-   "bar": "#2e3140",
-   "beak": "#1a1a20",
-   "foot": "#ffc83a"
+   "grey": "#a7abb2",
+   "black": "#5a5e66",
+   "white": "#f6f4ef",
+   "bar": "#3a3d44",
+   "beak": "#26262a",
+   "foot": "#ffc83a",
+   "crest": "#1e1f24"
   },
   "face_lines": {
    "eye_line_size": 0.0
@@ -3560,13 +3635,14 @@
    }
   },
   "motion": {
-   "persona": "eagle",
-   "portrait_view": [
-    -0.8,
-    1.0,
-    0.45
-   ],
-   "perch_tilt": 0.95
+   "persona": "eagle"
+  },
+  "species": {
+   "R": {
+    "crest_k": 1.5,
+    "crest_lift": 0.5,
+    "crest_fan": 3
+   }
   }
  },
  "hyacinth_macaw": {
@@ -3788,14 +3864,19 @@
  },
  "dragon": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.9,
-   "eyes": 2.4,
+   "head": 2.0,
+   "muzzle": 0.8,
+   "eyes": 2.7,
    "ears": 1.0,
-   "legs": 0.9,
-   "length": 0.9,
+   "legs": 0.65,
+   "length": 0.75,
    "belly": 1.1,
-   "limbs": 1.3
+   "limbs": 1.3,
+   "head_lift": 1.0,
+   "head_forward": 0.2,
+   "neck": 0.9,
+   "skull_round": 0.35,
+   "jaw": 0.85
   },
   "eyes": {
    "iris": "#ffb52c",
@@ -3855,6 +3936,12 @@
   "claw_scale": 1.5,
   "motion": {
    "persona": "dragon"
+  },
+  "species": {
+   "R": {
+    "horn_k": 1.8,
+    "wing_k": 1.3
+   }
   }
  },
  "electric_eel": {

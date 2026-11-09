@@ -2413,6 +2413,166 @@ def hero_cobra(c):
     return p
 
 
+def _hero_from_attack(c, t, jaw=-0.3, turn=0.25, lean=0.0, head=(0.0, 0.0)):
+    """A card pose from its own attack at moment `t` (mirrored, so the near
+    side leads on the card's camera), the body turned `turn` toward us and
+    leaning `lean`, the head turned and tipped (`head`: x, z), the jaw open."""
+    p = _mirror_pose(attack(c, t))
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx + lean, ry, rz + turn)
+    p.rot("head", x=head[0], z=head[1])
+    p.rot("jaw", x=jaw)
+    return p
+
+
+def hero_squirrel(c):
+    """An acorn cocked back to throw, side on so the big tail shows, grinning
+    at us."""
+    return _hero_from_attack(c, 0.3, jaw=-0.25, turn=-0.55, head=(0.1, 0.45))
+
+
+def _wings_up(c, jaw, turn, raise_k=1.0, pitch=0.3, sweep=1.1):
+    """A bird coming in to strike: wings raised high over its back in a V (so
+    it stays compact on the card), talons thrust out ahead, beak open, facing
+    us. Positive x raises a wing bone; positive z on the left (negative on the
+    right) sweeps it back."""
+    p = Pose()
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("wing_upper." + side, x=0.45 * raise_k, z=sweep * sign)
+        p.rot("wing_lower." + side, x=0.45 * raise_k, z=sweep * 0.6 * sign)
+        p.rot("wing_hand." + side, x=0.3 * raise_k, z=sweep * 0.4 * sign)
+        p.rot("leg." + side, x=1.0)
+    # Nose up a little (`pitch`): the face and talons toward us.
+    p["root_rot"] = (pitch, 0.0, turn)
+    p.rot("neck", x=0.25 - pitch * 0.6)
+    p.rot("head", x=0.2 - pitch * 0.3, z=0.25)
+    p.rot("jaw", x=jaw)
+    return p
+
+
+def hero_eagle(c):
+    """Swooping in, wings up and talons out, the crest raised."""
+    return _wings_up(c, -0.35, 0.3)
+
+
+def hero_owl(c):
+    """Swooping in at us, wings raised, the heart face full on."""
+    return _wings_up(c, -0.2, 0.45)
+
+
+def hero_dragon(c):
+    """Swooping at us roaring, horns first, the wings raised high in a V
+    behind it (so it fills the card)."""
+    p = _hero_from_attack(c, 0.3, jaw=-0.8, turn=0.35, lean=-0.3, head=(0.3, 0.2))
+    for side, sign in (("L", 1), ("R", -1)):
+        p["wing_upper." + side] = (0.4, 0.0, 0.4 * sign)
+        p["wing_lower." + side] = (0.4, 0.0, 0.24 * sign)
+        p["wing_hand." + side] = (0.27, 0.0, 0.16 * sign)
+    return p
+
+
+def hero_cerberus(c):
+    """All three heads barking, lunging at us."""
+    return _hero_from_attack(c, 0.5, jaw=-0.9, turn=0.4, lean=0.15, head=(-0.25, 0.2))
+
+
+def hero_camel(c):
+    """Side on so both humps show, turning to us with a big spit coming."""
+    return _hero_from_attack(c, 0.4, jaw=-0.3, turn=-0.6, head=(0.1, 0.5))
+
+
+def hero_elephant(c):
+    """Reared up on its hind legs, trunk raised, trumpeting at us."""
+    return _hero_from_attack(c, 0.35, jaw=-0.4, turn=-0.35, head=(0.25, 0.4))
+
+
+def hero_rhino(c):
+    """Head down, horn first, charging straight at us."""
+    return _hero_from_attack(c, 0.3, jaw=-0.25, turn=0.3, head=(-0.1, 0.2))
+
+
+def hero_panda(c):
+    """Up on its hind legs mid-swipe, a big grin."""
+    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=0.0, head=(0.12, 0.2))
+
+
+def hero_hippo(c):
+    """Its huge mouth gaping wide at us."""
+    return _hero_from_attack(c, 0.3, jaw=-1.1, turn=0.3, head=(0.35, 0.2))
+
+
+def hero_turtle(c):
+    """Neck shooting out, beak snapping at us."""
+    return _hero_from_attack(c, 0.35, jaw=-0.6, turn=0.35, head=(0.1, 0.2))
+
+
+def hero_yeti(c):
+    """Arms flung wide, roaring at us."""
+    p = yeti_idle(c, 0.0)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=1.45, lower=-0.3, foot=-0.2, splay=sign * 1.15)
+    p.rot("chest", x=0.12)
+    p.rot("head", x=0.3, z=0.15)
+    p.rot("jaw", x=-0.95)
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx, ry, rz + 0.25)
+    return p
+
+
+def hero_lion(c):
+    """Mid-roar, mane up, springing at us."""
+    return _hero_from_attack(c, 0.3, jaw=-1.0, turn=0.3, head=(0.35, 0.2))
+
+
+def hero_tiger(c):
+    """Pouncing at us, claws out, snarling."""
+    return _hero_from_attack(c, 0.35, jaw=-0.7, turn=0.3, head=(0.2, 0.2))
+
+
+def hero_boar(c):
+    """Head down, tusks first, charging at us."""
+    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=0.3, head=(-0.05, 0.2))
+
+
+def hero_wolf(c):
+    """Lunging in with a snarl."""
+    return _hero_from_attack(c, 0.3, jaw=-0.6, turn=0.3, head=(0.15, 0.2))
+
+
+def hero_badger(c):
+    """Fearless: rushing at us, teeth bared."""
+    return _hero_from_attack(c, 0.3, jaw=-0.6, turn=0.3, head=(0.15, 0.2))
+
+
+def hero_unicorn(c):
+    """Rearing up, horn high, mane flying."""
+    return _hero_from_attack(c, 0.35, jaw=-0.35, turn=0.3, lean=-0.45, head=(0.35, 0.2))
+
+
+def hero_sloth(c):
+    """The world's slowest, biggest yawn, arms stretched up."""
+    p = sloth_fidget(c, 0.6)
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx, ry, rz + 0.3)
+    return p
+
+
+def hero_kraken(c):
+    """Tentacles raised high, about to crash down, grinning at us."""
+    p = kraken_idle(c, 0.0)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.leg("fl." + side, upper=1.5, lower=-0.6, foot=-0.5, splay=sign * 0.9)
+        p.leg("hl." + side, upper=0.5, lower=-0.3, foot=-0.2, splay=sign * 0.4)
+    for i, bone in enumerate(("tail1", "tail2", "tail3")):
+        p.rot(bone, x=0.9 + 0.2 * i)
+    p.rot("neck", x=0.15)
+    p.rot("head", x=0.25, z=0.2)
+    p.rot("jaw", x=-0.8)
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx, ry, rz + 0.3)
+    return p
+
+
 def perched(c):
     """A bird's card portrait pose: standing with its body pitched up
     (`motion["perch_tilt"]`, radians nose-up; an owl stands nearly upright,
@@ -3174,40 +3334,40 @@ def kraken_victory(c, t):
 
 
 PERSONAS = {
-    "yeti": {"idle": yeti_idle, "fidget": yeti_fidget, "victory": yeti_victory},
+    "yeti": {"idle": yeti_idle, "fidget": yeti_fidget, "victory": yeti_victory, "portrait": hero_yeti},
     "eel": {"idle": eel_idle, "fidget": eel_fidget, "victory": eel_victory},
     "seal": {"idle": seal_idle, "fidget": seal_fidget, "victory": seal_victory},
     "fox": {"idle": fox_idle, "fidget": fox_fidget, "victory": fox_victory},
     "gorilla": {"idle": gorilla_idle, "fidget": gorilla_fidget, "victory": gorilla_victory},
     "red_panda": {"idle": red_panda_idle, "fidget": red_panda_fidget, "victory": red_panda_victory},
-    "sloth": {"idle": sloth_idle, "fidget": sloth_fidget, "victory": sloth_victory},
+    "sloth": {"idle": sloth_idle, "fidget": sloth_fidget, "victory": sloth_victory, "portrait": hero_sloth},
     "pangolin": {"idle": pangolin_idle, "fidget": pangolin_fidget, "victory": pangolin_victory},
-    "kraken": {"idle": kraken_idle, "fidget": kraken_fidget, "victory": kraken_victory},
+    "kraken": {"idle": kraken_idle, "fidget": kraken_fidget, "victory": kraken_victory, "portrait": hero_kraken},
     "falcon": {"idle": falcon_idle, "fidget": falcon_fidget, "victory": falcon_victory, "portrait": hero_falcon},
-    "owl": {"idle": owl_idle, "fidget": owl_fidget, "victory": owl_victory, "portrait": perched},
-    "eagle": {"idle": eagle_idle, "fidget": eagle_fidget, "victory": eagle_victory, "portrait": perched},
-    "macaw": {"idle": macaw_idle, "fidget": macaw_fidget, "victory": macaw_victory, "portrait": perched},
-    "condor": {"idle": condor_idle, "fidget": condor_fidget, "victory": condor_victory, "portrait": perched},
-    "dragon": {"idle": dragon_idle, "fidget": dragon_fidget, "victory": dragon_victory},
-    "squirrel": {"idle": squirrel_idle, "fidget": squirrel_fidget, "victory": squirrel_victory},
+    "owl": {"idle": owl_idle, "fidget": owl_fidget, "victory": owl_victory, "portrait": hero_owl},
+    "eagle": {"idle": eagle_idle, "fidget": eagle_fidget, "victory": eagle_victory, "portrait": hero_eagle},
+    "macaw": {"idle": macaw_idle, "fidget": macaw_fidget, "victory": macaw_victory},
+    "condor": {"idle": condor_idle, "fidget": condor_fidget, "victory": condor_victory},
+    "dragon": {"idle": dragon_idle, "fidget": dragon_fidget, "victory": dragon_victory, "portrait": hero_dragon},
+    "squirrel": {"idle": squirrel_idle, "fidget": squirrel_fidget, "victory": squirrel_victory, "portrait": hero_squirrel},
     "raccoon": {"idle": raccoon_idle, "fidget": raccoon_fidget, "victory": raccoon_victory},
     "skunk": {"idle": skunk_idle, "fidget": skunk_fidget, "victory": skunk_victory},
     "cobra": {"idle": cobra_idle, "fidget": cobra_fidget, "victory": cobra_victory, "portrait": hero_cobra},
-    "camel": {"idle": camel_idle, "fidget": camel_fidget, "victory": camel_victory},
+    "camel": {"idle": camel_idle, "fidget": camel_fidget, "victory": camel_victory, "portrait": hero_camel},
     "orangutan": {"idle": orangutan_idle, "fidget": orangutan_fidget, "victory": orangutan_victory},
-    "unicorn": {"idle": unicorn_idle, "fidget": unicorn_fidget, "victory": unicorn_victory},
-    "lion": {"idle": lion_idle, "fidget": lion_fidget, "victory": lion_victory},
-    "tiger": {"idle": tiger_idle, "fidget": tiger_fidget, "victory": tiger_victory},
-    "boar": {"idle": boar_idle, "fidget": boar_fidget, "victory": boar_victory},
-    "wolf": {"idle": wolf_idle, "fidget": wolf_fidget, "victory": wolf_victory},
-    "badger": {"idle": badger_idle, "fidget": badger_fidget, "victory": badger_victory},
-    "cerberus": {"idle": cerberus_idle, "fidget": cerberus_fidget, "victory": cerberus_victory},
+    "unicorn": {"idle": unicorn_idle, "fidget": unicorn_fidget, "victory": unicorn_victory, "portrait": hero_unicorn},
+    "lion": {"idle": lion_idle, "fidget": lion_fidget, "victory": lion_victory, "portrait": hero_lion},
+    "tiger": {"idle": tiger_idle, "fidget": tiger_fidget, "victory": tiger_victory, "portrait": hero_tiger},
+    "boar": {"idle": boar_idle, "fidget": boar_fidget, "victory": boar_victory, "portrait": hero_boar},
+    "wolf": {"idle": wolf_idle, "fidget": wolf_fidget, "victory": wolf_victory, "portrait": hero_wolf},
+    "badger": {"idle": badger_idle, "fidget": badger_fidget, "victory": badger_victory, "portrait": hero_badger},
+    "cerberus": {"idle": cerberus_idle, "fidget": cerberus_fidget, "victory": cerberus_victory, "portrait": hero_cerberus},
     "bear": {"idle": bear_idle, "fidget": bear_fidget, "victory": bear_victory, "portrait": hero_bear},
-    "panda": {"idle": panda_idle, "fidget": panda_fidget, "victory": panda_victory},
-    "hippo": {"idle": hippo_idle, "fidget": hippo_fidget, "victory": hippo_victory},
-    "elephant": {"idle": elephant_idle, "fidget": elephant_fidget, "victory": elephant_victory},
-    "rhino": {"idle": rhino_idle, "fidget": rhino_fidget, "victory": rhino_victory},
-    "turtle": {"idle": turtle_idle, "fidget": turtle_fidget, "victory": turtle_victory},
+    "panda": {"idle": panda_idle, "fidget": panda_fidget, "victory": panda_victory, "portrait": hero_panda},
+    "hippo": {"idle": hippo_idle, "fidget": hippo_fidget, "victory": hippo_victory, "portrait": hero_hippo},
+    "elephant": {"idle": elephant_idle, "fidget": elephant_fidget, "victory": elephant_victory, "portrait": hero_elephant},
+    "rhino": {"idle": rhino_idle, "fidget": rhino_fidget, "victory": rhino_victory, "portrait": hero_rhino},
+    "turtle": {"idle": turtle_idle, "fidget": turtle_fidget, "victory": turtle_victory, "portrait": hero_turtle},
 }
 
 ATTACKS.update({"slam": slam, "rake": rake, "lob": lob, "handstand": handstand, "leap": leap,
@@ -3257,12 +3417,12 @@ EXTRA = {"death": (death, 6, 10, False)}
 
 
 def portrait_pose(c):
-    """The pose for the card portrait: a persona's own (a bird perched)
-    or the first frame of the idle."""
+    """The pose for the card portrait (its hero pose): a persona's own, or
+    one from its own attack, turned toward us with its mouth open."""
     persona = PERSONAS.get(c.motion.get("persona"), {})
     if "portrait" in persona:
         return persona["portrait"](c)
-    return idle(c, 0.0)
+    return _hero_from_attack(c, 0.3)
 
 
 def animations_for(c, existing=()):

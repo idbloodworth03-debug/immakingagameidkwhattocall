@@ -15,10 +15,10 @@
   "tile_scale": 0.67057
  },
  "cerberus": {
-  "tile_scale": 1.26886
+  "tile_scale": 1.43837
  },
  "dragon": {
-  "tile_scale": 1.14508
+  "tile_scale": 0.90698
  },
  "electric_eel": {
   "tile_scale": 1.94083
@@ -27,7 +27,7 @@
   "tile_scale": 1.05094
  },
  "gray_squirrel": {
-  "tile_scale": 3.52268
+  "tile_scale": 3.55361
  },
  "harbor_seal": {
   "tile_scale": 1.2101
@@ -93,7 +93,7 @@
   "tile_scale": 1.4215
  },
  "wild_bactrian_camel": {
-  "tile_scale": 1.49245
+  "tile_scale": 1.5518
  },
  "wild_boar": {
   "tile_scale": 1.16945

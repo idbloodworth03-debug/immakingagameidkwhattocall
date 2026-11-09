@@ -492,7 +492,7 @@ func sync(f: BattleSim.Fighter, at: Vector2, dt: float, now: float) -> void:
 		moving = maxf(0.0, moving - dt)
 		if moving <= 0.0:
 			# Arriving: a small settling bounce instead of a slide.
-			squash_v += float(t.arrive_squash) * sqrt(float(t.spring_stiffness)) * 1.6
+			squash_v += float(t.arrive_squash) * sqrt(float(t.spring_stiffness)) * 1.6 * (float(t.model_squash_share) if modeled else 1.0)
 	_march = move_toward(_march, 1.0 if moving > 0.0 else 0.0, dt * 2.5)
 	# Facing: the fight's (BattleSim Fighter.heading: at what it strikes or
 	# the way it goes, turning at the cartoon pace; a push never turns it),
@@ -858,6 +858,7 @@ class Tune:
 	var walk_squash := 0.0
 	var windup_pull_pixels := 0.0
 	var windup_squash := 0.0
+	var model_squash_share := 1.0
 
 
 static func _tuning() -> Tune:
@@ -964,6 +965,7 @@ static func refresh_tuning() -> void:
 		t.walk_squash = Feel.num("characters", "walk_squash", 0.07)
 		t.windup_pull_pixels = Feel.num("combat", "windup_pull_pixels", 4.0)
 		t.windup_squash = Feel.num("combat", "windup_squash", 0.12)
+		t.model_squash_share = Feel.num("acting", "model_squash_share", 0.35)
 
 
 
@@ -1119,7 +1121,7 @@ func animate(dt: float, now: float) -> void:
 		# squashed on landing, leaning into the run. Tanks plod low and
 		# heavy; Tank Destroyers lean right into it.
 		var step := absf(sin(walk * TAU))
-		var hop := float(t.walk_hop_pixels)
+		var hop := float(t.walk_hop_pixels) * (float(t.model_squash_share) if modeled else 1.0)
 		var ws := float(t.walk_squash)
 		var lean_k := 1.0
 		match _style:
@@ -1225,6 +1227,14 @@ func animate(dt: float, now: float) -> void:
 		var hop_t2 := (now - _victory_at) * 6.0
 		lift += absf(sin(hop_t2)) * float(t.victory_hop_pixels)
 		sy += absf(cos(hop_t2)) * 0.04
+	if modeled:
+		# A 3D model's own animation already moves its body (its steps, its
+		# wind-up and strike), so the cartoon squash and stretch on top is
+		# only a touch of it (feel.json acting model_squash_share): its
+		# height doesn't pump with every step and swing.
+		var share := float(t.model_squash_share)
+		sx = 1.0 + (sx - 1.0) * share
+		sy = 1.0 + (sy - 1.0) * share
 	# Hit reaction: a squash, a little bounce and a flinch away from the blow.
 	sx += squash
 	sy -= squash
@@ -1436,7 +1446,7 @@ func _footfall(t: Tune) -> void:
 		return
 	match _style:
 		"tank":
-			squash_v += float(t.tank_step_squash) * 20.0
+			squash_v += float(t.tank_step_squash) * 20.0 * (float(t.model_squash_share) if modeled else 1.0)
 			var heavy := fighter != null and fighter.radius >= 600
 			field.fx.burst("puff", position, 2 if heavy else 1, 40.0, 0.45, 6.0 if heavy else 4.5, [dust], -15.0, 3.0)
 		"tank_destroyer":

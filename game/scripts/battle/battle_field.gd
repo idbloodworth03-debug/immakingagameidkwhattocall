@@ -343,10 +343,12 @@ func _frame_armies(delta: float, snap := false) -> void:
 
 ## The zoom past which an animal on the field would look bigger than
 ## bodies.json "limits" allows (a share of the screen's height: unit_max_pct
-## for any animal, hero_max_pct for a Mythic hero), from each one's standing
-## height at its drawn size (ModelStage.natural_box "up"; a bird's is its
-## body's, not its wingspan). So animals never get bigger than that, even
-## in a small fight. INF with nothing on the field.
+## for any animal, hero_max_pct for a Mythic hero), from the tallest each
+## one stands in a fight at its drawn size (ModelStage.natural_box
+## "tallest": its real outline in its tallest pose, bodies.json pose_up;
+## the margin is for the touch of squash and stretch on top). So animals
+## never get bigger than that, even in a small fight. INF with nothing on
+## the field.
 func _size_zoom_cap(base: float) -> float:
 	if sim == null:
 		return INF
@@ -359,7 +361,7 @@ func _size_zoom_cap(base: float) -> float:
 	for f: BattleSim.Fighter in sim.fighters:
 		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
 			continue
-		var up := float(ModelStage.natural_box(f.card.id).up) * UnitView.draw_k(f)
+		var up := float(ModelStage.natural_box(f.card.id).tallest) * UnitView.draw_k(f)
 		if up <= 0.0:
 			continue
 		var limit := hero_max if f.memory.get("hero", false) else unit_max

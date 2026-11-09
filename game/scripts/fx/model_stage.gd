@@ -75,6 +75,8 @@ class Model:
 	var id := ""
 	## Its mesh instances (for measuring it on screen).
 	var meshes: Array = []
+	## Its skeleton (for measuring its real outline as posed).
+	var skeleton: Skeleton3D
 
 
 static func make(on: BattleField) -> ModelStage:
@@ -249,7 +251,7 @@ static var _boxes := {}
 static func natural_box(id: String) -> Dictionary:
 	if _boxes.has(id):
 		return _boxes[id]
-	var info := {"longest": 1.0, "up": 1.0}
+	var info := {"longest": 1.0, "up": 1.0, "tallest": 1.0}
 	var scene := _scene(id)
 	if scene != null:
 		var root := scene.instantiate() as Node3D
@@ -271,6 +273,10 @@ static func natural_box(id: String) -> Dictionary:
 		if not first:
 			info.longest = maxf(box.size.x, maxf(box.size.y, box.size.z)) * ts
 			info.up = (box.size.y * COS + box.size.z * SIN) * ts
+			# The tallest it stands on the screen in a fight, its real outline
+			# in its tallest pose (bodies.json pose_up, measured from its
+			# animations: tests/test_sizes.gd keeps it true).
+			info.tallest = float(info.up) * float(GameData.bodies.get("animals", {}).get(id, {}).get("pose_up", 1.0))
 	_boxes[id] = info
 	return info
 
@@ -354,6 +360,9 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 		instance.material_override = m.skin
 		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		m.meshes.append(instance)
+	var skeletons := m.body.find_children("*", "Skeleton3D", true, false)
+	if not skeletons.is_empty():
+		m.skeleton = skeletons[0]
 	var players := m.body.find_children("*", "AnimationPlayer", true, false)
 	if not players.is_empty():
 		m.player = players[0]
@@ -490,8 +499,44 @@ func height_px(key: Variant) -> float:
 	return model_height_units(m) * field.size.y / camera.size
 
 
-## A model's standing height along the camera's up, in field tiles.
+## How tall a model stands on the screen right now, along the camera's
+## up, in field tiles: its real outline as posed (a sample of its mesh's
+## points, skinned to its skeleton's pose; the bounding box would add a
+## fifth or so), with its turn, lean and squash and stretch.
 static func model_height_units(m: Model) -> float:
+	if m.skeleton == null:
+		return _box_height_units(m)
+	var points: Dictionary = _outline_points(m)
+	if (points.verts as PackedVector3Array).is_empty():
+		return _box_height_units(m)
+	var up := Vector3(0, COS, -SIN)
+	var g := m.skeleton.global_transform
+	# Each bind's whole transform for this pose, once: then each point is
+	# its weighted mix.
+	var mats: Array[Transform3D] = []
+	for bind: Array in points.binds:
+		var bone := int(bind[0])
+		mats.append(g * (m.skeleton.get_bone_global_pose(bone) if bone >= 0 else Transform3D.IDENTITY) * (bind[1] as Transform3D))
+	var verts: PackedVector3Array = points.verts
+	var weights: Array = points.weights
+	var lo := INF
+	var hi := -INF
+	for i in verts.size():
+		var v := verts[i]
+		var at := Vector3.ZERO
+		var total := 0.0
+		for w: Vector2 in weights[i]:
+			at += (mats[int(w.x)] * v) * w.y
+			total += w.y
+		var d := (at / total if total > 0.0 else g * v).dot(up)
+		lo = minf(lo, d)
+		hi = maxf(hi, d)
+	return maxf(0.0, hi - lo) if lo < hi else 0.0
+
+
+## The bounding box's height along the camera's up (for a model with no
+## skeleton).
+static func _box_height_units(m: Model) -> float:
 	var up := Vector3(0, COS, -SIN)
 	var lo := INF
 	var hi := -INF
@@ -503,3 +548,75 @@ static func model_height_units(m: Model) -> float:
 			lo = minf(lo, d)
 			hi = maxf(hi, d)
 	return maxf(0.0, hi - lo) if lo < hi else 0.0
+
+
+## How many of a mesh's points measure its outline (spread over the mesh).
+const OUTLINE_POINTS := 360
+static var _outlines := {}
+
+
+## A model's outline sample, the same for every model of its animal: its
+## points (mesh space), each one's binds and weights (Vector2(bind, weight)),
+## and the binds (skeleton bone, bind pose).
+static func _outline_points(m: Model) -> Dictionary:
+	if _outlines.has(m.id):
+		return _outlines[m.id]
+	var verts := PackedVector3Array()
+	var weights: Array = []
+	var binds: Array = []
+	for mi: MeshInstance3D in m.meshes:
+		var mesh := mi.mesh
+		var skin := mi.skin
+		if mesh == null:
+			continue
+		var first_bind := binds.size()
+		if skin != null:
+			for b in skin.get_bind_count():
+				var bone := skin.get_bind_bone(b)
+				if bone < 0 and m.skeleton != null:
+					bone = m.skeleton.find_bone(skin.get_bind_name(b))
+				binds.append([bone, skin.get_bind_pose(b)])
+		var total := 0
+		for s in mesh.get_surface_count():
+			total += mesh.surface_get_array_len(s)
+		var step := maxi(1, total / OUTLINE_POINTS)
+		for s in mesh.get_surface_count():
+			var arrays := mesh.surface_get_arrays(s)
+			var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var bones: Variant = arrays[Mesh.ARRAY_BONES]
+			var ws: Variant = arrays[Mesh.ARRAY_WEIGHTS]
+			var skinned: bool = skin != null and bones != null and ws != null and (bones as Array).size() > 0
+			var per := 8 if skinned and (bones as Array).size() == vs.size() * 8 else 4
+			for i in range(0, vs.size(), step):
+				verts.append(vs[i])
+				var mine: Array[Vector2] = []
+				if skinned:
+					for k in per:
+						var w: float = ws[i * per + k]
+						if w > 0.001:
+							mine.append(Vector2(first_bind + int(bones[i * per + k]), w))
+				weights.append(mine)
+	var points := {"verts": verts, "weights": weights, "binds": binds}
+	_outlines[m.id] = points
+	return points
+
+
+## How much taller than its bounding box at rest (natural_box "up") an
+## animal stands on the screen at most in a fight's animations (idle, walk,
+## its attacks, fidget): its real outline, posed, at the poses of each
+## animation every twelfth of the way through. Measured from a model
+## (manual, in the scene tree) for bodies.json "pose_up".
+static func tallest_share(m: Model) -> float:
+	var box := float(natural_box(m.id).up) / maxf(0.0001, tile_scale(m.id))
+	if m.player == null or box <= 0.0:
+		return 1.0
+	var tallest := model_height_units(m) / maxf(0.0001, m.body.scale.y)
+	for anim in ["idle", "walk", "attack", "attack2", "special", "fidget"]:
+		if not m.player.has_animation(anim):
+			continue
+		var length := m.player.get_animation(anim).length
+		for k in 13:
+			m.player.play(anim)
+			m.player.seek(length * k / 12.0, true)
+			tallest = maxf(tallest, model_height_units(m) / maxf(0.0001, m.body.scale.y))
+	return tallest / box

@@ -142,7 +142,7 @@ To see how fights look (twitchy turning, flicker, pictures covering each
 other, sliding feet, hits shown before their strike, hit-stop, clutter,
 target hopping, slow endings, IDLE: the share of time animals stand
 about while there's an enemy they could fight, which should be close to
-zero, SIZE: how big the animals are drawn as a share of an iPhone
+zero, SIZE: how tall the animals stand (their real outline, posed) as a share of an iPhone
 screen's height, with the field laid out as on the phone, and Animation:
 hard cuts, swings cut short, sliding while hitting, snap turns and the feet
 against the ground, and BODIES: how often two drawn bodies overlap, and

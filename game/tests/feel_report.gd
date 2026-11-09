@@ -749,7 +749,11 @@ func _watch_size(v: UnitView) -> void:
 	var tally: Dictionary = stats.size_by_id.get_or_add(v.id, {"sum": 0.0, "n": 0, "max": 0.0, "hero": hero, "cls": cls})
 	tally.sum += pct
 	tally.n += 1
+	if pct > float(tally.max):
+		tally.max_why = "%s scale=%.2f,%.2f lift=%.2f lunge=%.2f zoom=%.1f" % [v.m_anim, v.m_scale.x, v.m_scale.y, v.m_altitude, v.m_lunge.length() / 1000.0, field.field_scale() * 1000.0]
 	tally.max = maxf(float(tally.max), pct)
+	if OS.get_environment("SIZE_DEBUG") != "" and pct > 9.0:
+		print("  SIZE OVER %s %.1f%% %s scale=%.2f,%.2f defeat=%.2f" % [v.id, pct, v.m_anim, v.m_scale.x, v.m_scale.y, v.defeat])
 	var limits: Dictionary = GameData.bodies.get("limits", {})
 	var limit := float(limits.get("hero_max_pct", 10.0)) if hero else float(limits.get("unit_max_pct", 9.0))
 	if pct > limit:
@@ -774,6 +778,8 @@ func _biggest(kind: String) -> String:
 			best = id
 	if best == "":
 		return "none"
+	if OS.get_environment("SIZE_DEBUG") != "":
+		print("  SIZE PEAK %s: %s" % [best, stats.size_by_id[best].get("max_why", "")])
 	return "%.1f%% (%s, peaks %.1f%%)" % [best_mean, best, float(stats.size_by_id[best].max)]
 
 

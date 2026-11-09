@@ -193,6 +193,12 @@ func _model_ready(scene: PackedScene) -> void:
 		var local := _turntable.global_transform.affine_inverse() * instance.global_transform * instance.get_aabb()
 		box = local if first else box.merge(local)
 		first = false
+	# Framed as it's drawn idling (its skinned points), not by its mesh's
+	# box at rest: a flier's model rests up in the air but is drawn hovering
+	# lower.
+	var posed := _idle_box()
+	if posed.size.y > 0.0:
+		box = posed
 	# The same size whatever the animal: its biggest side is model_size, its
 	# feet on the stage, centered.
 	var biggest := maxf(box.size.x, maxf(box.size.y, box.size.z))
@@ -273,6 +279,59 @@ func _apply_look() -> void:
 	_outline.set_shader_parameter("color", Color(String(_look.get("outline_color", "#140c09"))))
 	_outline.set_shader_parameter("silhouette", 1.0 if unknown else 0.0)
 	_outline.set_shader_parameter("silhouette_color", Color(String(_look.get("silhouette_outline", "#0a1430"))))
+
+
+## The box round the model as drawn in its idle's first pose, in the
+## turntable's space: a sample of its mesh's points skinned by its skeleton
+## (an empty box without a skeleton).
+func _idle_box() -> AABB:
+	var players := _model.find_children("*", "AnimationPlayer", true, false)
+	var skeletons := _model.find_children("*", "Skeleton3D", true, false)
+	if players.is_empty() or skeletons.is_empty():
+		return AABB()
+	var player: AnimationPlayer = players[0]
+	var skeleton: Skeleton3D = skeletons[0]
+	if player.has_animation("idle"):
+		player.play("idle")
+		player.seek(0.0, true)
+		player.advance(0.0)
+	var to_turntable := _turntable.global_transform.affine_inverse()
+	var box := AABB()
+	var first := true
+	for node in _model.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh == null or mi.skin == null:
+			continue
+		var skin := mi.skin
+		var mats: Array[Transform3D] = []
+		for b in skin.get_bind_count():
+			var bone := skin.get_bind_bone(b)
+			if bone < 0:
+				bone = skeleton.find_bone(skin.get_bind_name(b))
+			var pose := skeleton.get_bone_global_pose(bone) if bone >= 0 else Transform3D.IDENTITY
+			mats.append(to_turntable * skeleton.global_transform * pose * skin.get_bind_pose(b))
+		for surface in mi.mesh.get_surface_count():
+			var arrays := mi.mesh.surface_get_arrays(surface)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var bones: Variant = arrays[Mesh.ARRAY_BONES]
+			var weights: Variant = arrays[Mesh.ARRAY_WEIGHTS]
+			if bones == null or weights == null or (bones as Array).is_empty():
+				continue
+			var per := 8 if (bones as Array).size() == verts.size() * 8 else 4
+			for i in range(0, verts.size(), maxi(1, verts.size() / 600)):
+				var at := Vector3.ZERO
+				var total := 0.0
+				for k in per:
+					var w: float = weights[i * per + k]
+					if w > 0.001:
+						at += (mats[int(bones[i * per + k])] * verts[i]) * w
+						total += w
+				if total <= 0.0:
+					continue
+				at /= total
+				box = AABB(at, Vector3.ZERO) if first else box.expand(at)
+				first = false
+	return box
 
 
 func _place_camera() -> void:

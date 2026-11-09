@@ -2482,8 +2482,8 @@ def hero_camel(c):
 
 
 def hero_elephant(c):
-    """Reared up on its hind legs, trunk raised, trumpeting at us."""
-    return _hero_from_attack(c, 0.35, jaw=-0.4, turn=-0.35, head=(0.25, 0.4))
+    """Side on, trunk curled high, trumpeting, the big ear flared."""
+    return _hero_from_attack(c, 0.35, jaw=-0.4, turn=-0.8, head=(0.25, 0.5))
 
 
 def hero_rhino(c):
@@ -2502,8 +2502,9 @@ def hero_hippo(c):
 
 
 def hero_turtle(c):
-    """Neck shooting out, beak snapping at us."""
-    return _hero_from_attack(c, 0.35, jaw=-0.6, turn=0.35, head=(0.1, 0.2))
+    """Side on so the ridged shell shows, neck shooting out, beak snapping
+    at us (the lunge of its bite, the jaws not yet agape)."""
+    return _hero_from_attack(c, 0.42, jaw=-0.3, turn=-0.6, head=(0.1, 0.5))
 
 
 def hero_yeti(c):
@@ -2520,28 +2521,36 @@ def hero_yeti(c):
 
 
 def hero_lion(c):
-    """Mid-roar, mane up, springing at us."""
-    return _hero_from_attack(c, 0.3, jaw=-1.0, turn=0.3, head=(0.35, 0.2))
+    """Mid-roar at us, head up, the big mane framing its face."""
+    return _hero_from_attack(c, 0.3, jaw=-0.5, turn=0.0, head=(0.3, 0.3))
 
 
 def hero_tiger(c):
-    """Pouncing at us, claws out, snarling."""
-    return _hero_from_attack(c, 0.35, jaw=-0.7, turn=0.3, head=(0.2, 0.2))
+    """Pouncing at us, snarling, side on so the stripes show."""
+    return _hero_from_attack(c, 0.3, jaw=-0.45, turn=-0.3, head=(0.15, 0.5))
 
 
 def hero_boar(c):
-    """Head down, tusks first, charging at us."""
-    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=0.3, head=(-0.05, 0.2))
+    """Charging at us, tusks first."""
+    return _hero_from_attack(c, 0.3, jaw=-0.2, turn=-0.35, head=(-0.25, 0.5))
 
 
 def hero_wolf(c):
-    """Lunging in with a snarl."""
-    return _hero_from_attack(c, 0.3, jaw=-0.6, turn=0.3, head=(0.15, 0.2))
+    """Lunging in with a snarl (the lunge of its bite, the jaws not yet
+    agape, which head on would look like a tube)."""
+    return _hero_from_attack(c, 0.42, jaw=-0.35, turn=-0.35, head=(0.15, 0.5))
 
 
 def hero_badger(c):
-    """Fearless: rushing at us, teeth bared."""
-    return _hero_from_attack(c, 0.3, jaw=-0.6, turn=0.3, head=(0.15, 0.2))
+    """Fearless: rushing at us, teeth bared, side on so the white back
+    shows."""
+    return _hero_from_attack(c, 0.42, jaw=-0.35, turn=-0.35, head=(0.15, 0.5))
+
+
+def hero_komodo(c):
+    """Lunging in low, its forked tongue out, side on so the long body
+    shows."""
+    return _hero_from_attack(c, 0.42, jaw=-0.3, turn=-0.35, head=(0.1, 0.5))
 
 
 def hero_unicorn(c):
@@ -3361,6 +3370,7 @@ PERSONAS = {
     "boar": {"idle": boar_idle, "fidget": boar_fidget, "victory": boar_victory, "portrait": hero_boar},
     "wolf": {"idle": wolf_idle, "fidget": wolf_fidget, "victory": wolf_victory, "portrait": hero_wolf},
     "badger": {"idle": badger_idle, "fidget": badger_fidget, "victory": badger_victory, "portrait": hero_badger},
+    "komodo": {"portrait": hero_komodo},
     "cerberus": {"idle": cerberus_idle, "fidget": cerberus_fidget, "victory": cerberus_victory, "portrait": hero_cerberus},
     "bear": {"idle": bear_idle, "fidget": bear_fidget, "victory": bear_victory, "portrait": hero_bear},
     "panda": {"idle": panda_idle, "fidget": panda_fidget, "victory": panda_victory, "portrait": hero_panda},

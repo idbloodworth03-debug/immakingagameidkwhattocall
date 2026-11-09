@@ -55,6 +55,6 @@
     "over": {"air": "td"},
     "over_offset": 0.8,
     "back_reach": 8.0,
-    "lane_margin": 0.6
+    "lane_margin": 0.3
   }
 }

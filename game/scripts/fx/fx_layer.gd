@@ -65,10 +65,12 @@ func effect(kind: String, at: Vector2, radius: float, color: Color, life: float,
 
 ## A number popping up off a hit. `kind`: "hurt_enemy", "hurt_own" or "heal".
 ## Quick hits on the same animal (`source`) add up into one number that
-## pops again, instead of a pile of numbers. `only_add`: a quiet hit (a busy
-## spot): it adds to a number already showing on that animal (without
-## making it pop again or stay longer), but never makes a new one.
-func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant = null, only_add := false) -> void:
+## pops again, instead of a pile of numbers. `only_add`: a small or quiet
+## hit: it adds to a number already showing on that animal (without making
+## it pop again or stay longer), but never makes a new one. `room`: how big
+## (pixels, width and height) the number may get on the screen: no bigger
+## than the animal that struck (ZERO: no limit).
+func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant = null, only_add := false, room := Vector2.ZERO) -> void:
 	if not Feel.on("combat", "numbers") or amount <= 0:
 		return
 	var window := Feel.num("combat", "number_merge_seconds", 0.35)
@@ -82,6 +84,8 @@ func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant =
 				n.age = 0.0
 				n.big = bool(n.big) or big
 				n.at = at
+				if room != Vector2.ZERO:
+					n.room = room
 				if n.big and kind == "hurt_enemy":
 					n.color = Color("#ffe14d")
 				return
@@ -108,7 +112,7 @@ func number(at: Vector2, amount: int, kind: String, big: bool, source: Variant =
 		color = Color("#ffe14d") if kind == "hurt_enemy" else color
 	numbers.append({"at": at, "drift": randf_range(-14.0, 14.0), "text": ("+%d" if kind == "heal" else "%d") % amount,
 		"color": color, "big": big, "age": 0.0, "life": Feel.num("combat", "number_seconds", 0.85),
-		"source": source, "kind": kind, "amount": amount})
+		"source": source, "kind": kind, "amount": amount, "room": room})
 
 
 ## Whether a hit of `amount` gets sparks: only so many bursts at once
@@ -173,6 +177,13 @@ func _draw_number(n: Dictionary) -> void:
 	var size := float(Feel.count("combat", "number_big_size" if n.big else "number_size", 30 if n.big else 22))
 	# Pop in big, settle, then float up and fade.
 	var grow: float = Ease.out_back(minf(1.0, t * 5.0), 3.0)
+	# Never bigger than the animal that struck: no taller, no wider.
+	var room: Vector2 = n.get("room", Vector2.ZERO)
+	if room != Vector2.ZERO:
+		size = minf(size, room.y)
+		var wide := UIKit.DISPLAY_FONT.get_string_size(String(n.text), HORIZONTAL_ALIGNMENT_LEFT, -1, int(size)).x
+		if wide > room.x and wide > 0.0:
+			size *= room.x / wide
 	var font_size := int(size * lerpf(0.4, 1.0, grow))
 	var rise := Ease.out_cubic(t) * Feel.num("combat", "number_rise_pixels", 38.0)
 	var at: Vector2 = n.at + Vector2(float(n.drift) * t, -rise)
@@ -182,8 +193,15 @@ func _draw_number(n: Dictionary) -> void:
 
 func _draw_bars() -> void:
 	var c := "combat"
+	# As wide as the animal (health_bar_body_share of its footprint), but
+	# between health_bar_width and health_bar_max_width pixels; at least
+	# health_bar_height tall, or health_bar_height_share of its width.
 	var w := Feel.num(c, "health_bar_width", 44.0)
+	var w_most := maxf(w, Feel.num(c, "health_bar_max_width", w))
+	var share := Feel.num(c, "health_bar_body_share", 0.0)
 	var h := Feel.num(c, "health_bar_height", 9.0)
+	var h_share := Feel.num(c, "health_bar_height_share", 0.0)
+	var field_px := field.field_scale()
 	var stars_at := []
 	# A bar shows once an animal is hurt, and fades away when it hasn't been
 	# hit for a while (it comes back with the next hit).
@@ -196,23 +214,27 @@ func _draw_bars() -> void:
 		var hurt: bool = view.bar_shown < 0.999 or view.bar_trail > view.bar_shown + 0.002
 		var a := clampf(1.0 - (now - float(view.hurt_time()) - hide_after) / fade, 0.0, 1.0) if hurt else 0.0
 		if a > 0.0:
-			var top: Vector2 = view.position + view.head() + Vector2(0, -12.0)
-			var width := w * (0.8 if view.swarm else 1.0)
-			var rect := Rect2(top - Vector2(width / 2.0, h / 2.0), Vector2(width, h))
+			var width := w
+			if share > 0.0 and view.fighter != null:
+				width = clampf(float(view.fighter.radius) * field_px * 2.0 * share, w, w_most)
+			width *= 0.8 if view.swarm else 1.0
+			var tall := roundf(maxf(h, width * h_share))
+			var top: Vector2 = view.position + view.head() + Vector2(0, -6.0 - tall)
+			var rect := Rect2(top - Vector2(width / 2.0, tall / 2.0), Vector2(width, tall))
 			var team_color := BattleField.team_color(view.team)
-			var radius := int(h / 2.0)
+			var radius := int(tall / 2.0)
 			draw_style_box(_box(Color(UIKit.INK, a), radius + 2), rect.grow(2.0))
 			draw_style_box(_box(Color(0.12, 0.14, 0.2, a), radius), rect)
-			var trail := Rect2(rect.position, Vector2(width * clampf(view.bar_trail, 0.0, 1.0), h))
+			var trail := Rect2(rect.position, Vector2(width * clampf(view.bar_trail, 0.0, 1.0), tall))
 			if trail.size.x > 1.0:
 				draw_style_box(_box(Color("#fff1c2", a), radius), trail)
-			var fill := Rect2(rect.position, Vector2(width * clampf(view.bar_shown, 0.0, 1.0), h))
+			var fill := Rect2(rect.position, Vector2(width * clampf(view.bar_shown, 0.0, 1.0), tall))
 			if fill.size.x > 1.0:
 				draw_style_box(_box(Color(team_color, a), radius), fill)
-				var gloss := Rect2(fill.position + Vector2(1, 1), Vector2(maxf(fill.size.x - 2, 0.0), h * 0.38))
+				var gloss := Rect2(fill.position + Vector2(1, 1), Vector2(maxf(fill.size.x - 2, 0.0), tall * 0.38))
 				draw_style_box(_box(Color(1, 1, 1, 0.35 * a), radius), gloss)
 			if view.stars > 1 and view.shows_stars():
-				stars_at.append([top + Vector2(0, -h - 1.0), view.stars, 5.5])
+				stars_at.append([top + Vector2(0, -tall - 1.0), view.stars, 5.5])
 		elif view.stars > 1 and view.shows_stars():
 			stars_at.append([view.position + view.head() + Vector2(0, -14.0), view.stars, 6.5])
 		# Stunned: dizzy stars circling over its head.

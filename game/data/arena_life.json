@@ -1,298 +1,266 @@
 {
-  "_note": "Life round each arena (scripts/fx/arena_life.gd): everything outside the field's fence, drawn under the animals so it never covers them. Positions are in field tiles: x across (0 to 16), t down the field (0 is the far fence, the enemy's end; negative is behind it, where the camera can see a strip). actors: spectator (an animal watching from behind the fence: idle, and a cheer on big moments; animal, at [x, t], flip), runner (an animal scurrying along a path, pausing now and then: animal, path [[x, t], [x, t]], tiles_per_second, rail: how high it runs, in tiles), pouncer (an animal that now and then leaps sideways: animal, at, leap tiles), flag (a pole with a fluttering flag: at, height in tiles, colors), sign (a board on the far fence with the arena's name: at, width), ranger (a ranger waving: at, colors), aurora (northern lights shimmering behind everything: from t to t, colors, over a dusky glow: dusk color and dusk_alpha), sparkles (twinkles over snow and ice: count, area [x0, t0, x1, t1]), puffs (snow kicked up: color). cheer: what a big moment does (a clash, a knockout, a strong hit, the War Horn): spectators hop up to hop_tiles in a wave spreading wave_seconds_per_tile from where it happened, flags flutter faster for flutter_seconds, the aurora brightens. pieces: scenery built into the arena's picture (tools/creatures/arena.py): [kind, x, t, size, turn degrees]. scale: the crowd's size against the fighters'. fence: the far fence's color (it's drawn again over the crowd, so they stand behind it).",
+  "_note": "Life round each arena (scripts/fx/arena_life.gd): everything outside the field's fence, drawn under the animals so it never covers them. Positions are in field tiles: x across (0 to the field's width_tiles at its smallest, draft_rules.json \"field\"), t down the field (0 is the far fence, the enemy's end; negative is behind it, where the camera can see a strip). actors: spectator (an animal watching from behind the fence: idle, and a cheer on big moments; animal, at [x, t], flip), runner (an animal scurrying along a path, pausing now and then: animal, path [[x, t], [x, t]], tiles_per_second, rail: how high it runs, in tiles), pouncer (an animal that now and then leaps sideways: animal, at, leap tiles), flag (a pole with a fluttering flag: at, height in tiles, colors), sign (a board on the far fence with the arena's name: at, width), ranger (a ranger waving: at, colors), aurora (northern lights shimmering behind everything: from t to t, colors, over a dusky glow: dusk color and dusk_alpha), sparkles (twinkles over snow and ice: count, area [x0, t0, x1, t1]), puffs (snow kicked up: color). cheer: what a big moment does (a clash, a knockout, a strong hit, the War Horn): spectators hop up to hop_tiles, each with a bubble over its head (a heart, a star or a \"!\", emote_tiles across) for emote_seconds, in a wave spreading wave_seconds_per_tile from where it happened, flags flutter faster for flutter_seconds, the aurora brightens. pieces: scenery built into the arena's picture (tools/creatures/arena.py): [kind, x, t, size, turn degrees]. scale: the crowd's size against the fighters'. fence: the far fence's color (it's drawn again over the crowd, so they stand behind it).",
   "_defaults": {
-    "scale": 0.56,
-    "cheer": {"hop_tiles": 0.32, "wave_seconds_per_tile": 0.035, "flutter_seconds": 1.6, "cooldown_seconds": 0.6}
+    "scale": 1.0,
+    "cheer": {
+      "hop_tiles": 0.45,
+      "wave_seconds_per_tile": 0.035,
+      "flutter_seconds": 1.6,
+      "cooldown_seconds": 0.6,
+      "emote_seconds": 1.1,
+      "emote_tiles": 0.75
+    }
   },
   "rescue_center": {
     "actors": [
-      {"kind": "spectator", "animal": "raccoon", "at": [2.5, -0.78]},
-      {"kind": "spectator", "animal": "striped_skunk", "at": [3.9, -0.8], "flip": true},
-      {"kind": "flag", "at": [4.9, -0.62], "height": 1.6, "colors": ["#2f8f4a", "#ffd23f"]},
-      {"kind": "spectator", "animal": "red_fox", "at": [5.7, -0.8]},
-      {"kind": "sign", "at": [8.0, -0.3], "width": 3.0, "colors": ["#2f8f4a", "#ffd23f", "#6b4424"]},
+      {"kind": "spectator", "animal": "raccoon", "at": [2.85, -0.78]},
+      {"kind": "flag", "at": [4.3, -0.62], "height": 1.6, "colors": ["#2f8f4a", "#ffd23f"]},
+      {"kind": "spectator", "animal": "red_fox", "at": [1.0, -0.8]},
+      {"kind": "sign", "at": [6.0, -0.3], "width": 2.8, "colors": ["#2f8f4a", "#ffd23f", "#6b4424"]},
       {
         "kind": "ranger",
-        "at": [7.3, -1.0],
+        "at": [5.47, -1.0],
         "colors": {"shirt": "#c8a86a", "shorts": "#5a7a3a", "hat": "#8a5a2e", "skin": "#e8b48a"}
       },
-      {"kind": "spectator", "animal": "gray_squirrel", "at": [10.2, -0.72], "flip": true},
-      {"kind": "flag", "at": [11.1, -0.62], "height": 1.6, "colors": ["#ffd23f", "#2f8f4a"]},
-      {"kind": "spectator", "animal": "wild_boar", "at": [12.2, -0.86]},
-      {"kind": "spectator", "animal": "brown_bear", "at": [14.3, -1.0], "flip": true},
-      {"kind": "spectator", "animal": "raccoon", "at": [15.7, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "red_fox", "at": [0.9, -0.82], "flip": true},
+      {"kind": "spectator", "animal": "gray_squirrel", "at": [9.15, -0.72], "flip": true},
+      {"kind": "flag", "at": [7.7, -0.62], "height": 1.6, "colors": ["#ffd23f", "#2f8f4a"]},
+      {"kind": "spectator", "animal": "brown_bear", "at": [11.0, -1.0], "flip": true},
       {
         "kind": "runner",
         "animal": "gray_squirrel",
-        "path": [[-0.6, -0.3], [16.6, -0.3]],
+        "path": [[-0.6, -0.3], [12.6, -0.3]],
         "tiles_per_second": 2.4,
         "rail": 0.42,
         "pause": [1.0, 4.0]
       }
     ],
     "pieces": [
-      ["crate", 2.5, -0.78, 0.8, 10],
-      ["crate", 3.9, -0.8, 0.75, -15],
-      ["crate", 5.7, -0.8, 0.8, 5],
-      ["crate", 10.2, -0.72, 0.7, 20],
-      ["crate", 12.2, -0.86, 0.85, -5],
-      ["crate", 15.7, -0.78, 0.8, 30],
-      ["crate", 0.9, -0.82, 0.75, -20],
+      ["crate", 2.85, -0.78, 1.04, 10],
+      ["crate", 1.0, -0.8, 1.04, 5],
+      ["crate", 9.15, -0.72, 0.91, 20],
       ["ranger_station", -2.8, -2.4, 1.0, 0],
-      ["jeep", 18.0, -1.9, 1.0, -20]
+      ["jeep", 14.0, -1.9, 1.0, -20]
     ],
     "fence": "#b07a45"
   },
   "frozen_tundra": {
     "actors": [
-      {"kind": "aurora", "from": -0.75, "to": -2.3, "colors": ["#3dffa0", "#2fc8ff", "#a06cff"], "dusk": "#203a8a", "dusk_alpha": 0.7},
-      {"kind": "spectator", "animal": "african_penguins", "at": [2.2, -0.8]},
-      {"kind": "spectator", "animal": "harbor_seal", "at": [3.9, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "african_penguins", "at": [5.5, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "snowy_owl", "at": [7.1, -0.76]},
-      {"kind": "flag", "at": [8.2, -0.62], "height": 1.6, "colors": ["#3fa0ff", "#ffffff"]},
-      {"kind": "spectator", "animal": "walrus", "at": [9.8, -0.95], "flip": true},
-      {"kind": "spectator", "animal": "african_penguins", "at": [11.8, -0.8]},
-      {"kind": "spectator", "animal": "polar_bear", "at": [14.1, -1.0], "flip": true},
-      {"kind": "spectator", "animal": "harbor_seal", "at": [0.8, -0.78]},
-      {"kind": "spectator", "animal": "african_penguins", "at": [15.6, -0.8], "flip": true},
-      {"kind": "pouncer", "animal": "red_fox", "at": [8.6, -1.7], "leap": 1.6, "every": [3.0, 6.0]},
-      {"kind": "sparkles", "count": 16, "area": [-1.0, -2.6, 17.0, -0.5], "color": "#ffffff"}
+      {
+        "kind": "aurora",
+        "from": -0.75,
+        "to": -2.3,
+        "colors": ["#3dffa0", "#2fc8ff", "#a06cff"],
+        "dusk": "#203a8a",
+        "dusk_alpha": 0.7
+      },
+      {"kind": "spectator", "animal": "african_penguins", "at": [1.0, -0.8]},
+      {"kind": "spectator", "animal": "harbor_seal", "at": [2.85, -0.78], "flip": true},
+      {"kind": "flag", "at": [6.15, -0.62], "height": 1.6, "colors": ["#3fa0ff", "#ffffff"]},
+      {"kind": "spectator", "animal": "walrus", "at": [9.15, -0.95], "flip": true},
+      {"kind": "spectator", "animal": "polar_bear", "at": [11.0, -1.0], "flip": true},
+      {"kind": "pouncer", "animal": "red_fox", "at": [6.45, -1.7], "leap": 1.6, "every": [3.0, 6.0]},
+      {"kind": "sparkles", "count": 16, "area": [-1.0, -2.6, 13.0, -0.5], "color": "#ffffff"}
     ],
     "pieces": [
-      ["snowbank", 2.2, -0.8, 1.0, 0],
-      ["snowbank", 3.9, -0.78, 1.0, 20],
-      ["snowbank", 5.5, -0.8, 0.9, -10],
-      ["snowbank", 9.8, -0.95, 1.2, 5],
-      ["snowbank", 11.8, -0.8, 0.9, 15],
-      ["snowbank", 14.1, -1.0, 1.2, -5],
-      ["snowbank", 0.8, -0.78, 1.0, 10],
-      ["snowbank", 15.6, -0.8, 0.9, 0],
-      ["ice_post", 7.1, -0.76, 1.0, 0],
+      ["snowbank", 1.0, -0.8, 1.3, 0],
+      ["snowbank", 2.85, -0.78, 1.3, 20],
+      ["snowbank", 9.15, -0.95, 1.56, 5],
+      ["snowbank", 11.0, -1.0, 1.56, -5],
       ["igloo", -2.6, -2.2, 1.0, 30],
-      ["ice_block", 17.6, -1.6, 1.0, 20],
-      ["ice_block", 18.4, -0.6, 0.8, -10],
-      ["snow_hill", 6.0, -3.6, 1.0, 0],
-      ["snow_hill", 12.0, -3.9, 1.2, 0]
+      ["ice_block", 13.6, -1.6, 1.0, 20],
+      ["ice_block", 14.4, -0.6, 0.8, -10],
+      ["snow_hill", 4.5, -3.6, 1.0, 0],
+      ["snow_hill", 9.0, -3.9, 1.2, 0]
     ],
     "fence": "#8a6a4a"
   },
   "city_park": {
     "fence": "#8a8f99",
     "actors": [
-      {"kind": "spectator", "animal": "raccoon", "at": [1.9, -0.8]},
-      {"kind": "spectator", "animal": "opossum", "at": [3.5, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "gray_squirrel", "at": [5.1, -0.74]},
-      {"kind": "sign", "at": [8.0, -0.3], "width": 2.6, "colors": ["#3a6fc2", "#ffffff", "#5a6474"]},
-      {"kind": "spectator", "animal": "striped_skunk", "at": [10.9, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "sewer_rats", "at": [12.5, -0.78]},
-      {"kind": "spectator", "animal": "raccoon", "at": [14.4, -0.82], "flip": true},
-      {"kind": "birds", "mode": "ground", "at": [8.0, -1.3], "spread": [2.2, 0.25], "count": 6, "color": "#8d93a6", "size": 0.15},
-      {"kind": "drifter", "style": "kite", "at": [13.0, -1.0], "t": -1.9, "colors": ["#ff5a5a", "#ffd23f"]},
-      {"kind": "lights", "from": [0.0, -1.3], "to": [16.0, -1.3], "height": 0.95, "count": 16, "colors": ["#fff2b0"]}
+      {"kind": "spectator", "animal": "raccoon", "at": [1.0, -0.8]},
+      {"kind": "spectator", "animal": "opossum", "at": [2.85, -0.8], "flip": true},
+      {"kind": "sign", "at": [6.0, -0.3], "width": 2.6, "colors": ["#3a6fc2", "#ffffff", "#5a6474"]},
+      {"kind": "spectator", "animal": "striped_skunk", "at": [9.15, -0.8], "flip": true},
+      {"kind": "spectator", "animal": "sewer_rats", "at": [11.0, -0.78]},
+      {"kind": "birds", "mode": "ground", "at": [6.0, -1.3], "spread": [2.2, 0.25], "count": 6, "color": "#8d93a6", "size": 0.15},
+      {"kind": "drifter", "style": "kite", "at": [9.75, -1.0], "t": -1.9, "colors": ["#ff5a5a", "#ffd23f"]},
+      {"kind": "lights", "from": [0.0, -1.3], "to": [12.0, -1.3], "height": 0.95, "count": 16, "colors": ["#fff2b0"]}
     ],
     "pieces": [
-      ["bench", 1.9, -0.8, 0.9, -30],
-      ["bench", 3.5, -0.8, 0.9, 7],
-      ["bench", 10.9, -0.8, 0.9, -16],
-      ["bench", 12.5, -0.78, 0.9, 21],
-      ["bench", 14.4, -0.82, 0.9, -2],
-      ["lamp", 0.1, -1.6, 1.0, 0],
-      ["lamp", 16.0, -1.6, 1.0, 0],
+      ["bench", 1.0, -0.8, 1.17, -30],
+      ["bench", 2.85, -0.8, 1.17, 7],
+      ["bench", 9.15, -0.8, 1.17, -16],
+      ["bench", 11.0, -0.78, 1.17, 21],
+      ["lamp", 0.08, -1.6, 1.0, 0],
+      ["lamp", 12.0, -1.6, 1.0, 0],
       ["fountain", -2.4, -2.4, 1.0, 0],
-      ["flower_bed", 18.0, -1.4, 1.0, 0]
+      ["flower_bed", 14.0, -1.4, 1.0, 0]
     ]
   },
   "prairie_fields": {
     "fence": "#a8763e",
     "actors": [
-      {"kind": "spectator", "animal": "american_bison", "at": [2.0, -1.0]},
-      {"kind": "spectator", "animal": "black_footed_ferret", "at": [4.0, -0.76], "flip": true},
-      {"kind": "spectator", "animal": "coyote_pack", "at": [5.5, -0.82]},
-      {
-        "kind": "popper",
-        "holes": [[6.8, -0.9], [7.6, -1.25], [8.5, -0.88], [9.3, -1.2]],
-        "color": "#c09050",
-        "height": 0.45
-      },
-      {"kind": "spectator", "animal": "greater_bilby", "at": [10.6, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "texas_horned_lizard", "at": [12.1, -0.76]},
-      {"kind": "spectator", "animal": "american_bison", "at": [14.3, -1.0], "flip": true},
+      {"kind": "spectator", "animal": "american_bison", "at": [1.0, -1.0]},
+      {"kind": "spectator", "animal": "black_footed_ferret", "at": [2.85, -0.76], "flip": true},
+      {"kind": "spectator", "animal": "coyote_pack", "at": [9.15, -0.82]},
+      {"kind": "popper", "holes": [[5.1, -0.9], [5.7, -1.25], [6.38, -0.88], [6.98, -1.2]], "color": "#c09050", "height": 0.45},
+      {"kind": "spectator", "animal": "texas_horned_lizard", "at": [11.0, -0.76]},
       {"kind": "roller", "t": -1.55, "tiles_per_second": 1.8, "size": 0.26, "color": "#b08a50"},
       {"kind": "drifter", "style": "balloon", "t": -2.1, "tiles_per_second": 0.22, "colors": ["#ff6a5a", "#ffd23f"]},
-      {"kind": "butterflies", "count": 5, "area": [0.0, -1.8, 16.0, -0.9], "colors": ["#ffffff", "#ffd23f"]}
+      {"kind": "butterflies", "count": 5, "area": [0.0, -1.8, 12.0, -0.9], "colors": ["#ffffff", "#ffd23f"]}
     ],
     "pieces": [
       ["hay", -1.8, -1.4, 1.0, 20],
-      ["hay", 17.8, -1.2, 1.0, -30],
-      ["tall_grass", 0.6, -1.5, 1.0, 0],
-      ["tall_grass", 15.6, -1.6, 1.0, 0]
+      ["hay", 13.8, -1.2, 1.0, -30],
+      ["tall_grass", 0.45, -1.5, 1.0, 0],
+      ["tall_grass", 11.7, -1.6, 1.0, 0]
     ]
   },
   "whispering_woods": {
     "fence": "#7a5230",
     "actors": [
-      {"kind": "spectator", "animal": "red_wolf", "at": [1.8, -0.82]},
-      {"kind": "spectator", "animal": "porcupine", "at": [3.4, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "moose", "at": [5.3, -1.0]},
-      {"kind": "fire", "at": [8.0, -1.25]},
-      {"kind": "spectator", "animal": "wolverine", "at": [10.7, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "iberian_lynx", "at": [12.3, -0.8]},
-      {"kind": "spectator", "animal": "brown_bear", "at": [14.4, -1.0], "flip": true},
-      {
-        "kind": "glow",
-        "spots": [[6.6, -0.8], [9.4, -0.84], [0.5, -1.3], [15.5, -1.25], [7.2, -1.9]],
-        "color": "#7fffd4"
-      },
-      {"kind": "fireflies", "count": 14, "area": [-1.0, -2.2, 17.0, -0.6], "color": "#fff36a"},
-      {"kind": "blinker", "at": [13.3, -2.05], "height": 1.1}
+      {"kind": "spectator", "animal": "red_wolf", "at": [1.0, -0.82]},
+      {"kind": "spectator", "animal": "moose", "at": [2.85, -1.0]},
+      {"kind": "fire", "at": [6.0, -1.25]},
+      {"kind": "spectator", "animal": "iberian_lynx", "at": [9.15, -0.8]},
+      {"kind": "spectator", "animal": "brown_bear", "at": [11.0, -1.0], "flip": true},
+      {"kind": "glow", "spots": [[4.95, -0.8], [7.05, -0.84], [0.38, -1.3], [11.62, -1.25], [5.4, -1.9]], "color": "#7fffd4"},
+      {"kind": "fireflies", "count": 14, "area": [-1.0, -2.2, 13.0, -0.6], "color": "#fff36a"},
+      {"kind": "blinker", "at": [9.98, -2.05], "height": 1.1}
     ],
     "pieces": [
-      ["log", 1.8, -0.82, 0.8, -30],
-      ["log", 3.4, -0.78, 0.8, 7],
-      ["log", 10.7, -0.8, 0.8, -16],
-      ["log", 12.3, -0.8, 0.8, 21],
-      ["round_tree", 13.3, -2.3, 1.1, 0],
+      ["log", 1.0, -0.82, 1.04, -30],
+      ["log", 9.15, -0.8, 1.04, 21],
+      ["round_tree", 9.98, -2.3, 1.1, 0],
       ["pine", -1.6, -1.8, 1.0, 0],
-      ["pine", 17.6, -1.7, 1.0, 0],
-      ["mushroom", 6.6, -0.8, 1.0, 0],
-      ["mushroom", 9.4, -0.84, 1.0, 0]
+      ["pine", 13.6, -1.7, 1.0, 0],
+      ["mushroom", 4.95, -0.8, 1.0, 0],
+      ["mushroom", 7.05, -0.84, 1.0, 0]
     ]
   },
   "misty_marsh": {
     "fence": "#6e5a3e",
     "actors": [
       {"kind": "water", "from": -1.25, "to": -4.5, "color": "#3a9a94"},
-      {"kind": "spectator", "animal": "bullfrog", "at": [2.0, -0.76]},
-      {"kind": "spectator", "animal": "platypus", "at": [3.6, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "shoebill", "at": [5.3, -0.82]},
-      {"kind": "spectator", "animal": "snapping_turtle", "at": [10.7, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "axolotl", "at": [12.2, -0.76]},
-      {"kind": "spectator", "animal": "pygmy_hippo", "at": [14.2, -0.86], "flip": true},
+      {"kind": "spectator", "animal": "bullfrog", "at": [1.0, -0.76]},
+      {"kind": "spectator", "animal": "shoebill", "at": [2.85, -0.82]},
+      {"kind": "spectator", "animal": "axolotl", "at": [9.15, -0.76]},
+      {"kind": "spectator", "animal": "pygmy_hippo", "at": [11.0, -0.86], "flip": true},
       {
         "kind": "jumper",
-        "spots": [[7.2, -1.6], [8.9, -1.8], [0.8, -1.7], [15.0, -1.7]],
+        "spots": [[5.4, -1.6], [6.68, -1.8], [0.6, -1.7], [11.25, -1.7]],
         "color": "#ff9a3a",
         "size": 0.32,
         "every": [2.0, 4.0]
       },
-      {"kind": "mist", "count": 7, "area": [-2.0, -2.4, 18.0, -0.9], "color": "#eef6f4", "alpha": 0.32},
-      {"kind": "birds", "mode": "across", "at": [8.0, -1.9], "count": 3, "color": "#f4f4f4", "size": 0.2, "every": 11.0}
+      {"kind": "mist", "count": 7, "area": [-2.0, -2.4, 14.0, -0.9], "color": "#eef6f4", "alpha": 0.32},
+      {"kind": "birds", "mode": "across", "at": [6.0, -1.9], "count": 3, "color": "#f4f4f4", "size": 0.2, "every": 11.0}
     ],
     "pieces": [
-      ["reeds", 6.4, -0.9, 1.0, 0],
-      ["reeds", 9.6, -0.95, 1.0, 0],
+      ["reeds", 4.8, -0.9, 1.0, 0],
+      ["reeds", 7.2, -0.95, 1.0, 0],
       ["reeds", -1.2, -1.0, 1.0, 0],
-      ["reeds", 17.2, -1.0, 1.0, 0]
+      ["reeds", 13.2, -1.0, 1.0, 0]
     ]
   },
   "sunbaked_savanna": {
     "fence": "#9a6838",
     "actors": [
-      {"kind": "spectator", "animal": "lion", "at": [2.0, -0.92]},
-      {"kind": "spectator", "animal": "spotted_hyenas", "at": [3.8, -0.82], "flip": true},
-      {"kind": "spectator", "animal": "honey_badger", "at": [5.4, -0.78]},
-      {
-        "kind": "popper",
-        "holes": [[6.9, -0.95], [7.6, -1.15], [8.4, -0.92], [9.1, -1.12]],
-        "color": "#d8b070",
-        "height": 0.62
-      },
-      {"kind": "spectator", "animal": "cheetah", "at": [10.7, -0.86], "flip": true},
-      {"kind": "spectator", "animal": "african_wild_dogs", "at": [12.4, -0.82]},
-      {"kind": "spectator", "animal": "aardvark", "at": [14.4, -0.84], "flip": true},
+      {"kind": "spectator", "animal": "lion", "at": [1.0, -0.92]},
+      {"kind": "spectator", "animal": "honey_badger", "at": [2.85, -0.78]},
+      {"kind": "popper", "holes": [[5.18, -0.95], [5.7, -1.15], [6.3, -0.92], [6.82, -1.12]], "color": "#d8b070", "height": 0.62},
+      {"kind": "spectator", "animal": "cheetah", "at": [9.15, -0.86], "flip": true},
+      {"kind": "spectator", "animal": "aardvark", "at": [11.0, -0.84], "flip": true},
       {"kind": "walker", "animal": "asian_elephant", "t": -2.05, "size": 0.85, "tiles_per_second": 0.28},
-      {"kind": "birds", "mode": "across", "at": [8.0, -1.8], "count": 5, "color": "#3a2a20", "size": 0.17, "every": 10.0}
+      {"kind": "birds", "mode": "across", "at": [6.0, -1.8], "count": 5, "color": "#3a2a20", "size": 0.17, "every": 10.0}
     ],
     "pieces": [
       ["acacia", -1.6, -1.6, 1.0, 0],
-      ["acacia", 17.6, -1.4, 1.0, 40],
-      ["rock", 6.4, -1.0, 0.8, 0],
-      ["rock", 9.7, -1.0, 0.8, 30]
+      ["acacia", 13.6, -1.4, 1.0, 40],
+      ["rock", 4.8, -1.0, 0.8, 0],
+      ["rock", 7.27, -1.0, 0.8, 30]
     ]
   },
   "red_rock_canyon": {
     "fence": "#8a5a34",
     "actors": [
-      {"kind": "spectator", "animal": "rattlesnake", "at": [2.0, -0.78]},
-      {"kind": "spectator", "animal": "gila_monster", "at": [3.6, -0.78], "flip": true},
-      {"kind": "spectator", "animal": "coyote_pack", "at": [5.4, -0.82]},
-      {"kind": "sign", "at": [8.0, -0.3], "width": 3.2, "colors": ["#8a4a2a", "#ffe0a0", "#5a3a20"]},
-      {"kind": "spectator", "animal": "texas_horned_lizard", "at": [10.7, -0.76], "flip": true},
-      {"kind": "spectator", "animal": "jackalope", "at": [12.2, -0.8]},
-      {"kind": "spectator", "animal": "chupacabra", "at": [14.3, -0.86], "flip": true},
-      {"kind": "birds", "mode": "circle", "at": [8.0, -1.9], "radius": 2.4, "count": 3, "color": "#2a2a2e", "size": 0.3},
-      {"kind": "dust", "at": [11.4, -1.55], "color": "#d89a68"}
+      {"kind": "spectator", "animal": "rattlesnake", "at": [1.0, -0.78]},
+      {"kind": "spectator", "animal": "coyote_pack", "at": [2.85, -0.82]},
+      {"kind": "sign", "at": [6.0, -0.3], "width": 2.8, "colors": ["#8a4a2a", "#ffe0a0", "#5a3a20"]},
+      {"kind": "spectator", "animal": "jackalope", "at": [9.15, -0.8]},
+      {"kind": "spectator", "animal": "chupacabra", "at": [11.0, -0.86], "flip": true},
+      {"kind": "birds", "mode": "circle", "at": [6.0, -1.9], "radius": 2.4, "count": 3, "color": "#2a2a2e", "size": 0.3},
+      {"kind": "dust", "at": [8.55, -1.55], "color": "#d89a68"}
     ],
     "pieces": [
       ["cactus", -1.4, -1.5, 1.0, 0],
-      ["cactus", 17.4, -1.3, 1.0, 0],
-      ["red_rock", 0.6, -2.0, 1.0, 0],
-      ["red_rock", 15.6, -2.1, 1.0, 40],
-      ["cactus", 6.4, -1.3, 0.8, 20]
+      ["cactus", 13.4, -1.3, 1.0, 0],
+      ["red_rock", 0.45, -2.0, 1.0, 0],
+      ["red_rock", 11.7, -2.1, 1.0, 40],
+      ["cactus", 4.8, -1.3, 0.8, 20]
     ]
   },
   "emerald_jungle": {
     "fence": "#7a5a30",
     "actors": [
-      {"kind": "spectator", "animal": "jaguar", "at": [2.0, -0.86]},
-      {"kind": "spectator", "animal": "hyacinth_macaw", "at": [3.6, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "slow_loris", "at": [5.1, -0.76]},
-      {"kind": "swinger", "animal": "howler_monkey", "at": [8.0, -1.3], "height": 1.9, "length": 0.8},
-      {"kind": "spectator", "animal": "malayan_tapir", "at": [10.8, -0.9], "flip": true},
-      {"kind": "spectator", "animal": "helmeted_hornbill", "at": [12.5, -0.8]},
-      {"kind": "spectator", "animal": "bonobo", "at": [14.4, -0.84], "flip": true},
-      {"kind": "waterfall", "at": [0.2, -1.3], "height": 1.8, "width": 0.9},
-      {"kind": "butterflies", "count": 8, "area": [0.0, -2.0, 16.0, -0.8], "colors": ["#3fb0ff", "#ff8a3a", "#ffd23f"]},
-      {"kind": "mist", "count": 5, "area": [-2.0, -2.4, 18.0, -1.2], "color": "#e8fff0", "alpha": 0.25}
+      {"kind": "spectator", "animal": "jaguar", "at": [1.0, -0.86]},
+      {"kind": "spectator", "animal": "hyacinth_macaw", "at": [2.85, -0.8], "flip": true},
+      {"kind": "swinger", "animal": "howler_monkey", "at": [6.0, -1.3], "height": 1.9, "length": 0.8},
+      {"kind": "spectator", "animal": "malayan_tapir", "at": [9.15, -0.9], "flip": true},
+      {"kind": "spectator", "animal": "bonobo", "at": [11.0, -0.84], "flip": true},
+      {"kind": "waterfall", "at": [0.15, -1.3], "height": 1.8, "width": 0.9},
+      {"kind": "butterflies", "count": 8, "area": [0.0, -2.0, 12.0, -0.8], "colors": ["#3fb0ff", "#ff8a3a", "#ffd23f"]},
+      {"kind": "mist", "count": 5, "area": [-2.0, -2.4, 14.0, -1.2], "color": "#e8fff0", "alpha": 0.25}
     ],
     "pieces": [
-      ["big_leaf", 6.5, -1.0, 1.0, 0],
-      ["big_leaf", 9.5, -1.0, 1.0, 90],
-      ["boulder", 0.2, -1.9, 1.2, 0],
-      ["palm", 17.4, -1.6, 1.0, 0],
+      ["big_leaf", 4.88, -1.0, 1.0, 0],
+      ["big_leaf", 7.12, -1.0, 1.0, 90],
+      ["boulder", 0.15, -1.9, 1.2, 0],
+      ["palm", 13.4, -1.6, 1.0, 0],
       ["big_leaf", -1.4, -1.0, 1.0, 40]
     ]
   },
   "cloudpeak_mountains": {
     "fence": "#7a6048",
     "actors": [
-      {"kind": "spectator", "animal": "mountain_goat", "at": [2.0, -0.86]},
-      {"kind": "spectator", "animal": "snow_leopard", "at": [3.6, -0.82], "flip": true},
-      {"kind": "spectator", "animal": "red_panda", "at": [5.2, -0.78]},
-      {"kind": "pennants", "from": [6.0, -1.05], "to": [10.0, -1.05], "height": 1.5, "count": 11},
-      {"kind": "spectator", "animal": "giant_panda", "at": [10.8, -0.88], "flip": true},
-      {"kind": "spectator", "animal": "andean_bear", "at": [12.5, -0.9]},
-      {"kind": "spectator", "animal": "mountain_goat", "at": [14.4, -0.86], "flip": true},
-      {"kind": "drifter", "style": "cloud", "t": -1.9, "size": 2.2, "alpha": 0.85, "tiles_per_second": 0.18, "colors": ["#ffffff"]},
+      {"kind": "spectator", "animal": "mountain_goat", "at": [1.0, -0.86]},
+      {"kind": "spectator", "animal": "snow_leopard", "at": [11.0, -0.82], "flip": true},
+      {"kind": "spectator", "animal": "red_panda", "at": [2.85, -0.78]},
+      {"kind": "pennants", "from": [4.5, -1.05], "to": [7.5, -1.05], "height": 1.5, "count": 11},
+      {"kind": "spectator", "animal": "giant_panda", "at": [9.15, -0.88], "flip": true},
+      {
+        "kind": "drifter",
+        "style": "cloud",
+        "t": -1.9,
+        "size": 2.2,
+        "alpha": 0.85,
+        "tiles_per_second": 0.18,
+        "colors": ["#ffffff"]
+      },
       {"kind": "drifter", "style": "cloud", "t": -1.4, "size": 1.6, "alpha": 0.7, "tiles_per_second": 0.12, "colors": ["#ffffff"]},
-      {"kind": "birds", "mode": "across", "at": [8.0, -2.0], "count": 1, "color": "#5a3a20", "size": 0.42, "every": 12.0}
+      {"kind": "birds", "mode": "across", "at": [6.0, -2.0], "count": 1, "color": "#5a3a20", "size": 0.42, "every": 12.0}
     ],
     "pieces": [
-      ["boulder", 2.0, -0.86, 0.55, -30],
-      ["boulder", 14.4, -0.86, 0.55, 7],
+      ["boulder", 1.0, -0.86, 0.72, -30],
       ["pine", -1.6, -1.6, 1.0, 0],
-      ["pine", 17.6, -1.5, 1.0, 0],
-      ["rock", 3.6, -0.82, 0.8, 0]
+      ["pine", 13.6, -1.5, 1.0, 0],
+      ["rock", 11.0, -0.82, 1.04, 0]
     ]
   },
   "coral_coast": {
     "fence": "#c0a070",
     "actors": [
       {"kind": "water", "from": -1.3, "to": -4.5, "color": "#2f9be8"},
-      {"kind": "spectator", "animal": "sea_otter", "at": [2.0, -0.78]},
-      {"kind": "spectator", "animal": "loggerhead_turtle", "at": [3.6, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "atlantic_puffin", "at": [5.2, -0.76]},
-      {"kind": "birds", "mode": "ground", "at": [8.0, -0.95], "spread": [1.6, 0.15], "count": 4, "color": "#f4f4f4", "size": 0.17},
-      {"kind": "spectator", "animal": "harbor_seal", "at": [10.8, -0.8], "flip": true},
-      {"kind": "spectator", "animal": "wandering_albatross", "at": [12.4, -0.8]},
-      {"kind": "spectator", "animal": "sea_otter", "at": [14.4, -0.78], "flip": true},
+      {"kind": "spectator", "animal": "sea_otter", "at": [1.0, -0.78]},
+      {"kind": "spectator", "animal": "loggerhead_turtle", "at": [11.0, -0.8], "flip": true},
+      {"kind": "spectator", "animal": "atlantic_puffin", "at": [2.85, -0.76]},
+      {"kind": "birds", "mode": "ground", "at": [6.0, -0.95], "spread": [1.6, 0.15], "count": 4, "color": "#f4f4f4", "size": 0.17},
+      {"kind": "spectator", "animal": "harbor_seal", "at": [9.15, -0.8], "flip": true},
       {"kind": "roller", "style": "crab", "t": -0.95, "tiles_per_second": 0.9, "size": 0.18, "color": "#e8503a"},
       {"kind": "drifter", "style": "boat", "t": -2.0, "tiles_per_second": 0.2, "colors": ["#ffffff", "#e85a4a"]},
       {
         "kind": "jumper",
-        "spots": [[4.0, -1.9], [11.5, -2.0], [8.0, -2.1]],
+        "spots": [[3.0, -1.9], [8.62, -2.0], [6.0, -2.1]],
         "color": "#7f93b0",
         "size": 0.62,
         "height": 0.9,
@@ -301,33 +269,30 @@
     ],
     "pieces": [
       ["palm", -1.4, -1.0, 1.0, 0],
-      ["palm", 17.4, -0.9, 1.0, 60],
-      ["shell_rock", 6.5, -1.0, 0.8, 0],
-      ["shell_rock", 9.6, -1.05, 0.8, 40]
+      ["palm", 13.4, -0.9, 1.0, 60],
+      ["shell_rock", 4.88, -1.0, 0.8, 0],
+      ["shell_rock", 7.2, -1.05, 0.8, 40]
     ]
   },
   "last_sanctuary": {
     "fence": "#c8a040",
     "actors": [
-      {"kind": "spectator", "animal": "giant_panda", "at": [1.8, -0.86]},
-      {"kind": "spectator", "animal": "snow_leopard", "at": [3.3, -0.82], "flip": true},
-      {"kind": "spectator", "animal": "kakapo", "at": [4.8, -0.76]},
-      {"kind": "flag", "at": [5.9, -0.62], "height": 1.6, "colors": ["#ffd23f", "#c8902a"]},
-      {"kind": "sign", "at": [8.0, -0.3], "width": 3.4, "colors": ["#7a4ab8", "#ffd23f", "#5a3a20"]},
-      {"kind": "flag", "at": [10.1, -0.62], "height": 1.6, "colors": ["#c8902a", "#ffd23f"]},
-      {"kind": "spectator", "animal": "saola", "at": [10.9, -0.84], "flip": true},
-      {"kind": "spectator", "animal": "amur_leopard", "at": [12.4, -0.84]},
-      {"kind": "spectator", "animal": "black_rhino", "at": [14.4, -0.98], "flip": true},
-      {"kind": "lights", "from": [0.0, -1.3], "to": [16.0, -1.3], "height": 0.95, "count": 18},
+      {"kind": "spectator", "animal": "giant_panda", "at": [1.0, -0.86]},
+      {"kind": "spectator", "animal": "kakapo", "at": [2.85, -0.76]},
+      {"kind": "flag", "at": [4.3, -0.62], "height": 1.6, "colors": ["#ffd23f", "#c8902a"]},
+      {"kind": "sign", "at": [6.0, -0.3], "width": 2.8, "colors": ["#7a4ab8", "#ffd23f", "#5a3a20"]},
+      {"kind": "flag", "at": [7.7, -0.62], "height": 1.6, "colors": ["#c8902a", "#ffd23f"]},
+      {"kind": "spectator", "animal": "saola", "at": [9.15, -0.84], "flip": true},
+      {"kind": "spectator", "animal": "amur_leopard", "at": [11.0, -0.84]},
+      {"kind": "lights", "from": [0.0, -1.3], "to": [12.0, -1.3], "height": 0.95, "count": 18},
       {"kind": "fireworks", "from": -1.3, "to": -2.0, "colors": ["#ffd23f", "#ff5a8a", "#5ad1ff", "#7dff8a"]}
     ],
     "pieces": [
-      ["crate", 1.8, -0.86, 0.8, -30],
-      ["crate", 3.3, -0.82, 0.8, 7],
-      ["crate", 4.8, -0.76, 0.8, -16],
-      ["crate", 10.9, -0.84, 0.8, 21],
-      ["crate", 12.4, -0.84, 0.8, -2],
-      ["ranger_station", 18.2, -2.4, 1.1, 0],
+      ["crate", 1.0, -0.86, 1.04, -30],
+      ["crate", 2.85, -0.76, 1.04, -16],
+      ["crate", 9.15, -0.84, 1.04, 21],
+      ["crate", 11.0, -0.84, 1.04, -2],
+      ["ranger_station", 14.2, -2.4, 1.1, 0],
       ["flower_bed", -1.6, -1.2, 1.0, 0]
     ]
   }

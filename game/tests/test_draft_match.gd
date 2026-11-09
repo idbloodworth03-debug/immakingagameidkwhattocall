@@ -196,18 +196,21 @@ func _big_herd(count: int, ids: Array) -> Array:
 
 
 func test_small_herds_use_the_smallest_field() -> void:
+	# A first round's herds (three squads a side).
 	var m := DraftMatch.new(31)
-	m.herds = [_big_herd(6, ["brown_bear", "lion", "gray_squirrel"]), _big_herd(6, ["giant_panda", "wild_boar", "raccoon"])]
+	m.herds = [_big_herd(3, ["brown_bear", "lion", "gray_squirrel"]), _big_herd(3, ["giant_panda", "wild_boar", "raccoon"])]
 	m._lay_out_herds()
 	check_eq(m.field_scale, 1.0, "no need to grow")
-	check_eq(m.sim.width, BattleSim.WIDTH, "16 tiles wide")
+	var smallest := BattleArmy.base_size(GameData.draft_rules.field)
+	check_eq(Vector2i(m.sim.width, m.sim.height), smallest, "the smallest field (draft_rules.json \"field\")")
+	check_eq(smallest, Vector2i(12, 16) * BattleSim.TILE, "12 tiles wide and 16 long")
 
 
 func test_big_herds_grow_the_field_up_to_a_limit() -> void:
 	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "electric_eel", "wolf_pack", "hippopotamus", "red_panda", "raccoon", "wild_boar"]
 	var top := float(GameData.draft_rules.field.max_scale)
 	var last := 1.0
-	for count in [10, 20, 30, 45]:
+	for count in [10, 20, 30, 60]:
 		var m := DraftMatch.new(32)
 		m.herds = [_big_herd(count, ids), _big_herd(count, ids)]
 		m._lay_out_herds()

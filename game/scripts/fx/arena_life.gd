@@ -13,17 +13,22 @@ extends Node2D
 ## pictures (the crowd strips, tools/creatures/crowd.py) and simple shapes.
 
 const CROWD := "res://art/arenas/crowd/"
+## What a cheering spectator shows in a bubble over its head.
+const EMOTES := ["heart", "star", "!"]
 ## Every kind of life there is (data/arena_life.json "actors").
 const KINDS := ["spectator", "runner", "pouncer", "flag", "sign", "ranger", "aurora", "sparkles", "birds", "popper",
 	"roller", "drifter", "walker", "fire", "glow", "fireflies", "jumper", "mist", "waterfall", "butterflies", "swinger",
 	"pennants", "lights", "water", "fireworks", "dust", "blinker"]
-## A height straight up shows this much of itself on screen (the camera
-## looks down at 50 degrees).
-const UP := 0.643
 
 var field: BattleField
 var arena_id := ""
 var spec: Dictionary = {}
+## The field's width in tiles at its smallest (what the positions in
+## arena_life.json are laid out for).
+var wide := 16.0
+## A height straight up shows this much of itself on screen (the camera's
+## tilt: ModelStage.cos_down()).
+var up_k := 0.643
 
 var _actors: Array = []
 var _strips := {}
@@ -38,6 +43,8 @@ static func make(on: BattleField, id: String) -> ArenaLife:
 	var life := ArenaLife.new()
 	life.field = on
 	life.arena_id = id
+	life.wide = on.base_tiles().x
+	life.up_k = ModelStage.cos_down()
 	life._load()
 	return life
 
@@ -62,6 +69,8 @@ func _load() -> void:
 		var actor: Dictionary = (raw as Dictionary).duplicate(true)
 		actor.phase = _rng.randf() * 10.0
 		actor.cheer_at = -10.0
+		# What it shows in a bubble over its head when it cheers.
+		actor.emote = EMOTES[_rng.randi_range(0, EMOTES.size() - 1)]
 		match String(actor.kind):
 			"runner":
 				var path: Array = actor.path
@@ -94,7 +103,7 @@ func _load() -> void:
 					holes.append({"x": float(at[0]), "t": float(at[1]), "up": 1.0 if out else 0.0, "until": _rng.randf_range(0.5, 4.0), "out": out, "phase": _rng.randf() * TAU})
 				actor.state = holes
 			"roller", "drifter", "walker":
-				actor.x = _rng.randf_range(-2.0, 18.0)
+				actor.x = _rng.randf_range(-2.0, wide + 2.0)
 				actor.dir = 1.0 if _rng.randf() < 0.5 or String(actor.kind) == "drifter" else -1.0
 				actor.wait = _rng.randf_range(0.0, 3.0) if String(actor.kind) == "roller" else 0.0
 			"jumper":
@@ -188,8 +197,8 @@ func cheer(at_x: float, power := 1.0) -> void:
 				actor.next = minf(float(actor.next), _clock + 0.2)
 			"fireworks":
 				if power >= 0.7:
-					_firework(actor, _rng.randf_range(2.0, 14.0))
-					_firework(actor, _rng.randf_range(2.0, 14.0))
+					_firework(actor, _rng.randf_range(2.0, wide - 2.0))
+					_firework(actor, _rng.randf_range(2.0, wide - 2.0))
 	_flutter_until = _clock + float(c.get("flutter_seconds", 1.6)) * power
 	_flare = maxf(_flare, power)
 
@@ -212,9 +221,9 @@ func _process(delta: float) -> void:
 			"roller":
 				_roll(actor, delta)
 			"drifter", "walker":
-				var span := 24.0
+				var span := wide + 8.0
 				actor.x = float(actor.x) + float(actor.get("tiles_per_second", 0.3)) * delta * float(actor.dir)
-				if float(actor.x) > 19.5 or float(actor.x) < -3.5:
+				if float(actor.x) > wide + 3.5 or float(actor.x) < -3.5:
 					if String(actor.kind) == "walker":
 						actor.dir = -float(actor.dir)
 					else:
@@ -227,7 +236,7 @@ func _process(delta: float) -> void:
 					actor.next = _clock + _rng.randf_range(float(every[0]), float(every[1]))
 			"fireworks":
 				if _clock >= float(actor.next):
-					_firework(actor, _rng.randf_range(1.0, 15.0))
+					_firework(actor, _rng.randf_range(1.0, wide - 1.0))
 					actor.next = _clock + _rng.randf_range(5.0, 9.0)
 				var live: Array = []
 				for b in actor.bursts:
@@ -405,12 +414,49 @@ func _draw_spectator(actor: Dictionary, tile: float) -> void:
 		squash = 1.0 + 0.12 * sin(p * TAU)
 	else:
 		squash = 1.0 + 0.025 * sin(_clock * 2.4 + float(actor.phase))
-	_shadow(feet, tile * 0.32)
+	_shadow(feet, tile * 0.57 * float(spec.get("scale", 0.56)))
 	var anim := "cheer" if cheering else "idle"
 	var info: Dictionary = strip.animations.get(anim, {})
 	var fps := float(info.get("fps", 6))
 	var frame := int((since if cheering else _clock + float(actor.phase)) * fps)
-	_draw_frame(strip, anim, frame, feet - Vector2(0, lift * tile * UP), k, bool(actor.get("flip", false)), squash)
+	var lifted := feet - Vector2(0, lift * tile * up_k)
+	_draw_frame(strip, anim, frame, lifted, k, bool(actor.get("flip", false)), squash)
+	var emote_for := float(spec.get("cheer", {}).get("emote_seconds", 0.0))
+	if since >= 0.0 and since < emote_for:
+		var anchor: Array = info.get("anchor", [0.0, 0.0])
+		_draw_emote(String(actor.emote), lifted - Vector2(0, float(anchor[1]) * k * squash), since / emote_for, tile)
+
+
+## A cheer's bubble over a spectator's head (`over`: the top of its head),
+## popping in and fading out as `t` goes from 0 to 1: a heart, a star or a
+## "!" (arena_life.json "cheer" emote_tiles: its size).
+func _draw_emote(emote: String, over: Vector2, t: float, tile: float) -> void:
+	var r := tile * float(spec.get("cheer", {}).get("emote_tiles", 0.3)) * 0.5
+	var grow := Ease.out_back(minf(1.0, t * 5.0), 2.5)
+	var alpha := 1.0 - clampf((t - 0.7) / 0.3, 0.0, 1.0)
+	if grow <= 0.01 or alpha <= 0.0:
+		return
+	var rr := r * grow
+	var at := over - Vector2(0, r * 1.3 + t * r * 0.6)
+	var line := maxf(1.5, rr * 0.16)
+	var ink := Color(UIKit.INK, alpha)
+	# The bubble, with a little tail pointing down at its head.
+	var tail := PackedVector2Array([at + Vector2(-rr * 0.35, rr * 0.7), at + Vector2(rr * 0.35, rr * 0.7), at + Vector2(-rr * 0.05, rr * 1.35)])
+	draw_colored_polygon(tail, ink)
+	draw_circle(at, rr + line, ink)
+	draw_circle(at, rr, Color(1, 1, 1, alpha))
+	draw_colored_polygon(PackedVector2Array([tail[0] + Vector2(line, -line), tail[1] + Vector2(-line, -line), tail[2] + Vector2(0, -line * 1.6)]), Color(1, 1, 1, alpha))
+	match emote:
+		"heart":
+			UIStyle.draw_particle(self, "heart", at, rr * 0.5, Color(1.0, 0.33, 0.45, alpha))
+		"star":
+			UIStyle.draw_star(self, at, rr * 0.62, true, alpha)
+		_:
+			var font := UIKit.DISPLAY_FONT
+			var size := int(rr * 1.5)
+			if size >= 6:
+				var text_w := font.get_string_size("!", HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+				draw_string(font, at + Vector2(-text_w / 2.0, size * 0.36), "!", HORIZONTAL_ALIGNMENT_LEFT, -1, size, Color(0.92, 0.25, 0.2, alpha))
 
 
 func _draw_runner(actor: Dictionary, tile: float) -> void:
@@ -422,7 +468,7 @@ func _draw_runner(actor: Dictionary, tile: float) -> void:
 	var b := Vector2(float(path[1][0]), float(path[1][1]))
 	var at := a.lerp(b, float(actor.pos))
 	var rail := float(actor.get("rail", 0.0))
-	var feet := _point(at.x, at.y) - Vector2(0, rail * UP * tile)
+	var feet := _point(at.x, at.y) - Vector2(0, rail * up_k * tile)
 	var k := _scale_for(strip, tile) * float(actor.get("size", 0.85))
 	if float(actor.wait) > 0.0:
 		_draw_frame(strip, "idle", int((_clock + float(actor.phase)) * 6.0), feet, k, false)
@@ -448,7 +494,7 @@ func _draw_pouncer(actor: Dictionary, tile: float) -> void:
 		var info: Dictionary = strip.animations.get("pounce", {})
 		var pounce_frames: Array = info.get("frames", [])
 		var frames := maxi(1, pounce_frames.size())
-		_draw_frame(strip, "pounce" if not info.is_empty() else "idle", int(p * frames), feet - Vector2(0, lift * tile * UP * 1.6), k,
+		_draw_frame(strip, "pounce" if not info.is_empty() else "idle", int(p * frames), feet - Vector2(0, lift * tile * up_k * 1.6), k,
 			float(actor.leap_to) < float(actor.leap_from))
 		return
 	var feet := _point(float(actor.x), t)
@@ -472,16 +518,17 @@ func _draw_fence(actor: Dictionary, tile: float) -> void:
 	var edge := wood.darkened(0.6)
 	var t := -0.3
 	var left := _point(-0.3, t)
-	var right := _point(16.3, t)
+	var right := _point(wide + 0.3, t)
 	var line := maxf(1.0, tile * 0.02)
 	for h in [0.17, 0.33]:
-		var up := Vector2(0, -h * UP * tile)
-		draw_line(left + up, right + up, edge, tile * 0.07 * UP + line * 2.0)
-		draw_line(left + up, right + up, wood, tile * 0.07 * UP)
+		var up := Vector2(0, -h * up_k * tile)
+		draw_line(left + up, right + up, edge, tile * 0.07 * up_k + line * 2.0)
+		draw_line(left + up, right + up, wood, tile * 0.07 * up_k)
 		draw_line(left + up - Vector2(0, tile * 0.02), right + up - Vector2(0, tile * 0.02), wood.lightened(0.18), maxf(1.0, tile * 0.015))
-	for i in 17:
-		var foot := _point(-0.3 + i * (16.6 / 16.0), t)
-		var post := Rect2(foot + Vector2(-tile * 0.055, -0.42 * UP * tile - tile * 0.03), Vector2(tile * 0.11, 0.42 * UP * tile + tile * 0.06))
+	var posts := roundi(wide) + 1
+	for i in posts:
+		var foot := _point(-0.3 + i * ((wide + 0.6) / (posts - 1)), t)
+		var post := Rect2(foot + Vector2(-tile * 0.055, -0.42 * up_k * tile - tile * 0.03), Vector2(tile * 0.11, 0.42 * up_k * tile + tile * 0.06))
 		draw_rect(post.grow(line), edge)
 		draw_rect(post, wood)
 		draw_rect(Rect2(post.position, Vector2(post.size.x, tile * 0.035)), wood.lightened(0.2))
@@ -489,7 +536,7 @@ func _draw_fence(actor: Dictionary, tile: float) -> void:
 
 func _draw_flag(actor: Dictionary, tile: float) -> void:
 	var foot := _point(float(actor.at[0]), float(actor.at[1]))
-	var tall := float(actor.get("height", 2.0)) * UP * tile
+	var tall := float(actor.get("height", 2.0)) * up_k * tile
 	var top := foot - Vector2(0, tall)
 	var line := maxf(1.5, tile * 0.03)
 	_shadow(foot, tile * 0.12)
@@ -577,7 +624,7 @@ func _draw_ranger(actor: Dictionary, tile: float) -> void:
 		var p := since / 0.45
 		lift = 4.0 * p * (1.0 - p) * tile * 0.12
 	var base := feet - Vector2(0, lift)
-	var u := tile * 0.95 * UP
+	var u := tile * 0.95 * up_k
 	var line := maxf(1.5, tile * 0.035)
 	var skin := Color(String(colors.get("skin", "#e8b48a")))
 	var shirt := Color(String(colors.get("shirt", "#c8a86a")))
@@ -632,7 +679,7 @@ func _draw_aurora(actor: Dictionary, tile: float) -> void:
 	var glow := 0.55 + 0.45 * _flare
 	# A dusky sky glow first, so the lights show even over snow.
 	var dusk := Color(String(actor.get("dusk", "#1c2a6e")))
-	var sky := PackedVector2Array([_point(-3.0, far - 0.6), _point(19.0, far - 0.6), _point(19.0, near), _point(-3.0, near)])
+	var sky := PackedVector2Array([_point(-3.0, far - 0.6), _point(wide + 3.0, far - 0.6), _point(wide + 3.0, near), _point(-3.0, near)])
 	draw_polygon(sky, PackedColorArray([Color(dusk, float(actor.get("dusk_alpha", 0.55))), Color(dusk, float(actor.get("dusk_alpha", 0.55))), Color(dusk, 0.0), Color(dusk, 0.0)]))
 	for c in colors.size():
 		var color := Color(String(colors[c]))
@@ -641,7 +688,7 @@ func _draw_aurora(actor: Dictionary, tile: float) -> void:
 		var steps := 24
 		var bottoms := PackedVector2Array()
 		for i in steps + 1:
-			var x := lerpf(-3.0, 19.0, float(i) / steps)
+			var x := lerpf(-3.0, wide + 3.0, float(i) / steps)
 			var sway := sin(x * 0.5 + _clock * (0.35 + c * 0.12) + c * 2.1) * 0.35 + sin(x * 1.3 - _clock * 0.6 + c) * 0.12
 			var top_t := far + sway + c * 0.25
 			var bottom_t := near - 0.2 - c * 0.15 + sway * 0.4
@@ -683,7 +730,7 @@ func _roll(actor: Dictionary, delta: float) -> void:
 		actor.wait = float(actor.wait) - delta
 		return
 	actor.x = float(actor.x) + float(actor.get("tiles_per_second", 1.6)) * delta * float(actor.dir)
-	if float(actor.x) > 19.0 or float(actor.x) < -3.0:
+	if float(actor.x) > wide + 3.0 or float(actor.x) < -3.0:
 		actor.dir = -float(actor.dir)
 		actor.wait = _rng.randf_range(3.0, 8.0)
 
@@ -716,7 +763,7 @@ func _draw_birds(actor: Dictionary, tile: float) -> void:
 	var color := Color(String(actor.get("color", "#8a8f9e")))
 	var size := tile * float(actor.get("size", 0.16))
 	var mode := String(actor.get("mode", "ground"))
-	var at: Array = actor.get("at", [8.0, -1.2])
+	var at: Array = actor.get("at", [wide / 2.0, -1.2])
 	var spread: Array = actor.get("spread", [1.2, 0.3])
 	match mode:
 		"ground":
@@ -746,7 +793,7 @@ func _draw_birds(actor: Dictionary, tile: float) -> void:
 			var p := fmod(_clock + float(actor.flock[0].phase), period) / period
 			if p > 0.6:
 				return
-			var x := lerpf(-3.0, 19.0, p / 0.6)
+			var x := lerpf(-3.0, wide + 3.0, p / 0.6)
 			for b in actor.flock:
 				var spot := _point(x + float(b.x) * 1.2, float(at[1]) + float(b.t) * 0.4)
 				_bird(spot, size, color, 1.0, sin(_clock * 12.0 + float(b.phase)), true)
@@ -906,7 +953,7 @@ func _draw_fireflies(actor: Dictionary, tile: float) -> void:
 
 
 func _draw_jumper(actor: Dictionary, tile: float) -> void:
-	var spots: Array = actor.get("spots", [[8.0, -1.4]])
+	var spots: Array = actor.get("spots", [[wide / 2.0, -1.4]])
 	var since := _clock - float(actor.jump_at)
 	var spot: Array = spots[clampi(int(actor.spot), 0, spots.size() - 1)]
 	var at := _point(float(spot[0]), float(spot[1]))
@@ -981,7 +1028,7 @@ func _draw_butterflies(actor: Dictionary, tile: float) -> void:
 
 func _draw_swinger(actor: Dictionary, tile: float) -> void:
 	var strip := _strip(String(actor.animal))
-	var pivot := _point(float(actor.at[0]), float(actor.at[1])) - Vector2(0, tile * float(actor.get("height", 2.0)) * UP)
+	var pivot := _point(float(actor.at[0]), float(actor.at[1])) - Vector2(0, tile * float(actor.get("height", 2.0)) * up_k)
 	var length := tile * float(actor.get("length", 1.0))
 	var swing := sin(_clock * 1.8) * 0.6 * (1.0 + _flare * 0.5)
 	var hand := pivot + Vector2(0, length).rotated(swing)
@@ -1000,15 +1047,15 @@ func _draw_swinger(actor: Dictionary, tile: float) -> void:
 
 
 func _draw_pennants(actor: Dictionary, tile: float) -> void:
-	var a := _point(float(actor.from[0]), float(actor.from[1])) - Vector2(0, tile * float(actor.get("height", 1.4)) * UP)
-	var b := _point(float(actor.to[0]), float(actor.to[1])) - Vector2(0, tile * float(actor.get("height", 1.4)) * UP)
+	var a := _point(float(actor.from[0]), float(actor.from[1])) - Vector2(0, tile * float(actor.get("height", 1.4)) * up_k)
+	var b := _point(float(actor.to[0]), float(actor.to[1])) - Vector2(0, tile * float(actor.get("height", 1.4)) * up_k)
 	var colors: Array = actor.get("colors", ["#3f8fff", "#ffffff", "#ff4f4f", "#3fcf74", "#ffd23f"])
 	var count := int(actor.get("count", 12))
 	var sag := tile * 0.35
 	var fast := _clock < _flutter_until
 	var line := maxf(1.0, tile * 0.02)
 	for post: Vector2 in [a, b]:
-		var ground: Vector2 = post + Vector2(0, tile * float(actor.get("height", 1.4)) * UP)
+		var ground: Vector2 = post + Vector2(0, tile * float(actor.get("height", 1.4)) * up_k)
 		draw_line(ground, post, UIKit.INK, tile * 0.06 + line * 2.0)
 		draw_line(ground, post, Color("#8a5a33"), tile * 0.06)
 	var previous := a
@@ -1028,8 +1075,8 @@ func _draw_pennants(actor: Dictionary, tile: float) -> void:
 
 
 func _draw_lights(actor: Dictionary, tile: float) -> void:
-	var a := _point(float(actor.from[0]), float(actor.from[1])) - Vector2(0, tile * float(actor.get("height", 1.2)) * UP)
-	var b := _point(float(actor.to[0]), float(actor.to[1])) - Vector2(0, tile * float(actor.get("height", 1.2)) * UP)
+	var a := _point(float(actor.from[0]), float(actor.from[1])) - Vector2(0, tile * float(actor.get("height", 1.2)) * up_k)
+	var b := _point(float(actor.to[0]), float(actor.to[1])) - Vector2(0, tile * float(actor.get("height", 1.2)) * up_k)
 	var colors: Array = actor.get("colors", ["#ffd23f", "#ff5a8a", "#5ad1ff", "#7dff8a"])
 	var count := int(actor.get("count", 14))
 	var soft := BattleField._soft_texture()
@@ -1054,7 +1101,7 @@ func _draw_water(actor: Dictionary, tile: float) -> void:
 	var far := float(actor.get("to", -4.0))
 	var deep := Color(String(actor.get("color", "#2f9be8")))
 	var a := _point(-3.0, far)
-	var b := _point(19.0, near)
+	var b := _point(wide + 3.0, near)
 	draw_rect(Rect2(a, b - a), deep)
 	# Foam lines rolling in toward the shore.
 	for i in 4:
@@ -1062,12 +1109,12 @@ func _draw_water(actor: Dictionary, tile: float) -> void:
 		var t := lerpf(far, near, p)
 		var points := PackedVector2Array()
 		for j in 25:
-			var x := lerpf(-3.0, 19.0, j / 24.0)
+			var x := lerpf(-3.0, wide + 3.0, j / 24.0)
 			points.append(_point(x, t) + Vector2(0, sin(x * 1.3 + _clock + i) * tile * 0.05))
 		draw_polyline(points, Color(1, 1, 1, 0.6 * sin(p * PI)), maxf(1.5, tile * 0.04), true)
 	var shore := PackedVector2Array()
 	for j in 25:
-		var x := lerpf(-3.0, 19.0, j / 24.0)
+		var x := lerpf(-3.0, wide + 3.0, j / 24.0)
 		shore.append(_point(x, near) + Vector2(0, sin(x * 0.9 + _clock * 1.2) * tile * 0.06))
 	draw_polyline(shore, Color(1, 1, 1, 0.85), maxf(2.0, tile * 0.07), true)
 
@@ -1100,7 +1147,7 @@ func _draw_dust(actor: Dictionary, tile: float) -> void:
 
 
 func _draw_blinker(actor: Dictionary, tile: float) -> void:
-	var at := _point(float(actor.at[0]), float(actor.at[1])) - Vector2(0, tile * float(actor.get("height", 1.0)) * UP)
+	var at := _point(float(actor.at[0]), float(actor.at[1])) - Vector2(0, tile * float(actor.get("height", 1.0)) * up_k)
 	var r := tile * 0.11
 	draw_set_transform(at, 0.0, Vector2(1.0, 0.75))
 	draw_circle(Vector2.ZERO, r * 2.6, Color("#1c140e"))

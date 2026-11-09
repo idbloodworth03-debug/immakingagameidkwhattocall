@@ -207,9 +207,10 @@ func _scale() -> float:
 	return _base_scale() * _zoom
 
 
-## The scale that shows the whole field.
+## The scale that shows the whole field (at its smallest size).
 func _base_scale() -> float:
-	return minf(size.x / ((BattleSim.WIDTH + 2.0 * MARGIN) * _view_k), size.y / ((BattleSim.HEIGHT + 2.0 * MARGIN) * _view_k))
+	var base := _base_size()
+	return minf(size.x / ((base.x + 2.0 * MARGIN) * _view_k), size.y / ((base.y + 2.0 * MARGIN) * _view_k))
 
 
 func field_scale() -> float:
@@ -245,9 +246,20 @@ func _field_size() -> Vector2:
 	return Vector2(sim.width, sim.height) if sim != null else Vector2(BattleSim.WIDTH, BattleSim.HEIGHT)
 
 
+## The field's smallest size this fight, in field units (it grows from
+## that for big herds; the arena's picture and its life are made for it).
+func _base_size() -> Vector2:
+	return Vector2(sim.base_width, sim.base_height) if sim != null else Vector2(BattleSim.WIDTH, BattleSim.HEIGHT)
+
+
+## The field's smallest size this fight, in tiles.
+func base_tiles() -> Vector2:
+	return _base_size() / float(BattleSim.TILE)
+
+
 ## How much bigger than its smallest size the field is this fight.
 func _field_k() -> float:
-	return _field_size().x / BattleSim.WIDTH
+	return _field_size().x / _base_size().x
 
 
 ## The field sits in the middle, with the arena's scenery around it (or,
@@ -344,7 +356,9 @@ func _frame_armies(delta: float, snap := false) -> void:
 	var least := (camera_min_tiles if camera_min_tiles > 0.0 else Feel.num(a, "camera_min_tiles", 10.0)) * 1000.0
 	var w := maxf(box.size.x, least)
 	var h := maxf(box.size.y, least * size.y / maxf(1.0, size.x))
-	var most := minf(camera_max_zoom if camera_max_zoom > 0.0 else Feel.num(a, "camera_max_zoom", 1.7), _size_zoom_cap(base))
+	# camera_max_zoom counts from the whole field at its smallest (a field
+	# grown for big herds doesn't keep the camera further out).
+	var most := minf((camera_max_zoom if camera_max_zoom > 0.0 else Feel.num(a, "camera_max_zoom", 1.7)) * _view_k, _size_zoom_cap(base))
 	var zoom := clampf(minf(size.x / (w * base), size.y / (h * base)), 1.0, maxf(1.0, most))
 	var look := box.get_center()
 	# Keep the view on the arena.
@@ -366,10 +380,11 @@ func _frame_armies(delta: float, snap := false) -> void:
 ## The zoom past which an animal on the field would stand bigger than
 ## bodies.json "limits" allows (a share of the screen's height: unit_max_pct
 ## for any animal, hero_max_pct for a Mythic hero), from its standing height
-## at its drawn size (ModelStage.natural_box "up": its box at rest; the
-## margin is for the touch of squash and stretch on top). Its tallest poses
-## (an attack, a celebration: bodies.json pose_up) rise above that by at
-## most pose_allowance. INF with nothing on the field.
+## at its drawn size (ModelStage.natural_box "up": its outline as it stands;
+## the margin is for the touch of squash and stretch on top). Its tallest
+## poses (an attack, a celebration: bodies.json pose_up) rise above that by
+## at most pose_allowance (an animal whose tallest pose would rise more
+## counts as that much taller). INF with nothing on the field.
 func _size_zoom_cap(base: float) -> float:
 	if sim == null:
 		return INF
@@ -378,14 +393,16 @@ func _size_zoom_cap(base: float) -> float:
 	var unit_max := float(limits.get("unit_max_pct", 9.0)) / 100.0 * short
 	var hero_max := float(limits.get("hero_max_pct", 10.0)) / 100.0 * short
 	var screen := screen_height()
+	var allowance := maxf(1.0, float(limits.get("pose_allowance", 1.0)))
 	var cap := INF
 	for f: BattleSim.Fighter in sim.fighters:
 		if not f.alive or not f.is_unit() or (frame_team >= 0 and f.team != frame_team):
 			continue
-		# Its standing height (its box at rest on the screen): an attack or a
-		# celebration may rise above the limit for a moment, by at most
-		# bodies.json limits pose_allowance.
-		var up := float(ModelStage.natural_box(f.card.id).up) * UnitView.draw_k(f)
+		# Its standing height (its outline as it stands, on the screen): an
+		# attack or a celebration may rise above the limit for a moment, by
+		# at most bodies.json limits pose_allowance.
+		var box := ModelStage.natural_box(f.card.id)
+		var up := maxf(float(box.up), float(box.tallest) / allowance) * UnitView.draw_k(f)
 		if up <= 0.0:
 			continue
 		var limit := hero_max if f.memory.get("hero", false) else unit_max
@@ -480,10 +497,11 @@ func unit_height_share(v: UnitView) -> float:
 ## margin): at least 1. A style that grows a body (a Condor's feasts) grows
 ## it only into this room, rather than the camera pulling back for it.
 func size_room(f: BattleSim.Fighter) -> float:
-	var up := float(ModelStage.natural_box(f.card.id).up) * UnitView.draw_k(f)
+	var limits: Dictionary = GameData.bodies.get("limits", {})
+	var box := ModelStage.natural_box(f.card.id)
+	var up := maxf(float(box.up), float(box.tallest) / maxf(1.0, float(limits.get("pose_allowance", 1.0)))) * UnitView.draw_k(f)
 	if up <= 0.0:
 		return INF
-	var limits: Dictionary = GameData.bodies.get("limits", {})
 	var short := 1.0 - float(limits.get("camera_margin_pct", 4.0)) / 100.0
 	var limit := float(limits.get("hero_max_pct", 10.0) if f.memory.get("hero", false) else limits.get("unit_max_pct", 9.0)) / 100.0 * short
 	var drawn := up * _scale() * 1000.0 * _world.scale.y / maxf(1.0, screen_height())
@@ -599,6 +617,24 @@ func crowd_near(at: Vector2) -> int:
 		for dy in range(-1, 2):
 			n += int(_busy_grid.get(c + Vector2i(dx, dy), 0))
 	return n
+
+
+## How big a number off `v`'s hit may be on the screen: no bigger than the
+## animal itself (its height and width there). ZERO: no limit.
+func number_room(v: UnitView) -> Vector2:
+	if v == null or v.fighter == null:
+		return Vector2.ZERO
+	var tall := UnitSprites.top(v.id) * v.body.k
+	var wide := float(v.fighter.radius) * _scale() * 2.0
+	return Vector2(wide, tall) if tall > 0.0 else Vector2.ZERO
+
+
+## True if `amount` (a hit or a heal) is a strong share of `v`'s health
+## (feel.json "combat" strong_hit_pct): only those get a number of their own.
+func _strong_on(v: UnitView, amount: int) -> bool:
+	if v == null or v.fighter == null or v.fighter.max_hp <= 0:
+		return true
+	return amount >= v.fighter.max_hp * Feel.num("combat", "strong_hit_pct", 22) / 100.0
 
 
 ## Whether a hit at `at` (field units) keeps quiet: where at least
@@ -1280,7 +1316,8 @@ func _show_style(e: Dictionary) -> void:
 			fx.effect("flash", to, 260 * s, Color(1, 1, 1, 0.7), 0.18)
 			if source != null:
 				source.hurt(dir, false)
-				fx.number(to + Vector2(0, -10), int(e.amount), "hurt_own" if source.team == 0 else "hurt_enemy", false, source.key)
+				fx.number(to + Vector2(0, -10), int(e.amount), "hurt_own" if source.team == 0 else "hurt_enemy", false, source.key,
+					not _strong_on(source, int(e.amount)), number_room(v))
 		"shell":
 			if e.on:
 				fx.burst("puff", at, 6, 140.0, 0.4, 8.0, [Color(String(looks.get("shell_light", "#7fb04a"))), Color("#d8e8c8")], -20.0, 2.5)
@@ -1294,7 +1331,7 @@ func _show_style(e: Dictionary) -> void:
 				Sound.play("heal", -6.0)
 		"heal":
 			if v != null and int(e.amount) > 0:
-				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key)
+				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key, not _strong_on(v, int(e.amount)), number_room(v))
 				fx.burst_heal(at)
 		"rhino_charge":
 			var dust := Color(String(looks.get("charge_dust", "#c9b08a")))
@@ -1552,7 +1589,7 @@ func _show_style(e: Dictionary) -> void:
 		"beam_heal":
 			# The rainbow heals a teammate it passes through.
 			if v != null and int(e.amount) > 0:
-				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key)
+				fx.number(at + Vector2(0, -16), int(e.amount), "heal", false, v.key, not _strong_on(v, int(e.amount)), number_room(v))
 				fx.burst("sparkle", at, 6, 140.0, 0.6, 7.0, [Color(String(looks.get("heal_sparkle", "#9dffb0"))), Color.WHITE, Color("#fff176")], -50.0, 2.5)
 				_blast("light", at, 360 * s, false, Vector2.UP, false)
 		"scared":
@@ -1737,7 +1774,10 @@ func _land(hit: Dictionary) -> void:
 			_impact(style, at, dir, s, big)
 		fx.burst_hit(at, strong, Vector2(dir.x, dir.y * 0.6))
 	var kind := "hurt_enemy" if target == null or target.team == 1 else "hurt_own"
-	fx.number(at + Vector2(0, -10), amount, kind, strong, target.key if target != null else null, quiet)
+	# Only a strong hit gets a number of its own (smaller ones just add to a
+	# number already showing on that animal), never bigger than the animal
+	# that struck it.
+	fx.number(at + Vector2(0, -10), amount, kind, strong, target.key if target != null else null, quiet or not strong, number_room(attacker))
 	Sound.play("hit", -7.0, 0.2)
 	if big:
 		hit_stop(Feel.num(c, "hitstop_seconds", 0.055))
@@ -2072,10 +2112,10 @@ func _draw_banners(canvas: CanvasItem) -> void:
 		if int(sq.group) == picked_group:
 			# The picked squad's flag: a glowing ring round it.
 			canvas.draw_arc(tip + Vector2(w * 0.5, h * 0.5), maxf(w, h) * 0.95, 0.0, TAU, 24, Color(team_color(int(sq.team)).lightened(0.4), 0.85), 3.0, true)
-		var icon := UIKit.icon(GameData.ui_icon(String(GameData.class_info(String(sq.cls)).get("icon", ""))))
-		if icon != null:
-			var side := h * 0.8
-			canvas.draw_texture_rect(icon, Rect2(tip + Vector2(w * 0.42 - side / 2.0, h / 2.0 - side / 2.0 + wave * 0.4), Vector2(side, side)), false, Color(1, 1, 1, alpha))
+		# Its class, clear at a glance: the class's badge (its color and icon,
+		# as on the cards) filling the flag (feel.json "army" banner_badge_share).
+		var badge := minf(w, h) * 0.5 * Feel.num(a, "banner_badge_share", 0.9)
+		UIStyle.draw_class_badge(canvas, tip + Vector2(w * 0.45, h / 2.0 + wave * 0.4), badge, String(sq.cls), alpha)
 
 
 ## Over the ground, under the animals: the highlight, bait and ground effects.

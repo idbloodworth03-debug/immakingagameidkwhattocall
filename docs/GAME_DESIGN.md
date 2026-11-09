@@ -140,7 +140,14 @@ its lane.
 battle has a bold band in its team's color round its dark outline, blue
 for yours and red for the enemy's, so sides read even packed close
 together (3D models: a second, wider outline drawn behind the dark one;
-sprites: a band round the picture). Every shot trails a short streak in
+sprites: a band round the picture). Under its feet there's only a thin
+oval in the team's color, smaller than the animal (`characters`
+team_ring_size). Health bars are as wide as their animal (within limits),
+show once it's hurt and fade when it hasn't been hit for a while. Damage
+numbers are small and only for strong hits (a fifth or more of the target's
+health; smaller hits add to a number already showing), never bigger than
+the animal that struck. Each squad's flag carries its class badge (the
+class's color and icon, as on the cards). Every shot trails a short streak in
 the shooter's team color with a ring of it round the shot, and its landing
 sparks take the color too, so you can see who's shooting at whom.
 
@@ -540,20 +547,19 @@ with a big **NEW ANIMAL FREED!** for first finds, and a summary at the end.
 
 ## The fight
 
-**The field:** 16 tiles wide and 20 long, with a halfway line and a fence
-around it. You play from the bottom. Each class lines up across the field:
+**The field:** 12 tiles wide and 16 long at its smallest (`field` in
+`draft_rules.json`), with a halfway line and a fence around it; the
+armies' front lines start 3 tiles from the middle, 6 apart. You play from the bottom. Each class lines up across the field:
 front row 2.2 tiles back from the middle line, middle row 4.4, Air 5.5 and the
 back row 6.6 (`rows` in `classes.json`). A row with too many animals for one
 line gets more lines behind it, every other line shifted half a place so
 nobody hides behind another, and the rows behind it move back to make room.
 
-**Big herds** (`field` in `draft_rules.json`): the field grows as the herds
-do, keeping its shape. It starts at 12 animals on the bigger side and is
-1.5 times as big at 36. It also grows if the rows wouldn't fit otherwise.
-The rows spread wider and deeper with it, and the camera zooms out smoothly
-to show it all (the arena picture grows with the field, and mirrored copies of
-its edges fill a tall screen). 1.5 is the limit, so animals are never drawn
-smaller than two thirds of their size. Big fights also keep their effects in
+**Big herds** (`field` in `draft_rules.json`): the field grows, keeping its
+shape, when an army's lines wouldn't fit otherwise (up to twice its
+smallest size). The rows spread wider and deeper with it, and the camera
+keeps framing the animals (the arena picture grows with the field, and
+mirrored copies of its edges fill a tall screen). Big fights also keep their effects in
 check (`crowd` in `feel.json`). From 24 animals on the field:
 - only so many hit sparks and damage numbers show at once, and the biggest
   hits take the place of the smallest;

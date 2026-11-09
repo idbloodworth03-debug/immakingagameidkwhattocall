@@ -7,10 +7,11 @@ extends Node2D
 ## sits among them where the sprites were.
 ##
 ## One transparent 3D viewport the size of the field holds every model. Its
-## orthographic camera looks down at the same 50 degrees the sprites were
-## rendered from, and follows the field's own 2D camera each frame, so a
-## model stands exactly where its sprite would (one field tile is one unit
-## across, and 1 / sin 50 units deep, as the arena pictures stretch it).
+## orthographic camera is tilted as feel.json "camera" tilt_degrees says (the
+## angle the arena pictures and sprites are rendered from), and follows the
+## field's own 2D camera each frame, so a model stands exactly where its
+## sprite would (one field tile is one unit across, and 1 / sin(look down)
+## units deep, as the arena pictures stretch it).
 ## Each UnitView still runs all the choreography (which animation, how far
 ## through it, squash, lean, hops, flashes, knockouts) and says what to show
 ## (UnitView.m_*); this only poses the model to match.
@@ -265,8 +266,9 @@ static var _boxes := {}
 
 ## A battle model's box at its natural size (tile_scale), in field tiles:
 ## {"longest": its longest side, "up": how tall it stands along the
-## camera's up when facing up or down the field (its height and its
-## length, foreshortened)}. Measured once from the mesh.
+## camera's up (its real outline in its idle pose, facing whichever way
+## makes it tallest: its height and its length, foreshortened), "tallest":
+## the most it rises in a fight's poses}. Measured once from the mesh.
 static func natural_box(id: String) -> Dictionary:
 	if _boxes.has(id):
 		return _boxes[id]
@@ -287,18 +289,96 @@ static func natural_box(id: String) -> Dictionary:
 			var b: AABB = xf * mi.get_aabb()
 			box = b if first else box.merge(b)
 			first = false
-		root.free()
 		var ts := tile_scale(id)
 		if not first:
 			info.longest = maxf(box.size.x, maxf(box.size.y, box.size.z)) * ts
 			angle()
-			info.up = (box.size.y * COS + box.size.z * SIN) * ts
+			# Its real outline as it stands (its bounding box at rest would
+			# add a fifth or so; that's the fallback without a skeleton).
+			var stand := _idle_up(root)
+			info.up = (stand if stand > 0.0 else box.size.y * COS + box.size.z * SIN) * ts
 			# The tallest it stands on the screen in a fight, its real outline
 			# in its tallest pose (bodies.json pose_up, measured from its
 			# animations: tests/test_sizes.gd keeps it true).
 			info.tallest = float(info.up) * float(GameData.bodies.get("animals", {}).get(id, {}).get("pose_up", 1.0))
+		root.free()
 	_boxes[id] = info
 	return info
+
+
+## How tall a model (a fresh copy, not in the scene tree) stands along the
+## camera's up in its idle pose (the first moment of its "idle"), in model
+## units: a sample of its mesh's points, skinned to that pose, facing up,
+## down or across the field, whichever is tallest. 0 without a skeleton.
+static func _idle_up(root: Node3D) -> float:
+	var skeletons := root.find_children("*", "Skeleton3D", true, false)
+	if skeletons.is_empty():
+		return 0.0
+	var skeleton: Skeleton3D = skeletons[0]
+	var players := root.find_children("*", "AnimationPlayer", true, false)
+	if not players.is_empty() and (players[0] as AnimationPlayer).has_animation("idle"):
+		var idle := (players[0] as AnimationPlayer).get_animation("idle")
+		for i in idle.get_track_count():
+			var bone := skeleton.find_bone(idle.track_get_path(i).get_concatenated_subnames())
+			if bone < 0:
+				continue
+			match idle.track_get_type(i):
+				Animation.TYPE_POSITION_3D:
+					skeleton.set_bone_pose_position(bone, idle.position_track_interpolate(i, 0.0))
+				Animation.TYPE_ROTATION_3D:
+					skeleton.set_bone_pose_rotation(bone, idle.rotation_track_interpolate(i, 0.0))
+				Animation.TYPE_SCALE_3D:
+					skeleton.set_bone_pose_scale(bone, idle.scale_track_interpolate(i, 0.0))
+	var to_root := skeleton.transform
+	var parent := skeleton.get_parent()
+	while parent != null and parent != root:
+		if parent is Node3D:
+			to_root = (parent as Node3D).transform * to_root
+		parent = parent.get_parent()
+	var points := PackedVector3Array()
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh == null or mi.skin == null:
+			continue
+		var mats: Array[Transform3D] = []
+		for b in mi.skin.get_bind_count():
+			var bone := mi.skin.get_bind_bone(b)
+			if bone < 0:
+				bone = skeleton.find_bone(mi.skin.get_bind_name(b))
+			mats.append(to_root * (skeleton.get_bone_global_pose(bone) if bone >= 0 else Transform3D.IDENTITY) * mi.skin.get_bind_pose(b))
+		for surface in mi.mesh.get_surface_count():
+			var arrays := mi.mesh.surface_get_arrays(surface)
+			var verts: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+			var bones: Variant = arrays[Mesh.ARRAY_BONES]
+			var weights: Variant = arrays[Mesh.ARRAY_WEIGHTS]
+			if bones == null or weights == null or (bones as Array).is_empty():
+				continue
+			var per := 8 if (bones as Array).size() == verts.size() * 8 else 4
+			for i in range(0, verts.size(), maxi(1, verts.size() / OUTLINE_POINTS)):
+				var at := Vector3.ZERO
+				var total := 0.0
+				for k in per:
+					var w: float = weights[i * per + k]
+					if w > 0.001:
+						at += (mats[int(bones[i * per + k])] * verts[i]) * w
+						total += w
+				if total > 0.0:
+					points.append(at / total)
+	if points.is_empty():
+		return 0.0
+	var tallest := 0.0
+	for turn in 4:
+		# The camera's up as the model sees it, turned a quarter at a time.
+		var a := turn * PI / 2.0
+		var dir := Vector3(SIN * sin(a), COS, -SIN * cos(a))
+		var lo := INF
+		var hi := -INF
+		for p in points:
+			var d := p.dot(dir)
+			lo = minf(lo, d)
+			hi = maxf(hi, d)
+		tallest = maxf(tallest, hi - lo)
+	return tallest
 
 
 ## True if this model has the movie look: its mesh is named <id>_movie
@@ -393,7 +473,7 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 	return m
 
 
-## Points an orthographic camera down at the sprites' 50 degrees so that
+## Points an orthographic camera down at the camera's tilt (angle()) so that
 ## field point `middle` (field units) is the view's middle, at `ppu` screen
 ## pixels a tile, `view_height` pixels tall.
 static func aim(cam: Camera3D, middle: Vector2, ppu: float, view_height: float) -> void:

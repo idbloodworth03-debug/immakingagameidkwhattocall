@@ -8,8 +8,9 @@ extends RefCounted
 ## rely on this, because both phones run the fight and only the players'
 ## actions travel over the network.
 ##
-## Positions are in thousandths of a tile. The field is at least 16 tiles wide
-## and 20 long, and grows (keeping its shape) for big herds: set_size(). Team 0
+## Positions are in thousandths of a tile. The field is 16 tiles wide and 20
+## long unless set_size() makes it another size (Draft Duel's is smaller, from
+## draft_rules.json "field", and grows keeping its shape for big herds). Team 0
 ## starts on the near half (the bottom), team 1 on the far half.
 ## Animals go for the nearest enemy they can reach, or, in Draft Duel's
 ## armies, fight in formation (battle_army.gd). Nothing here draws
@@ -17,7 +18,7 @@ extends RefCounted
 ## the rounds around it.
 
 const TILE := 1000
-## The field's smallest size (it grows for big herds: width, height).
+## The field's size unless set_size() gives it another (width, height).
 const WIDTH := 16 * TILE
 const HEIGHT := 20 * TILE
 const MIDDLE := HEIGHT / 2
@@ -171,6 +172,9 @@ var turn_sin := 588
 var width := WIDTH
 var height := HEIGHT
 var middle := MIDDLE
+## Its smallest size (set_size): it grows from this, keeping its shape.
+var base_width := WIDTH
+var base_height := HEIGHT
 ## The armies' formations and battle phases (Draft Duel), or null: then
 ## every animal simply goes for the nearest enemy.
 var army: BattleArmy
@@ -223,10 +227,14 @@ func units(team: int) -> Array:
 
 
 ## Makes the field `scale` times its smallest size (the same shape), for big
-## herds. Only between fights: it doesn't move anyone.
-func set_size(scale: float) -> void:
-	width = roundi(WIDTH * maxf(1.0, scale) / 2.0) * 2
-	height = roundi(HEIGHT * maxf(1.0, scale) / 2.0) * 2
+## herds; `smallest` (field units, if given) sets that smallest size. Only
+## between fights: it doesn't move anyone.
+func set_size(scale: float, smallest := Vector2i.ZERO) -> void:
+	if smallest.x > 0 and smallest.y > 0:
+		base_width = smallest.x
+		base_height = smallest.y
+	width = roundi(base_width * maxf(1.0, scale) / 2.0) * 2
+	height = roundi(base_height * maxf(1.0, scale) / 2.0) * 2
 	middle = height / 2
 
 
@@ -1088,6 +1096,8 @@ func clone() -> BattleSim:
 	copy.width = width
 	copy.height = height
 	copy.middle = middle
+	copy.base_width = base_width
+	copy.base_height = base_height
 	copy.rng.seed = rng.seed
 	copy.rng.state = rng.state
 	copy.zones = zones.duplicate(true)

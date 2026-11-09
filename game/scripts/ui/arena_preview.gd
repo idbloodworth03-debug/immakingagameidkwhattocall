@@ -6,12 +6,14 @@ extends Control
 ## in a fight and, if `animate` is on, breathe and bob. Draws nothing if the
 ## arena has no rendered picture.
 
-## The part of the field shown, in tiles. Centered a little below the middle
-## line, so the animals stand clear of the arena's name along the bottom.
-const VIEW := Rect2(-1.0, 4.0, 18.0, 14.0)
-## Where the animals stand, in tiles: the far pair (red), then the near
-## pair (blue).
-const SPOTS := [Vector2(4.6, 8.2), Vector2(11.4, 7.8), Vector2(5.4, 11.4), Vector2(10.6, 11.8)]
+## The part of the field shown, in tiles round its middle (the field at its
+## smallest, draft_rules.json "field"): VIEW_SIZE across and down, centered
+## a little below the middle line, so the animals stand clear of the arena's
+## name along the bottom.
+const VIEW_SIZE := Vector2(18.0, 14.0)
+## Where the animals stand, in tiles from the view's middle: the far pair
+## (red), then the near pair (blue).
+const SPOTS := [Vector2(-3.4, -2.8), Vector2(3.4, -3.2), Vector2(-2.6, 0.4), Vector2(2.6, 0.8)]
 ## Smaller than in a fight, so four fit in a small window.
 const SPRITE_SCALE := 1.15
 ## Which way each one faces (degrees clockwise from up): toward the middle.
@@ -123,7 +125,7 @@ func _make_models() -> void:
 		if m == null:
 			continue
 		m.body.scale = Vector3.ONE * ModelStage.tile_scale(id) * SPRITE_SCALE
-		var spot: Vector2 = SPOTS[i]
+		var spot: Vector2 = _spot(i)
 		m.pivot.position = ModelStage.ground(spot * BattleSim.TILE)
 		ModelStage.face_toward(m, FACING[i])
 		_viewport.add_child(m.pivot)
@@ -149,7 +151,7 @@ func _place_models() -> void:
 	if _viewport == null or size.x <= 0.0:
 		return
 	_viewport.size = Vector2i((size * _render_scale()).round())
-	ModelStage.aim(_camera, VIEW.get_center() * BattleSim.TILE, _px(), size.y)
+	ModelStage.aim(_camera, _view().get_center() * BattleSim.TILE, _px(), size.y)
 	if not animate:
 		_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
 	queue_redraw()
@@ -157,11 +159,22 @@ func _place_models() -> void:
 
 ## How big a tile is on screen, and where the view's center sits.
 func _px() -> float:
-	return maxf(size.x / VIEW.size.x, size.y / VIEW.size.y)
+	return maxf(size.x / VIEW_SIZE.x, size.y / VIEW_SIZE.y)
+
+
+## The part of the field shown, in tiles.
+static func _view() -> Rect2:
+	var field := Vector2(BattleArmy.base_size(GameData.draft_rules.get("field", {}))) / BattleSim.TILE
+	return Rect2(field / 2.0 + Vector2(0.0, 1.0) - VIEW_SIZE / 2.0, VIEW_SIZE)
+
+
+## Where animal `i` stands, in tiles on the field.
+static func _spot(i: int) -> Vector2:
+	return _view().get_center() + (SPOTS[i] as Vector2)
 
 
 func _tile_to_screen(tx: float, ty: float) -> Vector2:
-	return size / 2.0 + (Vector2(tx, ty) - VIEW.get_center()) * _px()
+	return size / 2.0 + (Vector2(tx, ty) - _view().get_center()) * _px()
 
 
 func _place_bodies() -> void:
@@ -169,7 +182,7 @@ func _place_bodies() -> void:
 	var px := _px()
 	for i in _bodies.size():
 		var body: UnitView.Body = _bodies[i]
-		var spot: Vector2 = SPOTS[i]
+		var spot: Vector2 = _spot(i)
 		body.position = _tile_to_screen(spot.x, spot.y)
 		body.set_meta("foot_y", body.position.y)
 		body.k = px / UnitSprites.pixels_per_tile(_cast[i]) * SPRITE_SCALE
@@ -188,15 +201,15 @@ func _draw() -> void:
 	draw_texture_rect(ground.texture, Rect2(top_left, bottom_right - top_left), false)
 	# Ground shadows and team rings under the animals.
 	for i in _cast.size():
-		var spot: Vector2 = SPOTS[i]
+		var spot: Vector2 = _spot(i)
 		var foot := _tile_to_screen(spot.x, spot.y)
 		var color := BattleField.enemy_color() if i < 2 else BattleField.own_color()
-		var ring := px * 0.45
-		draw_set_transform(foot, 0.0, Vector2(1.0, 0.42))
-		draw_circle(Vector2.ZERO, ring * 1.2, Color(0.05, 0.1, 0.05, 0.3))
-		draw_circle(Vector2.ZERO, ring, Color(color, 0.18))
-		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color.darkened(0.45), 5.0 / 0.42)
-		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color, 3.0 / 0.42)
+		# (As in a fight: a soft shadow and a thin oval in the team's color.)
+		var ring := px * 0.32
+		var flat := Feel.num("characters", "team_ring_flat", 0.45)
+		draw_set_transform(foot, 0.0, Vector2(1.0, flat))
+		draw_circle(Vector2.ZERO, px * 0.5, Color(0.05, 0.1, 0.05, 0.3))
+		draw_arc(Vector2.ZERO, ring, 0, TAU, 32, color, 2.5 / flat)
 		draw_set_transform(Vector2.ZERO)
 	if _viewport != null:
 		draw_texture_rect(_viewport.get_texture(), Rect2(Vector2.ZERO, size), false)

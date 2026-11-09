@@ -107,7 +107,9 @@ func _open_dev_shortcut() -> void:
 		# prints where those animals are drawn each frame, for frame scripts).
 		# &slow=1 plays it in slow motion (styles showcase_slow_speed; or
 		# &slow=0.1, that fraction of full speed), for frame-by-frame shots.
-		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1", "track": _query("track"), "slow": _slow_of(_query("slow"))}
+		# &herds=id*2,id|id,id*3 skips the picks: the first fight with those
+		# herds ("id*2": two squads of it) at once.
+		DraftScreen.dev_auto = {"seed": fight.to_int(), "mine": _query("mine"), "theirs": _query("theirs"), "sizes": _query("sizes") == "1", "track": _query("track"), "slow": _slow_of(_query("slow")), "herds": _query("herds")}
 		Transition.go.call_deferred("res://scenes/draft.tscn")
 		return
 	var show := _query("showcase")

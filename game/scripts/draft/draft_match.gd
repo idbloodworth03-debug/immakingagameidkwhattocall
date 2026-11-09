@@ -454,8 +454,9 @@ static func row_of(card_id: String) -> String:
 func _lay_out_herds() -> void:
 	sim.clear_units()
 	groups = [[], []]
-	field_scale = BattleArmy.field_scale_for(herds, rules.get("field", {}))
-	sim.set_size(field_scale)
+	var field: Dictionary = rules.get("field", {})
+	field_scale = BattleArmy.field_scale_for(herds, field)
+	sim.set_size(field_scale, BattleArmy.base_size(field))
 	sim.army = BattleArmy.new(sim.rules, sim.tps)
 	sim.army.set_up(sim)
 	for team in 2:

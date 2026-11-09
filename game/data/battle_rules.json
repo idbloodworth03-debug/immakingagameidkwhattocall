@@ -1,5 +1,5 @@
 {
-  "_note": "Fight tuning. The field is 16 tiles wide and 20 long (bigger for big herds: draft_rules.json \"field\"). Times are in seconds, distances in tiles, speeds in tiles per minute. Who each animal goes for: targeting, below.",
+  "_note": "Fight tuning. The field is draft_rules.json \"field\" width_tiles wide and height_tiles long (bigger for big herds). Times are in seconds, distances in tiles, speeds in tiles per minute. Who each animal goes for: targeting, below.",
   "targeting": {
     "_note": "Who an animal fights (scripts/battle/targeting.gd), the same in every fight. It goes for the closest enemy it can attack unless its ability or class says otherwise (styles.json, classes.json \"prefer\"), and commits to it. It only switches when its target falls or can't be attacked or reached any more; when an enemy hits it from within threat_tiles (edge to edge) while it's busy with something further off, after reaction_seconds (with a cartoon \"!\" over its head); or for one at least closer_pct % closer (or one its ability or class prefers) once it has kept its target for commit_seconds. After any switch it keeps its new target for commit_seconds unless that one falls. It looks around every recheck_seconds (animals take turns), not every tick. A threat that hasn't hit it for threat_forget_seconds is forgotten.",
     "recheck_seconds": 0.5,
@@ -64,7 +64,7 @@
   "damage_variance_pct": 25,
   "army": {
     "_note": "Armies in Draft Duel (scripts/battle/battle_army.gd). Each army's front line starts start_gap tiles from the middle and marches at march_pace (tiles per minute) with everyone in step; an animal out of its place catches up at catch_up_pct of the pace (or its own speed if faster). The front holds while its first rank has an enemy within engage tiles (nose to nose, bodies.json), and never comes closer than contact_gap tiles to the enemy's front line (the lines meet, they don't pass through each other). Ranged ranks stop to shoot while an enemy is in reach and fire together every volley_seconds (each shot carries the damage of the time between volleys), the first volley first_volley_seconds after one comes into reach. clash: the moment the front lines meet. charge_after_seconds after the clash, Tank Destroyers charge the enemy Tanks (charge_speed_pct of their speed, no leash) and go back to their line once none are left. When animals fall, the ranks close up every repack_seconds. From the clash on, it's all-out war (see war, below): nobody keeps its place. lane_pct: how much an enemy off to the side of an animal's place counts as further away (keeps lines fighting straight across). damage_pct: every army animal's bite, as a share of its card's (with its squad's share on top): sets how long fights take.",
-    "start_gap": 4.0,
+    "start_gap": 3.0,
     "march_pace": 45,
     "catch_up_pct": 170,
     "engage": 0.55,

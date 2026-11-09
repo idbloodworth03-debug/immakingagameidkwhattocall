@@ -444,13 +444,28 @@ static func plan(units: Array, lane_w: int = BattleSim.WIDTH / 3, side_first := 
 	return {"slots": slots, "lanes": lanes, "depth": depth, "width": maxi(0, right - left), "block": block, "front": first}
 
 
+## The room one of `card_id`'s animals takes in a line, as spawn_squad()
+## gives it on the field: {"radius": its footprint's, "spacing": its class's,
+## or its body's and battle_rules.json spacing formation_gap if that's more}.
+static func body_room(card_id: String) -> Dictionary:
+	var card := GameData.get_card(card_id)
+	var squad := squad_of(card_id)
+	var flying := bool(GameData.class_info(String(card.get("class", ""))).get("flying", false))
+	var across := flying or bool(GameData.bodies.get("animals", {}).get(card_id, {}).get("across", false))
+	var radius := BattleSim.unit_radius(card)
+	var side := BattleSim.unit_half(card) if across else radius
+	var gap := roundi(float(GameData.battle_rules.get("spacing", {}).get("formation_gap", 0.1)) * T)
+	return {"radius": radius, "spacing": maxi(int(squad.spacing), 2 * side + gap)}
+
+
 ## The animals a herd brings ({id, stars, squads} entries), in army order,
-## as plan() wants them.
+## as plan() wants them (with the room their bodies take, as on the field).
 static func herd_units(herd: Array) -> Array:
 	var units := []
 	var group := 0
 	for entry in herd:
 		var squad := squad_of(String(entry.id))
+		squad.merge(body_room(String(entry.id)), true)
 		for s in maxi(1, int(entry.get("squads", 1))):
 			group += 1
 			var one := squad.duplicate()
@@ -460,16 +475,25 @@ static func herd_units(herd: Array) -> Array:
 	return units
 
 
-## How much bigger than its smallest size the field must be for both
-## armies to line up (start_gap from the middle, `edge` from the back).
+## The field's smallest size (draft_rules.json "field" width_tiles and
+## height_tiles), in field units.
+static func base_size(field: Dictionary) -> Vector2i:
+	var w := float(field.get("width_tiles", float(BattleSim.WIDTH) / T))
+	var h := float(field.get("height_tiles", float(BattleSim.HEIGHT) / T))
+	return Vector2i(roundi(w * T), roundi(h * T))
+
+
+## How much bigger than its smallest size (base_size) the field must be for
+## both armies to line up (start_gap from the middle, `edge` from the back).
 static func field_scale_for(herds: Array, field: Dictionary) -> float:
 	var a: Dictionary = GameData.battle_rules.get("army", {})
+	var base := base_size(field)
 	var need := 1.0
 	for herd in herds:
 		var units := herd_units(herd)
 		if units.is_empty():
 			continue
-		var p := plan(units)
+		var p := plan(units, base.x / 3)
 		var biggest := 0
 		for u in units:
 			biggest = maxi(biggest, int(u.radius))
@@ -477,7 +501,7 @@ static func field_scale_for(herds: Array, field: Dictionary) -> float:
 		# Every lane's lines fit in a third of the field.
 		var form: Dictionary = GameData.class_rules.get("formation", {})
 		var wide := int(p.block) + 2 * roundi(float(form.get("lane_margin", 0.6)) * T)
-		need = maxf(need, maxf(deep / BattleSim.MIDDLE, float(wide) / (BattleSim.WIDTH / 3.0)))
+		need = maxf(need, maxf(deep / (base.y / 2.0), float(wide) / (base.x / 3.0)))
 	return minf(ceilf(need * 20.0) / 20.0, float(field.get("max_scale", 1.5)))
 
 

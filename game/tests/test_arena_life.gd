@@ -76,10 +76,13 @@ func test_life_is_drawn_under_the_animals_and_cheers() -> void:
 	check(life.get_index() > field._arena.get_index(), "and over the arena's picture")
 	life.cheer(8.0, 1.0)
 	var cheering := 0
+	var crowd := 0
 	for actor in life._actors:
-		if String(actor.kind) == "spectator" and float(actor.cheer_at) >= 0.0:
-			cheering += 1
-	check(cheering >= 5, "a big moment sets the whole crowd cheering (%d)" % cheering)
+		if String(actor.kind) == "spectator":
+			crowd += 1
+			if float(actor.cheer_at) >= 0.0:
+				cheering += 1
+	check(crowd >= 4 and cheering == crowd, "a big moment sets the whole crowd cheering (%d of %d)" % [cheering, crowd])
 	var near: float = INF
 	var far: float = -INF
 	for actor in life._actors:

@@ -802,6 +802,8 @@ class Tune:
 	var shadow_width := 0.0
 	var shadow_alpha := 0.0
 	var team_ring_alpha := 0.0
+	var team_ring_size := 0.0
+	var team_ring_flat := 0.0
 	var class_badge_radius := 0.0
 	var arrive_squash := 0.0
 	var follow_rate := 0.0
@@ -909,6 +911,8 @@ static func refresh_tuning() -> void:
 		t.shadow_width = Feel.num("characters", "shadow_width", 1.25)
 		t.shadow_alpha = Feel.num("characters", "shadow_alpha", 0.34)
 		t.team_ring_alpha = Feel.num("characters", "team_ring_alpha", 0.9)
+		t.team_ring_size = Feel.num("characters", "team_ring_size", 1.45)
+		t.team_ring_flat = Feel.num("characters", "team_ring_flat", 0.42)
 		t.class_badge_radius = Feel.num("characters", "class_badge_radius", 9.0)
 		t.arrive_squash = Feel.num(m, "arrive_squash", 0.1)
 		t.follow_rate = Feel.num(m, "follow_rate", 12.0)
@@ -1699,30 +1703,31 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 	var t := _tuning()
 	var shadow_w := radius * t.shadow_width * (1.0 - air * 0.5)
 	GroundArt.draw(canvas, GroundArt.Cell.SHADOW, at, shadow_w * 1.1, 0.42, Color(0.05, 0.1, 0.05, t.shadow_alpha * 1.3 * (1.0 - air) * fade))
-	# Team ring, flattened to sit on the ground.
+	# Team ring: a thin oval on the ground under its feet, smaller than the
+	# animal (feel.json "characters" team_ring_size, a share of its
+	# footprint; team_ring_flat, how flat). Its side shows mostly on its body
+	# outline (feel.json "models" team_outline_px).
 	var team_color := BattleField.team_color(team)
-	var ring := radius * 1.45
+	var ring := radius * t.team_ring_size
 	var ring_alpha := t.team_ring_alpha * fade
 	if f != null and f.stealthed and f.revealed <= 0:
 		ring_alpha *= 0.4 if team == 0 else 0.1
-	GroundArt.draw(canvas, GroundArt.Cell.DISC, at, ring, 0.42, Color(team_color, 0.16 * ring_alpha))
-	GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring, 0.42, Color(team_color.darkened(0.45), ring_alpha))
-	GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring, 0.42, Color(team_color, ring_alpha))
+	GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring, t.team_ring_flat, Color(team_color, ring_alpha))
 	if f != null:
 		# Status rings around its feet.
 		if f.shield > 0:
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 4, 0.42, Color("#7fd6ff"))
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 4, t.team_ring_flat, Color("#7fd6ff"))
 		if f.rage > 0:
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 7, 0.42, Color("#ff9f43", fade))
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 7, t.team_ring_flat, Color("#ff9f43", fade))
 		if f.slow > 0:
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, 0.42, Color("#9fd8ff", fade))
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, t.team_ring_flat, Color("#9fd8ff", fade))
 		if f.invulnerable > 0:
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, 0.42, Color.WHITE)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, t.team_ring_flat, Color.WHITE)
 		if army and (f.memory.get("hero", false) or f.memory.get("elite", false)):
 			# An elite Specialist or a Mythic hero: a gold ring, set apart.
 			var gold := Color("#ffd24a", fade)
-			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 5, 0.42, gold)
-			GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring + 9, 0.42, Color(gold, 0.5 * fade))
+			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 5, t.team_ring_flat, gold)
+			GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring + 9, t.team_ring_flat, Color(gold, 0.5 * fade))
 		if cls != "" and not army:
 			# Its class, as a small badge just under its feet (an army's
 			# squads carry banners instead).

@@ -39,7 +39,7 @@
 ## Phase 1c: Draft Duel is the game (done)
 
 - [x] Hearts instead of dens: 30 each; a lost fight costs the round number plus 1 per enemy animal still standing
-- [x] An open 16x20 field with no river, bridges or dens; animals go for the nearest enemy
+- [x] An open field (now 12x16 at its smallest) with no river, bridges or dens; animals go for the nearest enemy
 - [x] Classic battle removed, with its bot, the 8-card deck, energy and release requirements
 - [x] Your collection is your draft pool (now your deck of 8: see Phase 1d), and your cards fight at their levels (the opponent's are leveled to match)
 - [x] Abilities reworked for the new field (the Raccoon steals Acorns, the Hippo guards its own half, the Bison shoves)

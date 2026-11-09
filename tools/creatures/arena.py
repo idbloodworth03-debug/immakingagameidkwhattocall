@@ -8,14 +8,15 @@ Writes game/art/arenas/<arena>.webp and arenas.json (what part of the
 field each picture covers).
 
 The game draws the field flat, one square per tile, while the animals are
-rendered from a camera 50 degrees up. The arena uses that same camera, with
-the ground stretched away from it (by 1 / sin 50) so the tiles still come
+rendered from a camera tilted as feel.json "camera" tilt_degrees says
+(sprites.ELEVATION). The arena uses that same camera, with the ground
+stretched away from it (by 1 / sin of its look down) so the tiles still come
 out square. Trees, rocks and the fence are seen from the same angle as the
 animals, and every tile lands exactly where the game puts it.
 
-The ground's colors (grass, tile stripes, the worn middle line and ring,
-flowers) are painted into a texture with numpy; Blender adds the fence and
-scenery, and the light and shadows.
+The ground's colors (grass, mown tile stripes, the worn middle line and ring,
+flowers outside the fence) are painted into a texture with numpy; Blender
+adds the fence and scenery, and the light and shadows.
 """
 import argparse
 import json
@@ -43,13 +44,15 @@ ROOT = os.path.dirname(os.path.dirname(HERE))
 OUT = os.path.join(ROOT, "game", "art", "arenas")
 SIN = math.sin(math.radians(ELEVATION))
 
-# The field, in tiles (as in battle_sim.gd): 16 wide, 20 long, y = 0 at the
-# far end.
-FIELD_W, FIELD_H = 16.0, 20.0
+# The field, in tiles, at its smallest (data/draft_rules.json "field"
+# width_tiles, height_tiles; the game grows the picture with the field), y = 0
+# at the far end.
+_FIELD = json.load(open(os.path.join(ROOT, "game", "data", "draft_rules.json")))["field"]
+FIELD_W, FIELD_H = float(_FIELD["width_tiles"]), float(_FIELD["height_tiles"])
 # The picture covers these tiles: wide margins all around (phones show more
 # or less of them).
-X0, X1 = -6.0, 22.0
-T0, T1 = -4.5, 24.0
+X0, X1 = -6.0, FIELD_W + 6.0
+T0, T1 = -4.5, FIELD_H + 4.0
 # The ground mesh and its color texture reach a bit past the picture.
 GX0, GX1, GT0, GT1 = X0 - 2.0, X1 + 2.0, T0 - 4.0, T1 + 2.0
 TEX_PPT = 32
@@ -57,7 +60,7 @@ TEX_PPT = 32
 # into the picture here, and a strip behind the far fence is kept clear for
 # the crowd that watches from there.
 LIFE = json.load(open(os.path.join(ROOT, "game", "data", "arena_life.json")))
-CROWD_STRIP = (-0.6, 16.6, -1.7, -0.3)
+CROWD_STRIP = (-0.6, FIELD_W + 0.6, -2.6, -0.3)
 # Set-piece names that are an existing kind of scenery at a size.
 ALIASES = {"snowbank": ("snow_mound", 1.0), "snow_hill": ("snow_mound", 2.6), "ice_block": ("ice_rock", 1.0),
            "ice_post": ("ice_rock", 0.6)}
@@ -187,19 +190,19 @@ def paint_ground(theme, rng):
     # each side's half is easy to see.
     n3 = _noise((h, w), TEX_PPT * 0.9, rng) * 0.22
     line = np.abs(t - FIELD_H / 2) < 0.12 + n3 * 0.25
-    ring = np.abs(np.hypot(x - FIELD_W / 2, t - FIELD_H / 2) - 2.2) < 0.13 + n3 * 0.25
+    ring = np.abs(np.hypot(x - FIELD_W / 2, t - FIELD_H / 2) - FIELD_W * 0.14) < 0.13 + n3 * 0.25
     marks = ndimage.gaussian_filter(((line | ring) & inside).astype(float), TEX_PPT * 0.05)
     path_col = hexa(theme["path"]) * (1 + 0.08 * n2[..., None])
     img = img * (1 - marks[..., None] * 0.6) + path_col * marks[..., None] * 0.6
 
-    # Flowers and little tufts: sparse on the field, thicker outside.
+    # Flowers and little tufts outside the fence; none on the field, where
+    # they'd only be noise round the animals.
     colors = [hexa(c) for c in theme["flowers"]]
     count = int((GX1 - GX0) * (GT1 - GT0) * 1.6)
     fx = rng.uniform(GX0, GX1, count)
     ft = rng.uniform(GT0, GT1, count)
     for i in range(count):
-        ins = 0 <= fx[i] <= FIELD_W and 0 <= ft[i] <= FIELD_H
-        if ins and rng.random() > 0.35:
+        if -0.4 <= fx[i] <= FIELD_W + 0.4 and -0.4 <= ft[i] <= FIELD_H + 0.4:
             continue
         cx, cy = int((fx[i] - GX0) * TEX_PPT), int((ft[i] - GT0) * TEX_PPT)
         r = max(1, int(TEX_PPT * rng.uniform(0.04, 0.07)))

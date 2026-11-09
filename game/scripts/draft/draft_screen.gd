@@ -24,9 +24,10 @@ const DEBUG_SPEEDS := [1.0, 0.5, 0.25, 0.1, 0.0]
 var duel: DraftMatch
 var bot: DraftBot
 ## For testing (the website opened with ?fight=<seed>, dev tools on;
-## main_menu.gd): {"seed", "mine", "theirs", "sizes"}: a match from that
-## seed, with these decks (comma-separated ids, or the usual), picked for
-## you by the computer, and (sizes) every animal's height marked on screen.
+## main_menu.gd): {"seed", "mine", "theirs", "sizes", "herds"}: a match from
+## that seed, with these decks (comma-separated ids, or the usual), picked for
+## you by the computer, and (sizes) every animal's height marked on screen;
+## herds: the first fight's herds, set at once (_dev_herds).
 static var dev_auto: Dictionary = {}
 var _auto_bot: DraftBot
 var _auto_wait := 0.0
@@ -116,6 +117,8 @@ func _ready() -> void:
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
 	if not auto.is_empty():
 		_auto_bot = DraftBot.new(duel, 0, _rng.randi(), 0.5, {})
+	if String(auto.get("herds", "")) != "":
+		_dev_herds(String(auto.herds))
 	# Only this match's animals' sprite sheets in memory (both decks, minus
 	# the bans; each loads when it first comes up), freed when it ends.
 	UnitSprites.keep_only(_match_animals())
@@ -1094,6 +1097,24 @@ func _opponent_moves(delta: float) -> void:
 
 
 ## Card ids from a comma-separated list, only the ones there are.
+## For testing (?fight=<seed>&herds=a|b): both herds as given, each a
+## comma-separated list of ids ("id*2": two squads of it), and the first
+## fight started at once, with no picks.
+func _dev_herds(text: String) -> void:
+	var sides := text.split("|")
+	for team in mini(2, sides.size()):
+		var herd := []
+		for part in sides[team].split(",", false):
+			var bits := part.strip_edges().split("*")
+			if GameData.cards.has(bits[0]) and not GameData.is_tool(bits[0]):
+				herd.append({"id": bits[0], "stars": 1, "squads": maxi(1, int(bits[1])) if bits.size() > 1 else 1})
+		duel.herds[team] = herd
+		duel.picks_left[team] = 0
+		duel.picks_made[team] = []
+	duel.set_ready(0)
+	duel.set_ready(1)
+
+
 static func _dev_ids(text: String) -> Array:
 	var ids := []
 	for part in text.split(","):

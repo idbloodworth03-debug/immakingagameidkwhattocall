@@ -160,7 +160,7 @@ func _reset_stats() -> void:
 		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0, "ranged_ticks": 0, "ranged_past": 0, "lane_checks": 0, "own_lane": 0,
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
-		"size_sum": 0.0, "size_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
+		"size_sum": 0.0, "size_n": 0, "size_war_sum": 0.0, "size_war_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
 		"attack_frames": 0, "attack_slide_frames": 0, "air_attack_frames": 0, "air_attack_slide_frames": 0, "design_attack_frames": 0, "design_attack_slide_frames": 0, "attack_dbg": {}, "snap_turns": 0, "pos_snaps": 0, "attacks_started": 0, "attacks_cut": 0, "seen_views": {},
 		"anim_time": {}, "walk_slide": 0.0, "walk_slide_n": 0,
 	}
@@ -761,6 +761,11 @@ func _watch_size(v: UnitView) -> void:
 	var pct := share * 100.0
 	stats.size_sum += pct
 	stats.size_n += 1
+	# In the all-out war (the camera framing the fighting) apart from the
+	# line-up and the march (framing both armies).
+	if field.sim != null and field.sim.army != null and field.sim.army.at_war():
+		stats.size_war_sum += pct
+		stats.size_war_n += 1
 	var cls := String(v.cls)
 	stats.size_by_class[cls] = float(stats.size_by_class.get(cls, 0.0)) + pct
 	stats.size_n_by_class[cls] = int(stats.size_n_by_class.get(cls, 0)) + 1
@@ -1047,8 +1052,9 @@ func _report() -> void:
 		"  stuck                 %.1f animal-seconds with a target out of reach and not moving" % [stats.stuck_seconds],
 		"  IDLE                  %.1f%% of animal-time while enemies are alive spent standing about with an enemy it could fight (%.1f%% more with nothing it can hit: a ground fighter with only flyers left; %.1f%% more waiting for a slot while every enemy it could fight is full); %.0f%% fighting; %s" % [100.0 * (stats.idle_ticks - stats.idle_no_target - stats.idle_waiting) / maxf(1, stats.war_ticks), 100.0 * stats.idle_no_target / maxf(1, stats.war_ticks), 100.0 * stats.idle_waiting / maxf(1, stats.war_ticks), 100.0 * stats.fighting_ticks / maxf(1, stats.war_ticks), _idle_by_class()],
 		"  endings               %.1f s per fight with 4 or fewer animals left (%.0f%% of fight time), %.2f hits/s then" % [stats.end_seconds / maxf(1, stats.fights), 100.0 * stats.end_seconds / maxf(0.1, stats.fight_seconds), stats.end_hits / maxf(0.1, stats.end_seconds)],
-		"  SIZE                  share of the phone screen's height (%dx%d, field %dx%d): average animal %.1f%% (target %.0f%%); biggest Tank %s, Mythic hero %s, biggest of all %s; %.1f%% of animal-frames over their limit (%.0f%%, heroes %.0f%%); by class: %s; camera %.1f px a tile on average, %.1f at most" % [
-			int(SIZE.x) + 32, int(SCREEN_HEIGHT), int(SIZE.x), int(SIZE.y), stats.size_sum / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("average_target_pct", 6.0)), _biggest("tank"), _biggest("hero"), _biggest(""),
+		"  SIZE                  share of the phone screen's height (%dx%d, field %dx%d): average animal %.1f%% (target %.0f%%; %.1f%% in the all-out war, %.1f%% in the line-up and march); biggest Tank %s, Mythic hero %s, biggest of all %s; %.1f%% of animal-frames over their limit (%.0f%%, heroes %.0f%%); by class: %s; camera %.1f px a tile on average, %.1f at most" % [
+			int(SIZE.x) + 32, int(SCREEN_HEIGHT), int(SIZE.x), int(SIZE.y), stats.size_sum / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("average_target_pct", 6.0)),
+			stats.size_war_sum / maxf(1, stats.size_war_n), (stats.size_sum - stats.size_war_sum) / maxf(1, stats.size_n - stats.size_war_n), _biggest("tank"), _biggest("hero"), _biggest(""),
 			100.0 * stats.size_over / maxf(1, stats.size_n), float(GameData.bodies.get("limits", {}).get("unit_max_pct", 9.0)), float(GameData.bodies.get("limits", {}).get("hero_max_pct", 10.0)), _size_by_class(), stats.zoom_sum / maxf(1, stats.zoom_n), stats.ppu_max],
 	]
 	var windups: Dictionary = GameData.feel.get("acting", {}).get("windup_scale", {})

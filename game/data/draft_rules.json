@@ -59,10 +59,9 @@
     "new_class": 1.5
   },
   "field": {
-    "_note": "The field grows for big herds, keeping its shape, and the camera zooms out to show all of it. scale 1 is 16 x 20 tiles. It starts growing when the bigger herd has more than grow_from_units animals on the field (a pack counts each animal) and reaches max_scale at grow_full_units; it also grows if the rows wouldn't fit otherwise. max_scale is the camera's zoom limit: animals are drawn 1/max_scale as big at most, so they stay readable on a phone. edge: how far (tiles) the last line stays from the back of the field.",
-    "grow_from_units": 12,
-    "grow_full_units": 36,
-    "max_scale": 1.5,
-    "edge": 0.8
+    "_note": "The field: width_tiles across and height_tiles long at its smallest (scale 1; a small field keeps the armies close and big on the screen). It grows for big herds, keeping its shape, when an army's lines wouldn't fit otherwise (battle_rules.json \"army\" start_gap from the middle and edge from the back; each lane a third of the field's width), up to max_scale, and the camera zooms out to show it: max_scale is its zoom limit, so animals stay readable on a phone. The arena pictures (tools/creatures/arena.py) and the life round them (arena_life.json) are made for the smallest field.",
+    "width_tiles": 12,
+    "height_tiles": 16,
+    "max_scale": 2.0
   }
 }

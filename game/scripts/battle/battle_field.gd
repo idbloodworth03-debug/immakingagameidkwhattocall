@@ -146,6 +146,7 @@ var camera_max_zoom := -1.0
 var camera_min_tiles := -1.0
 var camera_margin := -1.0
 var _banners: Node2D
+var _banner_war := 0.0  # 0 to 1 as the banners fade back once the armies are at war
 var _last_steps := [-1, -1]
 var _life: ArenaLife
 ## Show the animals as real 3D models (ModelStage) instead of sprites:
@@ -797,6 +798,10 @@ func _process(delta: float) -> void:
 	_remove_finished()
 	_decor.queue_redraw()
 	_ground.queue_redraw()
+	# Once the armies are at war the banners fade back, so the fighting
+	# animals under them read clearly (feel.json army banner_war_alpha).
+	var at_war := sim != null and sim.army != null and sim.army.at_war()
+	_banner_war = move_toward(_banner_war, 1.0 if at_war else 0.0, delta / maxf(0.05, Feel.num("army", "banner_fade_seconds", 0.6)))
 	_banners.queue_redraw()
 	fx.queue_redraw()
 
@@ -1955,7 +1960,16 @@ func _print_track() -> void:
 			continue
 		var at := v.get_global_transform_with_canvas().origin
 		var swinging := v.attacking(_time)
-		print("TRACK t=%.3f ms=%d %s key=%s x=%.1f y=%.1f of %dx%d anim=%s since=%.3f windup=%.2f length=%.2f lunge=%.2f,%.2f alt=%.2f defeat=%.2f" % [_time, Time.get_ticks_msec(), v.id, str(v.key), at.x, at.y, int(vs.x), int(vs.y), v.m_anim, _time - v.attack_at if swinging else -1.0, v.windup_seconds(), v._attack_length(), v.m_lunge.x / 1000.0, v.m_lunge.y / 1000.0, v.m_altitude, v.defeat])
+		# Its body's middle (in the air for a flier) and its target's, on the
+		# screen too, so a script can frame the two together.
+		var to_screen_px := _units.get_global_transform_with_canvas()
+		var mid := to_screen_px * v.middle()
+		var aim := mid
+		if v.fighter != null and v.fighter.target != null:
+			var tv := view_for_uid(v.fighter.target.uid)
+			if tv != null:
+				aim = to_screen_px * tv.middle()
+		print("TRACK t=%.3f ms=%d %s key=%s x=%.1f y=%.1f of %dx%d anim=%s since=%.3f windup=%.2f length=%.2f lunge=%.2f,%.2f alt=%.2f defeat=%.2f mid=%.1f,%.1f aim=%.1f,%.1f" % [_time, Time.get_ticks_msec(), v.id, str(v.key), at.x, at.y, int(vs.x), int(vs.y), v.m_anim, _time - v.attack_at if swinging else -1.0, v.windup_seconds(), v._attack_length(), v.m_lunge.x / 1000.0, v.m_lunge.y / 1000.0, v.m_altitude, v.defeat, mid.x, mid.y, aim.x, aim.y])
 
 
 func _draw_sizes(canvas: CanvasItem) -> void:
@@ -1988,9 +2002,12 @@ func _draw_banners(canvas: CanvasItem) -> void:
 	var a := "army"
 	var w := Feel.num(a, "banner_width_pixels", 22.0)
 	var h := Feel.num(a, "banner_height_pixels", 17.0)
-	var alpha := Feel.num(a, "banner_alpha", 1.0)
-	var ink := Color(UIKit.INK, alpha)
+	var full := Feel.num(a, "banner_alpha", 1.0)
+	var faded := lerpf(full, Feel.num(a, "banner_war_alpha", 0.3), _banner_war)
 	for sq: Dictionary in banners():
+		# (A tapped squad's banner shows in full.)
+		var alpha := full if int(sq.group) == picked_group else faded
+		var ink := Color(UIKit.INK, alpha)
 		var base: Vector2 = sq.base
 		var tip: Vector2 = sq.tip
 		canvas.draw_line(base, tip, ink, 2.5)

@@ -621,7 +621,11 @@ func _separate() -> void:
 ## Turns `f`'s body toward what it wants to face (its target in reach, or
 ## the way it goes) by at most turn_degrees_per_tick, as the drawn animal
 ## turns, so its spine sweeps round at the same pace. Whole numbers only.
+## Through the follow-through of its blow it keeps facing where it struck
+## (the swing finishes before it turns to the next).
 func _turn_body(f: Fighter) -> void:
+	if tick - int(f.memory.get("blow", -1000)) < recovery_ticks:
+		return
 	var t := f.target
 	var in_reach := t != null and t.alive and in_range(f, t)
 	if in_reach:

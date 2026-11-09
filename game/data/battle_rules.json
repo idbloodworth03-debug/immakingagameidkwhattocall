@@ -25,7 +25,7 @@
     "turn_degrees_per_tick": 36,
     "push_pct": 25,
     "formation_gap": 0.2,
-    "body_down_seconds": 1.6
+    "body_down_seconds": 1.0
   },
   "lanes": {
     "_note": "Lanes and the battle line (scripts/battle/battle_army.gd), once the war is on. The field is three lanes (left, middle, right); each squad has one (its place in the formation: classes.json formation). A fighter goes for an enemy in its own lane (or within slack tiles of it) first: one in another lane counts fighter_lane_cost tiles further per lane away, so it only leaves for the next lane when its own has nobody it can take on; a shooter's count shooter_lane_cost tiles further (it mostly shoots in its lane). In each lane the battle line is halfway between the two sides' front animals on the ground, and moves at most line_pace tiles a minute, so it pushes back and forth. A fighter doesn't go for an enemy more than line_reach tiles past it (one further counts line_cost tiles further: only when there's nobody else); Ranged stay ranged_gap tiles behind it, going only for enemies they can hit from there. Flankers (these animals) roam free of lanes and the line; Air flies over the line (air_flies_over) but keeps to its lane.",

@@ -112,7 +112,8 @@ func _build() -> void:
 		what_row.add_child(words)
 		var habitat: Dictionary = GameData.habitats.get(String(animal.get("habitat", "")), {})
 		if not habitat.is_empty():
-			info.add_child(_chip(String(habitat.name), Color(String(habitat.color))))
+			# Its biome (the card's front leaves it out).
+			info.add_child(_chip(String(habitat.name), Color(String(habitat.color)), 20, String(habitat.get("icon", ""))))
 
 	# Ranger Journal: the real animal or history behind a Mythic's legend,
 	# with a link to that animal's card when it's in the game.
@@ -162,7 +163,7 @@ func _add_stat(grid: GridContainer, stat_name: String, value: String) -> void:
 
 
 ## A small colored pill with a word on it.
-func _chip(text: String, color: Color, font_size := 20) -> Control:
+func _chip(text: String, color: Color, font_size := 20, icon_key := "") -> Control:
 	var chip := PanelContainer.new()
 	var style := UIKit.box(color.darkened(0.25), 14, 4)
 	style.content_margin_left = 12
@@ -171,7 +172,13 @@ func _chip(text: String, color: Color, font_size := 20) -> Control:
 	style.border_color = color.lightened(0.2)
 	chip.add_theme_stylebox_override("panel", style)
 	chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
-	chip.add_child(UIKit.label(text, font_size))
+	if icon_key == "":
+		chip.add_child(UIKit.label(text, font_size))
+		return chip
+	var row := UIKit.hbox(6)
+	row.add_child(UIKit.icon_rect(GameData.ui_icon(icon_key), Color.WHITE, font_size + 6))
+	row.add_child(UIKit.label(text, font_size))
+	chip.add_child(row)
 	return chip
 
 

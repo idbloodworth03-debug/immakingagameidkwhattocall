@@ -295,6 +295,26 @@ func test_the_animals_tab_sorts_and_keeps_locked_ones_locked() -> void:
 	check_eq(seen.size(), GameData.card_order.size(), "every animal and tool on the tab")
 
 
+## Under a class's own header the cards leave out their class badge (the
+## header says it); under any other sort they show it.
+func test_cards_under_a_class_header_leave_out_their_class_badge() -> void:
+	var levels := _levels()
+	_own(levels)
+	var tab: Control = load("res://scripts/ui/tabs/animals_tab.gd").new()
+	_made.append(tab)
+	_host().add_child(tab)
+	for key in AnimalSort.KEYS:
+		tab._sort.choose(key)
+		tab._rebuild()
+		var cards := 0
+		for child in tab._content.get_children():
+			if child is GridContainer:
+				for card: AnimalCard in child.get_children():
+					cards += 1
+					check_eq(card.show_class, key != "class", "%s sorted by %s: its class badge %s" % [card.animal_id, key, "left out" if key == "class" else "shown"])
+		check_eq(cards, GameData.card_order.size(), "every card on the tab (%s)" % key)
+
+
 ## A match's pick screen, without the rest (no intro, no fighting): just
 ## the pick view, in the tree.
 func _pick_screen(duel: DraftMatch) -> Control:

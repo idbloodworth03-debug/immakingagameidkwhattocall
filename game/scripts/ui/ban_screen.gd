@@ -177,6 +177,7 @@ func _lay_out() -> void:
 		center.add_child(grid)
 		_groups.add_child(center)
 		for id: String in group.ids:
+			_cards[id].show_class = not AnimalSort.names_class(_sort.key)
 			grid.add_child(_cards[id])
 
 

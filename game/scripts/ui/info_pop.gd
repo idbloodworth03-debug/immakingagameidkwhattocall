@@ -1,9 +1,10 @@
 class_name InfoPop
 extends Control
 ## The info popup you get by holding a card or an animal (HoldInfo): its
-## name, class icon, rarity, stars, squad size ("×3"), its attack style in
-## one line, and bars for Health, Damage, Speed and Range, pictures rather
-## than numbers. A Ranger tool shows its name, rarity and what it does.
+## name, class icon, rarity, stars, squad size ("×3"), its biome's badge
+## (off the card's front), its attack style in one line, and bars for
+## Health, Damage, Speed and Range, pictures rather than numbers. A Ranger
+## tool shows its name, rarity and what it does.
 ## Sizes and colors: feel.json "info".
 
 const BAR_ICONS := {"health": "stat_health", "damage": "stat_damage", "speed": "stat_speed", "range": "stat_range"}
@@ -140,6 +141,12 @@ func _draw() -> void:
 		draw_style_box(_box(UIKit.INK, 12), chip.grow(2))
 		draw_style_box(_box(UIKit.PANEL_LIGHT, 12), chip)
 		_outlined(font, squad, Vector2(cursor + 10, 101), 26, Color.WHITE, sw + 4)
+		cursor += sw + 24.0
+		# Its biome: the card's front leaves it out, its details show it.
+		var habitat := String(card.get("habitat", ""))
+		if GameData.habitats.has(habitat):
+			draw_circle(Vector2(cursor + 21, 92), 21, UIKit.INK)
+			UIKit.draw_habitat_badge(self, Vector2(cursor + 21, 92), 17.0, habitat)
 		line_y = 132.0
 	# The one-line style (or what a tool does).
 	var line := GameData.card_line(card_id)

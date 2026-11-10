@@ -135,6 +135,7 @@ func _refresh() -> void:
 		for id: String in group.ids:
 			var card := AnimalCard.create(id)
 			card.info = AnimalCard.Info.LEVEL
+			card.show_class = not AnimalSort.names_class(_sort.key)
 			if _deck.has(id):
 				# In your deck: fully bright, with a checkmark.
 				card.checked = true

@@ -1,11 +1,14 @@
 class_name AnimalCard
 extends Control
 ## One collectible card, drawn in code so it stays crisp at any size: a
-## glossy rim in the rarity's color, the animal's portrait standing in a
-## spotlight of its habitat color, a name plate, its class badge, and the
-## level with copies toward the next upgrade. The rarer it is, the more it
-## shows off (CardShow: a Rare's shine up to a Mythic's full show; the
-## lighter version unless `full_show`). Tap it to call `on_tap`.
+## glossy rim in the rarity's color (the only place its rarity shows), the
+## animal's portrait standing in a spotlight of its habitat color, a name
+## plate, its class badge (not under a class's own header: show_class), and
+## its level on a badge with a small bar under it filling with copies toward
+## the next upgrade. Its biome is in its details (InfoPop, the viewer). The
+## rarer it is, the more it shows off (CardShow: a Rare's shine up to a
+## Mythic's full show; the lighter version unless `full_show`). Tap it to
+## call `on_tap`.
 
 const SIZE_NORMAL := Vector2(158, 214)
 const SIZE_SMALL := Vector2(120, 160)
@@ -31,6 +34,12 @@ var stars := 0
 var checked := false:
 	set(value):
 		checked = value
+		queue_redraw()
+## Its class badge in the top-left corner: off among the cards under a
+## class's own header (AnimalSort.names_class), which already says it.
+var show_class := true:
+	set(value):
+		show_class = value
 		queue_redraw()
 
 ## The whole rarity show (CardShow): a card on its own, offered or freed
@@ -190,17 +199,13 @@ func _draw() -> void:
 	if stars > 1:
 		UIKit.draw_stars(self, Vector2(w / 2.0, plate.position.y - h * 0.035), stars, w * 0.07)
 
-	# Bottom: level and copies, or where to find it.
+	# Bottom: the level and its progress, or where to find it.
 	if info != Info.NONE:
-		_draw_info(font, Rect2(margin, plate.end.y + h * 0.025, w - margin * 2, h - margin - plate.end.y - h * 0.025), rarity_color)
+		_draw_info(font, Rect2(margin, plate.end.y + h * 0.025, w - margin * 2, h - margin - plate.end.y - h * 0.025))
 
 	# Class badge, overlapping the top-left corner.
-	if not dim or _reachable:
+	if show_class and (not dim or _reachable):
 		UIStyle.draw_class_badge(self, Vector2(w * 0.13, w * 0.13), w * 0.115, GameData.class_of(animal_id))
-	# Habitat badge, overlapping the top-right corner.
-	var habitat_id := String(animal.get("habitat", ""))
-	if habitat_id != "" and not (dim and not _reachable):
-		UIKit.draw_habitat_badge(self, Vector2(w - w * 0.13, w * 0.13), w * 0.115, habitat_id)
 	if _new and info == Info.COLLECTION:
 		var tag := Rect2(w * 0.32, -h * 0.015, w * 0.36, h * 0.1)
 		var tag_style := UIKit.box(UIKit.YELLOW, int(tag.size.y * 0.4))
@@ -272,39 +277,54 @@ func _draw_stamp(font: Font, rect: Rect2) -> void:
 	draw_set_transform(Vector2.ZERO)
 
 
-func _draw_info(font: Font, area: Rect2, rarity_color: Color) -> void:
+## The card's bottom strip: not found yet, where to find it; otherwise its
+## level on a badge, and under it (in the collection) a small bar filling
+## with copies toward the next upgrade: blue, green with an arrow once it
+## can be upgraded, full and gold at the top level (ui_style.json "card").
+func _draw_info(font: Font, area: Rect2) -> void:
 	var h := area.size.y
 	if info == Info.COLLECTION and not _owned:
 		var animal := GameData.get_card(animal_id)
 		var text := "Not found yet" if _reachable else "Arena %d" % (int(animal.unlock_arena_index) + 1)
 		_text(font, text, area, int(h * 0.62), UIKit.TEXT_DIM)
 		return
-	var badge_r := h * 0.5
-	var badge_c := Vector2(area.position.x + badge_r, area.get_center().y)
-	if info == Info.LEVEL or _needed == 0:
-		var label := "Level %d" % _level if _needed > 0 or info == Info.LEVEL else "MAX"
-		_text(font, label, area, int(h * 0.66), UIKit.YELLOW if label == "MAX" else Color.WHITE)
+	var progress := info == Info.COLLECTION
+	var bar_h := maxf(5.0, h * UIStyle.num("card", "level_bar_height", 0.17)) if progress else 0.0
+	var gap := h * 0.07 if progress else 0.0
+	var badge_r := minf(h * UIStyle.num("card", "level_badge", 0.36), (h - bar_h - gap) / 2.0)
+	var top := area.position.y + (h - (badge_r * 2.0 + gap + bar_h)) / 2.0
+	_draw_level_badge(font, Vector2(area.get_center().x, top + badge_r), badge_r)
+	if not progress:
 		return
-	var bar := Rect2(area.position.x + badge_r, area.position.y + h * 0.16, area.size.x - badge_r, h * 0.68)
-	var track := UIKit.box(UIKit.DEEP, int(bar.size.y / 2))
-	draw_style_box(track, bar)
-	var ratio := clampf(float(_copies) / maxf(1.0, float(_needed)), 0.0, 1.0)
+	var bar_w := area.size.x * UIStyle.num("card", "level_bar_width", 0.62)
+	var bar := Rect2(area.get_center().x - bar_w / 2.0, top + badge_r * 2.0 + gap, bar_w, bar_h)
+	draw_style_box(UIKit.box(UIKit.INK, int(bar_h / 2.0) + 2), bar.grow(2.0))
+	draw_style_box(UIKit.box(UIKit.DEEP, int(bar_h / 2.0)), bar)
+	var top_level := _needed == 0
+	var ratio := 1.0 if top_level else clampf(float(_copies) / float(_needed), 0.0, 1.0)
 	if ratio > 0.0:
-		var fill_color := UIKit.GREEN if _upgradable else UIKit.BLUE
-		var fill := Rect2(bar.position + Vector2(2, 2), Vector2(maxf(bar.size.y - 4, (bar.size.x - 4) * ratio), bar.size.y - 4))
-		draw_style_box(UIKit.bar_fill(fill_color, int(fill.size.y / 2)), fill)
-	var count := "%d/%d" % [_copies, _needed]
-	_text(font, count, Rect2(bar.position + Vector2(badge_r * 0.4, 0), bar.size - Vector2(badge_r * 0.4, 0)), int(h * 0.56), Color.WHITE)
-	# Level badge on the left end of the bar.
-	draw_circle(badge_c, badge_r, UIKit.INK)
-	draw_circle(badge_c, badge_r - 2.0, rarity_color.darkened(0.15))
-	draw_circle(badge_c - Vector2(0, badge_r * 0.25), badge_r * 0.55, Color(1, 1, 1, 0.18))
-	_text(font, str(_level), Rect2(badge_c - Vector2(badge_r, badge_r), Vector2(badge_r, badge_r) * 2.0), int(badge_r * 1.15), Color.WHITE)
+		var fill_color := UIKit.YELLOW if top_level else (UIKit.GREEN if _upgradable else UIKit.BLUE)
+		var fill := Rect2(bar.position, Vector2(maxf(bar_h, bar.size.x * ratio), bar_h))
+		draw_style_box(UIKit.bar_fill(fill_color, int(bar_h / 2.0)), fill)
 	if _upgradable:
+		# Ready: an arrow on a green disc at the bar's end.
+		var r := maxf(bar_h * 1.15, badge_r * 0.5)
+		var at := Vector2(bar.end.x + r * 0.35, bar.get_center().y)
+		draw_circle(at, r + 2.0, UIKit.INK)
+		draw_circle(at, r, UIKit.GREEN)
 		var arrow := UIKit.icon(GameData.ui_icon("upgrade"))
 		if arrow != null:
-			var side := h * 0.9
-			draw_texture_rect(arrow, Rect2(Vector2(bar.end.x - side * 0.85, bar.get_center().y - side / 2.0), Vector2(side, side)), false, Color.WHITE)
+			draw_texture_rect(arrow, Rect2(at - Vector2(r, r) * 0.8, Vector2(r, r) * 1.6), false, Color.WHITE)
+
+
+## The level on a round badge centered on `c`, the same for every rarity
+## (the frame alone shows that).
+func _draw_level_badge(font: Font, c: Vector2, r: float) -> void:
+	draw_circle(c + Vector2(0, 2), r + 2.0, Color(UIKit.INK, 0.45))
+	draw_circle(c, r + 2.0, UIKit.INK)
+	draw_circle(c, r, UIKit.DEEP.lightened(0.12))
+	draw_circle(c - Vector2(0, r * 0.28), r * 0.55, Color(1, 1, 1, 0.12))
+	_text(font, str(_level), Rect2(c - Vector2(r, r), Vector2(r, r) * 2.0), int(r * 1.15), Color.WHITE)
 
 
 ## Centered outlined text, shrunk to fit the width if it has to.

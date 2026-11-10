@@ -78,6 +78,12 @@ static func grouped(ids: Array, key: String, desc: bool, levels: Dictionary) -> 
 	return out
 
 
+## Whether the groups by `key` are headed by the class: their cards leave
+## out their class badge, which the header already shows.
+static func names_class(key: String) -> bool:
+	return key == "class"
+
+
 ## Which group `id` falls in under `key`.
 static func group_of(id: String, key: String, levels: Dictionary) -> String:
 	if GameData.is_tool(id):

@@ -551,6 +551,8 @@ func _build_options(pop := true) -> void:
 			for k in group.slots.size():
 				var slot: int = group.slots[k]
 				var card := _option_card(slot, _size("start_card", Vector2(156, 176)))
+				# Under a class's own tag the class badge would say it twice.
+				card.show_class = not AnimalSort.names_class(_start_sort.key)
 				# One line for the group's cards in this row, from the first.
 				if k == 0 or order % 4 == 0:
 					var run := mini(group.slots.size() - k, 4 - order % 4)

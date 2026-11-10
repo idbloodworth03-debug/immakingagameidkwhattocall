@@ -62,7 +62,7 @@ func _rebuild() -> void:
 	_content.add_child(UIKit.heading("Collection  %d/%d" % [Profile.found_count(), GameData.card_order.size()]))
 	for group in groups():
 		_content.add_child(AnimalSort.header(group))
-		_add_card_grid(group.ids)
+		_add_card_grid(group.ids, not AnimalSort.names_class(_sort.key))
 
 
 ## Every animal and tool in groups by the chosen sort (AnimalSort): the
@@ -79,11 +79,12 @@ func shown_order() -> Array:
 	return out
 
 
-func _add_card_grid(ids: Array) -> void:
+func _add_card_grid(ids: Array, show_class := true) -> void:
 	var grid := _grid()
 	_content.add_child(grid)
 	for id in ids:
 		var card := AnimalCard.create(id)
+		card.show_class = show_class
 		UIKit.on_tap(card, func() -> void: _show_detail(id))
 		grid.add_child(card)
 

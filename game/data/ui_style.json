@@ -171,10 +171,13 @@
     "icon": 40
   },
   "card": {
-    "_note": "The frame is the rarity color; selected cards get a thick selected-color outline and lift.",
+    "_note": "The frame is the rarity color, and nothing else on a card is (its level badge and bar are the same for every rarity); selected cards get a thick selected-color outline and lift. An animal card's bottom: its level on a round badge (level_badge: its radius as a share of the strip's height) and under it, in the collection, a small bar filling with copies toward the next upgrade (level_bar_width: a share of the card's width inside the frame; level_bar_height: a share of the strip's height): blue, green with an arrow once it can be upgraded, gold at the top level.",
     "border": 4,
     "frame": 7,
-    "selected_lift": 1.06
+    "selected_lift": 1.06,
+    "level_badge": 0.36,
+    "level_bar_width": 0.62,
+    "level_bar_height": 0.17
   },
   "screen": {
     "_note": "safe_area_extra adds a little room under a notch and above the home bar on top of what the phone reports.",

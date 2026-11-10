@@ -85,6 +85,7 @@ func _ready() -> void:
 ## website opened with ?viewer=<animal id> goes straight to that animal's
 ## 3D viewer (&pose=attack:0.6 holds that animation at that point), and
 ## with ?showcase=<animal id> to its attack showcase (&slow=1 slowed down),
+## with ?arttest=1 to the art tests beside our animals (ArtTestScreen),
 ## with ?army=1 to the Big army test, and with ?fight=<seed> to a real
 ## Draft Duel the computer plays for you (&mine=, &theirs=, &sizes=1):
 ## for checking a new model on a phone, or for screenshots. On a computer
@@ -94,6 +95,14 @@ func _open_dev_shortcut() -> void:
 	if not (OS.is_debug_build() or GameData.testing.get("show_dev_tools", false)):
 		return
 	DevShots.start_if_asked(self)
+	# Art tests (art_tests.json): animals from an outside art pack, tried out
+	# next to ours. They only exist when a shortcut asks for one.
+	if _wants_art_tests():
+		GameData.install_art_tests()
+	if _query("arttest") == "1":
+		# Their cards beside ours (tap for the 3D viewer), and a test fight.
+		_open_art_tests.call_deferred()
+		return
 	if _query("army") == "1":
 		# The Big army test (40 animals a side, an fps counter), as 3D models.
 		ArmyTest.use_models = true
@@ -126,6 +135,23 @@ func _open_dev_shortcut() -> void:
 	_open_viewer_dev.call_deferred(id, _query("pose"))
 
 
+## True if the website's address (or, on a computer, the environment) asks
+## for an art test: ?arttest=1, or an art test's id in ?viewer=, ?showcase=,
+## &herds=, &mine= or &theirs=.
+func _wants_art_tests() -> bool:
+	if _query("arttest") == "1":
+		return true
+	var ids: Dictionary = GameData.art_tests.get("animals", {})
+	for key in ["viewer", "showcase", "herds", "mine", "theirs"]:
+		var value := _query(key)
+		if value == "":
+			continue
+		for id: String in ids:
+			if value.contains(id):
+				return true
+	return false
+
+
 ## The speed a &slow= value asks for: 1 is the showcase's slow motion
 ## (styles showcase_slow_speed), a fraction under 1 that share of full
 ## speed, anything else full speed (0: not slowed).
@@ -144,6 +170,10 @@ func _query(key: String) -> String:
 		return OS.get_environment("DEV_" + key.to_upper())
 	var value: Variant = JavaScriptBridge.eval("(new URLSearchParams(window.location.search)).get('%s') || ''" % key, true)
 	return String(value) if value is String else ""
+
+
+func _open_art_tests() -> void:
+	ArtTestScreen.open()
 
 
 func _open_viewer_dev(id: String, pose: String) -> void:

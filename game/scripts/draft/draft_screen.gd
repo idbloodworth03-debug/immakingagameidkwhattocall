@@ -114,6 +114,9 @@ func _ready() -> void:
 	if String(auto.get("theirs", "")) != "":
 		theirs = DraftMatch.with_enough(_dev_ids(String(auto.theirs)))
 	duel = DraftMatch.new(_rng.randi(), {"levels": [Profile.card_levels(), _opponent_levels(theirs, Opponents.level_drop(opponent), mine)], "pools": [mine, theirs], "banned": _banned})
+	# An art test (art_tests.json, dev shortcuts only) fights at the level of
+	# the animal it plays as.
+	duel.sim.level_art_tests()
 	bot = DraftBot.new(duel, 1, _rng.randi(), float(opponent.difficulty), opponent.get("style", {}))
 	if not auto.is_empty():
 		_auto_bot = DraftBot.new(duel, 0, _rng.randi(), 0.5, {})

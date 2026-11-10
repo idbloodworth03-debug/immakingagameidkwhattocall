@@ -1,0 +1,463 @@
+"""Shared code for bringing an animal from a bought (or free) art pack into
+the game: loading its mesh, rig, clips and facial blendshapes into Blender,
+baking its palette into vertex colors, and building the game's animations
+(idle, walk, attack...) out of the pack's clips. Used by convert.py (the 3D
+models) and render.py (the card portrait and the battle sprites).
+
+Everything about a pack and each animal taken from it is in packs.json.
+The pack's own files are never part of this repository: say where they are
+with --pack <folder> (or the PACK_DIR environment variable).
+
+Coordinates match tools/creatures: the animal faces +Y with +Z up.
+"""
+import json
+import math
+import os
+
+import bpy
+import numpy as np
+from mathutils import Matrix, Quaternion, Vector
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+GAME = os.path.normpath(os.path.join(HERE, "..", "..", "game"))
+SETTINGS = json.load(open(os.path.join(HERE, "packs.json")))
+ANIMATIONS = ["idle", "walk", "attack", "attack2", "special", "fidget", "victory"]
+# Timing for an animation its stand-in's sheet doesn't have: (frames, fps, loops, hit).
+DEFAULT_TIMING = {"idle": (8, 6, True, None), "walk": (8, 12, True, None), "attack": (10, 16, False, 0.5),
+                  "attack2": (10, 16, False, 0.5), "special": (12, 12, False, 0.6), "fidget": (10, 10, False, None),
+                  "victory": (10, 10, True, None)}
+
+
+def animal(animal_id):
+    info = SETTINGS["animals"].get(animal_id)
+    if info is None:
+        raise SystemExit(f"packs.json has no animal '{animal_id}' (it has: {', '.join(SETTINGS['animals'])})")
+    return info
+
+
+def pack_of(animal_id):
+    return SETTINGS["packs"][animal(animal_id)["pack"]]
+
+
+def pack_dir(given=None):
+    path = given or os.environ.get("PACK_DIR", "")
+    if not path or not os.path.isdir(path):
+        raise SystemExit("Say where the art pack's files are: --pack <folder> (or PACK_DIR=<folder>). "
+                         "They are not part of this repository.")
+    return path
+
+
+def timing(animal_id):
+    """Each animation's (frames, fps, loops, hit): the same as the animal it
+    is timed like (packs.json "timing": an animal already in the game), so
+    the fight's choreography doesn't change with the art."""
+    info = animal(animal_id)
+    like = info.get("timing")
+    sheet = {}
+    if like:
+        path = os.path.join(GAME, "art", "units", like, "sheet.json")
+        sheet = json.load(open(path)).get("animations", {})
+    out = {}
+    for name in info["clips"]:
+        if name in sheet:
+            a = sheet[name]
+            out[name] = (int(a["frames"]), int(a["fps"]), bool(a["loop"]), a.get("hit"))
+        else:
+            out[name] = DEFAULT_TIMING[name]
+    return out
+
+
+# --- Loading -----------------------------------------------------------------
+
+class Loaded:
+    """One pack animal in the scene: its armature, its body mesh, its face
+    mesh (the eyes and tear drops, the only parts the blendshapes move) and
+    its clips (name -> list of poses, one per frame; a pose maps each bone
+    to (location, quaternion, scale))."""
+    def __init__(self):
+        self.arm = None
+        self.body = None
+        self.face = None
+        self.clips = {}
+        self.source = ""
+
+
+def _import_fbx(path, anim):
+    before = set(bpy.data.objects)
+    bpy.ops.import_scene.fbx(filepath=path, use_anim=anim)
+    return [o for o in bpy.data.objects if o not in before]
+
+
+def _slot(arm, action):
+    data = arm.animation_data or arm.animation_data_create()
+    data.action = action
+    if action is not None and hasattr(data, "action_slot") and len(action.slots):
+        data.action_slot = action.slots[0]
+
+
+def _read_clips(arm, actions):
+    """Every clip as its poses, frame by frame (the pack bakes a pose on
+    every frame). Quaternions are kept on one side from frame to frame so
+    they can be blended."""
+    sc = bpy.context.scene
+    clips = {}
+    for action in actions:
+        name = action.name.split("|")[-1]
+        _slot(arm, action)
+        f0, f1 = int(round(action.frame_range[0])), int(round(action.frame_range[1]))
+        poses = []
+        prev = {}
+        for f in range(f0, f1 + 1):
+            sc.frame_set(f)
+            pose = {}
+            for pb in arm.pose.bones:
+                loc, rot, scale = pb.matrix_basis.decompose()
+                if pb.name in prev and rot.dot(prev[pb.name]) < 0.0:
+                    rot.negate()
+                prev[pb.name] = rot.copy()
+                pose[pb.name] = (np.array(loc), np.array(rot), np.array(scale))
+            poses.append(pose)
+        clips[name] = poses
+    _slot(arm, None)
+    for pb in arm.pose.bones:
+        pb.matrix_basis = Matrix.Identity(4)
+    return clips
+
+
+def load(animal_id, lod, where, encode="srgb", fresh=True):
+    """The animal in the scene (an empty one, unless `fresh` is False),
+    ready for the game: facing +Y, its palette baked into the "Col" color
+    attribute (`encode`: "srgb" as the game's models keep them, "linear"
+    for rendering), its face split off, its clips read. `lod`: which of the
+    pack's level-of-detail meshes."""
+    info = animal(animal_id)
+    pack = pack_of(animal_id)
+    src = info["source"]
+    if fresh:
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+    made = _import_fbx(os.path.join(where, pack["meshes"].format(source=src, lod=lod)), False)
+    out = Loaded()
+    out.source = src
+    out.arm = next(o for o in made if o.type == "ARMATURE")
+    out.body = next(o for o in made if o.type == "MESH")
+    # The clips come in their own file, on a copy of the same rig.
+    old_actions = set(bpy.data.actions)
+    extra = _import_fbx(os.path.join(where, pack["clips"].format(source=src)), True)
+    actions = [a for a in bpy.data.actions if a not in old_actions]
+    for a in actions:
+        a.use_fake_user = True
+    for o in extra:
+        bpy.data.objects.remove(o, do_unlink=True)
+    out.clips = _read_clips(out.arm, actions)
+    for a in actions:
+        bpy.data.actions.remove(a)
+    if out.arm.animation_data is not None:
+        out.arm.animation_data_clear()
+    _paint(out.body, os.path.join(where, pack["palette"].format(source=src)), info.get("recolor", {}), encode)
+    out.face = _split_face(out.body)
+    # The pack's animals face -Y; the game's face +Y.
+    if pack.get("faces", "-Y") == "-Y":
+        out.arm.rotation_euler = (0.0, 0.0, math.pi)
+    for pb in out.arm.pose.bones:
+        pb.rotation_mode = "QUATERNION"
+    bpy.context.view_layer.update()
+    _bake_transform(out)
+    return out
+
+
+def _bake_transform(loaded):
+    """Bakes the rig object's own turn and scale (the pack's rigs are
+    scaled 0.4) into the bones and meshes, leaving every object's transform
+    plain: the game measures and scales its models by their meshes, and a
+    scale hidden on the rig would throw that off. Bone moves in the clips
+    shrink with it."""
+    arm = loaded.arm
+    m = arm.matrix_world.copy()
+    scale = float(m.to_scale()[0])
+    arm.data.transform(m)
+    for ob in (loaded.body, loaded.face):
+        if ob is None:
+            continue
+        local = ob.matrix_world.copy()
+        ob.data.transform(local, shape_keys=True)
+        ob.matrix_parent_inverse = Matrix.Identity(4)
+        ob.matrix_basis = Matrix.Identity(4)
+    arm.matrix_world = Matrix.Identity(4)
+    for poses in loaded.clips.values():
+        for pose in poses:
+            for bone, (loc, rot, size) in pose.items():
+                pose[bone] = (loc * scale, rot, size)
+    bpy.context.view_layer.update()
+
+
+def srgb_to_linear(c):
+    c = np.asarray(c, float)
+    return np.where(c <= 0.04045, c / 12.92, ((c + 0.055) / 1.055) ** 2.4)
+
+
+def _paint(ob, palette_path, recolor, encode):
+    """The pack colors an animal from a tiny palette picture through its UVs
+    (each face sits inside one swatch). Baked into a per-corner color
+    attribute instead: no texture to filter or bleed, and the game's own
+    shaders already draw vertex colors. `recolor` swaps palette colors
+    ("#rrggbb" -> "#rrggbb"), for making one animal into its cousin."""
+    from PIL import Image
+    im = np.asarray(Image.open(palette_path).convert("RGB"), float) / 255.0
+    h, w = im.shape[:2]
+    swaps = {tuple(int(k.lstrip("#")[i:i + 2], 16) for i in (0, 2, 4)): [int(v.lstrip("#")[i:i + 2], 16) / 255.0 for i in (0, 2, 4)]
+             for k, v in recolor.items()}
+    me = ob.data
+    uv = np.empty(len(me.loops) * 2)
+    me.uv_layers[0].data.foreach_get("uv", uv)
+    uv = uv.reshape(-1, 2)
+    x = np.clip((uv[:, 0] * w).astype(int), 0, w - 1)
+    y = np.clip(((1.0 - uv[:, 1]) * h).astype(int), 0, h - 1)
+    rgb = im[y, x].copy()
+    if swaps:
+        as_bytes = np.round(rgb * 255).astype(int)
+        for old, new in swaps.items():
+            rgb[(as_bytes == np.array(old)).all(axis=1)] = new
+    if encode == "linear":
+        rgb = srgb_to_linear(rgb)
+    rgba = np.ones((len(rgb), 4))
+    rgba[:, :3] = rgb
+    for name in [a.name for a in me.color_attributes]:
+        me.color_attributes.remove(me.color_attributes[name])
+    me.color_attributes.new("Col", "FLOAT_COLOR", "CORNER").data.foreach_set("color", rgba.ravel())
+    me.color_attributes.active_color = me.color_attributes["Col"]
+    me.color_attributes.render_color_index = 0
+    for name in [u.name for u in me.uv_layers]:
+        me.uv_layers.remove(me.uv_layers[name])
+    me.materials.clear()
+
+
+def _split_face(ob):
+    """Splits off the pieces the blendshapes move (the eyes, the tear and
+    sweat drops) into their own mesh, which keeps the blendshapes; the body
+    loses them. A blendshape stores every vertex of its mesh again, so on
+    the whole body thirty of them would be thirty copies of the animal."""
+    me = ob.data
+    if me.shape_keys is None:
+        return None
+    keys = me.shape_keys.key_blocks
+    n = len(me.vertices)
+    base = np.empty(n * 3)
+    keys[0].data.foreach_get("co", base)
+    moved = np.zeros(n, bool)
+    for kb in keys[1:]:
+        co = np.empty(n * 3)
+        kb.data.foreach_get("co", co)
+        moved |= (np.abs(co - base).reshape(-1, 3).max(axis=1) > 1e-6)
+    # Whole loose pieces: any piece with a moved vertex.
+    edges = np.empty(len(me.edges) * 2, int)
+    me.edges.foreach_get("vertices", edges)
+    edges = edges.reshape(-1, 2)
+    label = np.arange(n)
+    while True:
+        low = np.minimum(label[edges[:, 0]], label[edges[:, 1]])
+        new = label.copy()
+        np.minimum.at(new, edges[:, 0], low)
+        np.minimum.at(new, edges[:, 1], low)
+        if (new == label).all():
+            break
+        label = new
+    face_labels = np.unique(label[moved])
+    in_face = np.isin(label, face_labels)
+    if not in_face.any():
+        return None
+    bpy.ops.object.select_all(action="DESELECT")
+    ob.select_set(True)
+    bpy.context.view_layer.objects.active = ob
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.select_mode(type="VERT")
+    bpy.ops.mesh.select_all(action="DESELECT")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    me.vertices.foreach_set("select", in_face)
+    bpy.ops.object.mode_set(mode="EDIT")
+    bpy.ops.mesh.separate(type="SELECTED")
+    bpy.ops.object.mode_set(mode="OBJECT")
+    face = next(o for o in bpy.context.selected_objects if o != ob)
+    ob.shape_key_clear()
+    bpy.ops.object.select_all(action="DESELECT")
+    return face
+
+
+def keep_shapes(face, wanted, drops=("teardrop", "sweat")):
+    """Drops the blendshapes a model won't use, and the tear and sweat
+    drops (pieces hidden inside the head until a blendshape named like
+    `drops` brings them out) when no blendshape that is kept moves them."""
+    if face is None or wanted == "all":
+        return
+    me = face.data
+    keys = me.shape_keys.key_blocks
+    n = len(me.vertices)
+    base = np.empty(n * 3)
+    keys[0].data.foreach_get("co", base)
+    used = np.zeros(n, bool)
+    is_drop = np.zeros(n, bool)
+    for kb in list(keys[1:]):
+        co = np.empty(n * 3)
+        kb.data.foreach_get("co", co)
+        moves = np.abs(co - base).reshape(-1, 3).max(axis=1) > 1e-6
+        if kb.name.startswith(tuple(drops)):
+            is_drop |= moves
+        if kb.name in wanted:
+            used |= moves
+        else:
+            face.shape_key_remove(kb)
+    edges = np.empty(len(me.edges) * 2, int)
+    me.edges.foreach_get("vertices", edges)
+    edges = edges.reshape(-1, 2)
+    label = np.arange(n)
+    while True:
+        low = np.minimum(label[edges[:, 0]], label[edges[:, 1]])
+        new = label.copy()
+        np.minimum.at(new, edges[:, 0], low)
+        np.minimum.at(new, edges[:, 1], low)
+        if (new == label).all():
+            break
+        label = new
+    drop = np.zeros(n, bool)
+    for piece in np.unique(label):
+        mine = label == piece
+        if is_drop[mine].any() and not used[mine].any():
+            drop |= mine
+    if drop.any():
+        import bmesh
+        bm = bmesh.new()
+        bm.from_mesh(me)
+        bm.verts.ensure_lookup_table()
+        bmesh.ops.delete(bm, geom=[bm.verts[i] for i in np.nonzero(drop)[0]], context="VERTS")
+        bm.to_mesh(me)
+        bm.free()
+
+
+# --- Animations ----------------------------------------------------------------
+
+def sample(poses, u):
+    """A clip's pose at `u` (0-1 through it; clips loop), eased through the
+    pack's per-frame poses (a smooth curve through them, not straight lines
+    from one to the next: slowed three times for an idle, straight lines
+    would show as a twitch on every frame)."""
+    n = len(poses) - 1                      # the last frame repeats the first
+    x = (u % 1.0) * n
+    i = int(math.floor(x)) % n
+    t = x - math.floor(x)
+    out = {}
+    for bone in poses[0]:
+        p = [poses[(i + k) % n][bone] for k in (-1, 0, 1, 2)]
+        vals = []
+        for part in range(3):
+            a = [np.array(q[part], float) for q in p]
+            if part == 1:
+                # Quaternions: all on the side of the one we start from.
+                for k in (0, 2, 3):
+                    ref = a[1] if k != 3 else a[2]
+                    if float(np.dot(a[k], ref)) < 0.0:
+                        a[k] = -a[k]
+            v = 0.5 * ((2 * a[1]) + (-a[0] + a[2]) * t + (2 * a[0] - 5 * a[1] + 4 * a[2] - a[3]) * t * t
+                       + (-a[0] + 3 * a[1] - 3 * a[2] + a[3]) * t * t * t)
+            if part == 1:
+                v = v / max(np.linalg.norm(v), 1e-9)
+            vals.append(v)
+        out[bone] = tuple(vals)
+    return out
+
+
+def warp(p, hit, strike):
+    """Where in a clip (0-1) an attack is at `p` of the game's animation: the
+    clip's own strike moment lands exactly on the game's hit moment (`hit`:
+    the share of the animation where the blow lands, from the sheet)."""
+    if hit is None or strike is None:
+        return p
+    if p <= hit:
+        return strike * (p / hit)
+    return strike + (1.0 - strike) * ((p - hit) / (1.0 - hit))
+
+
+def pose_at(loaded, spec, p, hit=None):
+    """The pose of one of the game's animations at `p` (0-1), from its
+    recipe in packs.json: {"clip": name} (one clip, start to end), with
+    "strike" (where in the clip the blow lands), "times" (the clip played
+    that many times) or "clips": [names] (one after another)."""
+    names = spec.get("clips") or [spec["clip"]] * int(spec.get("times", 1))
+    x = min(max(p, 0.0), 1.0) * len(names)
+    k = min(int(x), len(names) - 1)
+    u = x - k
+    if len(names) == 1:
+        u = warp(u, hit, spec.get("strike"))
+    lo, hi = spec.get("from", 0.0), spec.get("to", 1.0)
+    u = lo + (hi - lo) * u
+    if u >= 1.0:
+        u = 0.0 if spec.get("loops", True) else 0.9999
+    return sample(loaded.clips[names[k]], u)
+
+
+def apply(arm, pose):
+    for pb in arm.pose.bones:
+        loc, rot, scale = pose[pb.name]
+        pb.location = Vector(loc)
+        pb.rotation_quaternion = Quaternion(rot)
+        pb.scale = Vector(scale)
+
+
+def rest(arm):
+    for pb in arm.pose.bones:
+        pb.location = (0, 0, 0)
+        pb.rotation_quaternion = (1, 0, 0, 0)
+        pb.scale = (1, 1, 1)
+    bpy.context.view_layer.update()
+
+
+def points(loaded):
+    """World positions of every vertex as posed now (body and face)."""
+    deps = bpy.context.evaluated_depsgraph_get()
+    out = []
+    for ob in (loaded.body, loaded.face):
+        if ob is None:
+            continue
+        ev = ob.evaluated_get(deps)
+        me = ev.to_mesh()
+        co = np.empty(len(me.vertices) * 3)
+        me.vertices.foreach_get("co", co)
+        ev.to_mesh_clear()
+        m = np.array(ob.matrix_world)
+        out.append(co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3])
+    return np.concatenate(out)
+
+
+def strike_of(loaded, clip):
+    """Where in a clip (0-1) the animal reaches furthest forward: its strike."""
+    best, at = -1e9, 0.0
+    for k in range(41):
+        u = k / 40.0
+        apply(loaded.arm, sample(loaded.clips[clip], u))
+        bpy.context.view_layer.update()
+        reach = float(points(loaded)[:, 1].max())
+        if reach > best + 1e-6:
+            best, at = reach, u
+    rest(loaded.arm)
+    return round(at, 3)
+
+
+ATTACKS = ("attack", "attack2", "special")
+
+
+def recipes(loaded, animal_id):
+    """Each game animation's recipe (packs.json "clips"), with each attack's
+    strike (where in its clip the blow lands) found when it isn't given."""
+    out = {}
+    for name, spec in animal(animal_id)["clips"].items():
+        spec = dict(spec)
+        if name in ATTACKS and "strike" not in spec and "clip" in spec:
+            spec["strike"] = strike_of(loaded, spec["clip"])
+        out[name] = spec
+    return out
+
+
+def set_face(loaded, shapes):
+    """Sets the face's blendshapes ({name: 0-1}; the rest go to 0)."""
+    if loaded.face is None or loaded.face.data.shape_keys is None:
+        return
+    for kb in loaded.face.data.shape_keys.key_blocks[1:]:
+        kb.value = float(shapes.get(kb.name, 0.0))

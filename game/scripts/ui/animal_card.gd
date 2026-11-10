@@ -76,14 +76,16 @@ static func create(id: String, small_card := false) -> AnimalCard:
 ## Re-reads the profile and redraws. Call after the profile changes.
 func refresh() -> void:
 	var animal := GameData.get_card(animal_id)
-	_owned = Profile.has_card(animal_id)
-	_level = Profile.card_level(animal_id)
+	# (An art test, art_tests.json, shows the progress of the animal it plays as.)
+	var mine := GameData.plays_as(animal_id)
+	_owned = Profile.has_card(mine)
+	_level = Profile.card_level(mine)
 	_reachable = int(animal.unlock_arena_index) <= Profile.highest_arena()
-	_new = Profile.is_card_new(animal_id)
-	var cost := Profile.upgrade_cost(animal_id) if _owned else {}
+	_new = Profile.is_card_new(mine) and mine == animal_id
+	var cost := Profile.upgrade_cost(mine) if _owned else {}
 	_needed = int(cost.get("copies", 0))
-	_copies = Profile.card_copies(animal_id) if _owned else 0
-	_upgradable = _owned and Profile.has_copies_for_upgrade(animal_id)
+	_copies = Profile.card_copies(mine) if _owned else 0
+	_upgradable = _owned and Profile.has_copies_for_upgrade(mine)
 	set_process(_animates())
 	queue_redraw()
 

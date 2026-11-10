@@ -222,6 +222,16 @@ func level_of(team: int, card_id: String) -> int:
 	return int(teams[team].levels.get(card_id, GameData.start_level(GameData.get_card(card_id).get("rarity", "common"))))
 
 
+## Each art test that's installed (GameData.install_art_tests: dev shortcuts
+## only) fights at the level of the animal it plays as, on both teams.
+func level_art_tests() -> void:
+	for id: String in GameData.art_tests.get("animals", {}):
+		if not GameData.cards.has(id):
+			continue
+		for team in teams.size():
+			teams[team].levels[id] = level_of(team, GameData.plays_as(id))
+
+
 func units(team: int) -> Array:
 	return fighters.filter(func(f): return f.alive and f.kind == "unit" and f.team == team)
 

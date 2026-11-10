@@ -34,6 +34,13 @@ var _skin: ShaderMaterial
 var _outline: ShaderMaterial
 ## The model has the movie look (hero art: no outline, its own shading).
 var _movie := false
+## The model comes from a flat-color art pack (its own shading; a face of
+## blendshapes that blinks and reacts).
+var _toon := false
+var _face_meshes: Array = []
+var _next_blink := 0.0
+var _blink_until := 0.0
+var _face := ""
 ## For testing: an animation to hold at a point in it once the model loads
 ## ("attack:0.6"), for screenshots of a pose. Empty: none.
 var dev_pose := ""
@@ -157,7 +164,7 @@ func _build_3d() -> void:
 	_placeholder.position = _view_rect.get_center() - Vector2(side, side) / 2.0
 	_placeholder.size = Vector2(side, side)
 	_placeholder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if not Profile.has_card(animal_id):
+	if not Profile.has_card(GameData.plays_as(animal_id)):
 		_placeholder.modulate = Color(UIKit.DEEP, 1.0)
 	add_child(_placeholder)
 
@@ -179,6 +186,9 @@ func _model_ready(scene: PackedScene) -> void:
 	_model = scene.instantiate() as Node3D
 	_turntable.add_child(_model)
 	_movie = ModelStage.is_movie(_model)
+	_toon = ModelStage.is_toon(_model)
+	if _toon:
+		_face_meshes = ModelStage.toon_faces(_model)
 	_skin = ShaderMaterial.new()
 	_skin.shader = SKIN_SHADER
 	_outline = ShaderMaterial.new()
@@ -256,8 +266,18 @@ func pose_at(spec: String) -> void:
 
 
 func _apply_look() -> void:
-	var unknown := not Profile.has_card(animal_id)
-	if _movie:
+	var unknown := not Profile.has_card(GameData.plays_as(animal_id))
+	var outline_px := float(_look.get("outline_px", 1.8))
+	var outline_color := String(_look.get("outline_color", "#140c09"))
+	if _toon:
+		# Flat-color art: its two-tone shading and a clean dark outline.
+		var toon_look: Dictionary = GameData.viewer.get("toon_look", {})
+		ModelStage.dress_toon(_skin)
+		_skin.set_shader_parameter("silhouette_color", Color(String(_look.get("silhouette_color", "#1d2f5e"))))
+		_skin.next_pass = _outline
+		outline_px *= float(toon_look.get("outline_scale", 1.0))
+		outline_color = String(toon_look.get("outline_color", outline_color))
+	elif _movie:
 		# Hero art: the movie shading and no outline (the rim light separates
 		# it from the background), except as an undiscovered silhouette.
 		ModelStage.dress_movie(_skin, animal_id)
@@ -275,8 +295,8 @@ func _apply_look() -> void:
 			if _look.has(key):
 				_skin.set_shader_parameter(key, float(_look[key]))
 	_skin.set_shader_parameter("silhouette", 1.0 if unknown else 0.0)
-	_outline.set_shader_parameter("width_px", float(_look.get("outline_px", 1.8)) * render_scale)
-	_outline.set_shader_parameter("color", Color(String(_look.get("outline_color", "#140c09"))))
+	_outline.set_shader_parameter("width_px", outline_px * render_scale)
+	_outline.set_shader_parameter("color", Color(outline_color))
 	_outline.set_shader_parameter("silhouette", 1.0 if unknown else 0.0)
 	_outline.set_shader_parameter("silhouette_color", Color(String(_look.get("silhouette_outline", "#0a1430"))))
 
@@ -366,11 +386,32 @@ func _process(delta: float) -> void:
 	if _flash > 0.0 and _skin != null:
 		_flash = maxf(0.0, _flash - delta / float(_look.get("flash_seconds", 0.25)))
 		_skin.set_shader_parameter("flash", _flash * float(_look.get("flash", 0.35)))
+	if _toon:
+		_animate_face()
 	if _player != null and _clock >= _next_fidget:
 		if _player.current_animation == "idle" and _player.has_animation("fidget"):
 			_play("fidget")
 		_schedule_fidget()
 	_place_camera()
+
+
+## A flat-color model's face: the face of the reaction it's playing
+## (viewer.json "toon_look" viewer_faces), a blink now and then otherwise.
+func _animate_face() -> void:
+	var toon_look: Dictionary = GameData.viewer.get("toon_look", {})
+	var playing := String(_player.current_animation) if _player != null else ""
+	var face := String(toon_look.get("viewer_faces", {}).get(playing, ""))
+	if face == "":
+		var blink: Dictionary = toon_look.get("viewer_blink", {})
+		if _clock >= _next_blink:
+			var every: Array = blink.get("every", [2.2, 5.0])
+			_blink_until = _clock + float(blink.get("seconds", 0.13))
+			_next_blink = _clock + randf_range(float(every[0]), float(every[1]))
+		if _clock < _blink_until:
+			face = "blink"
+	if face != _face or face == "dizzy":
+		_face = face
+		ModelStage.set_toon_face(_face_meshes, face, _clock)
 
 
 func _schedule_fidget() -> void:
@@ -551,11 +592,14 @@ func _build_info() -> void:
 		_info_box.remove_child(child)
 		child.queue_free()
 	var card := GameData.get_card(animal_id)
+	# An art test (art_tests.json) shows the progress of the animal it plays
+	# as, and can't be upgraded itself.
+	var art_test := GameData.is_art_test(animal_id)
 	var owned := Profile.has_card(animal_id)
 	var width := _view_rect.size.x - 32.0
 
 	# The hold popup's card, full width.
-	var pop := InfoPop.make(animal_id, 0, Profile.card_level(animal_id))
+	var pop := InfoPop.make(animal_id, 0, Profile.card_level(GameData.plays_as(animal_id)))
 	pop.size = Vector2(width, pop.size.y)
 	pop.custom_minimum_size = pop.size
 	_info_box.add_child(pop)
@@ -563,7 +607,13 @@ func _build_info() -> void:
 	# Level and Upgrade (or where to find it).
 	var row := UIKit.hbox(16)
 	_info_box.add_child(row)
-	if owned:
+	if art_test:
+		var test: Dictionary = GameData.art_tests.animals[animal_id]
+		var note := UIKit.paragraph("Art test. Plays exactly as the %s. Art: %s." % [
+				String(GameData.get_card(GameData.plays_as(animal_id)).get("name", "")), String(test.get("pack", "an art pack"))], 22, UIKit.YELLOW)
+		note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		row.add_child(note)
+	elif owned:
 		var level_box := UIKit.vbox(6)
 		level_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(level_box)

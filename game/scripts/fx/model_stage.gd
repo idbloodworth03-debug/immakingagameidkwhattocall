@@ -21,6 +21,8 @@ const SKIN_SHADER := preload("res://scripts/fx/model_skin.gdshader")
 const OUTLINE_SHADER := preload("res://scripts/fx/model_outline.gdshader")
 ## Animals with the movie look (docs/ART_DIRECTION.md): their own shading.
 const MOVIE_SHADER := preload("res://scripts/fx/model_movie.gdshader")
+## Animals from a flat-color art pack (tools/packs): their own shading too.
+const TOON_SHADER := preload("res://scripts/fx/model_toon.gdshader")
 const DIR := "res://art/models/battle/"
 const ATTACKS := ["attack", "attack2", "special"]
 ## Each cartoon face as the eye shader's [blink, lid, pupil size, happy, dizzy].
@@ -86,6 +88,12 @@ class Model:
 	var team := -1
 	## It has the movie look (its own shading; its locks' outline pushed back).
 	var movie := false
+	## It comes from a flat-color art pack (its own shading; its face is
+	## real geometry moved by blendshapes on face_meshes, not drawn by the
+	## shader; its outline outline_k times the usual width).
+	var toon := false
+	var face_meshes: Array = []
+	var outline_k := 1.0
 	var anim := ""
 	var lengths := {}
 	var size := 1.0
@@ -219,7 +227,7 @@ func _make_model(v: UnitView) -> Model:
 	if not spare.is_empty():
 		var reused: Model = spare.pop_back()
 		_fit(reused, v)
-		reused.outline.set_shader_parameter("width_px", outline_px(render_scale))
+		reused.outline.set_shader_parameter("width_px", outline_px(render_scale) * reused.outline_k)
 		_set_team(reused, v.team)
 		reused.anim = ""
 		reused.face = "-"
@@ -251,7 +259,7 @@ func _set_team(m: Model, team: int) -> void:
 		m.outline.next_pass = m.team_line
 	m.team = team
 	m.team_line.set_shader_parameter("color", BattleField.team_color(team))
-	m.team_line.set_shader_parameter("width_px", outline_px(render_scale) + px * render_scale)
+	m.team_line.set_shader_parameter("width_px", outline_px(render_scale) * m.outline_k + px * render_scale)
 
 
 ## Its size on the field: its natural size (tile_scale) times the view's
@@ -414,6 +422,55 @@ static func dress_movie(skin: ShaderMaterial, id: String) -> void:
 	skin.set_shader_parameter("lid_color", Color(String(lids[id])) if lids.has(id) else UnitSprites.lid_color(id))
 
 
+## True if this model comes from a flat-color art pack: its meshes are named
+## <id>_toon (tools/packs/convert.py).
+static func is_toon(root: Node) -> bool:
+	return not root.find_children("*_toon*", "MeshInstance3D", true, false).is_empty()
+
+
+## A skin material in the flat-color look's shading (viewer.json "toon_look").
+static func dress_toon(skin: ShaderMaterial) -> void:
+	skin.shader = TOON_SHADER
+	var look: Dictionary = GameData.viewer.get("toon_look", {})
+	var key_dir: Array = look.get("key_dir", [-0.45, 0.72, 0.55])
+	skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
+	for key in ["key_color", "shade_color", "rim_color"]:
+		if look.has(key):
+			skin.set_shader_parameter(key, Color(String(look[key])))
+	for key in ["band", "soft", "under", "rim", "rim_width", "saturation", "brightness"]:
+		if look.has(key):
+			skin.set_shader_parameter(key, float(look[key]))
+
+
+## The meshes of a flat-color model that carry its facial blendshapes.
+static func toon_faces(root: Node) -> Array:
+	var out := []
+	for node in root.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.mesh != null and mi.get_blend_shape_count() > 0:
+			out.append(mi)
+	return out
+
+
+## Shows one of the game's cartoon faces ("", blink, squint, drowsy, smug,
+## wide, happy, dizzy) on a flat-color model by setting its blendshapes
+## (viewer.json "toon_look" faces). A face that cycles (dizzy: spinning
+## eyes) wants calling every frame with the time.
+static func set_toon_face(meshes: Array, face: String, now := 0.0) -> void:
+	var faces: Dictionary = GameData.viewer.get("toon_look", {}).get("faces", {})
+	var want: Dictionary = faces.get(face, {})
+	var amounts := {}
+	if want.has("cycle"):
+		var names: Array = want.cycle
+		if not names.is_empty():
+			amounts[String(names[int(now * float(want.get("per_second", 9.0))) % names.size()])] = 1.0
+	else:
+		amounts = want
+	for mi: MeshInstance3D in meshes:
+		for i in mi.get_blend_shape_count():
+			mi.set_blend_shape_value(i, float(amounts.get(String(mi.mesh.get_blend_shape_name(i)), 0.0)))
+
+
 ## The outline's width in the viewport's real pixels.
 static func outline_px(scale: float) -> float:
 	return Feel.num("models", "outline_px", 1.5) * scale
@@ -438,7 +495,15 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 	m.outline.shader = OUTLINE_SHADER
 	var look: Dictionary = GameData.viewer.get("look", {})
 	m.movie = is_movie(m.body)
-	if m.movie:
+	m.toon = is_toon(m.body)
+	var outline_color := String(look.get("outline_color", "#140c09"))
+	if m.toon:
+		var toon_look: Dictionary = GameData.viewer.get("toon_look", {})
+		dress_toon(m.skin)
+		m.face_meshes = toon_faces(m.body)
+		m.outline_k = float(toon_look.get("outline_scale", 1.0))
+		outline_color = String(toon_look.get("outline_color", outline_color))
+	elif m.movie:
 		dress_movie(m.skin, id)
 		m.outline.set_shader_parameter("lock_push", lock_push())
 	else:
@@ -452,8 +517,8 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 			if look.has(key):
 				m.skin.set_shader_parameter(key, float(look[key]))
 		m.skin.set_shader_parameter("lid_color", UnitSprites.lid_color(id))
-	m.outline.set_shader_parameter("width_px", outline_width)
-	m.outline.set_shader_parameter("color", Color(String(look.get("outline_color", "#140c09"))))
+	m.outline.set_shader_parameter("width_px", outline_width * m.outline_k)
+	m.outline.set_shader_parameter("color", Color(outline_color))
 	m.skin.next_pass = m.outline
 	for mesh in m.body.find_children("*", "MeshInstance3D", true, false):
 		var instance := mesh as MeshInstance3D
@@ -552,7 +617,13 @@ func _pose(m: Model, v: UnitView, now: float, dt: float, ppu: float, right: Vect
 			else:
 				m.player.seek(target, true)
 	# Its cartoon face (UnitView chooses it, as for the sprite).
-	if v.m_face != m.face:
+	if m.toon:
+		# A flat-color model's face is blendshapes (its spinning dizzy eyes
+		# a cycle of them, so those are set every frame).
+		if v.m_face != m.face or m.face == "dizzy":
+			m.face = v.m_face
+			set_toon_face(m.face_meshes, m.face, now)
+	elif v.m_face != m.face:
 		m.face = v.m_face
 		var face: Array = FACES.get(m.face, FACES[""])
 		_param(m, m.skin, "blink", float(face[0]))
@@ -560,7 +631,7 @@ func _pose(m: Model, v: UnitView, now: float, dt: float, ppu: float, right: Vect
 		_param(m, m.skin, "pupil_size", float(face[2]))
 		_param(m, m.skin, "happy", float(face[3]))
 		_param(m, m.skin, "dizzy", float(face[4]))
-	if m.face == "dizzy":
+	if m.face == "dizzy" and not m.toon:
 		_param(m, m.skin, "spin", snappedf(fposmod(now * 7.0, TAU), 0.05))
 	_param(m, m.skin, "flash", snappedf(v.m_flash, 0.02))
 	_param(m, m.skin, "gold", snappedf(v.m_gold, 0.02))
@@ -573,7 +644,7 @@ func _pose(m: Model, v: UnitView, now: float, dt: float, ppu: float, right: Vect
 		var glow := snappedf(v.m_glow, 0.05)
 		var color := BattleField.team_color(m.team)
 		_param(m, m.team_line, "color", color.lerp(Color.WHITE, 0.4 * glow) if glow > 0.0 else color)
-		_param(m, m.team_line, "width_px", outline_px(render_scale) + (Feel.num("models", "team_outline_px", 3.0) + Feel.num("readability", "squad_band_boost_px", 2.5) * glow) * render_scale)
+		_param(m, m.team_line, "width_px", outline_px(render_scale) * m.outline_k + (Feel.num("models", "team_outline_px", 3.0) + Feel.num("readability", "squad_band_boost_px", 2.5) * glow) * render_scale)
 	_param(m, m.skin, "tint", v.m_tint)
 
 

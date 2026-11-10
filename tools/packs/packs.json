@@ -1,0 +1,183 @@
+{
+ "_note": "Animals taken from outside art packs (tools/packs). packs: where a pack keeps its files, relative to the folder given with --pack ({source}: the animal's name in the pack; {lod}: 0 the finest). lods: which of the pack's level-of-detail meshes each of the game's models uses (viewer: the 3D viewer; battle: fights; render: the card portrait and the sprites). shapes: the facial blendshapes kept in each model (\"all\", or a list: a blendshape stores every vertex of the face again, and a fight shows dozens of animals). look: how the portrait and sprites are rendered to flatter flat-color art (the game's own real-time look is in game/data/viewer.json \"toon_look\"): color: saturation and brightness of the palette; toon: the cel shading's light share (size) and how soft its edge is (smooth); flat: how much of the color shows whatever the light (the pack's own soft look); key_angle: the key light's size in degrees (bigger: softer shadows); shadow: how dark the ground shadow is; outline: the dark line's width in pixels (at a 512-pixel portrait, and at 56 pixels a tile for sprites) and color; portrait_subdivide and sprite_subdivide: smoothing rounds for each; portrait_samples, sprite_samples and sprite_denoise (Cycles' denoiser quality and prefilter: the sheets' hundreds of frames use the fast one). animals: one entry per game animal id: pack and source (its name in the pack), timing (an animal already in the game whose animation timing it keeps, so fights play the same), body and attack styles (as tools/creatures: how the game moves it and which hit effects it gets), tiles_long (its longest side in field tiles at natural size), walk_cycle_tiles (how far one walk cycle carries it), recolor (palette swaps, \"#old\": \"#new\"), clips (each game animation's recipe from the pack's clips: clip, or clips one after another; times: played that many times; strike: where in the clip the blow lands, 0-1, matched to the game's hit moment, found by itself for an attack when not given (where the animal reaches furthest forward); from/to: only that part of the clip), lid_color (the skin round its eyes, for the blinks the game draws over a sprite's eyes), hero (the card portrait's pose: clip, at 0-1, face blendshapes, turn in degrees, lift: how high off the ground a flier hovers, in the pack's units).",
+ "packs": {
+  "quirky": {
+   "name": "Quirky Series",
+   "by": "Omabuarts",
+   "meshes": "3D Files/FBX/{source}_LOD{lod}.fbx",
+   "clips": "3D Files/FBX/Animations/{source}_Animations.fbx",
+   "palette": "Textures/T_{source}.png",
+   "faces": "-Y"
+  }
+ },
+ "lods": {
+  "viewer": 0,
+  "battle": 1,
+  "render": 0
+ },
+ "shapes": {
+  "viewer": "all",
+  "battle": [
+   "eyes.blink",
+   "eyes.happy",
+   "eyes.annoyed",
+   "eyes.sleep",
+   "eyes.shrink",
+   "eyes.squint",
+   "eyes.dead",
+   "eyes.spin-1",
+   "eyes.spin-2",
+   "eyes.spin-3"
+  ]
+ },
+ "keys_per_second": {
+  "viewer": 30,
+  "battle": 24
+ },
+ "look": {
+  "color": {
+   "saturation": 1.18,
+   "value": 1.04
+  },
+  "toon": {
+   "size": 0.72,
+   "smooth": 0.3
+  },
+  "flat": 0.3,
+  "key_angle": 30.0,
+  "shadow": 0.55,
+  "outline": {
+   "portrait_pixels": 3.6,
+   "sprite_pixels": 2.3,
+   "color": [
+    0.03,
+    0.02,
+    0.035
+   ]
+  },
+  "portrait_samples": 64,
+  "sprite_samples": 16,
+  "portrait_subdivide": 1,
+  "sprite_subdivide": 0,
+  "sprite_denoise": {
+   "quality": "FAST",
+   "prefilter": "NONE"
+  }
+ },
+ "animals": {
+  "test_colobus": {
+   "pack": "quirky",
+   "source": "Colobus",
+   "timing": "brown_bear",
+   "body": "quadruped",
+   "attack_style": "swipe",
+   "attack2_style": "slam",
+   "tiles_long": 2.26,
+   "walk_cycle_tiles": 1.5,
+   "clips": {
+    "idle": {
+     "clip": "Idle_A"
+    },
+    "walk": {
+     "clip": "Walk"
+    },
+    "attack": {
+     "clip": "Attack"
+    },
+    "attack2": {
+     "clip": "Clicked",
+     "strike": 0.78
+    },
+    "fidget": {
+     "clip": "Idle_C"
+    },
+    "victory": {
+     "clip": "Jump",
+     "times": 2
+    }
+   },
+   "hero": {
+    "clip": "Clicked",
+    "at": 0.43,
+    "face": {},
+    "turn": 0.0
+   },
+   "lid_color": "#b4aebd"
+  },
+  "test_taipan": {
+   "pack": "quirky",
+   "source": "Taipan",
+   "timing": "king_cobra",
+   "body": "serpent",
+   "attack_style": "spit",
+   "tiles_long": 2.0,
+   "walk_cycle_tiles": 1.0,
+   "clips": {
+    "idle": {
+     "clip": "Idle_A"
+    },
+    "walk": {
+     "clip": "Walk"
+    },
+    "attack": {
+     "clip": "Attack"
+    },
+    "fidget": {
+     "clip": "Idle_C"
+    },
+    "victory": {
+     "clip": "Spin",
+     "times": 2
+    }
+   },
+   "hero": {
+    "clip": "Fly",
+    "at": 0.85,
+    "face": {},
+    "turn": 0.0
+   },
+   "lid_color": "#c2454f"
+  },
+  "test_sparrow": {
+   "pack": "quirky",
+   "source": "Sparrow",
+   "timing": "peregrine_falcon",
+   "body": "bird",
+   "attack_style": "dive",
+   "attack2_style": "rake",
+   "tiles_long": 2.06,
+   "walk_cycle_tiles": 1.4,
+   "clips": {
+    "idle": {
+     "clip": "Fly",
+     "times": 3
+    },
+    "walk": {
+     "clip": "Fly",
+     "times": 2
+    },
+    "attack": {
+     "clip": "Attack"
+    },
+    "attack2": {
+     "clip": "Eat"
+    },
+    "fidget": {
+     "clip": "Idle_C"
+    },
+    "victory": {
+     "clip": "Spin",
+     "times": 2
+    }
+   },
+   "hero": {
+    "clip": "Fly",
+    "at": 0.3,
+    "face": {},
+    "turn": 0.0,
+    "lift": 0.1
+   },
+   "lid_color": "#ece4da"
+  }
+ }
+}

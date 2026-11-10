@@ -86,6 +86,15 @@
  "sunda_pangolin": {
   "tile_scale": 1.84214
  },
+ "test_colobus": {
+  "tile_scale": 1.95215
+ },
+ "test_sparrow": {
+  "tile_scale": 2.95212
+ },
+ "test_taipan": {
+  "tile_scale": 1.61922
+ },
  "tiger": {
   "tile_scale": 1.23462
  },

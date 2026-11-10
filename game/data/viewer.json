@@ -1,5 +1,5 @@
 {
- "_note": "The 3D animal viewer (Animals tab: tap an animal). view: the 3D window's share of the screen height, its sharpness (render_scale_max: at most this many real pixels per layout pixel), antialiasing (msaa 2 or 4), the camera (fov, pitch and pitch_range in degrees, distance and distance_range in model units, target_height as a share of the animal's height, moving up to zoom_target_height, toward the face, as you zoom all the way in), model_size (the animal's biggest side, in the same units), start_yaw (degrees; 180 faces you), spin_per_pixel and tilt_per_pixel (degrees per finger pixel), spin_friction (how fast a flick slows), tap_pixels and tap_seconds (what counts as a tap), fidget_every (seconds between little idle moments), hint_seconds (how long the how-to hint stays). look: shading for the animal and scenery (key_dir: toward the light, in view space; shade_color multiplies the shaded side; soft: how gently light turns to shade; rim, highlight, vibrance), the outline (outline_px at one real pixel per layout pixel, scaled with the sharpness), the shadow under the animal, and the tap flash. reactions: what a tap plays, in turn (missing ones are skipped). platform: the round stage. habitats: each one's sky (top, bottom), stage (ground, side), named colors, props ([kind, x, z, size, color name, turn in degrees]; x across, z toward you, the animal stands at 0, 0; keep them behind or to the sides), far (the same, far behind), water (a pond or sea round the stage) and drift (little things floating by: snow, pollen, leaves, bubbles, fireflies). movie_look: animals with the movie look (tools/creatures/movie.py; their model's mesh is named <id>_movie) get their own shader (scripts/fx/model_movie.gdshader) lit like the card portraits: a warm key light (key_dir toward it in view space, its color and strength, how far it wraps round the form), a cool fill from the other side, a sky-to-ground ambient so shadows keep their color, a rim of light round the edge, a soft highlight; their fur locks show strands (how many round a lock, how deep the grooves, a soft sheen), their sides in soft shadow (lock_edge) of a cool color (lock_shadow) and less of the rim light than the body's edge (lock_rim), that fade out before they get small enough to shimmer; feather cards (the Peregrine Falcon) are darker at the base (feather_base), lighter at the edge (feather_edge) with a pale shaft (feather_shaft); scaly skin (the Komodo Dragon) shows its scale cells, drawn from the model's own shape (scale_groove: how dark the grooves, scale_dome: how much each scale domes, scale_shadow: the grooves' color); their eyes have a colored iris (its size on the eyeball, the pupil's share of it) and a catchlight (where, how big). They have no outline in the viewer (the rim light separates them from the background, as in the portraits); in battle they keep the dark line and team band. lock_outline_push: in battle, how far back (view units) the dark line and team band round its fur locks are pushed, so they only show round the animal's edge, not round every lock on its body. lid_colors: each one's eyelid color (its face skin).",
+ "_note": "The 3D animal viewer (Animals tab: tap an animal). view: the 3D window's share of the screen height, its sharpness (render_scale_max: at most this many real pixels per layout pixel), antialiasing (msaa 2 or 4), the camera (fov, pitch and pitch_range in degrees, distance and distance_range in model units, target_height as a share of the animal's height, moving up to zoom_target_height, toward the face, as you zoom all the way in), model_size (the animal's biggest side, in the same units), start_yaw (degrees; 180 faces you), spin_per_pixel and tilt_per_pixel (degrees per finger pixel), spin_friction (how fast a flick slows), tap_pixels and tap_seconds (what counts as a tap), fidget_every (seconds between little idle moments), hint_seconds (how long the how-to hint stays). look: shading for the animal and scenery (key_dir: toward the light, in view space; shade_color multiplies the shaded side; soft: how gently light turns to shade; rim, highlight, vibrance), the outline (outline_px at one real pixel per layout pixel, scaled with the sharpness), the shadow under the animal, and the tap flash. reactions: what a tap plays, in turn (missing ones are skipped). platform: the round stage. habitats: each one's sky (top, bottom), stage (ground, side), named colors, props ([kind, x, z, size, color name, turn in degrees]; x across, z toward you, the animal stands at 0, 0; keep them behind or to the sides), far (the same, far behind), water (a pond or sea round the stage) and drift (little things floating by: snow, pollen, leaves, bubbles, fireflies). movie_look: animals with the movie look (tools/creatures/movie.py; their model's mesh is named <id>_movie) get their own shader (scripts/fx/model_movie.gdshader) lit like the card portraits: a warm key light (key_dir toward it in view space, its color and strength, how far it wraps round the form), a cool fill from the other side, a sky-to-ground ambient so shadows keep their color, a rim of light round the edge, a soft highlight; their fur locks show strands (how many round a lock, how deep the grooves, a soft sheen), their sides in soft shadow (lock_edge) of a cool color (lock_shadow) and less of the rim light than the body's edge (lock_rim), that fade out before they get small enough to shimmer; feather cards (the Peregrine Falcon) are darker at the base (feather_base), lighter at the edge (feather_edge) with a pale shaft (feather_shaft); scaly skin (the Komodo Dragon) shows its scale cells, drawn from the model's own shape (scale_groove: how dark the grooves, scale_dome: how much each scale domes, scale_shadow: the grooves' color); their eyes have a colored iris (its size on the eyeball, the pupil's share of it) and a catchlight (where, how big). They have no outline in the viewer (the rim light separates them from the background, as in the portraits); in battle they keep the dark line and team band. lock_outline_push: in battle, how far back (view units) the dark line and team band round its fur locks are pushed, so they only show round the animal's edge, not round every lock on its body. lid_colors: each one's eyelid color (its face skin). toon_look: animals from a flat-color art pack (tools/packs; their model's meshes are named <id>_toon) get their own shader (scripts/fx/model_toon.gdshader): two soft cartoon tones (band: where light turns to shade, soft: how soft that edge is; shade_color tints the shade), under (how much darker a part facing the ground is: a soft shadow without lights), a rim of light, bolder color (saturation, brightness), and a dark outline outline_scale times the usual width in outline_color, in the viewer and in battle. Their faces are real geometry moved by the pack's blendshapes: faces maps each of the game's cartoon faces (blink, squint on a wind-up, drowsy when slowed, smug after a knockout, wide when hit, happy when celebrating, dizzy when stunned) to blendshape amounts, or to a cycle of blendshapes shown one after another per_second times a second (spinning eyes). In the viewer they blink (viewer_blink: every so many seconds, for so long) and wear a face while a reaction plays (viewer_faces).",
  "view": {
   "height_share": 0.5,
   "render_scale_max": 2.0,
@@ -1301,6 +1301,67 @@
     ],
     "amount": 10
    }
+  }
+ },
+ "toon_look": {
+  "key_dir": [
+   -0.45,
+   0.72,
+   0.55
+  ],
+  "key_color": "#fffaf0",
+  "shade_color": "#aea3d6",
+  "band": 0.05,
+  "soft": 0.14,
+  "under": 0.16,
+  "rim": 0.22,
+  "rim_width": 0.3,
+  "rim_color": "#fffaeb",
+  "saturation": 1.2,
+  "brightness": 1.04,
+  "outline_scale": 1.15,
+  "outline_color": "#1a0f14",
+  "faces": {
+   "": {},
+   "blink": {
+    "eyes.blink": 1.0
+   },
+   "squint": {
+    "eyes.annoyed": 1.0
+   },
+   "drowsy": {
+    "eyes.sleep": 0.6
+   },
+   "smug": {
+    "eyes.annoyed": 0.55
+   },
+   "wide": {
+    "eyes.shrink": 1.0
+   },
+   "happy": {
+    "eyes.happy": 1.0
+   },
+   "dizzy": {
+    "cycle": [
+     "eyes.spin-1",
+     "eyes.spin-2",
+     "eyes.spin-3"
+    ],
+    "per_second": 9.0
+   }
+  },
+  "viewer_faces": {
+   "attack": "squint",
+   "attack2": "squint",
+   "special": "squint",
+   "victory": "happy"
+  },
+  "viewer_blink": {
+   "every": [
+    2.2,
+    5.0
+   ],
+   "seconds": 0.13
   }
  }
 }

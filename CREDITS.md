@@ -4,8 +4,12 @@
 
 The animal sprites and card portraits are original 3D renders made for Den
 Duel by `tools/creatures/` with [Blender](https://www.blender.org) (used as
-a tool; Blender's GPL license doesn't apply to what it renders). No outside
-models or textures are used.
+a tool; Blender's GPL license doesn't apply to what it renders).
+
+The art tests (developer builds only, `game/data/art_tests.json`: the
+Colobus, Taipan and Sparrow) are from **Quirky Series - FREE Animals** by
+[Omabuarts](https://omabuarts.itch.io/quirky-series-free-animals), converted
+for the game by `tools/packs/`. They aren't in the game's roster.
 
 ## Icons
 

@@ -55,6 +55,7 @@ var rivals: Array = []               # Rival Rangers, in rivals.json order
 var ui_style: Dictionary = {}        # the design system (ui_style.json, see UIStyle)
 var art: Dictionary = {}
 var sorting: Dictionary = {}       # how animals sort (sorting.json)
+var art_tests: Dictionary = {}     # outside art tried out next to ours (art_tests.json)
 
 
 func _init() -> void:
@@ -126,6 +127,7 @@ func reload() -> void:
 	ui_style = _load("ui_style.json")
 	art = _load("art.json")
 	sorting = _load("sorting.json")
+	art_tests = _load("art_tests.json")
 	_paint()
 
 
@@ -157,6 +159,64 @@ func _load(file_name: String) -> Variant:
 
 func get_card(id: String) -> Dictionary:
 	return cards.get(id, {})
+
+
+# --- Art tests ---------------------------------------------------------------
+
+## True if this id is an art test (art_tests.json): an animal from an
+## outside art pack, tried out next to the game's own, not in the roster.
+func is_art_test(id: String) -> bool:
+	return art_tests.get("animals", {}).has(id)
+
+
+## The animal whose rules, numbers and progress a card uses: itself, or for
+## an art test the animal it plays as.
+func plays_as(id: String) -> String:
+	return String(art_tests.get("animals", {}).get(id, {}).get("plays_as", id))
+
+
+## Makes the art tests into cards (only dev shortcuts call this:
+## main_menu.gd). Each is a copy of the animal it plays as, under its own
+## id and name: the same stats, class, ability and attack style, the same
+## footprint, width and reach, so it fights exactly like it. Only its
+## drawing is its own: its models, portrait and sprites (by its id), and
+## its drawn size and tallest pose (art_tests.json). They stay out of
+## card_order, so the collection, cages, drafts and bots never see them.
+func install_art_tests() -> void:
+	var tests: Dictionary = art_tests.get("animals", {})
+	for id: String in tests:
+		var test: Dictionary = tests[id]
+		var like := String(test.get("plays_as", ""))
+		if cards.has(id) or not cards.has(like):
+			continue
+		var card: Dictionary = (cards[like] as Dictionary).duplicate(true)
+		card["id"] = id
+		card["name"] = String(test.get("name", id))
+		card["art_test"] = like
+		cards[id] = card
+		var all_bodies: Dictionary = bodies.get("animals", {})
+		var body: Dictionary = (all_bodies.get(like, {}) as Dictionary).duplicate(true)
+		for key in ["size", "pose_up"]:
+			if test.has(key):
+				body[key] = test[key]
+		all_bodies[id] = body
+		if styles.has(like):
+			styles[id] = styles[like]
+		if journal.has(like):
+			journal[id] = journal[like]
+		var icons: Dictionary = art.get("cards", {})
+		if icons.has(like):
+			icons[id] = icons[like]
+
+
+## Takes the art tests out again (tests).
+func remove_art_tests() -> void:
+	for id: String in art_tests.get("animals", {}):
+		cards.erase(id)
+		(bodies.get("animals", {}) as Dictionary).erase(id)
+		styles.erase(id)
+		journal.erase(id)
+		(art.get("cards", {}) as Dictionary).erase(id)
 
 
 func is_tool(id: String) -> bool:

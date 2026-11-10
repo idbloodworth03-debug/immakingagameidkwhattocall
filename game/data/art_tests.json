@@ -1,0 +1,29 @@
+{
+  "_note": "Art tests: animals from an outside art pack (tools/packs), tried out next to the game's own. They are not in the roster: not in the collection, cages, drafts or bots. Each exists only when a dev shortcut asks for it (the website opened with ?arttest=1, ?viewer=<id> or ?fight=<seed>&herds=..., dev tools on), as a copy of the animal it plays_as: the same stats, class, ability, attack style, footprint, width and reach, at the same level, so a test changes no gameplay. Only how it's drawn is its own: its models, portrait and sprites (art/models, art/units, made by tools/packs), and size (its longest side in tiles as drawn: set so it stands as tall on screen as the animal it plays as) and pose_up (how much taller than standing its tallest pose is; python3 tools/packs/sizes.py measures both). pack and source say where the art comes from.",
+  "animals": {
+    "test_colobus": {
+      "name": "Colobus",
+      "plays_as": "brown_bear",
+      "pack": "Quirky Series (free sample) by Omabuarts",
+      "source": "Colobus",
+      "size": 2.26,
+      "pose_up": 1.046
+    },
+    "test_taipan": {
+      "name": "Taipan",
+      "plays_as": "king_cobra",
+      "pack": "Quirky Series (free sample) by Omabuarts",
+      "source": "Taipan",
+      "size": 2.0,
+      "pose_up": 1.02
+    },
+    "test_sparrow": {
+      "name": "Sparrow",
+      "plays_as": "peregrine_falcon",
+      "pack": "Quirky Series (free sample) by Omabuarts",
+      "source": "Sparrow",
+      "size": 2.06,
+      "pose_up": 1.126
+    }
+  }
+}

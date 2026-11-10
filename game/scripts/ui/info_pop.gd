@@ -23,7 +23,7 @@ static func make(id: String, star_count := 0, at_level := -1) -> InfoPop:
 	var pop := InfoPop.new()
 	pop.card_id = id
 	pop.stars = star_count
-	pop.level = at_level if at_level > 0 else Profile.card_level(id)
+	pop.level = at_level if at_level > 0 else Profile.card_level(GameData.plays_as(id))
 	pop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var size_list: Array = GameData.feel.get("info", {}).get("size", [460, 276])
 	pop.size = Vector2(float(size_list[0]), float(size_list[1]) * (1.0 if not GameData.is_tool(id) else 0.62))

@@ -1,5 +1,10 @@
 # Creature pipeline
 
+> **New animal art no longer comes from here** (November 2026): the game is
+> moving to bought art packs, brought in by `tools/packs/`. This pipeline
+> still makes the current animals' art, the arenas and the crowd strips,
+> and `sprites.py` and `scene.py` are shared with `tools/packs/render.py`.
+
 Makes the battle sprites and card portraits for each animal, and the
 arena pictures, with Blender, from code: no hand modeling, so everything
 can be rebuilt or tweaked.

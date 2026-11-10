@@ -373,7 +373,7 @@ def _add_eyes(meta, eyes, frames, eye_objects, anchor, ppm):
 def _scene_points():
     """World positions of every posed mesh vertex in the scene (body, ears,
     eyes, horns...), leaving out the ground and what is under it, which the
-    ground hides (a perched bird's wingtips)."""
+    ground hides."""
     deps = bpy.context.evaluated_depsgraph_get()
     points = []
     for obj in bpy.context.scene.objects:
@@ -437,7 +437,7 @@ def render_portrait(creature, out_dir, samples, size=None, with_fur=True):
     # One camera for every card (look.json "hero_portrait"): the same
     # three-quarter front view, lens and framing, so the set reads as one game.
     hero = S.LOOK.get("hero_portrait", {})
-    d = np.array(creature.motion.get("portrait_view", hero.get("view", (-0.75, 1.0, 0.55))), float)
+    d = np.array(hero.get("view", (-0.75, 1.0, 0.55)), float)
     d /= np.linalg.norm(d)
     cam = S.perspective_camera(tuple(center + d * radius * 3.1), tuple(center), lens=float(hero.get("lens", 85)))
     sc.render.resolution_x = size

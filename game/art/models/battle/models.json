@@ -39,7 +39,7 @@
   "tile_scale": 0.74856
  },
  "honey_badger": {
-  "tile_scale": 1.67441
+  "tile_scale": 1.82707
  },
  "hyacinth_macaw": {
   "tile_scale": 1.16071
@@ -48,13 +48,13 @@
   "tile_scale": 2.71648
  },
  "komodo_dragon": {
-  "tile_scale": 1.1659
+  "tile_scale": 1.15413
  },
  "kraken": {
   "tile_scale": 2.07872
  },
  "lion": {
-  "tile_scale": 1.06379
+  "tile_scale": 1.12155
  },
  "mountain_gorilla": {
   "tile_scale": 2.048
@@ -87,7 +87,7 @@
   "tile_scale": 1.73607
  },
  "tiger": {
-  "tile_scale": 1.09661
+  "tile_scale": 1.23462
  },
  "unicorn": {
   "tile_scale": 1.4215
@@ -96,10 +96,10 @@
   "tile_scale": 1.5518
  },
  "wild_boar": {
-  "tile_scale": 1.16945
+  "tile_scale": 1.05777
  },
  "wolf_pack": {
-  "tile_scale": 0.93845
+  "tile_scale": 1.02003
  },
  "yeti": {
   "tile_scale": 2.25634

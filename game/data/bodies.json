@@ -46,7 +46,7 @@
    "reach": 0.35,
    "shooter": false,
    "width": 0.52,
-   "pose_up": 1.075
+   "pose_up": 1.049
   },
   "wolf_pack": {
    "size": 1.2,
@@ -54,7 +54,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.35,
-   "pose_up": 1.091
+   "pose_up": 1.083
   },
   "brown_bear": {
    "size": 1.5,
@@ -78,7 +78,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.48,
-   "pose_up": 1.208
+   "pose_up": 1.068
   },
   "tiger": {
    "size": 1.62,
@@ -86,7 +86,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.48,
-   "pose_up": 1.135
+   "pose_up": 1.039
   },
   "asian_elephant": {
    "size": 1.52,
@@ -207,7 +207,7 @@
    "reach": 0.35,
    "shooter": false,
    "width": 0.47,
-   "pose_up": 1.227
+   "pose_up": 1.039
   },
   "harbor_seal": {
    "size": 1.46,
@@ -240,7 +240,7 @@
    "reach": 0.45,
    "shooter": false,
    "width": 0.65,
-   "pose_up": 1.046
+   "pose_up": 1.031
   },
   "sunda_pangolin": {
    "size": 1.32,

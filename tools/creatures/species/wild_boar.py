@@ -82,11 +82,14 @@ def make():
     c.voxel = 0.006
     # The bristly mane along the spine, rising over the shoulders.
     c.shapes.append(ellipsoid((0, 0.08, 0.95), (0.055, 0.36, 0.07), "mane", "chest", blend=0.07, pitch=0.12))
+    # (A design may make the tusks bigger: R tusk_k.)
+    tk = R.get("tusk_k", 1.0)
     for side in (1, -1):
         c.shapes.append(ellipsoid((side * 0.1, 0.62, 0.6), (0.07, 0.1, 0.08), "cheek", "head", blend=0.05))
         # Tusks curving up out of the lower jaw.
-        c.extras.append(Extra("cone", "tusk", "head", center=(side * 0.05, 0.83, 0.5), tip=(side * 0.075, 0.86, 0.6),
-                              radius=0.012, tip_radius=0.002))
+        c.extras.append(Extra("cone", "tusk", "head", center=(side * 0.05, 0.83, 0.5),
+                              tip=(side * (0.05 + 0.025 * tk), 0.83 + 0.03 * tk, 0.5 + 0.1 * tk),
+                              radius=0.012 * tk ** 0.5, tip_radius=0.002))
     add_face(c, eye_dir=(-0.65, 0.65, 0.4), eye_radius=0.011, eye_sink=0.006, nose_radius=0.045, nose_sink=0.03,
              iris="#2a160c", pupil="round")
     c.extras[-1].color = "#5e4a44"

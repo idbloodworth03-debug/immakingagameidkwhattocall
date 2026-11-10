@@ -2431,7 +2431,7 @@ def hero_squirrel(c):
     return _hero_from_attack(c, 0.3, jaw=-0.25, turn=-0.55, head=(0.1, 0.45))
 
 
-def _wings_up(c, jaw, turn, raise_k=1.0, pitch=0.3, sweep=1.1):
+def _wings_up(c, jaw, turn, raise_k=1.0, pitch=0.3, sweep=1.1, head_turn=0.25):
     """A bird coming in to strike: wings raised high over its back in a V (so
     it stays compact on the card), talons thrust out ahead, beak open, facing
     us. Positive x raises a wing bone; positive z on the left (negative on the
@@ -2445,7 +2445,7 @@ def _wings_up(c, jaw, turn, raise_k=1.0, pitch=0.3, sweep=1.1):
     # Nose up a little (`pitch`): the face and talons toward us.
     p["root_rot"] = (pitch, 0.0, turn)
     p.rot("neck", x=0.25 - pitch * 0.6)
-    p.rot("head", x=0.2 - pitch * 0.3, z=0.25)
+    p.rot("head", x=0.2 - pitch * 0.3, z=head_turn)
     p.rot("jaw", x=jaw)
     return p
 
@@ -2458,6 +2458,17 @@ def hero_eagle(c):
 def hero_owl(c):
     """Swooping in at us, wings raised, the heart face full on."""
     return _wings_up(c, -0.2, 0.45)
+
+
+def hero_macaw(c):
+    """Swooping in squawking, wings raised, the head turned so the hooked
+    beak shows side on under the eyes."""
+    return _wings_up(c, -0.4, -0.25, head_turn=0.65)
+
+
+def hero_condor(c):
+    """Coming in on its huge raised wings, the bald head thrust at us."""
+    return _wings_up(c, -0.25, 0.3)
 
 
 def hero_dragon(c):
@@ -2554,8 +2565,19 @@ def hero_komodo(c):
 
 
 def hero_unicorn(c):
-    """Rearing up, horn high, mane flying."""
-    return _hero_from_attack(c, 0.35, jaw=-0.35, turn=0.3, lean=-0.45, head=(0.35, 0.2))
+    """Rearing up side on, horn high, the rainbow mane and tail flying,
+    turning to us."""
+    return _hero_from_attack(c, 0.35, jaw=-0.35, turn=-0.7, lean=0.4, head=(0.2, 0.6))
+
+
+def hero_raccoon(c):
+    """Side on so the ringed tail shows, mid-swipe, the masked face to us."""
+    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=-0.55, head=(0.1, 0.6))
+
+
+def hero_skunk(c):
+    """Side on, the big striped tail up, looking back at us."""
+    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=-0.75, head=(0.1, 0.7))
 
 
 def hero_sloth(c):
@@ -2579,47 +2601,6 @@ def hero_kraken(c):
     p.rot("jaw", x=-0.8)
     rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
     p["root_rot"] = (rx, ry, rz + 0.3)
-    return p
-
-
-def perched(c):
-    """A bird's card portrait pose: standing with its body pitched up
-    (`motion["perch_tilt"]`, radians nose-up; an owl stands nearly upright,
-    a condor leans forward), wings folded down along its flanks with the
-    tips crossed over the tail, legs straight under it with the feet on the
-    ground, chest out and the head level, turned a little toward us (the
-    flight pose reads as a dart on a card; "portrait_view" aims the camera).
-    The wings are longer than the bird is tall, so their tips go on under
-    the ground, which hides them; `motion["perch_wings"]` (0-1) folds the
-    wings less."""
-    p = Pose()
-    tilt = float(c.motion.get("perch_tilt", 1.0))
-    fold = float(c.motion.get("perch_wings", 1.0))
-    leg_x = float(c.motion.get("perch_legs", 0.3))
-    for side, sign in (("L", 1), ("R", -1)):
-        # Positive z on the left wing (negative on the right) sweeps it back;
-        # negative x drops it to lie along the flank.
-        p.rot("wing_upper." + side, x=-0.3 * fold, z=1.25 * fold * sign)
-        p.rot("wing_lower." + side, x=-0.1 * fold, z=0.7 * fold * sign)
-        p.rot("wing_hand." + side, x=-0.1 * fold, z=0.5 * fold * sign)
-        p.rot("leg." + side, x=leg_x)
-    p["root_rot"] = (tilt, 0.0, 0.0)
-    # Feet on the ground: where the left foot ends up after the leg's pitch
-    # and the body's tilt, from the rest joints.
-    j = c.joints
-    root = np.asarray(j["root"], float)
-    hip = np.asarray(j["hip.L"], float) - root
-    d = np.asarray(j["foot.L"], float) - root - hip
-    d = np.array([d[0], d[1] * math.cos(leg_x) - d[2] * math.sin(leg_x), d[1] * math.sin(leg_x) + d[2] * math.cos(leg_x)])
-    f = hip + d
-    foot_z = f[1] * math.sin(tilt) + f[2] * math.cos(tilt)
-    p.move(z=0.01 - float(c.motion.get("altitude", 0.0)) - foot_z)
-    p.rot("chest", x=0.05)
-    p.rot("neck", x=-(tilt - 0.1) * 0.6, z=0.2)
-    # `perch_head` lifts the head a little more (a parrot's beak hangs).
-    p.rot("head", x=-(tilt - 0.1) * 0.4 + float(c.motion.get("perch_head", 0.0)), z=0.25)
-    # The tail trails back just off the ground.
-    p.rot("tail1", x=-(tilt - 0.25))
     return p
 
 
@@ -3355,12 +3336,12 @@ PERSONAS = {
     "falcon": {"idle": falcon_idle, "fidget": falcon_fidget, "victory": falcon_victory, "portrait": hero_falcon},
     "owl": {"idle": owl_idle, "fidget": owl_fidget, "victory": owl_victory, "portrait": hero_owl},
     "eagle": {"idle": eagle_idle, "fidget": eagle_fidget, "victory": eagle_victory, "portrait": hero_eagle},
-    "macaw": {"idle": macaw_idle, "fidget": macaw_fidget, "victory": macaw_victory},
-    "condor": {"idle": condor_idle, "fidget": condor_fidget, "victory": condor_victory},
+    "macaw": {"idle": macaw_idle, "fidget": macaw_fidget, "victory": macaw_victory, "portrait": hero_macaw},
+    "condor": {"idle": condor_idle, "fidget": condor_fidget, "victory": condor_victory, "portrait": hero_condor},
     "dragon": {"idle": dragon_idle, "fidget": dragon_fidget, "victory": dragon_victory, "portrait": hero_dragon},
     "squirrel": {"idle": squirrel_idle, "fidget": squirrel_fidget, "victory": squirrel_victory, "portrait": hero_squirrel},
-    "raccoon": {"idle": raccoon_idle, "fidget": raccoon_fidget, "victory": raccoon_victory},
-    "skunk": {"idle": skunk_idle, "fidget": skunk_fidget, "victory": skunk_victory},
+    "raccoon": {"idle": raccoon_idle, "fidget": raccoon_fidget, "victory": raccoon_victory, "portrait": hero_raccoon},
+    "skunk": {"idle": skunk_idle, "fidget": skunk_fidget, "victory": skunk_victory, "portrait": hero_skunk},
     "cobra": {"idle": cobra_idle, "fidget": cobra_fidget, "victory": cobra_victory, "portrait": hero_cobra},
     "camel": {"idle": camel_idle, "fidget": camel_fidget, "victory": camel_victory, "portrait": hero_camel},
     "orangutan": {"idle": orangutan_idle, "fidget": orangutan_fidget, "victory": orangutan_victory},

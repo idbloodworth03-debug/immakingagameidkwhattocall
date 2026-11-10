@@ -95,9 +95,11 @@ def make():
     for side in (1, -1):
         c.shapes.append(ellipsoid((side * 0.09, 0.86, 0.96), (0.07, 0.08, 0.075), "cheek", "head", blend=0.05))
     # The mane: a big ruff framing the face, a beard under the chin, and a
-    # shaggy mass down the neck to the chest.
-    c.shapes.append(ellipsoid((0, 0.72, 1.02), (0.28, 0.11, 0.25), "mane", "neck", blend=0.08, pitch=0.25))
-    c.shapes.append(ellipsoid((0, 0.6, 0.98), (0.24, 0.2, 0.28), "mane", "neck", blend=0.09, pitch=0.5))
+    # shaggy mass down the neck to the chest. (A design may make the ruff
+    # wider and taller round a big head: R mane_k.)
+    mk = R.get("mane_k", 1.0)
+    c.shapes.append(ellipsoid((0, 0.72, 1.02), (0.28 * mk, 0.11, 0.25 * mk), "mane", "neck", blend=0.08, pitch=0.25))
+    c.shapes.append(ellipsoid((0, 0.6, 0.98), (0.24 * mk, 0.2, 0.28 * mk), "mane", "neck", blend=0.09, pitch=0.5))
     c.shapes.append(ellipsoid((0, 0.63, 0.75), (0.18, 0.14, 0.18), "mane", "chest", blend=0.08))
     c.shapes.append(ellipsoid((0, 0.85, 0.85), (0.11, 0.09, 0.09), "mane", "head", blend=0.05))
     # A mouth to roar and bite with, and the fangs.

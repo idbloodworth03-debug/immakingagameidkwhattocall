@@ -9,7 +9,7 @@
  },
  "animals": {
   "raccoon": {
-   "size": 1.22,
+   "size": 1.85,
    "footprint": 1.22,
    "reach": 7.0,
    "shooter": true,
@@ -17,7 +17,7 @@
    "pose_up": 1.069
   },
   "gray_squirrel": {
-   "size": 0.98,
+   "size": 1.96,
    "footprint": 0.98,
    "reach": 7.0,
    "shooter": true,
@@ -25,7 +25,7 @@
    "pose_up": 1.286
   },
   "red_fox": {
-   "size": 1.36,
+   "size": 1.68,
    "footprint": 1.36,
    "reach": 0.4,
    "shooter": false,
@@ -33,7 +33,7 @@
    "pose_up": 1.085
   },
   "peregrine_falcon": {
-   "size": 1.8,
+   "size": 2.86,
    "footprint": 1.5,
    "reach": 0.5,
    "shooter": false,
@@ -41,7 +41,7 @@
    "pose_up": 1.187
   },
   "wild_boar": {
-   "size": 1.37,
+   "size": 2.0,
    "footprint": 1.37,
    "reach": 0.35,
    "shooter": false,
@@ -49,7 +49,7 @@
    "pose_up": 1.049
   },
   "wolf_pack": {
-   "size": 1.2,
+   "size": 1.77,
    "footprint": 1.2,
    "reach": 0.4,
    "shooter": false,
@@ -57,7 +57,7 @@
    "pose_up": 1.083
   },
   "brown_bear": {
-   "size": 1.5,
+   "size": 2.11,
    "footprint": 1.75,
    "reach": 0.5,
    "shooter": false,
@@ -65,7 +65,7 @@
    "pose_up": 1.042
   },
   "hippopotamus": {
-   "size": 1.89,
+   "size": 2.82,
    "footprint": 1.89,
    "reach": 0.45,
    "shooter": false,
@@ -73,7 +73,7 @@
    "pose_up": 1.170
   },
   "lion": {
-   "size": 1.62,
+   "size": 1.86,
    "footprint": 1.62,
    "reach": 0.5,
    "shooter": false,
@@ -81,7 +81,7 @@
    "pose_up": 1.068
   },
   "tiger": {
-   "size": 1.62,
+   "size": 1.97,
    "footprint": 1.62,
    "reach": 0.5,
    "shooter": false,
@@ -89,7 +89,7 @@
    "pose_up": 1.039
   },
   "asian_elephant": {
-   "size": 1.52,
+   "size": 2.03,
    "footprint": 1.52,
    "reach": 0.55,
    "shooter": false,
@@ -97,7 +97,7 @@
    "pose_up": 1.019
   },
   "red_panda": {
-   "size": 1.3,
+   "size": 2.03,
    "footprint": 1.3,
    "reach": 0.35,
    "shooter": false,
@@ -105,7 +105,7 @@
    "pose_up": 1.358
   },
   "black_rhino": {
-   "size": 1.8,
+   "size": 2.14,
    "footprint": 1.8,
    "reach": 0.4,
    "shooter": false,
@@ -113,7 +113,7 @@
    "pose_up": 1.029
   },
   "california_condor": {
-   "size": 2.05,
+   "size": 3.16,
    "footprint": 2.05,
    "reach": 0.6,
    "shooter": false,
@@ -121,7 +121,7 @@
    "pose_up": 1.361
   },
   "striped_skunk": {
-   "size": 1.05,
+   "size": 2.1,
    "footprint": 1.05,
    "reach": 7.0,
    "shooter": true,
@@ -129,7 +129,7 @@
    "pose_up": 1.019
   },
   "barn_owl": {
-   "size": 1.5,
+   "size": 2.79,
    "footprint": 1.5,
    "reach": 0.5,
    "shooter": false,
@@ -137,7 +137,7 @@
    "pose_up": 0.813
   },
   "king_cobra": {
-   "size": 1.25,
+   "size": 1.72,
    "footprint": 1.46,
    "reach": 7.0,
    "shooter": true,
@@ -145,7 +145,7 @@
    "pose_up": 1.069
   },
   "sumatran_orangutan": {
-   "size": 1.95,
+   "size": 2.33,
    "footprint": 1.18,
    "reach": 7.0,
    "shooter": true,
@@ -154,7 +154,7 @@
    "across": true
   },
   "harpy_eagle": {
-   "size": 1.85,
+   "size": 2.98,
    "footprint": 1.85,
    "reach": 0.6,
    "shooter": false,
@@ -162,7 +162,7 @@
    "pose_up": 0.859
   },
   "hyacinth_macaw": {
-   "size": 1.6,
+   "size": 3.01,
    "footprint": 1.6,
    "reach": 0.4,
    "shooter": false,
@@ -170,7 +170,7 @@
    "pose_up": 0.936
   },
   "wild_bactrian_camel": {
-   "size": 1.52,
+   "size": 1.95,
    "footprint": 1.52,
    "reach": 7.0,
    "shooter": true,
@@ -178,7 +178,7 @@
    "pose_up": 1.066
   },
   "dragon": {
-   "size": 2.5,
+   "size": 3.47,
    "footprint": 2.5,
    "reach": 0.7,
    "shooter": false,
@@ -186,7 +186,7 @@
    "pose_up": 1.106
   },
   "unicorn": {
-   "size": 1.67,
+   "size": 2.24,
    "footprint": 1.67,
    "reach": 7.0,
    "shooter": true,
@@ -194,7 +194,7 @@
    "pose_up": 1.079
   },
   "snapping_turtle": {
-   "size": 1.75,
+   "size": 2.48,
    "footprint": 1.75,
    "reach": 0.5,
    "shooter": false,
@@ -202,7 +202,7 @@
    "pose_up": 1.062
   },
   "honey_badger": {
-   "size": 1.22,
+   "size": 1.98,
    "footprint": 1.22,
    "reach": 0.35,
    "shooter": false,
@@ -210,7 +210,7 @@
    "pose_up": 1.039
   },
   "harbor_seal": {
-   "size": 1.46,
+   "size": 2.01,
    "footprint": 1.46,
    "reach": 0.4,
    "shooter": false,
@@ -218,7 +218,7 @@
    "pose_up": 1.104
   },
   "giant_panda": {
-   "size": 1.7,
+   "size": 1.93,
    "footprint": 1.7,
    "reach": 0.4,
    "shooter": false,
@@ -226,7 +226,7 @@
    "pose_up": 1.053
   },
   "mountain_gorilla": {
-   "size": 2.15,
+   "size": 2.46,
    "footprint": 1.35,
    "reach": 0.55,
    "shooter": false,
@@ -235,7 +235,7 @@
    "across": true
   },
   "komodo_dragon": {
-   "size": 1.75,
+   "size": 2.65,
    "footprint": 1.75,
    "reach": 0.45,
    "shooter": false,
@@ -243,7 +243,7 @@
    "pose_up": 1.031
   },
   "sunda_pangolin": {
-   "size": 1.32,
+   "size": 2.55,
    "footprint": 1.32,
    "reach": 0.3,
    "shooter": false,
@@ -251,7 +251,7 @@
    "pose_up": 1.368
   },
   "electric_eel": {
-   "size": 1.48,
+   "size": 2.67,
    "footprint": 1.48,
    "reach": 0.4,
    "shooter": false,
@@ -259,7 +259,7 @@
    "pose_up": 1.167
   },
   "pygmy_three_toed_sloth": {
-   "size": 1.22,
+   "size": 1.69,
    "footprint": 1.22,
    "reach": 0.45,
    "shooter": false,
@@ -267,7 +267,7 @@
    "pose_up": 1.031
   },
   "yeti": {
-   "size": 2.5,
+   "size": 2.56,
    "footprint": 1.63,
    "reach": 0.55,
    "shooter": false,
@@ -276,7 +276,7 @@
    "across": true
   },
   "cerberus": {
-   "size": 1.83,
+   "size": 2.84,
    "footprint": 1.83,
    "reach": 0.55,
    "shooter": false,
@@ -284,7 +284,7 @@
    "pose_up": 1.150
   },
   "kraken": {
-   "size": 1.72,
+   "size": 2.39,
    "footprint": 1.58,
    "reach": 0.75,
    "shooter": false,

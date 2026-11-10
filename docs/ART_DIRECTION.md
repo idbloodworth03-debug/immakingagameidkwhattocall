@@ -152,7 +152,17 @@ King Cobra first, then every animal):
   biggest Tanks unit_max_pct (11%) and a Mythic hero hero_max_pct (12%); an
   attack or a celebration may rise pose_allowance (1.4) above that for a
   moment. Once the armies are at war the camera frames where the fighting
-  is (feel.json army camera_fight_*).
+  is (feel.json army camera_fight_*). The camera stops zooming in when the
+  tallest animal on the field reaches its limit, so the drawn sizes
+  (bodies.json size) are set by class from each animal's standing height
+  (its outline as the size limit measures it, ModelStage natural_box up):
+  a Tank 1.0, a Mythic about 1.06, a Tank Destroyer, Ranged animal or
+  Specialist 0.86-0.96 and a flier 0.84 of a Tank's (a flier's wings
+  spread out wide besides), growing a long, flat animal at most 1.45
+  times and never past twice its footprint. No Specialist or archer then
+  stands taller than the Tanks and holds the camera back for everyone:
+  the feel report's small fights average 7.8% of the screen's height,
+  big ones 6.4% (7.1% at war; the line-up frames the whole army).
 - **Hero cards**: every card portrait from the same camera (look.json
   hero_portrait: a three-quarter front view, the same lens and framing), the
   same studio lights, the animal facing us with an expression in a

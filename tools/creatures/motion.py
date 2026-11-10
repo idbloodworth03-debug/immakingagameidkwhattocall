@@ -2619,16 +2619,8 @@ def hero_gorilla(c):
 
 
 def hero_eel(c):
-    """Reared up and whipping round, jaws snapping, side on so the long body
-    shows."""
-    p = eel_victory(c, 0.125)
-    p.rot("chest", x=0.3)
-    p.rot("neck", x=0.5)
-    p.rot("neck2", x=0.3)
-    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
-    p["root_rot"] = (rx, ry, rz - 0.4)
-    return p
-
+    """Lunging at us with a snap, the long body curving away behind it."""
+    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=0.25)
 
 def hero_fox(c):
     """Side on so the big bushy tail shows, pouncing, the face to us."""

@@ -54,14 +54,23 @@ def paint(mesh, creature):
 def make():
     c = quadruped("kraken", J, R, paint=paint, tiles_long=1.6)
     c.voxel = 0.004
-    # Three more tentacles curling out at the sides and back.
+    # Three more tentacles curling out at the sides and back. (A design may
+    # raise them, R arm_lift 0-1: up beside the head and curling over at the
+    # tips, the kraken's tentacles reaching up, longer and thicker.)
+    lift = R.get("arm_lift", 0.0)
     for side, bone in ((1, "chest"), (-1, "chest"), (1, "hips")):
         y = 0.0 if bone == "chest" else -0.08
+        if bone == "hips" and lift > 0:
+            side = 0.0
         base = np.array([side * 0.1, y, 0.1])
-        mid = base + (side * 0.15, -0.05 if bone == "hips" else 0.0, -0.06)
-        tip = mid + (side * 0.12, 0.08, 0.04)
-        c.shapes.append(cone(base, mid, 0.05, 0.035, "arm", bone, blend=0.03))
-        c.shapes.append(cone(mid, tip, 0.035, 0.015, "arm", bone, blend=0.02))
+        mid = base + (side * (0.15 + 0.15 * lift), (-0.05 if bone == "hips" else 0.0) - 0.15 * lift * (side == 0), -0.06 + 0.22 * lift)
+        tip = mid + (side * (0.12 - 0.02 * lift), 0.08 - 0.06 * lift, 0.04 + 0.3 * lift)
+        r = 1.0 + 0.4 * lift
+        c.shapes.append(cone(base, mid, 0.05 * r, 0.035 * r, "arm", bone, blend=0.03))
+        c.shapes.append(cone(mid, tip, 0.035 * r, 0.015 * r + 0.01 * lift, "arm", bone, blend=0.02))
+        if lift > 0:
+            curl = tip + np.array([-side * 0.07, 0.03, 0.07]) * lift
+            c.shapes.append(cone(tip, curl, 0.015 * r + 0.01 * lift, 0.012, "arm", bone, blend=0.015))
     add_face(c, eye_dir=(-0.45, 0.85, 0.0), eye_radius=0.03, eye_sink=0.01, nose_radius=0.0, iris="#2a1a12", pupil="round")
     c.fur = {"strands": False, "variation": 0.0, "sheen": 0.45, "bump": 0.05, "roughness": 0.4, "subsurface": 0.15}
     c.motion = {"gait": "walk", "attack": "swipe", "rear": 0.3, "stride": 1.0, "wiggle": 0.1, "cycle_tiles": 0.7}

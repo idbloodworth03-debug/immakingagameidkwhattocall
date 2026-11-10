@@ -21,7 +21,7 @@
   "tile_scale": 0.90698
  },
  "electric_eel": {
-  "tile_scale": 1.94083
+  "tile_scale": 1.8163
  },
  "giant_panda": {
   "tile_scale": 1.08885
@@ -30,7 +30,7 @@
   "tile_scale": 3.55361
  },
  "harbor_seal": {
-  "tile_scale": 1.2101
+  "tile_scale": 1.20242
  },
  "harpy_eagle": {
   "tile_scale": 0.93897
@@ -51,28 +51,28 @@
   "tile_scale": 1.15413
  },
  "kraken": {
-  "tile_scale": 2.07872
+  "tile_scale": 1.49607
  },
  "lion": {
   "tile_scale": 1.12155
  },
  "mountain_gorilla": {
-  "tile_scale": 2.048
+  "tile_scale": 2.01883
  },
  "peregrine_falcon": {
   "tile_scale": 2.43059
  },
  "pygmy_three_toed_sloth": {
-  "tile_scale": 2.7741
+  "tile_scale": 2.82678
  },
  "raccoon": {
   "tile_scale": 1.7676
  },
  "red_fox": {
-  "tile_scale": 1.50018
+  "tile_scale": 1.71144
  },
  "red_panda": {
-  "tile_scale": 1.42803
+  "tile_scale": 1.60362
  },
  "snapping_turtle": {
   "tile_scale": 1.61107
@@ -84,7 +84,7 @@
   "tile_scale": 2.72951
  },
  "sunda_pangolin": {
-  "tile_scale": 1.73607
+  "tile_scale": 1.84214
  },
  "tiger": {
   "tile_scale": 1.23462

@@ -163,6 +163,20 @@ King Cobra first, then every animal):
   shrink it on the card), filling about 70-80% of the card. The Mythics
   get the most dramatic poses.
 
+All 35 animals are on these rules now (rolled out in batches after the
+pipeline test). Where a signature didn't read on a chibi body, its species
+module grew a design switch, set in `movie.json` species R (the defaults
+draw the animal as before): the camel's humps (hump, hump_at, hump_z), the
+harpy eagle's crest (crest_k, crest_lift, crest_fan), the barn owl's white
+heart face (face_heart, face_k, face_lobes), the dragon's horns and wings
+(horn_k, wing_k), Cerberus's heads (side_spread, side_snout_k, side_ear_k),
+the lion's mane ruff (mane_k), the wild boar's tusks (tusk_k), the skunk's
+stripes (stripe_k), the macaw's slimmer beak (beak, jaw) and the kraken's
+tentacles raised beside its head (arm_lift). A card pose built from a bite
+uses the lunge, not the full gape (head on, wide-open jaws look like a
+tube); side-on poses show a tail, a shell or stripes; some come from the
+animal's own celebration (the gorilla's roar, the pangolin popping up).
+
 ## Where the look is now
 
 **The Yeti is the first animal on the animated-movie look** (the style

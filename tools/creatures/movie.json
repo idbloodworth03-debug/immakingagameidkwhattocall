@@ -4040,14 +4040,15 @@
  },
  "electric_eel": {
   "shape": {
-   "head": 1.3,
-   "muzzle": 1.0,
-   "eyes": 2.4,
+   "head": 2.0,
+   "muzzle": 0.8,
+   "eyes": 2.7,
    "ears": 1.0,
    "legs": 1.0,
-   "length": 1.0,
+   "length": 0.9,
    "belly": 1.0,
-   "limbs": 1.0
+   "limbs": 1.0,
+   "skull_round": 0.5
   },
   "eyes": {
    "iris": "#f7b52c",
@@ -4104,14 +4105,19 @@
  },
  "harbor_seal": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.8,
-   "eyes": 2.3,
+   "head": 2.2,
+   "muzzle": 0.75,
+   "eyes": 3.0,
    "ears": 0.6,
-   "legs": 0.8,
-   "length": 0.85,
-   "belly": 1.0,
-   "limbs": 1.1
+   "legs": 0.7,
+   "length": 0.7,
+   "belly": 1.1,
+   "limbs": 1.1,
+   "head_lift": 0.3,
+   "head_forward": 0.2,
+   "neck": 1.1,
+   "skull_round": 0.55,
+   "jaw": 0.8
   },
   "eyes": {
    "iris": "#1a1410",
@@ -4167,14 +4173,19 @@
  },
  "red_fox": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.9,
-   "eyes": 2.0,
-   "ears": 1.3,
-   "legs": 0.85,
-   "length": 0.85,
-   "belly": 1.0,
-   "limbs": 1.2
+   "head": 2.3,
+   "muzzle": 0.8,
+   "eyes": 2.7,
+   "ears": 1.4,
+   "legs": 0.6,
+   "length": 0.6,
+   "belly": 1.1,
+   "limbs": 1.3,
+   "head_forward": 0.3,
+   "neck": 1.2,
+   "skull_round": 0.45,
+   "jaw": 0.8,
+   "head_lift": 0.5
   },
   "eyes": {
    "iris": "#e8a030",
@@ -4312,14 +4323,17 @@
  },
  "mountain_gorilla": {
   "shape": {
-   "head": 1.4,
-   "muzzle": 0.9,
-   "eyes": 1.8,
+   "head": 2.0,
+   "muzzle": 0.7,
+   "eyes": 2.6,
    "ears": 0.7,
-   "legs": 0.85,
-   "length": 0.9,
-   "belly": 1.0,
-   "limbs": 1.5
+   "legs": 0.6,
+   "length": 0.8,
+   "belly": 1.2,
+   "limbs": 1.6,
+   "head_lift": 0.3,
+   "neck": 1.1,
+   "skull_round": 0.5
   },
   "eyes": {
    "iris": "#4a2a12",
@@ -4494,14 +4508,19 @@
  },
  "red_panda": {
   "shape": {
-   "head": 1.55,
-   "muzzle": 0.75,
-   "eyes": 2.1,
-   "ears": 1.25,
-   "legs": 0.75,
-   "length": 0.85,
-   "belly": 1.0,
-   "limbs": 1.3
+   "head": 2.3,
+   "muzzle": 0.7,
+   "eyes": 2.7,
+   "ears": 1.3,
+   "legs": 0.55,
+   "length": 0.6,
+   "belly": 1.1,
+   "limbs": 1.4,
+   "head_forward": 0.3,
+   "neck": 1.2,
+   "skull_round": 0.5,
+   "jaw": 0.8,
+   "head_lift": 0.45
   },
   "eyes": {
    "iris": "#2a1a10",
@@ -4640,14 +4659,17 @@
  },
  "pygmy_three_toed_sloth": {
   "shape": {
-   "head": 1.5,
-   "muzzle": 0.8,
-   "eyes": 2.0,
+   "head": 2.2,
+   "muzzle": 0.7,
+   "eyes": 2.6,
    "ears": 0.6,
-   "legs": 0.9,
-   "length": 0.85,
-   "belly": 1.0,
-   "limbs": 1.4
+   "legs": 0.6,
+   "length": 0.7,
+   "belly": 1.1,
+   "limbs": 1.4,
+   "head_lift": 0.3,
+   "neck": 1.1,
+   "skull_round": 0.5
   },
   "eyes": {
    "iris": "#2a1a10",
@@ -4781,14 +4803,19 @@
  },
  "sunda_pangolin": {
   "shape": {
-   "head": 1.3,
-   "muzzle": 1.0,
-   "eyes": 2.2,
+   "head": 1.9,
+   "muzzle": 0.9,
+   "eyes": 2.5,
    "ears": 0.6,
-   "legs": 0.8,
-   "length": 0.85,
-   "belly": 1.0,
-   "limbs": 1.2
+   "legs": 0.55,
+   "length": 0.7,
+   "belly": 1.1,
+   "limbs": 1.4,
+   "head_forward": 0.3,
+   "neck": 1.2,
+   "skull_round": 0.4,
+   "jaw": 0.8,
+   "head_lift": 0.2
   },
   "eyes": {
    "iris": "#1a1410",
@@ -4849,14 +4876,15 @@
  },
  "kraken": {
   "shape": {
-   "head": 1.8,
+   "head": 1.6,
    "muzzle": 0.6,
-   "eyes": 2.6,
+   "eyes": 2.9,
    "ears": 0.5,
-   "legs": 0.9,
+   "legs": 1.4,
    "length": 0.85,
    "belly": 1.0,
-   "limbs": 1.2
+   "limbs": 1.4,
+   "skull_round": 0.5
   },
   "eyes": {
    "iris": "#1a1410",
@@ -4910,6 +4938,11 @@
   "paint_smoothing": 2,
   "motion": {
    "persona": "kraken"
+  },
+  "species": {
+   "R": {
+    "arm_lift": 1.0
+   }
   }
  }
 }

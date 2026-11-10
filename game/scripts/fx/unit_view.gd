@@ -132,7 +132,7 @@ var _trip_ready := 0.0
 var _sweat_in := 0.0
 var _zzz_in := 0.0
 var _bank := 0.0
-var _last_facing := 0.0
+var _last_facing := NAN  # (none yet: its first frame doesn't bank)
 var _prev_anim := ""
 var _last_step := 0
 var _defeat_kind := "poof"
@@ -1326,7 +1326,7 @@ func animate(dt: float, now: float) -> void:
 		lift += Ease.arc(emerge) * float(t.emerge_hop_pixels)
 	var opacity := 1.0
 	var rot := lean + _flinch
-	if air and dt > 0.0:
+	if air and dt > 0.0 and not is_nan(_last_facing):
 		# Banking into turns.
 		var turning := wrapf(facing - _last_facing, -180.0, 180.0) / dt
 		var bank := clampf(turning * 0.05, -float(t.air_bank_degrees), float(t.air_bank_degrees))

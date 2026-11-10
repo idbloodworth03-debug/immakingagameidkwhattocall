@@ -161,8 +161,10 @@ King Cobra first, then every animal):
   spread out wide besides), growing a long, flat animal at most 1.45
   times and never past twice its footprint. No Specialist or archer then
   stands taller than the Tanks and holds the camera back for everyone:
-  the feel report's small fights average 7.8% of the screen's height,
-  big ones 6.4% (7.1% at war; the line-up frames the whole army).
+  the feel report's small fights average 7.6% of the screen's height,
+  big ones 6.2% (6.9% at war; the line-up frames the whole army). The
+  camera stops bodies.json limits camera_margin_pct (7.5%) short of the
+  limit, for the squash and stretch and a flier's wingbeat on top.
 - **Hero cards**: every card portrait from the same camera (look.json
   hero_portrait: a three-quarter front view, the same lens and framing), the
   same studio lights, the animal facing us with an expression in a

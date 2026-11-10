@@ -8,7 +8,9 @@ extends Node
 ## animal it plays as; pose_up as bodies.json has it).
 ##   godot --headless --path game res://tests/art_test_report.tscn
 ## The last line (ARTTEST {...}) is for tools/packs/sizes.py, which writes
-## those two numbers into art_tests.json.
+## those numbers into art_tests.json. It also gives size_tallest: the size
+## at which its tallest pose stands as tall as the other's tallest, for an
+## animal that rests low and rears up (art_tests.json "match": "tallest").
 
 
 func _ready() -> void:
@@ -27,9 +29,10 @@ func _ready() -> void:
 		# Drawn height on screen: natural "up" times size over natural longest.
 		var their_tall := float(theirs.up) / float(theirs.longest) * their_size
 		var size := their_tall / (float(mine.up) / float(mine.longest))
-		out[id] = {"size": snappedf(size, 0.01), "pose_up": snappedf(float(mine.pose_up), 0.001)}
-		print("  %s stands %.2f tiles tall drawn %.2f long; %s needs size %.2f to stand as tall (its tallest pose %.3f of standing; the %s's %.3f)" % [
-			like, their_tall, their_size, id, size, float(mine.pose_up), like, float(theirs.pose_up)])
+		var size_tallest := their_tall * float(theirs.pose_up) / (float(mine.up) / float(mine.longest) * float(mine.pose_up))
+		out[id] = {"size": snappedf(size, 0.01), "size_tallest": snappedf(size_tallest, 0.01), "pose_up": snappedf(float(mine.pose_up), 0.001)}
+		print("  %s stands %.2f tiles tall drawn %.2f long; %s needs size %.2f to stand as tall, %.2f for its tallest pose to match (its tallest pose %.3f of standing; the %s's %.3f)" % [
+			like, their_tall, their_size, id, size, size_tallest, float(mine.pose_up), like, float(theirs.pose_up)])
 	print("ARTTEST " + JSON.stringify(out))
 	get_tree().quit()
 

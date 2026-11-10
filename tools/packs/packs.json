@@ -110,11 +110,11 @@
    "timing": "king_cobra",
    "body": "serpent",
    "attack_style": "spit",
-   "tiles_long": 2.0,
+   "tiles_long": 2.09,
    "walk_cycle_tiles": 1.0,
    "clips": {
     "idle": {
-     "clip": "Idle_A"
+     "clip": "Sit"
     },
     "walk": {
      "clip": "Walk"

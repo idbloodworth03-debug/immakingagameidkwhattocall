@@ -5,8 +5,10 @@ from the game's own measurements:
 
 The report's last line (ARTTEST {...}) gives, per art test, the size (its
 longest side in field tiles) at which it stands exactly as tall on screen as
-the animal it plays as, and its pose_up (how much taller than standing its
-tallest pose is). They go into game/data/art_tests.json; packs.json's
+the animal it plays as, the size at which its tallest pose stands as tall
+as that animal's tallest (size_tallest: for an animal that rests low and
+rears up, art_tests.json "match": "tallest"), and its pose_up (how much
+taller than standing its tallest pose is). They go into game/data/art_tests.json; packs.json's
 tiles_long follows the size, so its sprites are rendered at the size they
 are drawn. Run convert.py and render.py again after a size changes.
 """
@@ -33,11 +35,11 @@ def main():
         if entry is None:
             continue
         old = (entry.get("size"), entry.get("pose_up"))
-        entry["size"] = numbers["size"]
+        entry["size"] = numbers["size_tallest"] if entry.get("match") == "tallest" else numbers["size"]
         entry["pose_up"] = numbers["pose_up"]
         if animal_id in packs["animals"]:
-            packs["animals"][animal_id]["tiles_long"] = numbers["size"]
-        print(f"{animal_id}: size {old[0]} -> {numbers['size']}, pose_up {old[1]} -> {numbers['pose_up']}")
+            packs["animals"][animal_id]["tiles_long"] = entry["size"]
+        print(f"{animal_id}: size {old[0]} -> {entry['size']}, pose_up {old[1]} -> {numbers['pose_up']}")
     with open(TESTS, "w") as f:
         f.write(json.dumps(tests, indent=2, ensure_ascii=False) + "\n")
     with open(PACKS, "w") as f:

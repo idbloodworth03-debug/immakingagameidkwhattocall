@@ -66,7 +66,7 @@
   "tile_scale": 2.7741
  },
  "raccoon": {
-  "tile_scale": 1.58254
+  "tile_scale": 1.7676
  },
  "red_fox": {
   "tile_scale": 1.50018
@@ -78,10 +78,10 @@
   "tile_scale": 1.61107
  },
  "striped_skunk": {
-  "tile_scale": 1.65683
+  "tile_scale": 1.76792
  },
  "sumatran_orangutan": {
-  "tile_scale": 2.80841
+  "tile_scale": 2.72951
  },
  "sunda_pangolin": {
   "tile_scale": 1.73607
@@ -90,7 +90,7 @@
   "tile_scale": 1.23462
  },
  "unicorn": {
-  "tile_scale": 1.4215
+  "tile_scale": 1.52085
  },
  "wild_bactrian_camel": {
   "tile_scale": 1.5518

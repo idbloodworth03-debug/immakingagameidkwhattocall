@@ -14,7 +14,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.37,
-   "pose_up": 1.118
+   "pose_up": 1.069
   },
   "gray_squirrel": {
    "size": 0.98,
@@ -118,7 +118,7 @@
    "reach": 0.6,
    "shooter": false,
    "width": 0.7,
-   "pose_up": 1.327
+   "pose_up": 1.361
   },
   "striped_skunk": {
    "size": 1.05,
@@ -126,7 +126,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.39,
-   "pose_up": 0.915
+   "pose_up": 1.019
   },
   "barn_owl": {
    "size": 1.5,
@@ -150,7 +150,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.66,
-   "pose_up": 1.185,
+   "pose_up": 1.022,
    "across": true
   },
   "harpy_eagle": {
@@ -167,7 +167,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.9,
-   "pose_up": 0.948
+   "pose_up": 0.936
   },
   "wild_bactrian_camel": {
    "size": 1.52,
@@ -191,7 +191,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.48,
-   "pose_up": 1.061
+   "pose_up": 1.079
   },
   "snapping_turtle": {
    "size": 1.75,

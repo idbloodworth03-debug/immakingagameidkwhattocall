@@ -2581,28 +2581,66 @@ def hero_skunk(c):
 
 
 def hero_sloth(c):
-    """The world's slowest, biggest yawn, arms stretched up."""
+    """The world's slowest, biggest yawn, arms stretched up, the sleepy face
+    to us."""
     p = sloth_fidget(c, 0.6)
+    p.rot("neck", x=-0.55)
+    p.rot("head", x=-0.8)
     rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
     p["root_rot"] = (rx, ry, rz + 0.3)
     return p
 
 
 def hero_kraken(c):
-    """Tentacles raised high, about to crash down, grinning at us."""
+    """Tentacles raised high round its head (its design raises the spare
+    ones, kraken.py arm_lift), about to crash down, grinning at us."""
     p = kraken_idle(c, 0.0)
     for side, sign in (("L", 1), ("R", -1)):
-        p.leg("fl." + side, upper=1.5, lower=-0.6, foot=-0.5, splay=sign * 0.9)
-        p.leg("hl." + side, upper=0.5, lower=-0.3, foot=-0.2, splay=sign * 0.4)
+        p.leg("fl." + side, upper=0.6, lower=0.8, foot=0.6, splay=sign * 1.4)
+        p.leg("hl." + side, upper=-0.5, lower=0.8, foot=0.6, splay=sign * 1.1)
     for i, bone in enumerate(("tail1", "tail2", "tail3")):
         p.rot(bone, x=0.9 + 0.2 * i)
     p.rot("neck", x=0.15)
-    p.rot("head", x=0.25, z=0.2)
-    p.rot("jaw", x=-0.8)
+    p.rot("head", x=0.1, z=0.2)
+    p.rot("jaw", x=-0.6)
     rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
     p["root_rot"] = (rx, ry, rz + 0.3)
     return p
 
+
+def hero_gorilla(c):
+    """Roaring at us with both arms flung wide, after beating its chest."""
+    p = gorilla_victory(c, 0.7)
+    for side, sign in (("L", 1), ("R", -1)):
+        p.rot("fl_upper." + side, x=-0.8, z=0.7 * sign)
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx, ry, rz + 0.25)
+    return p
+
+
+def hero_eel(c):
+    """Reared up and whipping round, jaws snapping, side on so the long body
+    shows."""
+    p = eel_victory(c, 0.125)
+    p.rot("chest", x=0.3)
+    p.rot("neck", x=0.5)
+    p.rot("neck2", x=0.3)
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx, ry, rz - 0.4)
+    return p
+
+
+def hero_fox(c):
+    """Side on so the big bushy tail shows, pouncing, the face to us."""
+    return _hero_from_attack(c, 0.3, jaw=-0.3, turn=-0.6, head=(0.1, 0.6))
+
+
+def hero_pangolin(c):
+    """Popping up out of its ball with its claws up, the scales on show."""
+    p = pangolin_victory(c, 0.85)
+    rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+    p["root_rot"] = (rx, ry, rz - 0.4)
+    return p
 
 def falcon_idle(c, t):
     """Quick crisp wingbeats, the head snapping to scan one way and the
@@ -3325,13 +3363,13 @@ def kraken_victory(c, t):
 
 PERSONAS = {
     "yeti": {"idle": yeti_idle, "fidget": yeti_fidget, "victory": yeti_victory, "portrait": hero_yeti},
-    "eel": {"idle": eel_idle, "fidget": eel_fidget, "victory": eel_victory},
+    "eel": {"idle": eel_idle, "fidget": eel_fidget, "victory": eel_victory, "portrait": hero_eel},
     "seal": {"idle": seal_idle, "fidget": seal_fidget, "victory": seal_victory},
-    "fox": {"idle": fox_idle, "fidget": fox_fidget, "victory": fox_victory},
-    "gorilla": {"idle": gorilla_idle, "fidget": gorilla_fidget, "victory": gorilla_victory},
+    "fox": {"idle": fox_idle, "fidget": fox_fidget, "victory": fox_victory, "portrait": hero_fox},
+    "gorilla": {"idle": gorilla_idle, "fidget": gorilla_fidget, "victory": gorilla_victory, "portrait": hero_gorilla},
     "red_panda": {"idle": red_panda_idle, "fidget": red_panda_fidget, "victory": red_panda_victory},
     "sloth": {"idle": sloth_idle, "fidget": sloth_fidget, "victory": sloth_victory, "portrait": hero_sloth},
-    "pangolin": {"idle": pangolin_idle, "fidget": pangolin_fidget, "victory": pangolin_victory},
+    "pangolin": {"idle": pangolin_idle, "fidget": pangolin_fidget, "victory": pangolin_victory, "portrait": hero_pangolin},
     "kraken": {"idle": kraken_idle, "fidget": kraken_fidget, "victory": kraken_victory, "portrait": hero_kraken},
     "falcon": {"idle": falcon_idle, "fidget": falcon_fidget, "victory": falcon_victory, "portrait": hero_falcon},
     "owl": {"idle": owl_idle, "fidget": owl_fidget, "victory": owl_victory, "portrait": hero_owl},

@@ -20,19 +20,23 @@ def paint(mesh, creature):
     p = Painter(mesh, COLORS)
     v, n = p.v, p.n
     p.fill("black")
-    up = p.smooth(n[:, 2], 0.2, 0.4)
+    # (A design may make the stripes bolder, R stripe_k: wider, and further
+    # down the sides, so they read from the front.)
+    k = float(getattr(creature, "stripe_k", 1.0))
+    up = p.smooth(n[:, 2], 0.2 - 0.15 * (k - 1.0), 0.4)
     # A thin white stripe up the forehead, then two down the back.
     head = p.mesh.region_weight("head") + p.mesh.region_weight("snout") * 0.6
-    p.blend("white", head * p.smooth(0.008 - np.abs(v[:, 0]), 0.0, 0.004) * up)
+    p.blend("white", head * p.smooth(0.008 * k - np.abs(v[:, 0]), 0.0, 0.004 * k) * up)
     back = (p.mesh.region_weight("torso") + p.mesh.region_weight("neck")) * up
-    p.blend("white", back * p.smooth(0.016 - np.abs(np.abs(v[:, 0]) - 0.03), 0.0, 0.01))
+    p.blend("white", back * p.smooth(0.016 * k - np.abs(np.abs(v[:, 0]) - 0.03 * (0.5 + 0.5 * k)), 0.0, 0.01 * k))
     tail = p.mesh.region_weight("tail") + p.mesh.region_weight("tail_tip")
-    p.blend("white", tail * p.smooth(0.03 - np.abs(v[:, 0]), 0.0, 0.015))
+    p.blend("white", tail * p.smooth(0.03 * k - np.abs(v[:, 0]), 0.0, 0.015 * k))
     return p.colors
 
 
 def make():
     c = quadruped("striped_skunk", J, R, paint=paint, tiles_long=1.2)
+    c.stripe_k = float(R.get("stripe_k", 1.0))
     c.voxel = 0.0035
     add_face(c, eye_dir=(-0.55, 0.78, 0.25), eye_radius=0.0085, eye_sink=0.005, nose_radius=0.0072, iris="#24170e", pupil="round")
     c.fur = {"strands": False, "variation": 0.1, "sheen": 0.3, "bump": 0.2, "roughness": 0.6}

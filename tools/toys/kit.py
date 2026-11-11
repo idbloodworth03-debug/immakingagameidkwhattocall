@@ -14,6 +14,7 @@ calls a function for each side with the side's suffix (".L", ".R") and k
 """
 import numpy as np
 
+import motion
 from sdf import cone, ellipsoid, plate
 
 import toy as T
@@ -46,6 +47,15 @@ def either(*fields):
 def but(field, *others):
     """Where `field` is and none of `others` are."""
     return lambda s: np.minimum.reduce([field(s)] + [-f(s) for f in others])
+
+
+def card_pose(t=0.3, jaw=-0.3, turn=0.25, lean=0.0, head=(0.0, 0.0)):
+    """A card pose of the toy's own, where the old model's hides what the
+    toy is known by (a face turned down, a mouth agape): its attack at
+    moment `t`, the body turned `turn` toward us (radians; below 0: side on
+    the other way) and leaning `lean`, the head turned and tipped (`head`:
+    up, toward us), the jaw open by `jaw`. Give it to Design.toy(hero=...)."""
+    return lambda c: motion._hero_from_attack(c, t, jaw=jaw, turn=turn, lean=lean, head=head)
 
 
 def facing(direction, at_least=0.0):

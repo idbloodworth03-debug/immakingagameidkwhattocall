@@ -86,6 +86,7 @@ class Toy:
     longest: tuple = (0.03, 0.05)
     voxel: float = 0.006
     lid: str = None              # the color round its eyes, for the blinks drawn over a sprite's (the base color if not given)
+    hero: object = None          # its card pose, if not the old model's: a function of the creature (motion.portrait_pose's kind)
 
 
 def skeleton(animal_id, changes=None):
@@ -557,7 +558,8 @@ def bake(toy, arm):
     """Every animation the game plays, as actions (tools/creatures'
     motion, sampled as its own models are), plus "hero": the card pose."""
     c = toy.creature
-    motion.ANIMATIONS["hero"] = (lambda creature, t: motion.portrait_pose(creature), 2, 2, False)
+    pose = toy.hero or motion.portrait_pose
+    motion.ANIMATIONS["hero"] = (lambda creature, t: pose(creature), 2, 2, False)
     X.LOD.clear()
     X.LOD.update({"animations": ["idle", "walk", "attack", "attack2", "special", "fidget", "victory", "hero"]})
     try:

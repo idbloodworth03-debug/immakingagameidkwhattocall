@@ -617,9 +617,16 @@ The toy style won: the whole roster is being rebuilt in it, class by class
   animal's own id, and is drawn in the flat-color look (its meshes are
   named `<id>_toon`).
 
-So far: the Red Fox and the Tank Destroyers (Wolf, Honey Badger, Wild
-Boar, Lion, Tiger, Komodo Dragon, Cerberus). The others keep the
-animated-movie look until their class's turn.
+* **Its card pose** is the old model's too, unless that hides what the
+  toy is known by: the Rhino charged at us head down (its face and horns
+  out of sight), the Hippo gaped so wide its snout hid its eyes, and the
+  Elephant's raised head hid its ears, so each has a card pose of its own
+  (`kit.card_pose` in its design).
+
+So far: the Red Fox, the Tank Destroyers (Wolf, Honey Badger, Wild Boar,
+Lion, Tiger, Komodo Dragon, Cerberus) and the Tanks (Brown Bear, Giant
+Panda, Hippo, Black Rhino, Asian Elephant, Snapping Turtle, Yeti). The
+others keep the animated-movie look until their class's turn.
 
 ## What's next for the art
 

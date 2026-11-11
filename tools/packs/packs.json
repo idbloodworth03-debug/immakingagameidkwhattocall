@@ -1235,6 +1235,234 @@
     "face": {},
     "turn": 0.0
    }
+  },
+  "barn_owl": {
+   "pack": "own",
+   "source": "barn_owl",
+   "timing": "barn_owl",
+   "body": "bird",
+   "attack_style": "dive",
+   "attack2_style": "rake",
+   "tiles_long": 2.96,
+   "walk_cycle_tiles": 1.4,
+   "lid_color": "#e8c486",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.5
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.5
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "peregrine_falcon": {
+   "pack": "own",
+   "source": "peregrine_falcon",
+   "timing": "peregrine_falcon",
+   "body": "bird",
+   "attack_style": "dive",
+   "attack2_style": "rake",
+   "tiles_long": 2.79,
+   "walk_cycle_tiles": 1.4,
+   "lid_color": "#647a93",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.5
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.5
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "harpy_eagle": {
+   "pack": "own",
+   "source": "harpy_eagle",
+   "timing": "harpy_eagle",
+   "body": "bird",
+   "attack_style": "dive",
+   "tiles_long": 3.31,
+   "walk_cycle_tiles": 1.4,
+   "lid_color": "#3d4453",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.5
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "hyacinth_macaw": {
+   "pack": "own",
+   "source": "hyacinth_macaw",
+   "timing": "hyacinth_macaw",
+   "body": "bird",
+   "attack_style": "dive",
+   "tiles_long": 2.62,
+   "walk_cycle_tiles": 1.4,
+   "lid_color": "#3158dc",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.5
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "california_condor": {
+   "pack": "own",
+   "source": "california_condor",
+   "timing": "california_condor",
+   "body": "bird",
+   "attack_style": "dive",
+   "tiles_long": 3.13,
+   "walk_cycle_tiles": 2.0,
+   "lid_color": "#2c2c35",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.5
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "dragon": {
+   "pack": "own",
+   "source": "dragon",
+   "timing": "dragon",
+   "body": "winged",
+   "attack_style": "winged_dive",
+   "tiles_long": 2.23,
+   "walk_cycle_tiles": 2.0,
+   "lid_color": "#2fa868",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.45
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
   }
  }
 }

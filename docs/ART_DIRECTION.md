@@ -627,8 +627,13 @@ So far: the Red Fox, the Tank Destroyers (Wolf, Honey Badger, Wild Boar,
 Lion, Tiger, Komodo Dragon, Cerberus), the Tanks (Brown Bear, Giant
 Panda, Hippo, Black Rhino, Asian Elephant, Snapping Turtle, Yeti) and the
 Ranged animals (Gray Squirrel, Raccoon, Striped Skunk, King Cobra, Wild
-Bactrian Camel, Sumatran Orangutan, Unicorn). The others keep the
-animated-movie look until their class's turn.
+Bactrian Camel, Sumatran Orangutan, Unicorn) and the Air animals (Barn
+Owl, Peregrine Falcon, Harpy Eagle, Hyacinth Macaw, California Condor,
+Dragon). The Specialists keep the animated-movie look until their turn.
+
+A toy bird's wings are stubbier than the bird's it replaces (about half
+the span), which leaves its body and face more of its size on screen: it
+is drawn as tall as before, inside the old wingspan.
 
 ## What's next for the art
 

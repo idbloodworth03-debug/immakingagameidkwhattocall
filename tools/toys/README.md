@@ -16,7 +16,7 @@ replaces.
 | File | What it does |
 | --- | --- |
 | `animals/<id>.py` | One animal's design: its shapes (each on the bone that moves it), its colors, its color patches, its eyes and nose. Sizes are proportions of the animal's own height, so a design's numbers carry from one animal to another. |
-| `kit.py` | Shortcuts for a design: the usual parts of a four-legged animal placed on its joints (body, head, muzzle, neck, legs, tail, ears, a jaw that opens), one limb at a time for an upright one (arms that hang, big hands and feet), and the patch functions (a body part, above or below a place, inside an ellipsoid, facing a way, stripes). |
+| `kit.py` | Shortcuts for a design: the usual parts of a four-legged animal placed on its joints (body, head, muzzle, neck, legs, tail, ears, a jaw that opens), one limb at a time for an upright one (arms that hang, big hands and feet), a bird's (stubby wings as flat lobes along the wing bones, feathers at their tips, a tail fan, a hooked beak, trailing legs), and the patch functions (a body part, above or below a place, inside an ellipsoid, facing a way, stripes). |
 | `toy.py` | Melts the shapes into one smooth body (`tools/creatures/sdf.py`), cuts it down to a few thousand triangles, cuts each patch's edge into the mesh so the color ends exactly on it, adds the eyes with their blendshapes, rigs it and bakes the animal's animations (`tools/creatures/motion.py`). |
 | `skeletons.json` | Every animal's skeleton and motion settings as the game has them (joints, bones, gait, attacks, persona), frozen from its old model by `skeletons.py`: a toy starts from these, so its animations are the ones the game already plays. |
 | `build.py` | Writes `art_sources/own/<id>_LOD0.glb` (the 3D viewer and the renders) and `_LOD1.glb` (fights), and the animal's entry in `tools/packs/packs.json` (pack `own`). A few seconds an animal. |
@@ -77,6 +77,7 @@ place of the old ones.
 ## Adding an animal
 
 Copy a design like its own kind (`animals/wolf_pack.py` for a four-legged
-animal). Start from its skeleton (`Design("<id>", colors, base)`), give it
+animal, `yeti.py` for an upright one, `barn_owl.py` for a bird,
+`king_cobra.py` for a snake, `dragon.py` for wings on four legs). Start from its skeleton (`Design("<id>", colors, base)`), give it
 its shapes, patches, eyes and nose, and preview it. Then run the steps
 above; `sizes.py` tells you if it has grown too long on the ground.

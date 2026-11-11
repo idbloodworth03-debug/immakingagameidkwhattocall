@@ -8,10 +8,9 @@ copied, traced or reshaped, and every shape of an animal is written out in
 its own design file. (A style can't be owned; a pack's files can, see
 `CREDITS.md`.)
 
-The roster is moving to toys class by class (November 2026). A toy replaces
-an animal's art only: it keeps the animal's skeleton, its animations and
-its place in the game, and stands exactly as tall on screen as the model it
-replaces.
+The whole roster of 35 is toys (November 2026). A toy replaces an animal's
+art only: it keeps the animal's skeleton, its animations and its place in
+the game, and stands exactly as tall on screen as the model it replaced.
 
 | File | What it does |
 | --- | --- |
@@ -104,7 +103,8 @@ accepted from single previews; it was taken out again.
 Copy a design like its own kind (`animals/wolf_pack.py` for a four-legged
 animal, `yeti.py` for an upright one, `komodo_dragon.py` for one that
 sprawls, `king_cobra.py` for a snake, `barn_owl.py` for a bird,
-`dragon.py` for wings on four legs). Start from its skeleton (`Design("<id>", colors, base)`), give it
+`dragon.py` for wings on four legs, `harbor_seal.py` for flippers,
+`kraken.py` for tentacles). Start from its skeleton (`Design("<id>", colors, base)`), give it
 its shapes, patches, eyes and nose, and preview it. Then run the steps
 above; `measure.py` tells you if it is built like the approved toys, and
 `sizes.py` if it has grown too long on the ground.

@@ -600,7 +600,7 @@ only; no pack mesh is copied or reshaped.
 
 ## Toys: the roster's own art (November 2026)
 
-The toy style won: the whole roster is being rebuilt in it, class by class
+The toy style won: the whole roster of 35 is rebuilt in it, class by class
 (`tools/toys/`, see its README). A toy replaces an animal's art only:
 
 * **Same animal underneath:** it keeps the animal's skeleton and every
@@ -616,12 +616,12 @@ The toy style won: the whole roster is being rebuilt in it, class by class
   pack animal (pack `own`, its files in `art_sources/own/`), under the
   animal's own id, and is drawn in the flat-color look (its meshes are
   named `<id>_toon`).
-
 * **Its card pose** is the old model's too, unless that hides what the
   toy is known by: the Rhino charged at us head down (its face and horns
-  out of sight), the Hippo gaped so wide its snout hid its eyes and the
-  Elephant's raised head hid its ears, so each has a card pose of its own
-  (`kit.card_pose` in its design).
+  out of sight), the Hippo gaped so wide its snout hid its eyes, the
+  Elephant's raised head hid its ears, the Cobra showed us its chin and
+  the Sloth yawned its face up and away, so each has a card pose of its
+  own (`kit.card_pose` in its design).
 
 The first fifteen (the Red Fox; the Tank Destroyers: Wolf, Honey Badger,
 Wild Boar, Lion, Tiger, Komodo Dragon, Cerberus; the Tanks: Brown Bear,
@@ -633,11 +633,16 @@ in: first versions of the Ranged and Air animals did not (lankier bodies,
 smaller heads, thinner legs, birds that were mostly wing) and were taken
 out again.
 
-Redone to the standard so far: the Ranged animals (Gray Squirrel,
-Raccoon, Striped Skunk, King Cobra, Wild Bactrian Camel, Sumatran
-Orangutan, Unicorn) and the Air animals (Barn Owl, Peregrine Falcon,
-Harpy Eagle, Hyacinth Macaw, California Condor, Dragon). The Specialists
-keep the animated-movie look until their toys match.
+The other twenty were then built to that standard, each checked beside
+approved toys in one picture and in the game's own 3D viewer before it
+went in: the Ranged animals (Gray Squirrel, Raccoon, Striped Skunk, King
+Cobra, Wild Bactrian Camel, Sumatran Orangutan, Unicorn), the Air animals
+(Barn Owl, Peregrine Falcon, Harpy Eagle, Hyacinth Macaw, California
+Condor, Dragon) and the Specialists (Harbor Seal, Electric Eel, Red
+Panda, Mountain Gorilla, Sunda Pangolin, Pygmy Three-toed Sloth, Kraken).
+No animal is on the animated-movie look any more; its tools
+(`tools/creatures/movie.py`) and its shader stay in the repository,
+unused, with the sections above as their record.
 
 A toy bird is body and face, not wing: a round body, a big head held
 high, stubby wings (about a third of the real bird's span) and its legs

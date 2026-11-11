@@ -1463,6 +1463,280 @@
     "face": {},
     "turn": 0.0
    }
+  },
+  "harbor_seal": {
+   "pack": "own",
+   "source": "harbor_seal",
+   "timing": "harbor_seal",
+   "body": "pinniped",
+   "attack_style": "bite",
+   "attack2_style": "slam",
+   "tiles_long": 2.3,
+   "walk_cycle_tiles": 0.8,
+   "lid_color": "#9ca8b4",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.42
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.55
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "electric_eel": {
+   "pack": "own",
+   "source": "electric_eel",
+   "timing": "electric_eel",
+   "body": "serpent",
+   "attack_style": "bite",
+   "attack2_style": "ram",
+   "tiles_long": 2.68,
+   "walk_cycle_tiles": 1.0,
+   "lid_color": "#5f6a5b",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.42
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.45
+    },
+    "special": {
+     "clip": "special",
+     "once": true,
+     "strike": 0.72
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "red_panda": {
+   "pack": "own",
+   "source": "red_panda",
+   "timing": "red_panda",
+   "body": "quadruped",
+   "attack_style": "swipe",
+   "tiles_long": 1.84,
+   "walk_cycle_tiles": 1.013,
+   "lid_color": "#bf4a1c",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.48
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "mountain_gorilla": {
+   "pack": "own",
+   "source": "mountain_gorilla",
+   "timing": "mountain_gorilla",
+   "body": "biped",
+   "attack_style": "stomp",
+   "tiles_long": 1.56,
+   "walk_cycle_tiles": 1.0,
+   "lid_color": "#302e38",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.52
+    },
+    "special": {
+     "clip": "special",
+     "once": true,
+     "strike": 0.72
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "sunda_pangolin": {
+   "pack": "own",
+   "source": "sunda_pangolin",
+   "timing": "sunda_pangolin",
+   "body": "quadruped",
+   "attack_style": "swipe",
+   "tiles_long": 2.65,
+   "walk_cycle_tiles": 1.05,
+   "lid_color": "#7a5631",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.48
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "pygmy_three_toed_sloth": {
+   "pack": "own",
+   "source": "pygmy_three_toed_sloth",
+   "timing": "pygmy_three_toed_sloth",
+   "body": "quadruped",
+   "attack_style": "swipe",
+   "tiles_long": 1.85,
+   "walk_cycle_tiles": 0.35,
+   "lid_color": "#c6ab7f",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.48
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "kraken": {
+   "pack": "own",
+   "source": "kraken",
+   "timing": "kraken",
+   "body": "quadruped",
+   "attack_style": "swipe",
+   "tiles_long": 2.56,
+   "walk_cycle_tiles": 0.7,
+   "lid_color": "#ee664e",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.48
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
   }
  }
 }

@@ -97,12 +97,12 @@
    "pose_up": 1.248
   },
   "red_panda": {
-   "size": 2.03,
+   "size": 1.84,
    "footprint": 1.3,
    "reach": 0.35,
    "shooter": false,
    "width": 0.33,
-   "pose_up": 1.358
+   "pose_up": 1.112
   },
   "black_rhino": {
    "size": 2.44,
@@ -210,12 +210,12 @@
    "pose_up": 1.112
   },
   "harbor_seal": {
-   "size": 2.01,
+   "size": 2.3,
    "footprint": 1.46,
    "reach": 0.4,
    "shooter": false,
    "width": 0.52,
-   "pose_up": 1.104
+   "pose_up": 1.15
   },
   "giant_panda": {
    "size": 2.07,
@@ -226,12 +226,12 @@
    "pose_up": 1.043
   },
   "mountain_gorilla": {
-   "size": 2.46,
+   "size": 2.33,
    "footprint": 1.35,
    "reach": 0.55,
    "shooter": false,
    "width": 0.67,
-   "pose_up": 0.984,
+   "pose_up": 0.953,
    "across": true
   },
   "komodo_dragon": {
@@ -243,28 +243,28 @@
    "pose_up": 1.086
   },
   "sunda_pangolin": {
-   "size": 2.55,
+   "size": 2.65,
    "footprint": 1.32,
    "reach": 0.3,
    "shooter": false,
    "width": 0.3,
-   "pose_up": 1.368
+   "pose_up": 1.365
   },
   "electric_eel": {
-   "size": 2.67,
+   "size": 2.68,
    "footprint": 1.48,
    "reach": 0.4,
    "shooter": false,
    "width": 0.57,
-   "pose_up": 1.167
+   "pose_up": 1.202
   },
   "pygmy_three_toed_sloth": {
-   "size": 1.69,
+   "size": 1.85,
    "footprint": 1.22,
    "reach": 0.45,
    "shooter": false,
    "width": 1.04,
-   "pose_up": 1.031
+   "pose_up": 1.058
   },
   "yeti": {
    "size": 2.28,
@@ -284,12 +284,12 @@
    "pose_up": 1.163
   },
   "kraken": {
-   "size": 2.39,
+   "size": 2.56,
    "footprint": 1.58,
    "reach": 0.75,
    "shooter": false,
    "width": 1.44,
-   "pose_up": 1.027
+   "pose_up": 1.079
   }
  }
 }

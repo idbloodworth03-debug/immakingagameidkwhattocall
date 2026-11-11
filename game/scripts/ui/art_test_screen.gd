@@ -1,11 +1,11 @@
 class_name ArtTestScreen
 extends Control
 ## For testing art (dev tools on; the website opened with ?arttest=1): each
-## art test (data/art_tests.json: an animal from an outside art pack) next
-## to the animal it plays as, as their cards, pack by pack. Tap a card for
-## its 3D viewer. Each pack's "Test fight" starts a fight of its animals
-## against ours, played by the computer for both sides (main_menu.gd's
-## ?fight= shortcut).
+## art test (data/art_tests.json: an animal from an outside art pack, or
+## one of our own in a new style) next to the animal it plays as, as their
+## cards, pack by pack. Tap a card for its 3D viewer. Each pack's "Test
+## fight" starts a fight of its animals against the game's current ones,
+## played by the computer for both sides (main_menu.gd's ?fight= shortcut).
 
 ## The fight's seed (the same fight every time).
 const FIGHT_SEED := 7
@@ -47,13 +47,13 @@ func _ready() -> void:
 	for id: String in tests:
 		if GameData.cards.has(id):
 			(packs.get_or_add(String(tests[id].get("pack", "")), []) as Array).append(id)
-	column.add_child(UIKit.paragraph("Ours on the left, the pack's on the right. Each plays exactly as the animal beside it. Tap a card for its 3D viewer.", 22))
+	column.add_child(UIKit.paragraph("The game's animal now on the left, the test on the right. Each test plays exactly as the animal beside it. Tap a card for its 3D viewer.", 22))
 	for pack: String in packs:
 		var ids: Array = packs[pack]
 		column.add_child(UIKit.label(pack, 26, UIKit.GREEN))
 		for id: String in ids:
 			column.add_child(_pair(GameData.plays_as(id), id))
-		var fight := UIKit.button("Test fight: these vs ours", UIKit.GREEN, 24)
+		var fight := UIKit.button("Test fight: these vs now", UIKit.GREEN, 24)
 		fight.pressed.connect(_start_fight.bind(ids))
 		column.add_child(fight)
 	var close := UIKit.button("Close", UIKit.BLUE, 26)
@@ -71,14 +71,14 @@ func _pair(ours: String, theirs: String) -> Control:
 		var card := AnimalCard.create(id)
 		UIKit.on_tap(card, func() -> void: AnimalViewer.open(id))
 		cell.add_child(card)
-		var line := "Ours: %s" if id == ours else "Pack: %s"
+		var line := "Now: %s" if id == ours else "Test: %s"
 		cell.add_child(UIKit.label(line % String(GameData.get_card(id).get("name", id)), 20, UIKit.YELLOW if id == ours else UIKit.GREEN, HORIZONTAL_ALIGNMENT_CENTER))
 		row.add_child(cell)
 	return row
 
 
-## A pack's animals (team 0, blue) against ours (team 1, red), one squad
-## each, played by the computer.
+## A pack's animals (team 0, blue) against the ones they play as (team 1,
+## red), one squad each, played by the computer.
 func _start_fight(theirs: Array) -> void:
 	var ours := []
 	for id: String in theirs:

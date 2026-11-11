@@ -592,6 +592,16 @@ faces don't change. The Fox and Wolf are faceted low-poly models: the
 flat-color shader lights them face by face (`viewer.json` toon_look, the
 shader's `faceted`), while their outline still follows smoothed normals.
 
+A third test is **our own**: the **Toy Fox**, a Red Fox built by code in the
+packs' flat toy style (`tools/toys/`: a few big round shapes, flat colors in
+crisp patches, stick legs, button eyes), to see whether models we make
+ourselves can stand next to a pack's. The packs are the reference for the
+style only; no pack mesh is copied or reshaped. It keeps our own skeleton
+and animations (the Red Fox's trot, pounce, bite and persona), has the same
+blendshape faces as the first pack, and comes into the game through
+`tools/packs` like a pack animal (pack `own`, its files in
+`art_sources/own/`).
+
 ## What's next for the art
 
 1. **Play with the 20 animals and react:** which ones don't look right, which

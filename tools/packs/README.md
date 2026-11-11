@@ -12,11 +12,15 @@ Two kinds of pack are read (`packs.json` "format"):
   blendshapes, the clips in their own file, colors from a tiny palette
   picture.
 * **gltf** (Quaternius): one file per animal with its mesh, rig and clips,
-  colors from flat materials or a color atlas, no blendshapes.
+  colors from flat materials or a color atlas, no blendshapes. Our own
+  toy-style animals (`tools/toys`, the pack `own`) come in this way too:
+  a file per level of detail (`{lod}` in the pack's file name), with eye
+  blendshapes and smooth normals of their own (`smooth_normals`).
 
 Each pack's files are in its own folder (`packs.json` "folder") under one
 root. A **CC0** pack's files are in this repository, under `art_sources/`
-(Quaternius: anyone may use, change and share them). A pack under a **store
+(Quaternius: anyone may use, change and share them), and so are our own
+(`art_sources/own/`, built by `tools/toys/build.py`). A pack under a **store
 license** stays on your computer (most don't allow handing the files on;
 `.gitignore` keeps anything else under `art_sources/` out): put it in a
 folder of packs and name that root with `--pack <root>` (or
@@ -31,6 +35,7 @@ folder of packs and name that root with `--pack <root>` (or
 | `sizes.py` | Writes each animal's drawn size and tallest pose into `game/data/art_tests.json` from the game's own measurement (`tests/art_test_report.tscn`). |
 
     python tools/packs/convert.py test_fox test_yeti          # CC0 packs: straight from art_sources/
+    python tools/toys/build.py red_fox && python tools/packs/convert.py own_fox   # our own
     python tools/packs/convert.py --all --pack ~/packs
     python tools/packs/render.py --all --pack ~/packs
     godot --headless --path game --import
@@ -91,6 +96,6 @@ with it is the same, tick for tick, as with the animal it replaces.
 * `?fight=7&herds=test_colobus,test_taipan,test_sparrow|brown_bear,king_cobra,peregrine_falcon`:
   a fight of theirs against ours, played by the computer
   (`test_fox,test_wolf,test_yeti,test_dragon|red_fox,wolf_pack,yeti,dragon`
-  for the Quaternius four).
+  for the Quaternius four; `own_fox|red_fox` for our own Toy Fox).
 
 (Dev tools on: `game/data/testing.json` "show_dev_tools".)

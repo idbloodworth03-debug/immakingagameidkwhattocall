@@ -59,6 +59,9 @@
  "mountain_gorilla": {
   "tile_scale": 2.01883
  },
+ "own_fox": {
+  "tile_scale": 2.60437
+ },
  "peregrine_falcon": {
   "tile_scale": 2.43059
  },

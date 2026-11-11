@@ -59,6 +59,14 @@
       "source": "Dragon_Evolved (Ultimate Monsters)",
       "size": 3.25,
       "pose_up": 0.775
+    },
+    "own_fox": {
+      "name": "Toy Fox",
+      "plays_as": "red_fox",
+      "pack": "Our own, built by code (toy style)",
+      "source": "tools/toys/animals/red_fox.py",
+      "size": 2.57,
+      "pose_up": 1.132
     }
   }
 }

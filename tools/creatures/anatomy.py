@@ -117,17 +117,11 @@ def mirror(point):
     return (-x, y, z)
 
 
-def quadruped(name, j, r, **extra):
-    """Standard four-legged body.
-
-    `j` holds joint positions for the animal's LEFT side (x < 0) and the
-    midline; the right side is mirrored. `r` holds radii. Required joints:
-      pelvis, spine_mid, withers, neck_base, head_base, skull, snout_tip,
-      jaw_hinge, chin, ear_base, ear_tip,
-      shoulder, elbow, wrist, front_toe,
-      hip, knee, hock, hind_toe,
-      tail_base, tail_mid, tail_end
-    """
+def quadruped_skeleton(j):
+    """The usual four-legged skeleton (spine, neck, head with a jaw, ears,
+    three-segment legs, tail) from the joint positions `quadruped` lists:
+    (joints, bones). Whatever shapes go on it, tools/creatures' motion
+    moves it."""
     joints = {}
     for key, value in j.items():
         if key in SIDED:
@@ -135,7 +129,6 @@ def quadruped(name, j, r, **extra):
             joints[key + ".R"] = mirror(value)
         else:
             joints[key] = value
-    pelvis = np.asarray(j["pelvis"], float)
     joints["root"] = (0.0, (j["pelvis"][1] + j["withers"][1]) / 2, 0.0)
     joints["root_tip"] = (0.0, joints["root"][1] + 0.1, 0.0)
     joints["tail_tip_end"] = tuple(np.asarray(j["tail_end"]) + (np.asarray(j["tail_end"]) - np.asarray(j["tail_mid"])) * 0.3)
@@ -161,6 +154,21 @@ def quadruped(name, j, r, **extra):
             Bone("hl_lower" + side, "knee" + side, "hock" + side, "hl_upper" + side),
             Bone("hl_foot" + side, "hock" + side, "hind_toe" + side, "hl_lower" + side),
         ]
+    return joints, bones
+
+
+def quadruped(name, j, r, **extra):
+    """Standard four-legged body.
+
+    `j` holds joint positions for the animal's LEFT side (x < 0) and the
+    midline; the right side is mirrored. `r` holds radii. Required joints:
+      pelvis, spine_mid, withers, neck_base, head_base, skull, snout_tip,
+      jaw_hinge, chin, ear_base, ear_tip,
+      shoulder, elbow, wrist, front_toe,
+      hip, knee, hock, hind_toe,
+      tail_base, tail_mid, tail_end
+    """
+    joints, bones = quadruped_skeleton(j)
 
     P = lambda key: np.asarray(joints[key], float)
     shapes = []

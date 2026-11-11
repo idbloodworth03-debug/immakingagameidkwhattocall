@@ -1,5 +1,5 @@
 {
- "_note": "Animals taken from outside art packs (tools/packs). packs: each pack's license, its folder under the packs' root (art_sources/ in this repository, or --pack <root>), its format (\"fbx\": a mesh per level of detail, clips in their own file, colors from a palette picture; \"gltf\": one file per animal, colors from its flat materials or color atlas) and where it keeps its files ({source}: the animal's name in the pack; {lod}: 0 the finest); faces: which way its animals face in Blender (\"-Y\" ones are turned round: the game's face +Y); handles: its rigs have handle bones that move no part of the mesh (IK and pole targets), left out of the game's models; weld: a faceted mesh's split edges are joined and shaded smooth, so the game's outline doesn't tear; faceted: the game still lights it face by face (its low-poly look). lods: which of the pack's level-of-detail meshes each of the game's models uses (viewer: the 3D viewer; battle: fights; render: the card portrait and the sprites). shapes: the facial blendshapes kept in each model (\"all\", or a list: a blendshape stores every vertex of the face again, and a fight shows dozens of animals). look: how the portrait and sprites are rendered to flatter flat-color art (the game's own real-time look is in game/data/viewer.json \"toon_look\"): color: saturation and brightness of the palette; toon: the cel shading's light share (size) and how soft its edge is (smooth); flat: how much of the color shows whatever the light (the pack's own soft look); key_angle: the key light's size in degrees (bigger: softer shadows); shadow: how dark the ground shadow is; outline: the dark line's width in pixels (at a 512-pixel portrait, and at 56 pixels a tile for sprites) and color; portrait_subdivide and sprite_subdivide: smoothing rounds for each; portrait_samples, sprite_samples and sprite_denoise (Cycles' denoiser quality and prefilter: the sheets' hundreds of frames use the fast one). animals: one entry per game animal id: pack and source (its name in the pack), timing (an animal already in the game whose animation timing it keeps, so fights play the same), body and attack styles (as tools/creatures: how the game moves it and which hit effects it gets), tiles_long (its longest side in field tiles at natural size), walk_cycle_tiles (how far one walk cycle carries it), recolor (palette swaps, \"#old\": \"#new\"), clips (each game animation's recipe from the pack's clips: clip, or clips one after another; times: played that many times; once: the clip doesn't loop (an attack, a nod); frames and fps: how long an idle, walk, fidget or victory lasts, when not the stand-in's (a swing always keeps the stand-in's length and hit moment); strike: where in the clip the blow lands, 0-1, matched to the game's hit moment, found by itself for an attack when not given (where the animal reaches furthest forward); from/to: only that part of the clip), lid_color (the skin round its eyes, for the blinks the game draws over a sprite's eyes), hero (the card portrait's pose: clip, at 0-1, face blendshapes, turn in degrees, lift: how high off the ground a flier hovers, in the pack's units).",
+ "_note": "Animals taken from outside art packs (tools/packs). packs: each pack's license, its folder under the packs' root (art_sources/ in this repository, or --pack <root>), its format (\"fbx\": a mesh per level of detail, clips in their own file, colors from a palette picture; \"gltf\": one file per animal (or one per level of detail, with {lod} in its name), colors from its flat materials or color atlas) and where it keeps its files ({source}: the animal's name in the pack; {lod}: 0 the finest); faces: which way its animals face in Blender (\"-Y\" ones are turned round: the game's face +Y); handles: its rigs have handle bones that move no part of the mesh (IK and pole targets), left out of the game's models; weld: the mesh's split edges (a faceted mesh's every edge; any glTF mesh's edges where its color changes) are joined and shaded smooth, so the game's outline doesn't tear; smooth_normals: the mesh comes with smooth normals of its own, kept when it is welded; faceted: the game still lights it face by face (its low-poly look). The pack \"own\" is our own toy-style animals, built by tools/toys into art_sources/own. lods: which of the pack's level-of-detail meshes each of the game's models uses (viewer: the 3D viewer; battle: fights; render: the card portrait and the sprites). shapes: the facial blendshapes kept in each model (\"all\", or a list: a blendshape stores every vertex of the face again, and a fight shows dozens of animals). look: how the portrait and sprites are rendered to flatter flat-color art (the game's own real-time look is in game/data/viewer.json \"toon_look\"): color: saturation and brightness of the palette; toon: the cel shading's light share (size) and how soft its edge is (smooth); flat: how much of the color shows whatever the light (the pack's own soft look); key_angle: the key light's size in degrees (bigger: softer shadows); shadow: how dark the ground shadow is; outline: the dark line's width in pixels (at a 512-pixel portrait, and at 56 pixels a tile for sprites) and color; portrait_subdivide and sprite_subdivide: smoothing rounds for each; portrait_samples, sprite_samples and sprite_denoise (Cycles' denoiser quality and prefilter: the sheets' hundreds of frames use the fast one). animals: one entry per game animal id: pack and source (its name in the pack), timing (an animal already in the game whose animation timing it keeps, so fights play the same), body and attack styles (as tools/creatures: how the game moves it and which hit effects it gets), tiles_long (its longest side in field tiles at natural size), walk_cycle_tiles (how far one walk cycle carries it), recolor (palette swaps, \"#old\": \"#new\"), clips (each game animation's recipe from the pack's clips: clip, or clips one after another; times: played that many times; once: the clip doesn't loop (an attack, a nod); frames and fps: how long an idle, walk, fidget or victory lasts, when not the stand-in's (a swing always keeps the stand-in's length and hit moment); strike: where in the clip the blow lands, 0-1, matched to the game's hit moment, found by itself for an attack when not given (where the animal reaches furthest forward); from/to: only that part of the clip), lid_color (the skin round its eyes, for the blinks the game draws over a sprite's eyes), hero (the card portrait's pose: clip, at 0-1, face blendshapes, turn in degrees, lift: how high off the ground a flier hovers, in the pack's units).",
  "packs": {
   "quirky": {
    "name": "Quirky Series",
@@ -34,6 +34,17 @@
    "faces": "-Y",
    "weld": true,
    "handles": true
+  },
+  "own": {
+   "name": "Our own toy-style animals",
+   "by": "Den Duel (built by code: tools/toys)",
+   "license": "ours",
+   "folder": "own",
+   "format": "gltf",
+   "file": "{source}_LOD{lod}.glb",
+   "faces": "+Y",
+   "weld": true,
+   "smooth_normals": true
   }
  },
  "lods": {
@@ -375,6 +386,48 @@
    "hero": {
     "clip": "Flying_Idle",
     "at": 0.3,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "own_fox": {
+   "pack": "own",
+   "source": "Fox",
+   "timing": "red_fox",
+   "body": "quadruped",
+   "attack_style": "pounce_bite",
+   "attack2_style": "bite",
+   "tiles_long": 2.57,
+   "walk_cycle_tiles": 1.2,
+   "lid_color": "#ee7b2b",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.45
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.42
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
     "face": {},
     "turn": 0.0
    }

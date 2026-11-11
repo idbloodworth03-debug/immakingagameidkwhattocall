@@ -9,12 +9,14 @@ Two kinds of pack are read: "fbx" (Quirky Series: a mesh per level of
 detail with facial blendshapes, the clips in their own file, colors from a
 tiny palette picture) and "gltf" (Quaternius: one file per animal with its
 mesh, rig and clips, colors from flat materials or a color atlas, no
-blendshapes).
+blendshapes). Our own toy-style animals (tools/toys, the pack "own") come
+in as a glTF pack too: a file per level of detail, with eye blendshapes
+and smooth normals of their own.
 
 Each pack's files are in its own folder (packs.json "folder") under one
 root: art_sources/ in this repository, or --pack <root> (or PACK_ROOT).
-Only packs whose license allows it are in the repository (CC0: Quaternius);
-a store-licensed pack's files stay on your computer.
+Only packs whose license allows it are in the repository (CC0: Quaternius;
+and our own); a store-licensed pack's files stay on your computer.
 
 Coordinates match tools/creatures: the animal faces +Y with +Z up.
 """
@@ -172,7 +174,7 @@ def load(animal_id, lod, where, encode="srgb", fresh=True):
     out = Loaded()
     out.source = src
     if pack.get("format", "fbx") == "gltf":
-        actions = _import_gltf(out, os.path.join(folder, pack["file"].format(source=src)))
+        actions = _import_gltf(out, os.path.join(folder, pack["file"].format(source=src, lod=lod)))
     else:
         made = _import_fbx(os.path.join(folder, pack["meshes"].format(source=src, lod=lod)), False)
         out.arm = next(o for o in made if o.type == "ARMATURE")
@@ -196,7 +198,7 @@ def load(animal_id, lod, where, encode="srgb", fresh=True):
         rgb = _palette_colors(out.body, os.path.join(folder, pack["palette"].format(source=src)))
     _paint(out.body, rgb, info.get("recolor", {}), encode)
     if pack.get("weld", False):
-        _weld_smooth(out.body)
+        _weld_smooth(out.body, keep_normals=bool(pack.get("smooth_normals", False)))
     out.face = _split_face(out.body)
     # A pack's animals may face -Y; the game's face +Y. (Turned through the
     # rig's matrix: a glTF rig's rotation is a quaternion, and setting its
@@ -382,11 +384,15 @@ def _paint(ob, rgb, recolor, encode):
     me.materials.clear()
 
 
-def _weld_smooth(ob):
-    """Joins the vertices a faceted (flat-shaded) mesh has split along its
-    edges and shades it smooth. The game's outline is the mesh pushed out
-    along its normals: on a faceted mesh every face would move its own way
-    and the line would tear at each edge."""
+def _weld_smooth(ob, keep_normals=False):
+    """Joins the vertices a mesh has split along its edges and shades it
+    smooth. A faceted (flat-shaded) mesh is split along every edge, and
+    any mesh in a glTF file along the edges where its color changes. The
+    game's outline is the mesh pushed out along its normals: split, each
+    side would move its own way and the line would tear there (and the
+    renders' outline would trace every split as an edge of the mesh).
+    `keep_normals`: the mesh's own normals are smooth already and stay
+    (packs.json "smooth_normals"); otherwise they are worked out afresh."""
     import bmesh
     me = ob.data
     bm = bmesh.new()
@@ -398,7 +404,7 @@ def _weld_smooth(ob):
         poly.use_smooth = True
     for edge in me.edges:
         edge.use_edge_sharp = False
-    if me.has_custom_normals:
+    if me.has_custom_normals and not keep_normals:
         with bpy.context.temp_override(object=ob, active_object=ob, selected_objects=[ob]):
             bpy.ops.mesh.customdata_custom_splitnormals_clear()
     me.update()

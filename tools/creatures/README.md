@@ -4,6 +4,8 @@
 > moving to bought art packs, brought in by `tools/packs/`. This pipeline
 > still makes the current animals' art, the arenas and the crowd strips,
 > and `sprites.py` and `scene.py` are shared with `tools/packs/render.py`.
+> `tools/toys/` is a test of making our own animals in the packs' flat
+> style, on this pipeline's shape kit, skeleton and motion.
 
 Makes the battle sprites and card portraits for each animal, and the
 arena pictures, with Blender, from code: no hand modeling, so everything

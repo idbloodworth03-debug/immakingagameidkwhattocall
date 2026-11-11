@@ -16,6 +16,9 @@ for the game by `tools/packs/`, aren't in the game's roster:
   [Quaternius](https://quaternius.com), released under
   [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public
   domain; their files are in `art_sources/quaternius/`).
+- The Toy Fox is our own: built by `tools/toys/` in the packs' flat style,
+  with the packs as reference for the style only (no pack mesh is copied;
+  its files are in `art_sources/own/`).
 
 ## Icons
 

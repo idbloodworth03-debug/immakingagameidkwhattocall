@@ -30,6 +30,8 @@ game/art/units/*/_*
 /game/build.json
 
 # Art packs under a store license stay on your computer (tools/packs): only
-# CC0 sources (art_sources/quaternius) are part of the repository.
+# CC0 sources (art_sources/quaternius) and our own models (art_sources/own,
+# built by tools/toys) are part of the repository.
 /art_sources/*
 !/art_sources/quaternius/
+!/art_sources/own/

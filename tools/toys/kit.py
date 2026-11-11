@@ -155,6 +155,27 @@ class Design:
     def stick(self, a, b, ra, rb, part_name, bone, bone_b=None, blend=0.07):
         self.c.shapes.append(cone(self.p(a), self.p(b), ra * self.u, rb * self.u, part_name, bone, bone_b, blend=blend * self.u))
 
+    def rope(self, joints, radii, bones, part_name, blend=0.1, steps=3):
+        """A rope of a body through joints (a snake's, an eel's), curved
+        smoothly through them where sticks would bend at each: `radii` at
+        each joint; `bones`: the bone each stretch between two joints
+        follows, and one more for the last joint to blend into;
+        `part_name`: one name, or one for each stretch."""
+        points = [self.p(j) for j in joints]
+        last = len(points) - 1
+        names = [part_name] * last if isinstance(part_name, str) else list(part_name)
+        for i in range(last):
+            p0, p1, p2, p3 = points[max(i - 1, 0)], points[i], points[i + 1], points[min(i + 2, last)]
+
+            def at(t):
+                return 0.5 * (2 * p1 + (p2 - p0) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t + (3 * p1 - p0 - 3 * p2 + p3) * t ** 3)
+            for k in range(steps):
+                t0, t1 = k / steps, (k + 1) / steps
+                ra = radii[i] + (radii[i + 1] - radii[i]) * t0
+                rb = radii[i] + (radii[i + 1] - radii[i]) * t1
+                onto = bones[i + 1] if k == steps - 1 and i + 1 < len(bones) else None
+                self.stick(at(t0), at(t1), ra, rb, names[i], bones[i], onto, blend=blend)
+
     def flat(self, a, b, tip, thick, rounding, part_name, bone, blend=0.07):
         self.c.shapes.append(plate(self.p(a), self.p(b), self.p(tip), thick * self.u, rounding * self.u, part_name, bone,
                                    blend=blend * self.u))
@@ -247,6 +268,16 @@ class Design:
     # --- A bird in its flying pose (wings spread, legs trailing); wings on a four-legged body ---
 
     WING = ("shoulder", "elbow", "wrist", "wing_tip")
+
+    def bird_stance(self, head=(0, -0.15, 0.55), hip=(-0.3, 0.3, -0.5), foot=(-0.3, 0.05, -0.95)):
+        """A toy bird carries a big head high over a round body and lets
+        its legs dangle under it (the bird it replaces flew stretched out
+        flat, its legs trailing): its head's joints move by `head`, and
+        each hip and foot go to a place from its pelvis (given for the
+        left). Do it before its shapes are made."""
+        self.move(["head_base", "skull", "beak_tip", "jaw_hinge", "chin"], head)
+        self.put("hip", "pelvis", hip)
+        self.put("foot", "pelvis", foot)
 
     def shorten_wings(self, share, joints=WING):
         """A toy's wings are stubbier than a real bird's, which leaves its

@@ -20,6 +20,7 @@ replaces.
 | `toy.py` | Melts the shapes into one smooth body (`tools/creatures/sdf.py`), cuts it down to a few thousand triangles, cuts each patch's edge into the mesh so the color ends exactly on it, adds the eyes with their blendshapes, rigs it and bakes the animal's animations (`tools/creatures/motion.py`). |
 | `skeletons.json` | Every animal's skeleton and motion settings as the game has them (joints, bones, gait, attacks, persona), frozen from its old model by `skeletons.py`: a toy starts from these, so its animations are the ones the game already plays. |
 | `build.py` | Writes `art_sources/own/<id>_LOD0.glb` (the 3D viewer and the renders) and `_LOD1.glb` (fights), and the animal's entry in `tools/packs/packs.json` (pack `own`). A few seconds an animal. |
+| `measure.py` | Says whether a design is built like the approved toys: its head against its body, its legs' thickness, its eyes, how much of its height is head, a bird's wingspan against its height. See "The standard" below. |
 | `stands.json`, `sizes.py` | How tall each animal stood and how long it was on the ground before it became a toy, and the tool that gives each toy the drawn size at which it stands exactly as tall (`game/data/bodies.json` size and pose_up), from the game's own measurement (`game/tests/stand_report.tscn`). |
 
     python tools/toys/build.py red_fox wolf_pack
@@ -34,6 +35,30 @@ replaces.
 comes into the game exactly as a pack animal does (`tools/packs/README.md`),
 under the animal's own id, so its models, portrait and sheets take the
 place of the old ones.
+
+## The standard
+
+The first fifteen toys (the Red Fox, the Tank Destroyers and the Tanks)
+are the standard: a new toy has to stand up next to them. What they share:
+
+* **A big head**: as wide as the body or wider, and a third or more of the
+  animal's standing height.
+* **A chunky body on thick, stubby legs**: a leg well over a third as thick
+  as the body's half width. Not the real animal's proportions: a toy
+  Camel, Unicorn or Dragon has a short neck and a head that sits close to
+  its shoulders.
+* **Big button eyes**, a fifth of the head's width or more.
+* **A bird is body and face, not wing**: a round body, its big head held
+  high, stubby wings (a wingspan under twice its height), its legs
+  dangling under it (`kit.bird_stance`, `kit.shorten_wings`).
+
+`measure.py` checks these numbers for every design, marking what falls
+short. Then look: render it beside approved toys in one picture, and look
+at it in the game's own 3D viewer, in the pose it stands in there. (The
+Squirrel sits up on its haunches, which tipped a face built for all fours
+up at the sky; its face is built tipped down.) A first draft of the
+Ranged and Air animals was built to the real animals' proportions and
+accepted from single previews; it was taken out again.
 
 ## What a toy keeps
 
@@ -78,6 +103,7 @@ place of the old ones.
 
 Copy a design like its own kind (`animals/wolf_pack.py` for a four-legged
 animal, `yeti.py` for an upright one, `komodo_dragon.py` for one that
-sprawls). Start from its skeleton (`Design("<id>", colors, base)`), give it
+sprawls, `king_cobra.py` for a snake). Start from its skeleton (`Design("<id>", colors, base)`), give it
 its shapes, patches, eyes and nose, and preview it. Then run the steps
-above; `sizes.py` tells you if it has grown too long on the ground.
+above; `measure.py` tells you if it is built like the approved toys, and
+`sizes.py` if it has grown too long on the ground.

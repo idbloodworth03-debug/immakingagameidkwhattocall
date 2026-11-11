@@ -623,14 +623,20 @@ The toy style won: the whole roster is being rebuilt in it, class by class
   Elephant's raised head hid its ears, so each has a card pose of its own
   (`kit.card_pose` in its design).
 
-So far: the Red Fox, the Tank Destroyers (Wolf, Honey Badger, Wild Boar,
-Lion, Tiger, Komodo Dragon, Cerberus) and the Tanks (Brown Bear, Giant
-Panda, Hippo, Black Rhino, Asian Elephant, Snapping Turtle, Yeti). These
-fifteen are the standard: a toy that doesn't stand up next to them doesn't
-go in. First versions of the Ranged and Air animals did not (lankier
-bodies, smaller heads, thinner legs, birds that were mostly wing) and
-were taken out again; the other twenty keep the animated-movie look until
-their toys match.
+The first fifteen (the Red Fox; the Tank Destroyers: Wolf, Honey Badger,
+Wild Boar, Lion, Tiger, Komodo Dragon, Cerberus; the Tanks: Brown Bear,
+Giant Panda, Hippo, Black Rhino, Asian Elephant, Snapping Turtle, Yeti)
+are the standard: a big head, a chunky body on thick stubby legs, big
+button eyes (`tools/toys/README.md`, "The standard"; `measure.py` checks
+a design's numbers). A toy that doesn't stand up next to them doesn't go
+in: first versions of the Ranged and Air animals did not (lankier bodies,
+smaller heads, thinner legs, birds that were mostly wing) and were taken
+out again.
+
+Redone to the standard so far: the Ranged animals (Gray Squirrel,
+Raccoon, Striped Skunk, King Cobra, Wild Bactrian Camel, Sumatran
+Orangutan, Unicorn). The Air animals and the Specialists keep the
+animated-movie look until their toys match.
 
 ## What's next for the art
 

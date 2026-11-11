@@ -19,6 +19,10 @@ uniform float rim_width = 0.3;
 uniform vec3 rim_color : source_color = vec3(1.0, 0.98, 0.92);
 uniform float saturation = 1.2;
 uniform float brightness = 1.04;
+// 1: lit face by face (a low-poly model's own faceted look), whatever the
+// mesh's smooth normals say. Those stay smooth for the outline, which is
+// the mesh pushed out along them and would tear along every edge otherwise.
+uniform float faceted = 0.0;
 uniform float silhouette = 0.0;     // 1: a solid shape (an animal not found yet)
 uniform vec3 silhouette_color : source_color = vec3(0.1, 0.16, 0.32);
 uniform float flash = 0.0;          // a quick brightening when tapped (or hit)
@@ -40,6 +44,11 @@ void fragment() {
 	float grey = dot(base, vec3(0.299, 0.587, 0.114));
 	base = clamp(mix(vec3(grey), base, saturation) * brightness, vec3(0.0), vec3(1.0));
 	vec3 n = normalize(NORMAL);
+	if (faceted > 0.5) {
+		// The face's own normal, from how the surface runs across the screen.
+		vec3 flat_n = normalize(cross(dFdx(VERTEX), dFdy(VERTEX)));
+		n = dot(flat_n, VIEW) < 0.0 ? -flat_n : flat_n;
+	}
 	vec3 l = normalize(key_dir);
 	float lit = smoothstep(band - soft, band + soft, dot(n, l));
 	vec3 col = base * mix(shade_color, key_color, lit);

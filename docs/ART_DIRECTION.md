@@ -582,6 +582,16 @@ the **Taipan** as the King Cobra and the **Sparrow** as the Peregrine Falcon.
   `&herds=test_colobus,...`), and fight exactly as the animal they play as
   (`tests/test_art_tests.gd`).
 
+A second test uses free **CC0** art from Quaternius (public domain: it may
+be used, changed and kept in this repository, `art_sources/quaternius/`):
+the **Fox** and **Wolf** (Ultimate Animated Animal Pack) play as the Red Fox
+and the Wolf Pack, the **Yeti** and **Dragon** (Ultimate Monsters) as our
+Mythic Yeti and Dragon. Their rigs are real ones (knees, neck, head, tail,
+fingers) with longer clips, but they have no facial blendshapes, so their
+faces don't change. The Fox and Wolf are faceted low-poly models: the
+flat-color shader lights them face by face (`viewer.json` toon_look, the
+shader's `faceted`), while their outline still follows smoothed normals.
+
 ## What's next for the art
 
 1. **Play with the 20 animals and react:** which ones don't look right, which

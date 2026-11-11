@@ -83,12 +83,18 @@ def _stage(animal_id, where, smoothing=0):
     sc.collection.objects.link(facing)
     loaded.arm.parent = facing
     mat = _material()
+    # A faceted (low-poly) pack keeps its facets: lit face by face, and not
+    # rounded off by smoothing.
+    faceted = bool(P.pack_of(animal_id).get("faceted", False))
     for ob in (loaded.body, loaded.face):
         if ob is None:
             continue
         ob.data.materials.clear()
         ob.data.materials.append(mat)
-        rounds = int(smoothing)
+        if faceted:
+            for poly in ob.data.polygons:
+                poly.use_smooth = False
+        rounds = 0 if faceted else int(smoothing)
         if rounds > 0:
             mod = ob.modifiers.new("smooth", "SUBSURF")
             mod.levels = mod.render_levels = rounds

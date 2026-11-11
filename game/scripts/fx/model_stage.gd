@@ -428,9 +428,18 @@ static func is_toon(root: Node) -> bool:
 	return not root.find_children("*_toon*", "MeshInstance3D", true, false).is_empty()
 
 
-## A skin material in the flat-color look's shading (viewer.json "toon_look").
-static func dress_toon(skin: ShaderMaterial) -> void:
+## True if a flat-color model is a faceted one (low-poly, lit face by
+## face): its meshes are named <id>_toonflat (tools/packs: a pack with
+## "faceted" in packs.json).
+static func is_faceted(root: Node) -> bool:
+	return not root.find_children("*_toonflat*", "MeshInstance3D", true, false).is_empty()
+
+
+## A skin material in the flat-color look's shading (viewer.json "toon_look");
+## `faceted`: lit face by face.
+static func dress_toon(skin: ShaderMaterial, faceted := false) -> void:
 	skin.shader = TOON_SHADER
+	skin.set_shader_parameter("faceted", 1.0 if faceted else 0.0)
 	var look: Dictionary = GameData.viewer.get("toon_look", {})
 	var key_dir: Array = look.get("key_dir", [-0.45, 0.72, 0.55])
 	skin.set_shader_parameter("key_dir", Vector3(float(key_dir[0]), float(key_dir[1]), float(key_dir[2])))
@@ -499,7 +508,7 @@ static func new_model(id: String, outline_width: float, manual := false) -> Mode
 	var outline_color := String(look.get("outline_color", "#140c09"))
 	if m.toon:
 		var toon_look: Dictionary = GameData.viewer.get("toon_look", {})
-		dress_toon(m.skin)
+		dress_toon(m.skin, is_faceted(m.body))
 		m.face_meshes = toon_faces(m.body)
 		m.outline_k = float(toon_look.get("outline_scale", 1.0))
 		outline_color = String(toon_look.get("outline_color", outline_color))

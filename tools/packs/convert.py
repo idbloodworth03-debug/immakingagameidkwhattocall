@@ -71,11 +71,13 @@ def export(animal_id, lod_name, where, index=None):
     P.keep_shapes(loaded.face, P.SETTINGS["shapes"][lod_name])
     info = P.animal(animal_id)
     made = bake(loaded, animal_id, float(P.SETTINGS["keys_per_second"][lod_name]))
-    # The game picks its look by these names (ModelStage.is_toon).
-    loaded.body.name = loaded.body.data.name = animal_id + "_toon"
+    # The game picks its look by these names (ModelStage.is_toon; a faceted
+    # pack's are lit face by face: is_faceted).
+    look = "_toonflat" if P.pack_of(animal_id).get("faceted", False) else "_toon"
+    loaded.body.name = loaded.body.data.name = animal_id + look
     parts = [loaded.body]
     if loaded.face is not None:
-        loaded.face.name = loaded.face.data.name = animal_id + "_toon_face"
+        loaded.face.name = loaded.face.data.name = animal_id + look + "_face"
         parts.append(loaded.face)
     skin = bpy.data.materials.new("skin")
     for ob in parts:

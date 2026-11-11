@@ -2,9 +2,10 @@ class_name ArtTestScreen
 extends Control
 ## For testing art (dev tools on; the website opened with ?arttest=1): each
 ## art test (data/art_tests.json: an animal from an outside art pack) next
-## to the animal it plays as, as their cards. Tap a card for its 3D viewer.
-## "Test fight" starts a fight of the pack's animals against ours, played by
-## the computer for both sides (main_menu.gd's ?fight= shortcut).
+## to the animal it plays as, as their cards, pack by pack. Tap a card for
+## its 3D viewer. Each pack's "Test fight" starts a fight of its animals
+## against ours, played by the computer for both sides (main_menu.gd's
+## ?fight= shortcut).
 
 ## The fight's seed (the same fight every time).
 const FIGHT_SEED := 7
@@ -41,17 +42,20 @@ func _ready() -> void:
 	margin.add_child(column)
 	column.add_child(UIKit.heading("Art test"))
 	var tests: Dictionary = GameData.art_tests.get("animals", {})
+	# Pack by pack, in the order the packs first appear.
 	var packs := {}
 	for id: String in tests:
-		packs[String(tests[id].get("pack", ""))] = true
-	column.add_child(UIKit.paragraph("Ours on the left, %s on the right. Each plays exactly as the animal beside it. Tap a card for its 3D viewer." % ", ".join(packs.keys()), 22))
-	for id: String in tests:
-		if not GameData.cards.has(id):
-			continue
-		column.add_child(_pair(GameData.plays_as(id), id))
-	var fight := UIKit.button("Test fight: theirs vs ours", UIKit.GREEN, 26)
-	fight.pressed.connect(_start_fight)
-	column.add_child(fight)
+		if GameData.cards.has(id):
+			(packs.get_or_add(String(tests[id].get("pack", "")), []) as Array).append(id)
+	column.add_child(UIKit.paragraph("Ours on the left, the pack's on the right. Each plays exactly as the animal beside it. Tap a card for its 3D viewer.", 22))
+	for pack: String in packs:
+		var ids: Array = packs[pack]
+		column.add_child(UIKit.label(pack, 26, UIKit.GREEN))
+		for id: String in ids:
+			column.add_child(_pair(GameData.plays_as(id), id))
+		var fight := UIKit.button("Test fight: these vs ours", UIKit.GREEN, 24)
+		fight.pressed.connect(_start_fight.bind(ids))
+		column.add_child(fight)
 	var close := UIKit.button("Close", UIKit.BLUE, 26)
 	close.pressed.connect(queue_free)
 	column.add_child(close)
@@ -73,14 +77,11 @@ func _pair(ours: String, theirs: String) -> Control:
 	return row
 
 
-## The pack's animals (team 0, blue) against ours (team 1, red), one squad
+## A pack's animals (team 0, blue) against ours (team 1, red), one squad
 ## each, played by the computer.
-func _start_fight() -> void:
-	var tests: Dictionary = GameData.art_tests.get("animals", {})
-	var theirs := []
+func _start_fight(theirs: Array) -> void:
 	var ours := []
-	for id: String in tests:
-		theirs.append(id)
+	for id: String in theirs:
 		ours.append(GameData.plays_as(id))
 	DraftScreen.dev_auto = {"seed": FIGHT_SEED, "mine": "", "theirs": "", "sizes": false, "track": "", "slow": 0.0,
 		"herds": ",".join(theirs) + "|" + ",".join(ours)}

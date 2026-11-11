@@ -4,7 +4,9 @@ extends TestCase
 ## until a dev shortcut asks for them, they fight exactly as the animal
 ## they play as (only their drawing is their own), and all their art is
 ## there: models in the flat-color look with a face of blendshapes, a
-## portrait, and a sprite sheet timed like the animal they play as.
+## portrait, and a sprite sheet whose attacks are timed like the animal they
+## play as. Packs differ: one has a face of blendshapes, another none; one
+## is smooth, another faceted (lit face by face).
 
 const ANIMATIONS := ["idle", "walk", "attack", "attack2", "special", "fidget", "victory"]
 
@@ -116,11 +118,15 @@ func test_every_art_test_has_its_art() -> void:
 		var root := (load("res://art/models/battle/%s.glb" % id) as PackedScene).instantiate()
 		_made.append(root)
 		check(ModelStage.is_toon(root), "%s's battle model is in the flat-color look" % id)
+		# A pack with a face of blendshapes has every face the game shows;
+		# one without has none (its face is part of its mesh).
 		var names := {}
 		for mi: MeshInstance3D in ModelStage.toon_faces(root):
 			for i in mi.get_blend_shape_count():
 				names[String(mi.mesh.get_blend_shape_name(i))] = true
 		for face: String in faces:
+			if names.is_empty():
+				break
 			var want: Dictionary = faces[face]
 			var shapes: Array = want.get("cycle", want.keys())
 			for shape in shapes:
@@ -140,8 +146,29 @@ func test_every_art_test_has_its_art() -> void:
 				continue
 			check(player.has_animation(anim), "%s's battle model has a %s" % [id, anim])
 			check(not mine.is_empty(), "%s's sheet has a %s" % [id, anim])
-			for key in ["frames", "fps", "loop", "hit"]:
+			# A swing's length and hit moment are the fight's choreography:
+			# always the stand-in's. How long an idle, walk or fidget lasts
+			# is the art's own.
+			var keys := ["frames", "fps", "loop", "hit"] if anim in ModelStage.ATTACKS else ["loop"]
+			for key: String in keys:
 				check_eq(mine.get(key), theirs.get(key), "%s's %s %s is the %s's" % [id, anim, key, like])
+
+
+## A faceted pack's models (low-poly: their meshes named <id>_toonflat) are
+## lit face by face; the others smoothly.
+func test_a_faceted_pack_is_lit_face_by_face() -> void:
+	GameData.install_art_tests()
+	var seen := {}
+	for id: String in _ids():
+		var m := ModelStage.new_model(id, 1.5)
+		if m == null:
+			continue
+		_made.append(m.pivot)
+		var faceted := ModelStage.is_faceted(m.body)
+		seen[faceted] = true
+		check(m.toon, "%s is in the flat-color look" % id)
+		check_eq(float(m.skin.get_shader_parameter("faceted")), 1.0 if faceted else 0.0, "%s is lit %s" % [id, "face by face" if faceted else "smoothly"])
+	check(seen.has(true) and seen.has(false), "there are art tests of both kinds")
 
 
 func test_an_art_test_is_drawn_in_the_flat_color_look() -> void:

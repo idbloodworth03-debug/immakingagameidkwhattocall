@@ -25,6 +25,40 @@
       "source": "Sparrow",
       "size": 2.06,
       "pose_up": 1.126
+    },
+    "test_fox": {
+      "name": "Fox",
+      "plays_as": "red_fox",
+      "pack": "Quaternius (free, CC0)",
+      "source": "Fox (Ultimate Animated Animal Pack)",
+      "size": 2.48,
+      "pose_up": 1.172,
+      "match": "tallest"
+    },
+    "test_wolf": {
+      "name": "Wolf",
+      "plays_as": "wolf_pack",
+      "pack": "Quaternius (free, CC0)",
+      "source": "Wolf (Ultimate Animated Animal Pack)",
+      "size": 2.51,
+      "pose_up": 1.173,
+      "match": "tallest"
+    },
+    "test_yeti": {
+      "name": "Yeti",
+      "plays_as": "yeti",
+      "pack": "Quaternius (free, CC0)",
+      "source": "Yeti (Ultimate Monsters)",
+      "size": 3.74,
+      "pose_up": 1.049
+    },
+    "test_dragon": {
+      "name": "Dragon",
+      "plays_as": "dragon",
+      "pack": "Quaternius (free, CC0)",
+      "source": "Dragon_Evolved (Ultimate Monsters)",
+      "size": 3.25,
+      "pose_up": 0.775
     }
   }
 }

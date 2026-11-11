@@ -89,11 +89,23 @@
  "test_colobus": {
   "tile_scale": 1.95215
  },
+ "test_dragon": {
+  "tile_scale": 0.59358
+ },
+ "test_fox": {
+  "tile_scale": 0.42155
+ },
  "test_sparrow": {
   "tile_scale": 2.95212
  },
  "test_taipan": {
   "tile_scale": 1.69209
+ },
+ "test_wolf": {
+  "tile_scale": 0.452
+ },
+ "test_yeti": {
+  "tile_scale": 0.80445
  },
  "tiger": {
   "tile_scale": 1.23462

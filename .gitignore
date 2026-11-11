@@ -28,3 +28,8 @@ game/art/units/*/_*
 
 # Written by tools/build_web.sh: which build this is (shown in the game)
 /game/build.json
+
+# Art packs under a store license stay on your computer (tools/packs): only
+# CC0 sources (art_sources/quaternius) are part of the repository.
+/art_sources/*
+!/art_sources/quaternius/

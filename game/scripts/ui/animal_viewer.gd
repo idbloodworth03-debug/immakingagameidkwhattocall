@@ -272,7 +272,7 @@ func _apply_look() -> void:
 	if _toon:
 		# Flat-color art: its two-tone shading and a clean dark outline.
 		var toon_look: Dictionary = GameData.viewer.get("toon_look", {})
-		ModelStage.dress_toon(_skin)
+		ModelStage.dress_toon(_skin, ModelStage.is_faceted(_model))
 		_skin.set_shader_parameter("silhouette_color", Color(String(_look.get("silhouette_color", "#1d2f5e"))))
 		_skin.next_pass = _outline
 		outline_px *= float(toon_look.get("outline_scale", 1.0))

@@ -6,10 +6,16 @@ The animal sprites and card portraits are original 3D renders made for Den
 Duel by `tools/creatures/` with [Blender](https://www.blender.org) (used as
 a tool; Blender's GPL license doesn't apply to what it renders).
 
-The art tests (developer builds only, `game/data/art_tests.json`: the
-Colobus, Taipan and Sparrow) are from **Quirky Series - FREE Animals** by
-[Omabuarts](https://omabuarts.itch.io/quirky-series-free-animals), converted
-for the game by `tools/packs/`. They aren't in the game's roster.
+The art tests (developer builds only, `game/data/art_tests.json`), converted
+for the game by `tools/packs/`, aren't in the game's roster:
+
+- The Colobus, Taipan and Sparrow are from **Quirky Series - FREE Animals**
+  by [Omabuarts](https://omabuarts.itch.io/quirky-series-free-animals).
+- The Fox and Wolf are from the **Ultimate Animated Animal Pack** and the
+  Yeti and Dragon from **Ultimate Monsters**, both by
+  [Quaternius](https://quaternius.com), released under
+  [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public
+  domain; their files are in `art_sources/quaternius/`).
 
 ## Icons
 

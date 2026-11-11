@@ -77,7 +77,7 @@ place of the old ones.
 ## Adding an animal
 
 Copy a design like its own kind (`animals/wolf_pack.py` for a four-legged
-animal, `yeti.py` for an upright one, `barn_owl.py` for a bird,
-`king_cobra.py` for a snake, `dragon.py` for wings on four legs). Start from its skeleton (`Design("<id>", colors, base)`), give it
+animal, `yeti.py` for an upright one, `komodo_dragon.py` for one that
+sprawls). Start from its skeleton (`Design("<id>", colors, base)`), give it
 its shapes, patches, eyes and nose, and preview it. Then run the steps
 above; `sizes.py` tells you if it has grown too long on the ground.

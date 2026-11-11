@@ -9,20 +9,20 @@
  },
  "animals": {
   "raccoon": {
-   "size": 2.11,
+   "size": 1.85,
    "footprint": 1.22,
    "reach": 7.0,
    "shooter": true,
    "width": 0.37,
-   "pose_up": 1.1
+   "pose_up": 1.069
   },
   "gray_squirrel": {
-   "size": 2.09,
+   "size": 1.96,
    "footprint": 0.98,
    "reach": 7.0,
    "shooter": true,
    "width": 0.38,
-   "pose_up": 1.35
+   "pose_up": 1.286
   },
   "red_fox": {
    "size": 1.93,
@@ -33,12 +33,12 @@
    "pose_up": 1.068
   },
   "peregrine_falcon": {
-   "size": 2.79,
+   "size": 2.86,
    "footprint": 1.5,
    "reach": 0.5,
    "shooter": false,
    "width": 0.62,
-   "pose_up": 1.162
+   "pose_up": 1.187
   },
   "wild_boar": {
    "size": 2.17,
@@ -113,31 +113,31 @@
    "pose_up": 1.122
   },
   "california_condor": {
-   "size": 3.13,
+   "size": 3.16,
    "footprint": 2.05,
    "reach": 0.6,
    "shooter": false,
    "width": 0.7,
-   "pose_up": 1.349
+   "pose_up": 1.361
   },
   "striped_skunk": {
-   "size": 2.11,
+   "size": 2.1,
    "footprint": 1.05,
    "reach": 7.0,
    "shooter": true,
    "width": 0.39,
-   "pose_up": 1.041
+   "pose_up": 1.019
   },
   "barn_owl": {
-   "size": 2.96,
+   "size": 2.79,
    "footprint": 1.5,
    "reach": 0.5,
    "shooter": false,
    "width": 0.51,
-   "pose_up": 1.062
+   "pose_up": 0.813
   },
   "king_cobra": {
-   "size": 1.94,
+   "size": 1.72,
    "footprint": 1.46,
    "reach": 7.0,
    "shooter": true,
@@ -145,53 +145,53 @@
    "pose_up": 1.069
   },
   "sumatran_orangutan": {
-   "size": 2.31,
+   "size": 2.33,
    "footprint": 1.18,
    "reach": 7.0,
    "shooter": true,
    "width": 0.66,
-   "pose_up": 1.035,
+   "pose_up": 1.022,
    "across": true
   },
   "harpy_eagle": {
-   "size": 3.31,
+   "size": 2.98,
    "footprint": 1.85,
    "reach": 0.6,
    "shooter": false,
    "width": 0.71,
-   "pose_up": 1.16
+   "pose_up": 0.859
   },
   "hyacinth_macaw": {
-   "size": 2.62,
+   "size": 3.01,
    "footprint": 1.6,
    "reach": 0.4,
    "shooter": false,
    "width": 0.9,
-   "pose_up": 1.378
+   "pose_up": 0.936
   },
   "wild_bactrian_camel": {
-   "size": 1.96,
+   "size": 1.95,
    "footprint": 1.52,
    "reach": 7.0,
    "shooter": true,
    "width": 0.43,
-   "pose_up": 1.116
+   "pose_up": 1.066
   },
   "dragon": {
-   "size": 2.23,
+   "size": 3.47,
    "footprint": 2.5,
    "reach": 0.7,
    "shooter": false,
    "width": 1.93,
-   "pose_up": 1.122
+   "pose_up": 1.106
   },
   "unicorn": {
-   "size": 2.25,
+   "size": 2.24,
    "footprint": 1.67,
    "reach": 7.0,
    "shooter": true,
    "width": 0.48,
-   "pose_up": 1.065
+   "pose_up": 1.079
   },
   "snapping_turtle": {
    "size": 2.67,

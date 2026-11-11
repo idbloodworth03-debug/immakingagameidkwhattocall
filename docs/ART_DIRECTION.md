@@ -619,21 +619,18 @@ The toy style won: the whole roster is being rebuilt in it, class by class
 
 * **Its card pose** is the old model's too, unless that hides what the
   toy is known by: the Rhino charged at us head down (its face and horns
-  out of sight), the Hippo gaped so wide its snout hid its eyes, the
-  Elephant's raised head hid its ears and the Cobra showed us its chin,
-  so each has a card pose of its own (`kit.card_pose` in its design).
+  out of sight), the Hippo gaped so wide its snout hid its eyes and the
+  Elephant's raised head hid its ears, so each has a card pose of its own
+  (`kit.card_pose` in its design).
 
 So far: the Red Fox, the Tank Destroyers (Wolf, Honey Badger, Wild Boar,
-Lion, Tiger, Komodo Dragon, Cerberus), the Tanks (Brown Bear, Giant
-Panda, Hippo, Black Rhino, Asian Elephant, Snapping Turtle, Yeti) and the
-Ranged animals (Gray Squirrel, Raccoon, Striped Skunk, King Cobra, Wild
-Bactrian Camel, Sumatran Orangutan, Unicorn) and the Air animals (Barn
-Owl, Peregrine Falcon, Harpy Eagle, Hyacinth Macaw, California Condor,
-Dragon). The Specialists keep the animated-movie look until their turn.
-
-A toy bird's wings are stubbier than the bird's it replaces (about half
-the span), which leaves its body and face more of its size on screen: it
-is drawn as tall as before, inside the old wingspan.
+Lion, Tiger, Komodo Dragon, Cerberus) and the Tanks (Brown Bear, Giant
+Panda, Hippo, Black Rhino, Asian Elephant, Snapping Turtle, Yeti). These
+fifteen are the standard: a toy that doesn't stand up next to them doesn't
+go in. First versions of the Ranged and Air animals did not (lankier
+bodies, smaller heads, thinner legs, birds that were mostly wing) and
+were taken out again; the other twenty keep the animated-movie look until
+their toys match.
 
 ## What's next for the art
 

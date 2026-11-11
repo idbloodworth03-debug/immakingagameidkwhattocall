@@ -635,8 +635,14 @@ out again.
 
 Redone to the standard so far: the Ranged animals (Gray Squirrel,
 Raccoon, Striped Skunk, King Cobra, Wild Bactrian Camel, Sumatran
-Orangutan, Unicorn). The Air animals and the Specialists keep the
-animated-movie look until their toys match.
+Orangutan, Unicorn) and the Air animals (Barn Owl, Peregrine Falcon,
+Harpy Eagle, Hyacinth Macaw, California Condor, Dragon). The Specialists
+keep the animated-movie look until their toys match.
+
+A toy bird is body and face, not wing: a round body, a big head held
+high, stubby wings (about a third of the real bird's span) and its legs
+dangling under it, where the bird it replaces flew stretched out flat.
+It is drawn as tall as before, well inside the old wingspan.
 
 ## What's next for the art
 

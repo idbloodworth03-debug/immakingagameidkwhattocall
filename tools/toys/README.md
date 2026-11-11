@@ -103,7 +103,8 @@ accepted from single previews; it was taken out again.
 
 Copy a design like its own kind (`animals/wolf_pack.py` for a four-legged
 animal, `yeti.py` for an upright one, `komodo_dragon.py` for one that
-sprawls, `king_cobra.py` for a snake). Start from its skeleton (`Design("<id>", colors, base)`), give it
+sprawls, `king_cobra.py` for a snake, `barn_owl.py` for a bird,
+`dragon.py` for wings on four legs). Start from its skeleton (`Design("<id>", colors, base)`), give it
 its shapes, patches, eyes and nose, and preview it. Then run the steps
 above; `measure.py` tells you if it is built like the approved toys, and
 `sizes.py` if it has grown too long on the ground.

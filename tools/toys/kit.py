@@ -49,13 +49,22 @@ def but(field, *others):
     return lambda s: np.minimum.reduce([field(s)] + [-f(s) for f in others])
 
 
-def card_pose(t=0.3, jaw=-0.3, turn=0.25, lean=0.0, head=(0.0, 0.0)):
+def card_pose(t=0.3, jaw=-0.3, turn=0.25, lean=0.0, head=(0.0, 0.0), clip="attack"):
     """A card pose of the toy's own, where the old model's hides what the
-    toy is known by (a face turned down, a mouth agape): its attack at
-    moment `t`, the body turned `turn` toward us (radians; below 0: side on
-    the other way) and leaning `lean`, the head turned and tipped (`head`:
-    up, toward us), the jaw open by `jaw`. Give it to Design.toy(hero=...)."""
-    return lambda c: motion._hero_from_attack(c, t, jaw=jaw, turn=turn, lean=lean, head=head)
+    toy is known by (a face turned down, a mouth agape): a moment `t` of
+    one of its animations (`clip`: its attack unless given), mirrored so
+    its near side leads on the card's camera, the body turned `turn`
+    toward us (radians; below 0: side on the other way) and leaning
+    `lean`, the head tipped and turned (`head`: up, toward us), the jaw
+    open by `jaw`. Give it to Design.toy(hero=...)."""
+    def pose(c):
+        p = motion._mirror_pose(motion.ANIMATIONS[clip][0](c, t))
+        rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
+        p["root_rot"] = (rx + lean, ry, rz + turn)
+        p.rot("head", x=head[0], z=head[1])
+        p.rot("jaw", x=jaw)
+        return p
+    return pose
 
 
 def facing(direction, at_least=0.0):
@@ -234,6 +243,79 @@ class Design:
         def one(suffix, k):
             self.blob(self.p("ear_base" + suffix, side(at, k)), radii, part_name, "ear" + suffix, blend=blend, roll=tilt * k)
         self.pair(one)
+
+    # --- A bird in its flying pose (wings spread, legs trailing); wings on a four-legged body ---
+
+    WING = ("shoulder", "elbow", "wrist", "wing_tip")
+
+    def shorten_wings(self, share, joints=WING):
+        """A toy's wings are stubbier than a real bird's, which leaves its
+        body more of its size on screen: each wing's joints come in toward
+        its shoulder, to `share` of their distance. Do it before the wings
+        are made."""
+        for suffix in (".L", ".R"):
+            root = self.j(joints[0] + suffix)
+            for name in joints[1:]:
+                self.c.joints[name + suffix] = tuple(root + (self.j(name + suffix) - root) * share)
+
+    def wings(self, chords, thick=0.09, lead=0.2, blend=0.08, part_name="wing", joints=WING):
+        """Wings: a flat lobe along each of a wing's three bones (from the
+        shoulder to the elbow, the wrist and the tip), as deep front to
+        back as `chords` says for each, its front edge a little (`lead` of
+        its depth) ahead of the bone."""
+        def one(suffix, k):
+            points = [self.j(n + suffix) for n in joints]
+            for a, b, chord, bone in zip(points, points[1:], chords, ("wing_upper", "wing_lower", "wing_hand")):
+                along = b - a
+                flat = float(np.hypot(along[0], along[1]))
+                back = np.array([-along[1], along[0], 0.0]) / flat
+                if back[1] > 0:
+                    back = -back
+                center = (a + b) / 2 + back * chord * (0.5 - lead) * self.u
+                radii = (float(np.linalg.norm(along)) / 2 + chord * 0.3 * self.u, chord * self.u / 2, thick * self.u)
+                self.c.shapes.append(ellipsoid(center, radii, part_name, bone + suffix, blend=blend * self.u,
+                                               yaw=float(np.arctan2(along[1], along[0])), roll=-float(np.arctan2(along[2], flat))))
+        self.pair(one)
+
+    def wing_fingers(self, count, length, radius, fan=(-0.1, -1.0), blend=0.04, part_name="wing", joints=WING):
+        """The long feathers at each wing's tip (an eagle's, a condor's):
+        `count` fingers from the tip, fanned from `fan`[0] to `fan`[1]
+        radians off the wing's last bone, toward the back."""
+        def one(suffix, k):
+            wrist, tip = self.j(joints[2] + suffix), self.j(joints[3] + suffix)
+            along = (tip - wrist) / np.linalg.norm(tip - wrist)
+            for i in range(count):
+                turn = fan[0] + (fan[1] - fan[0]) * i / max(count - 1, 1)
+                a = turn if suffix == ".L" else -turn
+                way = np.array([along[0] * np.cos(a) - along[1] * np.sin(a), along[0] * np.sin(a) + along[1] * np.cos(a), along[2]])
+                root = tip - along * 0.35 * length * self.u
+                self.stick(root, root + way * length * 1.35 * self.u, radius, radius * 0.75, part_name, "wing_hand" + suffix, blend=blend)
+        self.pair(one)
+
+    def tail_fan(self, spread, root=0.3, thick=0.07, rounding=0.1, blend=0.08, part_name="tail", end=(0, 0, 0)):
+        """A bird's tail: a flat fan from a point `root` ahead of the tail's
+        base (inside its body) to the tail's end (moved by `end`), `spread`
+        wide there."""
+        tip = self.p("tail_end", end)
+        half = np.array([spread * self.u / 2, 0.0, 0.0])
+        self.flat(tip - half, tip + half, self.p("tail_base", (0, root, 0)), thick, rounding, part_name, "tail1", blend=blend)
+
+    def bird_legs(self, radius, foot, blend=0.04, part_name="leg", foot_part="foot"):
+        """A bird's legs, trailing under its tail as it flies: a stick from
+        each hip to its foot, and the foot's ball (its half sizes)."""
+        def one(suffix, k):
+            self.stick("hip" + suffix, "foot" + suffix, radius, radius * 0.85, part_name, "leg" + suffix, blend=blend)
+            self.blob("foot" + suffix, foot, foot_part, "leg" + suffix, blend=blend)
+        self.pair(one)
+
+    def beak(self, root, base, end, hook=0.0, blend=0.03, part_name="beak", tip=(0, 0, 0)):
+        """The upper beak, from the skull (moved by `root`) to the beak's
+        tip (moved by `tip`); `hook`: how far its tip turns down (a
+        raptor's, a parrot's). The lower beak is the jaw()."""
+        a, b = self.p("skull", root), self.p("beak_tip", tip)
+        self.stick(a, b, base, end, part_name, "head", blend=blend)
+        if hook:
+            self.stick(b, self.p(b, (0, -0.3 * hook, -hook)), end, end * 0.45, part_name, "head", blend=blend)
 
     # --- Color patches ---
 

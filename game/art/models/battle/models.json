@@ -27,7 +27,7 @@
   "tile_scale": 1.1389
  },
  "gray_squirrel": {
-  "tile_scale": 3.55361
+  "tile_scale": 7.74509
  },
  "harbor_seal": {
   "tile_scale": 1.20242
@@ -45,7 +45,7 @@
   "tile_scale": 1.16071
  },
  "king_cobra": {
-  "tile_scale": 2.71648
+  "tile_scale": 2.71123
  },
  "komodo_dragon": {
   "tile_scale": 1.29187
@@ -66,7 +66,7 @@
   "tile_scale": 2.82678
  },
  "raccoon": {
-  "tile_scale": 1.7676
+  "tile_scale": 3.23076
  },
  "red_fox": {
   "tile_scale": 2.12758
@@ -78,10 +78,10 @@
   "tile_scale": 3.42249
  },
  "striped_skunk": {
-  "tile_scale": 1.76792
+  "tile_scale": 3.12684
  },
  "sumatran_orangutan": {
-  "tile_scale": 2.72951
+  "tile_scale": 2.01491
  },
  "sunda_pangolin": {
   "tile_scale": 1.84214
@@ -111,10 +111,10 @@
   "tile_scale": 1.16024
  },
  "unicorn": {
-  "tile_scale": 1.52085
+  "tile_scale": 1.06098
  },
  "wild_bactrian_camel": {
-  "tile_scale": 1.5518
+  "tile_scale": 1.27144
  },
  "wild_boar": {
   "tile_scale": 1.3256

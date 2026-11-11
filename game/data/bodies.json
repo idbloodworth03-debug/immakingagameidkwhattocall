@@ -25,12 +25,12 @@
    "pose_up": 1.286
   },
   "red_fox": {
-   "size": 1.68,
+   "size": 1.93,
    "footprint": 1.36,
    "reach": 0.4,
    "shooter": false,
    "width": 0.3,
-   "pose_up": 1.085
+   "pose_up": 1.068
   },
   "peregrine_falcon": {
    "size": 2.86,
@@ -41,20 +41,20 @@
    "pose_up": 1.187
   },
   "wild_boar": {
-   "size": 2.0,
+   "size": 2.17,
    "footprint": 1.37,
    "reach": 0.35,
    "shooter": false,
    "width": 0.52,
-   "pose_up": 1.049
+   "pose_up": 1.067
   },
   "wolf_pack": {
-   "size": 1.77,
+   "size": 1.86,
    "footprint": 1.2,
    "reach": 0.4,
    "shooter": false,
    "width": 0.35,
-   "pose_up": 1.083
+   "pose_up": 1.06
   },
   "brown_bear": {
    "size": 2.11,
@@ -70,23 +70,23 @@
    "reach": 0.45,
    "shooter": false,
    "width": 1.0,
-   "pose_up": 1.170
+   "pose_up": 1.17
   },
   "lion": {
-   "size": 1.86,
+   "size": 1.84,
    "footprint": 1.62,
    "reach": 0.5,
    "shooter": false,
    "width": 0.48,
-   "pose_up": 1.068
+   "pose_up": 1.078
   },
   "tiger": {
-   "size": 1.97,
+   "size": 2.24,
    "footprint": 1.62,
    "reach": 0.5,
    "shooter": false,
    "width": 0.48,
-   "pose_up": 1.039
+   "pose_up": 1.115
   },
   "asian_elephant": {
    "size": 2.03,
@@ -202,12 +202,12 @@
    "pose_up": 1.062
   },
   "honey_badger": {
-   "size": 1.98,
+   "size": 2.39,
    "footprint": 1.22,
    "reach": 0.35,
    "shooter": false,
    "width": 0.47,
-   "pose_up": 1.039
+   "pose_up": 1.112
   },
   "harbor_seal": {
    "size": 2.01,
@@ -235,12 +235,12 @@
    "across": true
   },
   "komodo_dragon": {
-   "size": 2.65,
+   "size": 2.81,
    "footprint": 1.75,
    "reach": 0.45,
    "shooter": false,
    "width": 0.65,
-   "pose_up": 1.031
+   "pose_up": 1.086
   },
   "sunda_pangolin": {
    "size": 2.55,
@@ -276,12 +276,12 @@
    "across": true
   },
   "cerberus": {
-   "size": 2.84,
+   "size": 2.7,
    "footprint": 1.83,
    "reach": 0.55,
    "shooter": false,
    "width": 0.96,
-   "pose_up": 1.150
+   "pose_up": 1.163
   },
   "kraken": {
    "size": 2.39,

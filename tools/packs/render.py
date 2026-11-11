@@ -200,7 +200,10 @@ def _eye_pieces(loaded):
 
 def _eye_spots(sc, cam, side, loaded, pieces):
     """Where each eye is in the frame (pixels) and how squarely it faces
-    the camera, as tools/creatures/sprites.py records them."""
+    the camera, as tools/creatures/sprites.py records them. An eye is a
+    disc on the head: the way it faces is its flattest way, away from the
+    middle of the body (its vertices' own normals won't do: an eye that is
+    a closed shape has them pointing every way)."""
     from bpy_extras.object_utils import world_to_camera_view
     if not pieces:
         return []
@@ -209,26 +212,32 @@ def _eye_spots(sc, cam, side, loaded, pieces):
     me = ev.to_mesh()
     co = np.empty(len(me.vertices) * 3)
     me.vertices.foreach_get("co", co)
-    normals = np.empty(len(me.vertices) * 3)
-    me.vertices.foreach_get("normal", normals)
     ev.to_mesh_clear()
     m = np.array(loaded.face.matrix_world)
     world = co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3]
-    wn = normals.reshape(-1, 3) @ m[:3, :3].T
+    ev = loaded.body.evaluated_get(deps)
+    me = ev.to_mesh()
+    co = np.empty(len(me.vertices) * 3)
+    me.vertices.foreach_get("co", co)
+    ev.to_mesh_clear()
+    m = np.array(loaded.body.matrix_world)
+    middle = (co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3]).mean(axis=0)
     view = np.array((cam.matrix_world.to_3x3() @ Vector((0, 0, -1))).normalized())
     spots = []
     for piece in pieces:
         # (Subdivision adds vertices after the originals: these stay first.)
         c = world[piece].mean(axis=0)
-        out = wn[piece].mean(axis=0)
-        out /= max(np.linalg.norm(out), 1e-9)
+        out = np.linalg.svd(world[piece] - c, full_matrices=False)[2][-1]
+        if float(out @ (c - middle)) < 0.0:
+            out = -out
         uv = world_to_camera_view(sc, cam, Vector(c))
         spots.append([float(uv.x) * side, (1.0 - float(uv.y)) * side, float(-out.dot(view))])
     return spots
 
 
-def render_sprites(animal_id, where, out_dir, samples=None):
-    started = time.time()
+def _sprite_view(animal_id, where, samples=None):
+    """The animal staged for its sprites: (scene, loaded, facing, camera,
+    the frame's side in pixels, its anchor, pixels per meter, recipes)."""
     info = P.animal(animal_id)
     sc, loaded, facing = _stage(animal_id, where, LOOK.get("sprite_subdivide", 0))
     sc.cycles.samples = int(samples or LOOK["sprite_samples"])
@@ -252,6 +261,51 @@ def render_sprites(animal_id, where, out_dir, samples=None):
     cam = S.ortho_camera(SP.ELEVATION, side / ppm, target=(0, 0, target_z))
     sc.render.resolution_x = sc.render.resolution_y = side
     anchor = (side / 2, side / 2 + target_z * math.cos(math.radians(SP.ELEVATION)) * ppm)
+    return sc, loaded, facing, cam, side, anchor, ppm, clips
+
+
+def _eye_table(eyes, anchor):
+    """The sheet's "eyes": per animation and direction, each frame's eyes
+    from the anchor (None for one that doesn't face the camera)."""
+    out = {}
+    for (anim, d), spots in eyes.items():
+        out.setdefault(anim, {})[str(d)] = [
+            [[round(x - anchor[0], 1), round(y - anchor[1], 1)] if facing_k > 0.15 else None for x, y, facing_k in spot]
+            for spot in spots]
+    return out
+
+
+def render_eyes(animal_id, where, out_dir):
+    """Works out again where the eyes are in every frame of a sheet that is
+    already rendered (its sheet.json "eyes"), without rendering it again."""
+    started = time.time()
+    sc, loaded, facing, cam, side, anchor, ppm, clips = _sprite_view(animal_id, where)
+    pieces = _eye_pieces(loaded)
+    path = os.path.join(out_dir, "sheet.json")
+    meta = json.load(open(path))
+    if not pieces:
+        return
+    eyes = {}
+    for anim, (count, fps, loops, hit) in P.timing(animal_id).items():
+        for d in SP.DIRECTIONS:
+            facing.rotation_euler = (0, 0, -math.radians(d))
+            spots = []
+            for f in range(count):
+                p = f / count if loops else f / max(count - 1, 1)
+                P.apply(loaded.arm, P.pose_at(loaded, clips[anim], p, hit))
+                bpy.context.view_layer.update()
+                spots.append(_eye_spots(sc, cam, side, loaded, pieces))
+            eyes[(anim, d)] = spots
+    meta["eyes"] = _eye_table(eyes, anchor)
+    with open(path, "w") as fh:
+        json.dump(meta, fh, indent=1)
+    print(f"[pack] {animal_id} eyes: worked out again in {time.time() - started:.1f} s")
+
+
+def render_sprites(animal_id, where, out_dir, samples=None):
+    started = time.time()
+    info = P.animal(animal_id)
+    sc, loaded, facing, cam, side, anchor, ppm, clips = _sprite_view(animal_id, where, samples)
     tmp = os.path.join(tempfile.gettempdir(), f"_{animal_id}_frame.png")
     pieces = _eye_pieces(loaded)
     frames, eyes = {}, {}
@@ -302,12 +356,7 @@ def render_sprites(animal_id, where, out_dir, samples=None):
         world = co.reshape(-1, 3) @ m[:3, :3].T + m[:3, 3]
         radius = float(np.ptp(world[pieces[0]], axis=0).max()) / 2.0 * ppm
         meta["eye_radius"] = round(radius, 2)
-        out = {}
-        for (anim, d), spots in eyes.items():
-            out.setdefault(anim, {})[str(d)] = [
-                [[round(x - anchor[0], 1), round(y - anchor[1], 1)] if facing_k > 0.15 else None for x, y, facing_k in spot]
-                for spot in spots]
-        meta["eyes"] = out
+        meta["eyes"] = _eye_table(eyes, anchor)
         meta["lid_color"] = info.get("lid_color", "#7a5a3a")
     meta["walk_cycle_tiles"] = round(float(info.get("walk_cycle_tiles", float(info["tiles_long"]) * 0.75)), 3)
     meta["top"] = SP.sprite_top(frames, anchor)
@@ -337,13 +386,17 @@ def main():
     parser.add_argument("animals", nargs="*")
     parser.add_argument("--all", action="store_true")
     parser.add_argument("--pack", default=None, help="the pack's folder (or PACK_DIR)")
-    parser.add_argument("--only", choices=["sprites", "portrait"])
+    parser.add_argument("--only", choices=["sprites", "portrait", "eyes"],
+                        help="eyes: only work out again where the eyes are in an already rendered sheet")
     parser.add_argument("--out", default=OUT)
     parser.add_argument("--samples", type=int, default=None)
     args = parser.parse_args(argv)
     where = P.pack_dir(args.pack)
     for animal_id in (list(P.SETTINGS["animals"]) if args.all else args.animals):
         out_dir = os.path.join(args.out, animal_id)
+        if args.only == "eyes":
+            render_eyes(animal_id, where, out_dir)
+            continue
         if args.only != "sprites":
             render_portrait(animal_id, where, out_dir)
         if args.only != "portrait":

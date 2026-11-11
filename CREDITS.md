@@ -2,9 +2,10 @@
 
 ## Animals
 
-The animal sprites and card portraits are original 3D renders made for Den
-Duel by `tools/creatures/` with [Blender](https://www.blender.org) (used as
-a tool; Blender's GPL license doesn't apply to what it renders).
+The animal models, sprites and card portraits are original 3D work made for
+Den Duel by `tools/creatures/` and `tools/toys/` with
+[Blender](https://www.blender.org) (used as a tool; Blender's GPL license
+doesn't apply to what it renders).
 
 The art tests (developer builds only, `game/data/art_tests.json`), converted
 for the game by `tools/packs/`, aren't in the game's roster:
@@ -16,9 +17,10 @@ for the game by `tools/packs/`, aren't in the game's roster:
   [Quaternius](https://quaternius.com), released under
   [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) (public
   domain; their files are in `art_sources/quaternius/`).
-- The Toy Fox is our own: built by `tools/toys/` in the packs' flat style,
-  with the packs as reference for the style only (no pack mesh is copied;
-  its files are in `art_sources/own/`).
+
+The roster's toy-style animals are our own: built by `tools/toys/` in a flat
+toy style, with the art packs as reference for the style only (no pack mesh
+is copied; their files are in `art_sources/own/`).
 
 ## Icons
 

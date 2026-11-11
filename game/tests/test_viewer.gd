@@ -64,8 +64,11 @@ func test_the_model_loads_fits_and_idles() -> void:
 		check((mesh.material_override as ShaderMaterial).next_pass == null, "the movie look has no outline in the viewer")
 	else:
 		check((mesh.material_override as ShaderMaterial).next_pass != null, "with an outline")
-	var box := mesh.get_aabb()
-	var biggest := maxf(box.size.x, maxf(box.size.y, box.size.z)) * viewer.model().scale.x
+	# Its biggest side as it idles, on the stage (its skinned points, scaled
+	# as it stands there: a model may be made of more than one mesh, and its
+	# idle pose isn't its pose at rest).
+	var box := viewer._idle_box()
+	var biggest := maxf(box.size.x, maxf(box.size.y, box.size.z))
 	check(absf(biggest - float(GameData.viewer.view.model_size)) < 0.05, "scaled to the viewer's size (%.2f)" % biggest)
 
 

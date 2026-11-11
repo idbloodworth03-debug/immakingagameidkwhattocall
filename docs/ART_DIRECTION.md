@@ -592,15 +592,34 @@ faces don't change. The Fox and Wolf are faceted low-poly models: the
 flat-color shader lights them face by face (`viewer.json` toon_look, the
 shader's `faceted`), while their outline still follows smoothed normals.
 
-A third test is **our own**: the **Toy Fox**, a Red Fox built by code in the
-packs' flat toy style (`tools/toys/`: a few big round shapes, flat colors in
-crisp patches, stick legs, button eyes), to see whether models we make
-ourselves can stand next to a pack's. The packs are the reference for the
-style only; no pack mesh is copied or reshaped. It keeps our own skeleton
-and animations (the Red Fox's trot, pounce, bite and persona), has the same
-blendshape faces as the first pack, and comes into the game through
-`tools/packs` like a pack animal (pack `own`, its files in
-`art_sources/own/`).
+A third test was **our own**: a Red Fox built by code in the packs' flat
+toy style (`tools/toys/`: a few big round shapes, flat colors in crisp
+patches, stick legs, button eyes), to see whether models we make ourselves
+can stand next to a pack's. The packs are the reference for the style
+only; no pack mesh is copied or reshaped.
+
+## Toys: the roster's own art (November 2026)
+
+The toy style won: the whole roster is being rebuilt in it, class by class
+(`tools/toys/`, see its README). A toy replaces an animal's art only:
+
+* **Same animal underneath:** it keeps the animal's skeleton and every
+  animation (its walk, its attacks, its persona's idle, fidget and
+  victory), so swings land on the same hit moments; and it has the first
+  pack's blendshape faces (blink, squint, happy, drowsy, wide, dizzy).
+* **Same height on screen:** each toy is drawn as tall as the model it
+  replaces (`tools/toys/sizes.py`, from how tall each stood before:
+  `stands.json`), and is designed about as long on the ground, because its
+  body's room in a fight (`bodies.json` footprint, width, reach) is
+  gameplay and stays as it was.
+* **Same way in:** a toy comes into the game through `tools/packs` like a
+  pack animal (pack `own`, its files in `art_sources/own/`), under the
+  animal's own id, and is drawn in the flat-color look (its meshes are
+  named `<id>_toon`).
+
+So far: the Red Fox and the Tank Destroyers (Wolf, Honey Badger, Wild
+Boar, Lion, Tiger, Komodo Dragon, Cerberus). The others keep the
+animated-movie look until their class's turn.
 
 ## What's next for the art
 

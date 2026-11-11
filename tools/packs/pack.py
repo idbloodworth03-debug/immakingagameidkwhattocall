@@ -200,6 +200,10 @@ def load(animal_id, lod, where, encode="srgb", fresh=True):
     if pack.get("weld", False):
         _weld_smooth(out.body, keep_normals=bool(pack.get("smooth_normals", False)))
     out.face = _split_face(out.body)
+    # Every blendshape starts at rest (a glTF file's come in switched on).
+    if out.face is not None and out.face.data.shape_keys is not None:
+        for kb in out.face.data.shape_keys.key_blocks[1:]:
+            kb.value = 0.0
     # A pack's animals may face -Y; the game's face +Y. (Turned through the
     # rig's matrix: a glTF rig's rotation is a quaternion, and setting its
     # Euler angles would do nothing.)

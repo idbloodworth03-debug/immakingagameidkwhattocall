@@ -1,10 +1,14 @@
 extends TestCase
-## The animated-movie look (docs/ART_DIRECTION.md): an animal whose model
-## was built by tools/creatures/movie.py (its mesh named <id>_movie) is
-## drawn by its own shader in the viewer (without an outline) and in battle
-## (with the outline and team band, pushed back round its fur locks); the
-## others keep the cartoon shader. The Yeti, the Komodo Dragon (scales) and
-## the Peregrine Falcon (feathers) are the first three.
+## The look of an animal's model, told by its mesh's name
+## (docs/ART_DIRECTION.md). <id>_toon is a toy in the flat-color look (our
+## own: tools/toys; or a pack's animal: tools/packs), drawn by
+## model_toon.gdshader with its outline in the viewer and in battle, its
+## face a small mesh of blendshapes. <id>_movie is the older animated-movie
+## look (tools/creatures/movie.py), drawn by model_movie.gdshader (in the
+## viewer without an outline; in battle with the outline and team band,
+## pushed back round its fur locks). Anything else keeps the first cartoon
+## shader. The roster is moving from the movie look to toys class by class:
+## every animal is one or the other, and gets its look's shader.
 
 var _made: Array = []
 
@@ -34,12 +38,12 @@ func _shader_name(material: Material) -> String:
 	return (material as ShaderMaterial).shader.resource_path.get_file() if material is ShaderMaterial else ""
 
 
+## (The movie look's own details, for as long as an animal is still on it.)
 func test_the_yeti_has_the_movie_look_in_the_viewer() -> void:
 	var viewer := _viewer("yeti")
 	check(viewer.model() != null, "the model loaded")
-	if viewer.model() == null:
+	if viewer.model() == null or not ModelStage.is_movie(viewer.model()):
 		return
-	check(ModelStage.is_movie(viewer.model()), "its mesh is marked as the movie look")
 	var mesh := viewer.model().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
 	check_eq(_shader_name(mesh.material_override), "model_movie.gdshader", "drawn with the movie shader")
 	check((mesh.material_override as ShaderMaterial).next_pass == null, "with no outline (hero art)")
@@ -61,7 +65,8 @@ func test_the_yeti_keeps_its_outline_and_team_band_in_battle() -> void:
 	if m == null:
 		return
 	_made.append(m.pivot)
-	check(m.movie, "it has the movie look")
+	if not m.movie:
+		return
 	check_eq(_shader_name(m.skin), "model_movie.gdshader", "drawn with the movie shader")
 	check_eq(_shader_name(m.outline), "model_outline.gdshader", "with the dark outline")
 	check(m.skin.next_pass == m.outline, "the outline drawn after the skin")
@@ -91,7 +96,7 @@ func test_the_komodo_dragon_is_scaly_and_the_falcon_feathered() -> void:
 	for id in ["komodo_dragon", "peregrine_falcon"]:
 		var viewer := _viewer(id)
 		check(viewer.model() != null, "%s's model loaded" % id)
-		if viewer.model() == null:
+		if viewer.model() == null or not ModelStage.is_movie(viewer.model()):
 			continue
 		var mesh := viewer.model().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
 		check_eq(_shader_name(mesh.material_override), "model_movie.gdshader", "%s drawn with the movie shader" % id)
@@ -123,66 +128,86 @@ func test_the_yeti_has_its_own_animations() -> void:
 	check(absf(player.current_animation_position - 0.6 * player.get_animation("attack").length) < 0.02, "at its hit")
 
 
-## The animals on the movie look so far (tools/creatures/movie.json).
-const MOVIE := ["yeti", "komodo_dragon", "peregrine_falcon", "brown_bear", "giant_panda", "hippopotamus",
-	"asian_elephant", "black_rhino", "snapping_turtle",
-	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus",
-	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn",
-	"barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon",
-	"electric_eel", "harbor_seal", "red_fox", "mountain_gorilla", "red_panda", "pygmy_three_toed_sloth",
-	"sunda_pangolin", "kraken"]
+func _roster() -> Array:
+	var out := []
+	for id: String in GameData.card_order:
+		if not GameData.is_tool(id):
+			out.append(id)
+	return out
 
 
-func test_every_movie_look_animal_gets_the_movie_shader() -> void:
-	for id in MOVIE:
+## Every animal in the roster is a toy or on the movie look, and is drawn
+## by its look's shader in the viewer and in battle: a toy with its
+## outline in both, a movie-look animal without one in the viewer.
+func test_every_animal_gets_its_looks_shader() -> void:
+	var toys := 0
+	for id: String in _roster():
 		var viewer := _viewer(id)
 		check(viewer.model() != null, "%s's model loaded" % id)
 		if viewer.model() == null:
 			continue
-		check(ModelStage.is_movie(viewer.model()), "%s is marked as the movie look" % id)
+		var movie := ModelStage.is_movie(viewer.model())
+		var toy := ModelStage.is_toon(viewer.model())
+		check(movie != toy, "%s is a toy or on the movie look" % id)
+		var shader := "model_toon.gdshader" if toy else "model_movie.gdshader"
 		var mesh := viewer.model().find_children("*", "MeshInstance3D", true, false)[0] as MeshInstance3D
-		check_eq(_shader_name(mesh.material_override), "model_movie.gdshader", "%s drawn with the movie shader" % id)
+		check_eq(_shader_name(mesh.material_override), shader, "%s drawn with its look's shader in the viewer" % id)
+		if toy:
+			toys += 1
+			check((mesh.material_override as ShaderMaterial).next_pass != null, "%s the toy has its outline in the viewer" % id)
 		var m := ModelStage.new_model(id, 1.5)
-		check(m != null and m.movie and _shader_name(m.skin) == "model_movie.gdshader", "%s has the movie look in battle" % id)
+		check(m != null and m.movie == movie and m.toon == toy and _shader_name(m.skin) == shader, "%s has its look in battle" % id)
 		if m != null:
 			_made.append(m.pivot)
+			check_eq(_shader_name(m.outline), "model_outline.gdshader", "%s has the dark outline in battle" % id)
+		cleanup()
+	check(toys >= 1, "the roster has toys (%d)" % toys)
+
+
+## A model is told to be a toy or on the movie look by its mesh's name
+## (<id>_toon, <id>_movie); one with neither keeps the first cartoon look.
+func test_a_look_is_told_by_the_mesh_name() -> void:
+	var looks := {"red_fox": [false, false], "red_fox_movie": [true, false], "red_fox_toon": [false, true]}
+	for mesh_name: String in looks:
+		var root := Node3D.new()
+		var mesh := MeshInstance3D.new()
+		mesh.name = mesh_name
+		root.add_child(mesh)
+		_made.append(root)
+		check_eq(ModelStage.is_movie(root), looks[mesh_name][0], "a mesh named %s: the movie look" % mesh_name)
+		check_eq(ModelStage.is_toon(root), looks[mesh_name][1], "a mesh named %s: a toy" % mesh_name)
+
+
+## A toy's face is a small mesh of blendshapes beside its body, with every
+## face the game shows (viewer.json "toon_look" "faces": blink, squint,
+## drowsy, smug, wide, happy, dizzy), in the viewer's model and in the
+## lighter battle model.
+func test_a_toy_has_every_face_the_game_shows() -> void:
+	var faces: Dictionary = GameData.viewer.get("toon_look", {}).get("faces", {})
+	check(not faces.is_empty(), "viewer.json toon_look maps the game's faces to blendshapes")
+	for id: String in _roster():
+		for path in ["res://art/models/%s.glb" % id, "res://art/models/battle/%s.glb" % id]:
+			var root := (load(path) as PackedScene).instantiate()
+			_made.append(root)
+			if not ModelStage.is_toon(root):
+				continue
+			var names := {}
+			for mi: MeshInstance3D in ModelStage.toon_faces(root):
+				for i in mi.get_blend_shape_count():
+					names[String(mi.mesh.get_blend_shape_name(i))] = true
+			check(not names.is_empty(), "%s has a face of blendshapes (%s)" % [id, path.get_file()])
+			for face: String in faces:
+				var want: Dictionary = faces[face]
+				var shapes: Array = want.get("cycle", want.keys())
+				for shape in shapes:
+					check(names.has(String(shape)), "%s's face has %s (the game's %s face)" % [id, shape, face])
 		cleanup()
 
 
-## Every animal in the roster is on the movie look now; a model is told to
-## be on it by its mesh's name (<id>_movie), so an older model without the
-## suffix would still get the cartoon look.
-func test_the_movie_look_is_told_by_the_mesh_name() -> void:
-	var plain := Node3D.new()
-	var mesh := MeshInstance3D.new()
-	mesh.name = "red_fox"
-	plain.add_child(mesh)
-	_made.append(plain)
-	check(not ModelStage.is_movie(plain), "a mesh without the suffix is the cartoon look")
-	var movie := Node3D.new()
-	var movie_mesh := MeshInstance3D.new()
-	movie_mesh.name = "red_fox_movie"
-	movie.add_child(movie_mesh)
-	_made.append(movie)
-	check(ModelStage.is_movie(movie), "a mesh named <id>_movie is the movie look")
-	for id in GameData.cards:
-		if not GameData.is_tool(id):
-			check(MOVIE.has(id), "%s is on the movie look" % id)
-
-
-## The Tanks have personas like the Yeti's (tools/creatures/motion.py
-## PERSONAS, movie.json "motion"): their models carry their own idle,
-## fidget and victory.
-const PERSONAS := ["brown_bear", "giant_panda", "hippopotamus", "asian_elephant", "black_rhino", "snapping_turtle",
-	"lion", "tiger", "wild_boar", "wolf_pack", "honey_badger", "cerberus",
-	"gray_squirrel", "raccoon", "striped_skunk", "king_cobra", "wild_bactrian_camel", "sumatran_orangutan", "unicorn",
-	"peregrine_falcon", "barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon",
-	"electric_eel", "harbor_seal", "red_fox", "mountain_gorilla", "red_panda", "pygmy_three_toed_sloth",
-	"sunda_pangolin", "kraken", "yeti"]
-
-
-func test_the_persona_animals_have_their_own_animations() -> void:
-	for id in PERSONAS:
+## Every animal has a persona (tools/creatures/motion.py PERSONAS): its
+## model carries its own idle, fidget and victory, whatever its look.
+func test_every_animal_has_its_own_animations() -> void:
+	for id: String in _roster():
 		var viewer := _viewer(id)
 		if viewer.model() == null:
 			check(false, "%s's model loaded" % id)

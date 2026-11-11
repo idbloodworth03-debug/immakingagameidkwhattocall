@@ -390,14 +390,14 @@
     "turn": 0.0
    }
   },
-  "own_fox": {
+  "red_fox": {
    "pack": "own",
-   "source": "Fox",
+   "source": "red_fox",
    "timing": "red_fox",
    "body": "quadruped",
    "attack_style": "pounce_bite",
    "attack2_style": "bite",
-   "tiles_long": 2.57,
+   "tiles_long": 1.93,
    "walk_cycle_tiles": 1.2,
    "lid_color": "#ee7b2b",
    "clips": {
@@ -414,6 +414,276 @@
     },
     "attack2": {
      "clip": "attack2",
+     "once": true,
+     "strike": 0.42
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "wolf_pack": {
+   "pack": "own",
+   "source": "wolf_pack",
+   "timing": "wolf_pack",
+   "body": "quadruped",
+   "attack_style": "bite",
+   "attack2_style": "pounce_bite",
+   "tiles_long": 1.86,
+   "walk_cycle_tiles": 1.087,
+   "lid_color": "#76808f",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.42
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.45
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "honey_badger": {
+   "pack": "own",
+   "source": "honey_badger",
+   "timing": "honey_badger",
+   "body": "quadruped",
+   "attack_style": "bite",
+   "attack2_style": "swipe",
+   "tiles_long": 2.39,
+   "walk_cycle_tiles": 0.862,
+   "lid_color": "#2c2932",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.42
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.48
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "wild_boar": {
+   "pack": "own",
+   "source": "wild_boar",
+   "timing": "wild_boar",
+   "body": "quadruped",
+   "attack_style": "charge",
+   "attack2_style": "bite",
+   "tiles_long": 2.17,
+   "walk_cycle_tiles": 1.35,
+   "lid_color": "#7d5b45",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.45
+    },
+    "attack2": {
+     "clip": "attack2",
+     "once": true,
+     "strike": 0.42
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "lion": {
+   "pack": "own",
+   "source": "lion",
+   "timing": "lion",
+   "body": "quadruped",
+   "attack_style": "pounce_bite",
+   "tiles_long": 1.84,
+   "walk_cycle_tiles": 1.8,
+   "lid_color": "#e3ab5c",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.45
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "tiger": {
+   "pack": "own",
+   "source": "tiger",
+   "timing": "tiger",
+   "body": "quadruped",
+   "attack_style": "pounce_bite",
+   "tiles_long": 2.24,
+   "walk_cycle_tiles": 1.8,
+   "lid_color": "#f08a24",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.45
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "komodo_dragon": {
+   "pack": "own",
+   "source": "komodo_dragon",
+   "timing": "komodo_dragon",
+   "body": "quadruped",
+   "attack_style": "bite",
+   "tiles_long": 2.81,
+   "walk_cycle_tiles": 0.9,
+   "lid_color": "#8b8667",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
+     "once": true,
+     "strike": 0.42
+    },
+    "fidget": {
+     "clip": "fidget",
+     "once": true
+    },
+    "victory": {
+     "clip": "victory"
+    }
+   },
+   "hero": {
+    "clip": "hero",
+    "at": 0.0,
+    "face": {},
+    "turn": 0.0
+   }
+  },
+  "cerberus": {
+   "pack": "own",
+   "source": "cerberus",
+   "timing": "cerberus",
+   "body": "quadruped",
+   "attack_style": "bite",
+   "tiles_long": 2.7,
+   "walk_cycle_tiles": 1.35,
+   "lid_color": "#40384a",
+   "clips": {
+    "idle": {
+     "clip": "idle"
+    },
+    "walk": {
+     "clip": "walk"
+    },
+    "attack": {
+     "clip": "attack",
      "once": true,
      "strike": 0.42
     },

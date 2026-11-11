@@ -1,0 +1,142 @@
+{
+ "asian_elephant": {
+  "long": 1.895,
+  "stands": 2.267
+ },
+ "barn_owl": {
+  "long": 2.79,
+  "stands": 1.847
+ },
+ "black_rhino": {
+  "long": 2.14,
+  "stands": 2.205
+ },
+ "brown_bear": {
+  "long": 2.11,
+  "stands": 2.201
+ },
+ "california_condor": {
+  "long": 3.16,
+  "stands": 1.936
+ },
+ "cerberus": {
+  "long": 2.84,
+  "stands": 2.331
+ },
+ "dragon": {
+  "long": 3.47,
+  "stands": 2.201
+ },
+ "electric_eel": {
+  "long": 2.67,
+  "stands": 1.831
+ },
+ "giant_panda": {
+  "long": 1.93,
+  "stands": 2.152
+ },
+ "gray_squirrel": {
+  "long": 1.96,
+  "stands": 1.657
+ },
+ "harbor_seal": {
+  "long": 2.01,
+  "stands": 1.979
+ },
+ "harpy_eagle": {
+  "long": 2.98,
+  "stands": 1.914
+ },
+ "hippopotamus": {
+  "long": 2.82,
+  "stands": 2.265
+ },
+ "honey_badger": {
+  "long": 1.98,
+  "stands": 1.939
+ },
+ "hyacinth_macaw": {
+  "long": 3.01,
+  "stands": 1.85
+ },
+ "king_cobra": {
+  "long": 1.72,
+  "stands": 1.978
+ },
+ "komodo_dragon": {
+  "long": 2.65,
+  "stands": 1.977
+ },
+ "kraken": {
+  "long": 2.39,
+  "stands": 2.334
+ },
+ "lion": {
+  "long": 1.86,
+  "stands": 2.09
+ },
+ "mountain_gorilla": {
+  "long": 1.344,
+  "stands": 2.112
+ },
+ "peregrine_falcon": {
+  "long": 2.86,
+  "stands": 1.85
+ },
+ "pygmy_three_toed_sloth": {
+  "long": 1.69,
+  "stands": 1.935
+ },
+ "raccoon": {
+  "long": 1.85,
+  "stands": 1.938
+ },
+ "red_fox": {
+  "long": 1.68,
+  "stands": 1.932
+ },
+ "red_panda": {
+  "long": 2.03,
+  "stands": 1.726
+ },
+ "snapping_turtle": {
+  "long": 2.48,
+  "stands": 2.111
+ },
+ "striped_skunk": {
+  "long": 2.1,
+  "stands": 1.769
+ },
+ "sumatran_orangutan": {
+  "long": 1.214,
+  "stands": 2.069
+ },
+ "sunda_pangolin": {
+  "long": 2.55,
+  "stands": 1.891
+ },
+ "tiger": {
+  "long": 1.97,
+  "stands": 2.044
+ },
+ "unicorn": {
+  "long": 1.607,
+  "stands": 2.335
+ },
+ "wild_bactrian_camel": {
+  "long": 1.95,
+  "stands": 2.069
+ },
+ "wild_boar": {
+  "long": 2.0,
+  "stands": 2.024
+ },
+ "wolf_pack": {
+  "long": 1.675,
+  "stands": 1.978
+ },
+ "yeti": {
+  "long": 1.47,
+  "stands": 2.35
+ }
+}

@@ -36,6 +36,7 @@ import scene as S
 from sdf import Mesh, attribute, bone_weights, build_mesh, field_normals, rotation, surface_point
 
 OUT = os.path.normpath(os.path.join(HERE, "..", "..", "art_sources", "own"))
+SKELETONS = os.path.join(HERE, "skeletons.json")
 # The blendshapes the game's faces use (game/data/viewer.json "toon_look"
 # "faces"), named as the first pack's so one table serves both.
 BLINK, ANNOYED, SLEEP, SHRINK, HAPPY = "eyes.blink", "eyes.annoyed", "eyes.sleep", "eyes.shrink", "eyes.happy"
@@ -71,7 +72,7 @@ class Piece:
 
 @dataclass
 class Toy:
-    name: str                    # its files in art_sources/own: <name>_LOD<n>.glb
+    name: str                    # the animal's id (its files in art_sources/own: <id>_LOD<n>.glb)
     creature: object             # tools/creatures Creature: joints, bones, shapes, how it moves
     colors: dict                 # name -> "#rrggbb"
     base: str                    # the color the whole body starts as
@@ -84,6 +85,32 @@ class Toy:
     triangles: tuple = (9000, 2600)
     longest: tuple = (0.03, 0.05)
     voxel: float = 0.006
+    lid: str = None              # the color round its eyes, for the blinks drawn over a sprite's (the base color if not given)
+
+
+def skeleton(animal_id, changes=None):
+    """An animal's own skeleton and how it moves, as the game has them
+    (skeletons.json, frozen from its model by skeletons.py), as a creature
+    with no shapes yet: the toy's design gives it those. `changes`: joints
+    to move, {name: (x, y, z)}; a sided joint named without its side (an
+    "ear_tip") is given for the left (x < 0) and mirrored to the right."""
+    import json
+    from anatomy import Bone, Creature
+    data = json.load(open(SKELETONS))
+    if animal_id not in data:
+        raise SystemExit(f"skeletons.json has no '{animal_id}': run skeletons.py (it reads game/data/animals.json).")
+    frozen = data[animal_id]
+    joints = {k: tuple(v) for k, v in frozen["joints"].items()}
+    for name, at in (changes or {}).items():
+        if name in joints:
+            joints[name] = tuple(at)
+        elif name + ".L" in joints:
+            joints[name + ".L"] = tuple(at)
+            joints[name + ".R"] = (-at[0], at[1], at[2])
+        else:
+            raise SystemExit(f"{animal_id} has no joint '{name}' (it has: {', '.join(sorted(joints))})")
+    bones = [Bone(name, head, tail, parent, tuple(up) if up is not None else None) for name, head, tail, parent, up in frozen["bones"]]
+    return Creature(animal_id, joints, bones, [], motion=dict(frozen["motion"]), tiles_long=float(frozen["tiles_long"]))
 
 
 class Surface:
@@ -370,6 +397,11 @@ def eye_parts(toy, eye, side, lod=0):
     origin = np.array([eye.origin[0] * -side, eye.origin[1], eye.origin[2]], float)
     at = surface_point(c.shapes, origin, d)
     axes = _eye_frame(d)
+    # Which way is the front of this eye: an eye facing the animal's right
+    # has its front (the animal's nose side) along its own x, one facing
+    # left against it. (Not the side it is on: a side head's inner eye
+    # faces the other way.)
+    front = 1.0 if d[0] >= 0 else -1.0
     R = eye.radius
     depth = R * eye.bulge
     parts = []
@@ -383,7 +415,7 @@ def eye_parts(toy, eye, side, lod=0):
         offset = np.zeros(3)
         if index == 2:
             # The glint sits up and toward the front of the pupil.
-            offset = axes[:, 0] * (R * eye.pupil * 0.36 * side) + axes[:, 1] * (R * eye.pupil * 0.36)
+            offset = axes[:, 0] * (R * eye.pupil * 0.36 * front) + axes[:, 1] * (R * eye.pupil * 0.36)
         segments, rings = ((20, 8), (10, 6)) if lod == 0 else ((12, 6), (8, 4))
         verts, faces, normals, local = _ball(center + offset, axes, (r, r, out), segments=segments[0 if index < 2 else 1],
                                              rings=rings[0 if index < 2 else 1])
@@ -398,14 +430,14 @@ def eye_parts(toy, eye, side, lod=0):
             shapes[BLINK] = placed(np.stack([x, y * 0.06, z * 0.5], axis=1))
             shapes[HAPPY] = placed(np.stack([x, y * 0.06 + (r * 0.45) * (1 - (x / r) ** 2) - r * 0.2, z * 0.5], axis=1))
             shapes[SLEEP] = placed(np.stack([x, np.minimum(y, r * 0.05), z], axis=1))
-            shapes[ANNOYED] = placed(np.stack([x, np.minimum(y, r * 0.35 + x * 0.45 * -side), z], axis=1))
+            shapes[ANNOYED] = placed(np.stack([x, np.minimum(y, r * 0.35 + x * 0.45 * -front), z], axis=1))
         elif index == 1:
             # The pupil: a blink is a dark line as wide as the eye.
             wide = R / r
             shapes[BLINK] = placed(np.stack([x * wide, y * 0.1, z * 0.7], axis=1))
             shapes[HAPPY] = placed(np.stack([x * wide, y * 0.1 + (R * 0.45) * (1 - (x / r) ** 2) - R * 0.2, z * 0.7], axis=1))
             shapes[SLEEP] = placed(np.stack([x, np.minimum(y, R * 0.05), z], axis=1))
-            shapes[ANNOYED] = placed(np.stack([x, np.minimum(y, R * 0.35 + x * 0.45 * -side), z], axis=1))
+            shapes[ANNOYED] = placed(np.stack([x, np.minimum(y, R * 0.35 + x * 0.45 * -front), z], axis=1))
             shapes[SHRINK] = placed(local * np.array([0.6, 0.6, 1.0]))
             for k, name in enumerate(SPIN):
                 # Dizzy: a small pupil rolling round the white.
@@ -510,6 +542,9 @@ def assemble(toy, lod=0):
             for start, moved in moves:
                 co[start:start + len(moved)] = moved
             kb.data.foreach_set("co", co.ravel())
+            # At rest: the file's own weights are what a game shows before
+            # it sets a face.
+            kb.value = 0.0
     mod = ob.modifiers.new("rig", "ARMATURE")
     mod.object = arm
     ob.parent = arm
@@ -534,9 +569,9 @@ def bake(toy, arm):
 
 
 def export(toy, out_dir=OUT):
-    """Writes <name>_LOD0.glb (the 3D viewer's and the renders' detail) and
-    <name>_LOD1.glb (fights'): the same rig and clips on both."""
-    paths = []
+    """Writes <id>_LOD0.glb (the 3D viewer's and the renders' detail) and
+    <id>_LOD1.glb (fights'): the same rig and clips on both. Returns the
+    clips' names."""
     for lod in range(len(toy.triangles)):
         S.reset()
         arm, ob = assemble(toy, lod)
@@ -555,5 +590,4 @@ def export(toy, out_dir=OUT):
             export_morph=True, export_morph_normal=False, export_morph_tangent=False,
             export_extras=False, export_cameras=False, export_lights=False)
         print(f"[toy] {toy.name} LOD{lod}: clips {', '.join(made)}; wrote {path} ({os.path.getsize(path) / 1024:.0f} KB)")
-        paths.append(path)
-    return paths
+    return made

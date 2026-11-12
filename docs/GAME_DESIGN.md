@@ -822,6 +822,14 @@ the field and flies into the score bar.
 The fight engine is deterministic: the same herds, seed and actions always
 play out the same way, which online play will rely on.
 
+**The pace:** every fight plays 1.25 times as fast as the rules run it
+(`feel.json` "choreography" `fight_speed`): the march, every step, swing
+and shot, the effects and the camera alike, so nothing in a fight changes
+but how long it takes to watch. The times in this document are the rules'
+own: the 40-second bell rings 32 seconds after the fight starts. A fight's
+opening beat and its ending (the last knockout, the celebration) keep
+their own pace.
+
 ## Ranger tools
 
 Picked like animals, kept on your tool belt (2 at most) and used once each

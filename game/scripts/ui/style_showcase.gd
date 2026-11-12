@@ -225,7 +225,9 @@ func _process(delta: float) -> void:
 	if field.is_frozen():
 		return
 	var tick := 1.0 / sim.tps
-	_accumulator += delta
+	# (At the pace a real fight plays.)
+	field.playback = BattleField.fight_speed()
+	_accumulator += delta * field.playback
 	var steps := 0
 	while _accumulator >= tick and steps < 4:
 		sim.step()

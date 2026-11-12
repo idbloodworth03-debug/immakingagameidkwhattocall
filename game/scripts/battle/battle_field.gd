@@ -39,6 +39,14 @@ static func enemy_color() -> Color:
 static func team_color(team: int) -> Color:
 	return own_color() if team == 0 else enemy_color()
 
+
+## How fast every fight plays (feel.json choreography fight_speed; 1: at
+## the rules' own pace). A screen steps its fight this many times as fast
+## and sets `playback` to match, so the march, the swings, the shots and the
+## effects all quicken alike and what happens in a fight stays the same.
+static func fight_speed() -> float:
+	return clampf(Feel.num("choreography", "fight_speed", 1.0), 0.25, 4.0)
+
 const EFFECT_COLORS := {
 	"net": Color("#d8c08a"), "air_horn": Color("#ffffff"), "flare": Color("#ff8a3d"),
 	"medkit": Color("#5ef08a"), "tranq_dart": Color("#b07cff"), "bait": Color("#c98b4a"),
@@ -59,8 +67,8 @@ var grass := Color("#5f9e4f")
 var arena_id := ""
 ## How far we are between the last tick and the next (0-1), for smooth motion.
 var blend := 0.0
-## How fast the field plays (the screen speeds a dragging ending up; it
-## steps the fight at the same pace).
+## How fast the field plays (the screen plays every fight at fight_speed()
+## and speeds a dragging ending up; it steps the fight at the same pace).
 var playback := 1.0
 ## What to light up: "" (nothing), "own_half" (where the player's animals
 ## may start) or "field" (anywhere: aiming a tool or a Rally).

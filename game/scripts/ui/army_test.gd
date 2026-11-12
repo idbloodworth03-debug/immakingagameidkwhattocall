@@ -144,7 +144,9 @@ func _process(delta: float) -> void:
 		_intro -= delta
 	elif duel.phase == "fight" and not field.is_frozen():
 		var tick := 1.0 / duel.sim.tps
-		_accumulator += delta
+		# (At the pace a real fight plays.)
+		field.playback = BattleField.fight_speed()
+		_accumulator += delta * field.playback
 		var steps := 0
 		while _accumulator >= tick and steps < 4 and duel.phase == "fight":
 			var t0 := Time.get_ticks_usec()

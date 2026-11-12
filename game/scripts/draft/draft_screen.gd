@@ -40,8 +40,9 @@ var _accumulator := 0.0
 var _bot_wait := 0.0
 var _fast := false
 ## A fight's opening beat (the armies stand in formation a moment, then
-## "FIGHT!"), and how fast it's playing: a dragging ending speeds up
-## (feel.json "choreography").
+## "FIGHT!"), and how fast it's playing: every fight at the fight's speed
+## (BattleField.fight_speed), a dragging ending faster still (feel.json
+## "choreography").
 var _intro_left := 0.0
 var _speed := 1.0
 var _quiet := 0.0
@@ -1154,9 +1155,10 @@ func _run_fight(delta: float) -> void:
 		_field.blend = clampf(_accumulator / tick_length, 0.0, 1.0)
 
 
-## With only a few animals left and nobody knocked out for a while, the
-## fight (and the field with it) gradually plays faster, so the end never
-## drags. Only how fast it plays changes, never what happens.
+## A fight plays at the fight's speed. With only a few animals left and
+## nobody knocked out for a while, it (and the field with it) gradually
+## plays faster still, so the end never drags. Only how fast it plays
+## changes, never what happens.
 func _speed_up_ending(delta: float) -> void:
 	var c := "choreography"
 	var alive := 0
@@ -1168,12 +1170,16 @@ func _speed_up_ending(delta: float) -> void:
 	else:
 		_quiet = 0.0
 	var ramp := clampf((_quiet - Feel.num(c, "stall_after_seconds", 3.0)) / maxf(0.1, Feel.num(c, "stall_ramp_seconds", 3.0)), 0.0, 1.0)
-	_speed = move_toward(_speed, 1.0 + ramp * (Feel.num(c, "stall_max_speed", 2.2) - 1.0), delta)
+	var target := BattleField.fight_speed() * (1.0 + ramp * (Feel.num(c, "stall_max_speed", 2.2) - 1.0))
+	_speed = move_toward(_speed, target, delta)
 	_field.playback = _speed
 
 
+## Before a fight and after it: its opening beat and its ending (the last
+## knockout, the celebration) play at their own pace; the fight between
+## them starts at the fight's speed.
 func _reset_speed() -> void:
-	_speed = 1.0
+	_speed = BattleField.fight_speed()
 	_quiet = 0.0
 	_field.playback = 1.0
 

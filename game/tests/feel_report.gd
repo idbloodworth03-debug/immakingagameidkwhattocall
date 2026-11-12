@@ -88,6 +88,8 @@ func _ready() -> void:
 	field.size = SIZE
 	field.screen_height_override = SCREEN_HEIGHT
 	field.log_impacts = true
+	# (At the pace the game plays a fight: its speed is part of how it looks.)
+	field.playback = BattleField.fight_speed()
 	add_child(field)
 	_reset_stats()
 	_next_fight()
@@ -185,7 +187,7 @@ func _process(delta: float) -> void:
 	if frozen:
 		return
 	var tick_length := 1.0 / duel.sim.tps
-	accumulator += delta
+	accumulator += delta * field.playback
 	var steps := 0
 	while accumulator >= tick_length and steps < 10 and duel.phase == "fight":
 		_before_step()
@@ -1034,7 +1036,7 @@ func _report() -> void:
 	var uf := maxf(1.0, float(stats.unit_frames))
 	var secs := uf / 60.0  # animal-seconds watched
 	var lines := [
-		"Feel report: %d fights, %d a side, %.1f s per fight on average, %d hit the time limit" % [stats.fights, herd_size, stats.fight_seconds / maxf(1, stats.fights), stats.timeouts],
+		"Feel report: %d fights, %d a side, %.1f s per fight on average by the rules' clock (%.1f s on the screen, played at x%.2f), %d hit the time limit" % [stats.fights, herd_size, stats.fight_seconds / maxf(1, stats.fights), stats.fight_seconds / maxf(1, stats.fights) / field.playback, field.playback, stats.timeouts],
 		"  facing changes        %.2f per animal-second; %.0f%% bounce straight back" % [stats.dir_changes / secs, 100.0 * stats.dir_bounces / maxf(1, stats.dir_changes)],
 		"  animation changes     %.2f per animal-second; %.0f%% last under 0.15 s (flicker)" % [stats.anim_changes / secs, 100.0 * stats.anim_blips / maxf(1, stats.anim_changes)],
 		"  jitter                %.1f%% of animal-frames reverse direction on screen" % [100.0 * stats.jitter / uf],
@@ -1070,7 +1072,7 @@ func _report() -> void:
 		"  snap turns            %.2f per animal-minute (more than 30 degrees in one frame)" % [stats.snap_turns / secs * 60.0],
 		"  position snaps        %.2f per animal-minute (the drawn body jumps more than half a tile in one frame, hops aside)" % [stats.pos_snaps / secs * 60.0],
 		"  feet on the ground    walk cycle against the ground covered: %.0f%% off on average" % [100.0 * stats.walk_slide / maxf(1, stats.walk_slide_n)],
-		"  speed scaling         wind-ups stretched by class: %s; stall speed-up to x%.1f (choreography)" % [", ".join(scaled) if not scaled.is_empty() else "none", Feel.num("choreography", "stall_max_speed", 1.0)],
+		"  speed scaling         wind-ups stretched by class: %s; fights play at x%.2f, a dragging ending up to x%.1f of that (choreography; the report plays at the fights' speed, without the ending's)" % [", ".join(scaled) if not scaled.is_empty() else "none", BattleField.fight_speed(), Feel.num("choreography", "stall_max_speed", 1.0)],
 		"  time in animations    %s" % [_anim_time()],
 	])
 	var lanes: Array = stats.lane_fights

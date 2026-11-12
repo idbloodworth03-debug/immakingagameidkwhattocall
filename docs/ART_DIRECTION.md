@@ -703,7 +703,13 @@ Badger bristles up and bites, or swipes; the Komodo Dragon coils sideways
 into an S and whips straight; the Lion and the Tiger crouch flat, spring
 up with their paws spread and land on their prey; the Wild Boar hunkers
 and tosses its tusks up, or rears and bites; the Red Fox pounces like the
-cats.
+cats. And the Ranged animals: the Raccoon rears from its hunch and flings,
+or lobs with both paws from over its head; the Striped Skunk stomps with
+its tail fluffed, or goes up on its front paws and fans its tail out as it
+sprays; the Bactrian Camel rocks back with its cheeks full and its head
+swung out to the side, and whips it forward; the Orangutan twists with a
+long arm cocked high and throws; the Unicorn lowers its horn like a lance
+and thrusts.
 
 ## What's next for the art
 

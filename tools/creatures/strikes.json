@@ -3,7 +3,7 @@
  "gape": 0.5,
  "limits": {"reach_at_hit": 0.6, "reach_most": 0.8, "flier_reach": 1.6, "shooter_ahead_tiles": 0.6, "back_tiles": 0.3},
  "standard": {"windup": 0.4, "swing": 0.5},
- "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti", "cerberus", "honey_badger", "komodo_dragon", "lion", "tiger", "wild_boar", "red_fox"],
+ "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti", "cerberus", "honey_badger", "komodo_dragon", "lion", "tiger", "wild_boar", "red_fox", "raccoon", "striped_skunk", "wild_bactrian_camel", "sumatran_orangutan", "unicorn"],
  "styles": {
   "swipe": {
    "keys": [
@@ -1052,53 +1052,54 @@
     ],
     "poses": {
      "windup": {
-      "turn": -0.45,
-      "move": [0.0, -0.05, 0.0],
+      "turn": -0.6,
+      "move": [0.0, -0.08, 0.02],
+      "squash": -0.06,
       "bones": {
-       "chest": [0.15, -0.4, 0.0],
-       "neck": [0.0, 0.5, 0.0],
+       "chest": [0.25, -0.5, 0.0],
+       "neck": [0.0, 0.6, 0.0],
        "head": [0.0, 0.0, 0.3],
        "jaw": [-0.5, 0.0, 0.0],
-       "fl_upper.R": [2.9, 0.0, 0.45],
-       "fl_lower.R": [-0.8, 0.0, 0.0],
-       "fl_upper.L": [1.0, 0.0, 0.0],
+       "fl_upper.R": [2.9, 0.0, 0.6],
+       "fl_lower.R": [-0.6, 0.0, 0.0],
+       "fl_upper.L": [1.2, 0.0, -0.5],
        "fl_lower.L": [-0.05, 0.0, 0.0]
       },
-      "legs": {"hl.L": [0.25, -0.2, 0.0], "hl.R": [-0.15, -0.2, 0.2]},
-      "scale": {"fl_foot.R": [1.6, 1.6, 1.6]}
+      "legs": {"hl.L": [0.3, -0.2, 0.0], "hl.R": [-0.2, -0.2, 0.2]},
+      "scale": {"fl_upper.R": [1.0, 1.25, 1.0], "fl_foot.R": [1.9, 1.9, 1.9]}
      },
      "coiled": {"like": "windup", "times": 1.06},
      "strike": {
-      "turn": 0.3,
-      "move": [0.0, 0.14, 0.06],
-      "stretch": 0.05,
+      "turn": 0.35,
+      "move": [0.0, 0.16, 0.08],
+      "stretch": 0.06,
       "bones": {
-       "chest": [-0.3, 0.4, 0.0],
-       "neck": [0.15, -0.3, 0.0],
-       "head": [0.1, 0.0, -0.15],
+       "chest": [-0.25, 0.5, 0.0],
+       "neck": [0.2, -0.4, 0.0],
+       "head": [0.12, 0.0, -0.15],
        "jaw": [-0.2, 0.0, 0.0],
        "fl_upper.R": [1.1, -0.15, 0.0],
        "fl_lower.R": [0.0, 0.0, 0.0],
-       "fl_upper.L": [-0.6, 0.0, 0.0],
+       "fl_upper.L": [-0.7, 0.0, 0.3],
        "fl_lower.L": [-0.3, 0.0, 0.0]
       },
-      "legs": {"hl.L": [0.4, -0.5, 0.2], "hl.R": [-0.3, 0.1, 0.3]},
-      "scale": {"fl_foot.R": [1.5, 1.5, 1.5]}
+      "legs": {"hl.L": [0.5, -0.6, 0.2], "hl.R": [-0.35, 0.1, 0.3]},
+      "scale": {"fl_foot.R": [1.6, 1.6, 1.6]}
      },
      "follow": {
-      "turn": 0.42,
-      "move": [0.0, 0.18, -0.04],
-      "squash": 0.08,
+      "turn": 0.5,
+      "move": [0.0, 0.2, -0.05],
+      "squash": 0.1,
       "bones": {
-       "chest": [-0.45, 0.5, 0.0],
-       "neck": [0.25, -0.4, 0.0],
+       "chest": [-0.35, 0.6, 0.0],
+       "neck": [0.3, -0.5, 0.0],
        "head": [0.15, 0.0, -0.2],
-       "fl_upper.R": [0.5, -0.7, 0.0],
+       "fl_upper.R": [0.4, -0.8, 0.0],
        "fl_lower.R": [-0.2, 0.0, 0.0],
-       "fl_upper.L": [-0.5, 0.0, 0.0],
+       "fl_upper.L": [-0.6, 0.0, 0.3],
        "fl_lower.L": [-0.3, 0.0, 0.0]
       },
-      "legs": {"hl.L": [0.45, -0.6, 0.25], "hl.R": [-0.2, 0.0, 0.2]},
+      "legs": {"hl.L": [0.55, -0.7, 0.25], "hl.R": [-0.25, 0.0, 0.2]},
       "scale": {"fl_foot.R": [1.3, 1.3, 1.3]}
      },
      "recoil": {"like": "follow", "times": 0.3, "squash": 0.0, "scale": {}}
@@ -1516,6 +1517,62 @@
        "neck": [0.1, 0.0, 0.15]
       },
       "scale": {"fl_upper.L": [1.0, 1.4, 1.0], "fl_foot.L": [1.3, 1.3, 1.3], "fl_upper.R": [1.0, 1.5, 1.0], "fl_foot.R": [1.35, 1.35, 1.35]}
+     }
+    }
+   }
+  },
+  "wild_bactrian_camel": {
+   "spit": {
+    "poses": {
+     "windup": {
+      "rear": 0.1,
+      "move": [0.0, -0.2, 0.0],
+      "swell": 0.04,
+      "bones": {"chest": [0.06, 0.0, -0.15], "neck": [0.4, 0.0, 0.55], "head": [0.25, 0.3, 0.35]},
+      "scale": {"head": [1.3, 1.3, 1.3]},
+      "legs": {"fl.L": [0.3, -0.5, 0.0], "fl.R": [0.1, 0.0, 0.0], "hl.L": [-0.15, -0.1, 0.15], "hl.R": [-0.15, -0.1, 0.15]},
+      "tail": [-0.8, -0.8]
+     },
+     "strike": {
+      "dip": 0.06,
+      "move": [0.0, 0.3, 0.0],
+      "stretch": 0.1,
+      "bones": {"chest": [-0.06, 0.0, 0.1], "neck": [-0.3, 0.0, -0.15], "head": [0.1, 0.0, -0.1], "jaw": [-1.0, 0.0, 0.0]},
+      "tail": [0.4, 0.6]
+     },
+     "follow": {
+      "dip": 0.07,
+      "move": [0.0, 0.34, 0.0],
+      "bones": {"chest": [-0.08, 0.0, 0.15], "neck": [-0.38, 0.0, -0.3], "head": [0.15, 0.0, -0.15], "jaw": [-0.6, 0.0, 0.0]},
+      "tail": [0.5, 0.9]
+     }
+    }
+   }
+  },
+  "unicorn": {
+   "charge": {
+    "poses": {
+     "strike": {
+      "rear": 0.0,
+      "bones": {"chest": [0.0, 0.0, 0.0], "neck": [-0.2, 0.0, 0.0], "head": [-0.3, 0.0, 0.0], "jaw": [0.0, 0.0, 0.0]},
+      "stretch": 0.2,
+      "legs": {"fl.L": [0.6, -0.2, -0.2, 0.1], "fl.R": [0.6, -0.2, -0.2, -0.1], "hl.L": [-0.55, 0.3, 0.2], "hl.R": [-0.55, 0.3, 0.2]}
+     },
+     "follow": {
+      "rear": 0.05,
+      "bones": {"chest": [0.04, 0.0, 0.0], "neck": [0.12, 0.0, 0.0], "head": [0.05, 0.0, 0.0], "jaw": [-0.3, 0.0, 0.0]},
+      "legs": {"fl.L": [0.5, -0.3, -0.2, 0.1], "fl.R": [0.5, -0.3, -0.2, -0.1], "hl.L": [-0.4, 0.2, 0.2], "hl.R": [-0.4, 0.2, 0.2]}
+     },
+     "windup": {
+      "replace": true,
+      "dip": 0.15,
+      "move": [0.0, -0.3, -0.03],
+      "squash": 0.1,
+      "bones": {"chest": [-0.05, 0.0, 0.0], "neck": [-0.7, 0.0, 0.0], "head": [-0.45, 0.0, 0.0]},
+      "legs": {"fl.L": [0.1, -0.1, 0.0], "fl.R": [0.7, -1.2, 0.3, -0.3], "hl.L": [0.15, -0.25, 0.15], "hl.R": [0.15, -0.25, 0.15]},
+      "ears": [-0.5, 0.3],
+      "tail": [-1.4, 0.6],
+      "swell": 0.05
      }
     }
    }

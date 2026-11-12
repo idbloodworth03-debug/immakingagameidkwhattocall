@@ -14,7 +14,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.37,
-   "pose_up": 1.139
+   "pose_up": 1.152
   },
   "gray_squirrel": {
    "size": 1.99,
@@ -126,7 +126,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.39,
-   "pose_up": 1.051
+   "pose_up": 1.171
   },
   "barn_owl": {
    "size": 2.1,
@@ -150,7 +150,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.66,
-   "pose_up": 1.031,
+   "pose_up": 0.936,
    "across": true
   },
   "harpy_eagle": {
@@ -175,7 +175,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.43,
-   "pose_up": 1.117
+   "pose_up": 1.173
   },
   "dragon": {
    "size": 2.57,

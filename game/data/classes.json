@@ -36,16 +36,35 @@
     "ranged": {"class": "air", "tiles": 7.0}
   },
   "squads": {
-    "_note": "How many animals one card brings into a fight (a squad), and how strong each one is, by class: `units` animals, each with hp_pct and damage_pct of the card's health and bite (so a squad of 3 at 36% is a little more than one animal at 100%). radius: how much room each takes (tiles). spacing: how far apart neighbours stand in a line (tiles, centre to centre). line_max: how many fit in one line before a second line forms behind. leash: how far (tiles) an animal may leave its place in the formation to fight. Specialists are single elite animals, stronger each, standing on the flanks. A Mythic (any class) is one big hero carrying share_pct of a whole squad of its class (all of its squad's health and bite in one animal); how big each animal is drawn is bodies.json.",
+    "_note": "What one card's animals carry into a fight between them, by class: as much as `units` animals each with hp_pct and damage_pct of the card's health and bite (so a squad of 3 at 36% is a little more than one animal at 100%). How many animals a card really brings is its group (groups, below), which shares this equally. radius: how much room each takes (tiles) when it has no body of its own in bodies.json. spacing: how far apart neighbours stand in a line (tiles, centre to centre). line_max: how many fit in one line before a second line forms behind. leash: how far (tiles) an animal may leave its place in the formation to fight. Specialists stand at the outer ends of the rank their trait belongs to. A Mythic's animals are heroes (a gold ring, the middle of their rank's first line) with the room in `mythic`; how big each animal is drawn is bodies.json.",
     "tank": {"units": 1, "hp_pct": 150, "damage_pct": 130, "radius": 0.6, "spacing": 1.45, "line_max": 7, "leash": 1.0},
     "tank_destroyer": {"units": 2, "hp_pct": 66, "damage_pct": 66, "radius": 0.42, "spacing": 1.1, "line_max": 10, "leash": 1.4},
     "ranged": {"units": 3, "hp_pct": 35, "damage_pct": 32, "radius": 0.34, "spacing": 0.88, "line_max": 12, "leash": 0.4},
     "air": {"units": 2, "hp_pct": 55, "damage_pct": 55, "radius": 0.4, "spacing": 1.35, "line_max": 8, "leash": 2.4},
-    "specialist": {"units": 1, "hp_pct": 140, "damage_pct": 135, "radius": 0.5, "spacing": 1.2, "line_max": 4, "leash": 1.6, "elite": true},
-    "mythic": {"units": 1, "share_pct": 100, "radius": 0.78, "spacing": 1.8, "leash": 1.6}
+    "specialist": {"units": 1, "hp_pct": 140, "damage_pct": 135, "radius": 0.5, "spacing": 1.2, "line_max": 8, "leash": 1.6},
+    "mythic": {"radius": 0.78, "spacing": 1.8, "leash": 1.6}
+  },
+  "groups": {
+    "_note": "Every card brings a group of its animal, sized by the animal's build: small animals come as a bunch, big ones as a few (by_build: how many; builds: each animal's build, one not listed is `default`). The group shares what its class's squad carries (squads, above) equally between its animals: a Tank's 150% of the card's health is 2 Elephants at 75% each, or 4 Snapping Turtles at 37.5% each, so a card is worth the same whatever its group. tune: a card's whole group this many percent of that (100 if not listed), for the cards a bigger or smaller group changed the worth of (tests/power_report.tscn finds them: a trick that every animal of a bunch does is worth more than one animal doing it).",
+    "by_build": {"small": 6, "medium": 4, "large": 3, "huge": 2},
+    "default": "medium",
+    "builds": {
+      "gray_squirrel": "small", "striped_skunk": "small", "raccoon": "small", "king_cobra": "small",
+      "peregrine_falcon": "small", "barn_owl": "small", "hyacinth_macaw": "small",
+      "honey_badger": "small", "red_fox": "small", "red_panda": "small", "sunda_pangolin": "small", "electric_eel": "small",
+      "wolf_pack": "medium", "wild_boar": "medium", "komodo_dragon": "medium", "snapping_turtle": "medium",
+      "harpy_eagle": "medium", "california_condor": "medium", "harbor_seal": "medium", "pygmy_three_toed_sloth": "medium",
+      "lion": "large", "tiger": "large", "cerberus": "large", "brown_bear": "large", "giant_panda": "large",
+      "sumatran_orangutan": "large", "wild_bactrian_camel": "large", "unicorn": "large", "mountain_gorilla": "large",
+      "asian_elephant": "huge", "black_rhino": "huge", "hippopotamus": "huge", "yeti": "huge", "dragon": "huge", "kraken": "huge"
+    },
+    "tune": {
+      "brown_bear": 123, "electric_eel": 128, "honey_badger": 120, "black_rhino": 88,
+      "gray_squirrel": 84, "wolf_pack": 96, "sumatran_orangutan": 96
+    }
   },
   "formation": {
-    "_note": "How an army lines up (tiles). Ranks from the front: the Tank wall, the Tank Destroyer line, then the Ranged ranks; Air hovers over the Tank Destroyer line (`over`: a rank drawn over another, `over_offset` tiles behind it, taking no room of its own). Specialists stand on the flanks of the rank their trait belongs to (rank_of_row: Burrowers on the wall's, the rest on the Tank Destroyers', where they can reach a fight): at an outer end of their lane's first line. rank_gap: extra room between ranks; line_gap: between two lines of the same rank. Every other line of a `stagger` rank is shifted half a place so all can shoot. An animal whose reach (its card's range, or its attack style's) is at least back_reach tiles stands in a line of its own at the very back of its rank, so its range shows (the King Cobra). Lanes (battle_rules.json \"lanes\"): each rank's squads are spread over the field's three lanes, the middle one first, each lane with its own lines of that rank, keeping lane_margin tiles from the lane's edges.",
+    "_note": "How an army lines up (tiles): one block across the field. Ranks from the front: the Tank wall, the Tank Destroyer line, then the Ranged ranks; Air hovers over the Tank Destroyer line (`over`: a rank drawn over another, `over_offset` tiles behind it, taking no room of its own). Each rank's lines hold at most its class's line_max (squads, above) and as many as fit across the field, keeping edge_margin tiles from its sides. A card's group stands together: the first in the middle of the line, the next ones to its right and left in turn. Specialists stand with the rank their trait belongs to (rank_of_row: Burrowers with the wall, the rest with the Tank Destroyers, where they can reach a fight), after its own groups, so at its outer ends. rank_gap: extra room between ranks; line_gap: between two lines of the same rank. Every other line of a `stagger` rank is shifted half a place so all can shoot. An animal whose reach (its card's range, or its attack style's) is at least back_reach tiles stands in a line of its own at the very back of its rank, so its range shows (the King Cobra).",
     "ranks": ["wall", "td", "air", "ranged"],
     "rank_of_class": {"tank": "wall", "tank_destroyer": "td", "air": "air", "ranged": "ranged"},
     "rank_of_row": {"front": "wall", "middle": "td", "back": "td"},
@@ -55,6 +74,6 @@
     "over": {"air": "td"},
     "over_offset": 0.8,
     "back_reach": 8.0,
-    "lane_margin": 0.3
+    "edge_margin": 0.3
   }
 }

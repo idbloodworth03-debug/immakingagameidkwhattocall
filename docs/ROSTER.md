@@ -13,7 +13,7 @@ bring an animal back; saves keep its card level, and its art is still in
 **Power** comes from bot fights (`game/tests/power_report.tscn` with
 `WEIGHTS=draft`): the animal joins a random army of four cards and fights
 the same army with a random card in its place instead, every card at its
-starting level, one squad each (see Squads in GAME_DESIGN.md). Cards come
+starting level, one group each (see Groups in GAME_DESIGN.md). Cards come
 up as often as Draft Duel offers each rarity, so 0.50 is an average offered
 card. Measured with the armies and every animal's attack style (three
 runs of 96 fights each, averaged; about plus or minus 0.04). The targets

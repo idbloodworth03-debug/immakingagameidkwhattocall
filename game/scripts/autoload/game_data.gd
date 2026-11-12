@@ -77,9 +77,14 @@ func reload() -> void:
 	for i in arenas.size():
 		arena_index_by_id[arenas[i].id] = i
 
+	# Ranger tools are in the game only while Draft Duel offers them
+	# (draft_rules.json offer_tools). Switched off, none are loaded: nothing
+	# offers, drops, lists or shows one, and the ones a player owns are kept
+	# aside in their save until tools are back (Profile archived_cards).
+	draft_rules = _load("draft_rules.json")
 	cards.clear()
 	card_order.clear()
-	for file_name in ["animals.json", "tools.json"]:
+	for file_name in ["animals.json", "tools.json"] if tools_on() else ["animals.json"]:
 		for card in _load(file_name):
 			if not card.has("kind"):
 				card["kind"] = "animal"
@@ -98,8 +103,11 @@ func reload() -> void:
 	banners = _load("banners.json")
 	player_icons = _load("player_icons.json")
 	progression = _load("progression.json")
+	if not tools_on():
+		# (The starting tools wait with the rest.)
+		var off: Array = (_load("tools.json") as Array).map(func(card): return card.id)
+		progression["starting_cards"] = (progression.get("starting_cards", []) as Array).filter(func(id): return not off.has(id))
 	battle_rules = _load("battle_rules.json")
-	draft_rules = _load("draft_rules.json")
 	feel = _load("feel.json")
 	bodies = _load("bodies.json")
 	shots = _load("shots.json")
@@ -221,6 +229,12 @@ func remove_art_tests() -> void:
 
 func is_tool(id: String) -> bool:
 	return cards.get(id, {}).get("kind", "") == "tool"
+
+
+## Whether Ranger tools are in the game: only while Draft Duel offers them
+## (draft_rules.json offer_tools; 0 switches them off everywhere).
+func tools_on() -> bool:
+	return int(draft_rules.get("offer_tools", 0)) > 0
 
 
 func cards_in_arena(arena_index: int) -> Array:

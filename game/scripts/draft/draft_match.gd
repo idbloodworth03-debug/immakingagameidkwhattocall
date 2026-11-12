@@ -6,19 +6,20 @@ extends RefCounted
 ## Each round: Pick, then Fight, then a quick result.
 ##
 ##   Pick: each player makes 3 picks. In round 1, three starting animals
-##   from their deck. After that, from 4 animals from their deck and 2 of
-##   their tools, each pick is one of:
-##     - an offered animal: a new squad of it joins the army (another squad
-##       if the army has it already),
+##   from their deck. After that, from 4 animals from their deck (and, when
+##   Ranger tools are on, 2 of their tools), each pick is one of:
+##     - an offered animal: a group of it joins the army; if the army has
+##       it already, the player chooses: add more (another group of it) or
+##       upgrade (a star for every group of it),
 ##     - an offered tool (two at most; a third replaces one of them),
-##     - an upgrade: a star for every squad of an animal in the army,
-##     - a reinforcement: another full squad of an animal in the army.
+##     - an upgrade: a star for every group of an animal in the army,
+##     - a reinforcement: another full group of an animal in the army.
 ##   Picks can be taken back until the player is ready. There's no money;
 ##   the army grows every round, up to army_max_units animals.
 ##
 ##   Fight: each army lines up in formation (Tank wall in front, Tank
-##   Destroyers behind it, Air over the middle, Ranged ranks at the back,
-##   Specialists on the flanks) and fights as one (BattleArmy). Each player
+##   Destroyers behind it, Air over them, Ranged ranks at the back,
+##   Specialists at the ends) and fights as one (BattleArmy). Each player
 ##   can blow the War Horn once and use each tool once.
 ##
 ##   Result: the herd that outlasts the other wins the round (at the bell,
@@ -97,7 +98,10 @@ func _init(seed_value: int, setup: Dictionary = {}, draft_rules: Dictionary = {}
 	var pool: Array = setup.get("pool", GameData.card_order)
 	var both: Array = setup.get("pools", [pool, pool])
 	banned = setup.get("banned", []).duplicate()
-	pools = [both[0].filter(func(id): return not banned.has(id)), both[1].filter(func(id): return not banned.has(id))]
+	# (Only cards that are in the game: a tool while tools are switched off
+	# isn't, nor is an animal a save still names after it left the roster.)
+	var playable := func(id: String) -> bool: return GameData.cards.has(id) and not banned.has(id)
+	pools = [both[0].filter(playable), both[1].filter(playable)]
 	fight_ticks = roundi(float(rules.fight_seconds) * sim.tps)
 	for team in 2:
 		_dice[team].seed = seed_value * 31 + team + 1
@@ -227,7 +231,9 @@ func take_events() -> Array:
 
 # --- Picking -------------------------------------------------------------------
 
-## Why `team` can't take option `slot` right now ("" if it can).
+## Why `team` can't take option `slot` right now ("" if it can): for an
+## animal, as a group joining its army (see can_pick_upgrade for the other
+## way to take one it already has).
 func can_pick(team: int, slot: int) -> String:
 	if phase != "pick" or ready[team]:
 		return "Not now"
@@ -246,6 +252,26 @@ func can_pick(team: int, slot: int) -> String:
 	return ""
 
 
+## Why `team` can't take option `slot` as an upgrade ("" if it can): only
+## an animal already in its army that isn't fully trained, after round 1.
+func can_pick_upgrade(team: int, slot: int) -> String:
+	if phase != "pick" or ready[team]:
+		return "Not now"
+	if picks_left[team] <= 0:
+		return "No picks left"
+	if slot < 0 or slot >= offers[team].size():
+		return "Pick a card"
+	var item: Dictionary = offers[team][slot]
+	if item.taken:
+		return "Already picked"
+	var index := herd_index(team, item.id)
+	if GameData.is_tool(item.id) or index < 0 or is_first_round():
+		return "Not in your army"
+	if int(herds[team][index].stars) >= int(rules.star_max):
+		return "Fully trained"
+	return ""
+
+
 ## True if taking option `slot` needs a tool to make room (choose one with
 ## `replace` in pick()).
 func needs_tool_swap(team: int, slot: int) -> bool:
@@ -254,10 +280,21 @@ func needs_tool_swap(team: int, slot: int) -> bool:
 	return GameData.is_tool(offers[team][slot].id) and tools[team].size() >= int(rules.tools_max)
 
 
-## Takes option `slot`: a squad of an animal joins the army (another squad
-## if it's there already); a tool joins the tool belt (replacing tool
-## `replace` if the belt is full).
-func pick(team: int, slot: int, replace := -1) -> bool:
+## Takes option `slot`: a group of an animal joins the army (another group
+## if it's there already, or with `upgrade` a star for every group of it
+## instead); a tool joins the tool belt (replacing tool `replace` if the
+## belt is full).
+func pick(team: int, slot: int, replace := -1, upgrade := false) -> bool:
+	if upgrade:
+		if can_pick_upgrade(team, slot) != "":
+			return false
+		_save_undo(team)
+		var card: Dictionary = offers[team][slot]
+		card.taken = true
+		var at := herd_index(team, card.id)
+		herds[team][at].stars = int(herds[team][at].stars) + 1
+		_picked(team, {"kind": "star", "id": card.id, "index": at, "slot": slot})
+		return true
 	if can_pick(team, slot) != "":
 		return false
 	if needs_tool_swap(team, slot) and (replace < 0 or replace >= tools[team].size()):
@@ -361,7 +398,7 @@ func has_any_pick(team: int) -> bool:
 	if picks_left[team] <= 0:
 		return false
 	for slot in offers[team].size():
-		if can_pick(team, slot) == "":
+		if can_pick(team, slot) == "" or can_pick_upgrade(team, slot) == "":
 			return true
 	for index in herds[team].size():
 		if can_star(team, index) == "" or can_reinforce(team, index) == "":

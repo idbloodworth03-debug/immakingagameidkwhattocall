@@ -120,6 +120,10 @@ func test_attackers_stand_apart_round_their_target() -> void:
 	var m := _armies(["lion*2"], ["brown_bear"], 3)
 	var sim := m.sim
 	var army: BattleArmy = sim.army
+	# (One bear of its group, that lasts.)
+	var bears: Array = sim.units(1)
+	for f in bears.slice(1):
+		f.alive = false
 	for f in sim.units(1):
 		f.hp = 1000000
 		f.max_hp = 1000000

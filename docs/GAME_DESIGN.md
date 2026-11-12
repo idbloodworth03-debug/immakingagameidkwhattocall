@@ -8,9 +8,10 @@ itself (speeds, timing, luck) in `game/data/battle_rules.json`.
 ## The big idea
 
 An animal battler built around one mode, **Draft Duel**: a best-of-7 duel.
-Each round you make 3 picks from your collection (new animals, tools, or
-stars for animals you have), then watch your herd fight on its own while you
-make a few well-timed calls: the War Horn and your tools. Every animal has a
+Each round you make 3 picks from your deck (new animals, more of the ones
+you have, or stars for them), then watch your army fight on its own, an
+all-out war of whole groups of animals, and blow the War Horn when it
+counts. Every animal has a
 class (Tank, Tank Destroyer, Ranged, Air or Specialist) that sets its row
 and what it beats. First to 4 round wins takes the match.
 
@@ -26,8 +27,9 @@ its own deck of 8 now.)
 ## Draft Duel
 
 The goal: a simple, clear game that feels like commanding an army. Armies
-fight on their own in formation; your choices are what to pick, and when to
-blow the War Horn or use a tool. **Best of 7**: the first player
+fight on their own, as armies: every card is a whole group of its animal,
+and once the lines meet it's all-out war. Your choices are what to pick,
+and when to blow the War Horn. **Best of 7**: the first player
 to win 4 rounds wins (at most 7 rounds; then the most wins, or a draw). The
 score is always big at the top: "2 - 1", with 4 pips each.
 
@@ -35,35 +37,48 @@ score is always big at the top: "2 - 1", with 4 pips each.
 
 **Pick 3.** Every round you make exactly 3 picks:
 - **Round 1:** 3 starting animals from your deck of 8.
-- **After that:** 4 animals from your deck and 2 of your tools, shown as
-  two groups, each on its own tray (rarer ones come up less often). Each
-  pick is one of:
-  - an offered animal: a **squad** of it joins your army (another squad if
-    it's there already),
-  - an offered tool (2 at most; a third replaces one you choose),
-  - tap an animal in your army (or its card in the row below) for two big
-    buttons: **Upgrade** (a star for every squad of it) or **+Squad**
-    (another full squad of it: "+3 Squad" for a Ranged animal, "+1 Squad" for
-    a Tank). The computer chooses between them too.
+- **After that:** 4 animals from your deck, on a tray (rarer ones come up
+  less often). Each pick is one of:
+  - an offered animal you don't have yet: a **group** of it joins your
+    army,
+  - an offered animal you already have: it asks, with two big buttons,
+    **Upgrade** (a star for every group of it) or **+N More** (another full
+    group of it: "+6 More" for Squirrels, "+2 More" for Elephants),
+  - tap an animal in your army (or its card in the row below) for the same
+    two buttons. The computer chooses between them too.
 - Stars go up to 3; each star after the first adds 60% health and bite.
 - The army grows every round, up to 40 animals (`army_max_units`); after
-  that +Squad and offered animals say "Army full" (tools and upgrades still
-  work).
+  that more of an animal says "Army full" (upgrades still work).
 - While you pick, your army stands in formation under the options; new
-  squads march into their places.
+  groups march into their places.
 - Tap your latest pick to take it back. **Fight!** lights up once all 3
   picks are made. Hold any card for its name and one short line.
 - No money, no shop, no hearts: there are no Acorns any more.
 
-**Squads** (`squads` in `game/data/classes.json`): a card brings a squad,
-each animal with its share of the card's health and bite: Tanks 1 (big),
-Tank Destroyers 2, Ranged 3, Air 2, Specialists 1 (an elite: stronger,
-drawn bigger, with a gold ring and banner), a Mythic 1 (a large hero). Each
-squad carries a banner in its team's color with its class's icon.
+**Groups** (`groups` in `game/data/classes.json`): every card brings a
+group of its animal, sized by the animal's build: small animals come as a
+bunch, big ones as a few.
+
+| Build | How many | Who |
+|---|---|---|
+| Small | 6 | Gray Squirrel, Striped Skunk, Raccoon, King Cobra, Peregrine Falcon, Barn Owl, Hyacinth Macaw, Honey Badger, Red Fox, Red Panda, Sunda Pangolin, Electric Eel |
+| Medium | 4 | Wolf Pack, Wild Boar, Komodo Dragon, Snapping Turtle, Harpy Eagle, California Condor, Harbor Seal, Pygmy Three-toed Sloth |
+| Large | 3 | Lion, Tiger, Cerberus, Brown Bear, Giant Panda, Sumatran Orangutan, Wild Bactrian Camel, Unicorn, Mountain Gorilla |
+| Huge | 2 | Asian Elephant, Black Rhino, Hippopotamus, Yeti, Dragon, Kraken |
+
+The group shares what its class's squad carries (`squads`: as much as 1
+Tank at 150% of the card's health and 130% of its bite, 2 Tank Destroyers
+at 66%, 3 Ranged at 35% and 32%, 2 Air at 55%, 1 Specialist at 140% and
+135%), equally: two Elephants have 75% of the card's health each, four
+Turtles 37.5%. So a card is worth what it was whatever its group, and
+`tune` in the same table nudges the cards a bigger or smaller group
+changed the worth of (found with the power report). Each group carries a
+banner in its team's color with its class's icon; a Mythic's animals are
+heroes, with a gold ring.
 
 **Classes** (`game/data/classes.json`): every animal has one, shown as an
-icon on its card and on its squad's banner. The army lines up in formation
-by class (`formation`):
+icon on its card and on its group's banner. The army lines up in formation
+by class (`formation`), one block across the field:
 
 | Class | Place | What it does |
 |---|---|---|
@@ -71,7 +86,11 @@ by class (`formation`):
 | Tank Destroyer | The line behind the wall | +200% damage to Tanks (and no armor in the way); charges them after the clash |
 | Ranged | The back ranks, every other line shifted half a place | Reaches at least 7 tiles; +50% damage to Air; fires in volleys |
 | Air | Hovering over the Tank Destroyers | Flies: only Ranged and Air can hit it |
-| Specialist | On the flanks (Burrowers the wall's, the rest the Tank Destroyers') | One trait: Burrow, Splash, Stun or Slow |
+| Specialist | With its trait's rank, after that rank's own groups, so at its outer ends (Burrowers with the wall, the rest with the Tank Destroyers) | One trait: Burrow, Splash, Stun or Slow |
+
+Each group stands together in its line: the first in the middle, the next
+ones to its right and left in turn; a Mythic's heroes in the middle of
+their rank's first line.
 
 Counters: Tank Destroyers beat Tanks, Tanks protect Ranged, Ranged beat Air,
 Air beats Tank Destroyers (they can't hit back), and Specialists disrupt.
@@ -80,12 +99,11 @@ Specialist traits: **Burrow** (lines up on the wall's flank, digs in as the
 march starts, travels underground and pops up behind the enemy's last row),
 **Splash** (every hit also hits the group around the target for 75%),
 **Stun** (every second hit freezes the target for 1 second), **Slow** (hits
-slow the target 50% for 2.5 seconds). Specialists are elites: one animal,
-stronger than a squad's, with these stronger traits.
+slow the target 50% for 2.5 seconds).
 
 **Fight** (`scripts/battle/battle_army.gd`, numbers in `battle_rules.json`
-"army"). The armies line up in three lanes (below) and fight on their own,
-as armies:
+"army"). The armies line up, each one block across the field, and fight on
+their own, as armies:
 1. **Lineup:** both armies stand in formation a moment, then FIGHT!
 2. **March:** each army moves up as one, at one pace, every animal in its
    place and the whole army in step (with dust and a stomp on every step).
@@ -94,14 +112,15 @@ as armies:
 4. **Clash:** the walls meet with a big thump and a ring of dust. The front
    holds while it fights; the lines never pass through each other.
 5. **Charge:** a moment later the Tank Destroyers leave their line and go
-   around the end of their own wall for the enemy Tanks in their lane (back
-   to their line once there are none left).
+   around the end of their own wall for the enemy Tanks, wherever they
+   stand (back to their line once there are none left).
 6. **All-out war:** from the clash on, nobody keeps its place or waits for
-   a fight to come to it. Every animal goes for an enemy anywhere on the
-   field. Fighters take a slot round one (below); they walk around
-   teammates and other enemies in the way, round the end of a line if they
-   must. Shooters close in until they're in reach and shoot over everyone
-   (nothing blocks a shot). A burrower whose army is gone comes up at once.
+   a fight to come to it. There are no lanes: every animal charges
+   whichever enemy is best for it, anywhere on the field. Fighters take a
+   slot round one (below); they walk around teammates and other enemies in
+   the way, round the end of a line if they must. Shooters close in until
+   they're in reach and shoot over everyone (nothing blocks a shot), from
+   behind the battle line. A burrower whose army is gone comes up at once.
 7. **Collapse:** when animals fall, the ones behind step up into the gaps.
 
 **Engagement slots** (`engagement` in `battle_rules.json`): only so many
@@ -116,25 +135,19 @@ free. Shooters take no slot. **Personal space** (`spacing`): animals never
 overlap, and within a little room of each other they're nudged gently
 apart. Defeated animals poof away quickly (`feel.json`).
 
-**Lanes and the battle line** (`lanes` in `battle_rules.json`). The field
-is three lanes: left, middle and right. Each rank's squads are spread over
-them, the middle one first, so an army with one squad of a class stays a
-single column in the middle, and a big army lines up in three columns, each
-with its own Tanks in front, Tank Destroyers, Air and Ranged behind. A
-squad keeps its lane all fight (a rank's own squads take lanes before the
-Specialists on its flanks, so a Fox listed first never pushes the Tank off
-the middle). The all-out war starts once the two fronts have met even if
-their animals are in different lanes and nobody is in reach yet. Fighters go for an enemy in their own lane
-and only move into the next lane when theirs has nobody they can take on;
-shooters mostly shoot in their lane. A Tank Destroyer's charge goes for the
-Tanks in its lane. In each lane the **battle line** sits halfway between
-the two sides' front animals on the ground and moves at most 1.5 tiles a
-second, so it pushes back and forth as one side wins ground: fighters don't
-go after enemies more than 1.5 tiles past it (only when there's nobody
-else), and Ranged stay 1.2 tiles behind it. **Flankers** roam free of the
-lanes and the line: the Tiger, Red Fox, Barn Owl, Harbor Seal and Sunda
-Pangolin (the list is in the data). Air flies over the line but keeps to
-its lane.
+**One field and the battle line** (`line` in `battle_rules.json`). There
+are no lanes: the field is one, an army stands across it as one block, and
+in the war a fighter goes for the closest enemy it can take on (or the one
+its class or its trick prefers), right across the field if that's where it
+is. The all-out war starts once the two fronts have met, even if nobody is
+in reach yet. The **battle line** sits halfway between the two sides'
+front animals on the ground and moves at most 1.5 tiles a second, so it
+pushes back and forth as one side wins ground: Ranged stay 1.2 tiles
+behind it, shooting at what they can hit from there. The **flankers**,
+whose tricks take them round the side or behind (the Tiger, Red Fox, Barn
+Owl, Harbor Seal and Sunda Pangolin: the list is in the data), aren't
+counted as their army's front, so one deep in the enemy's ranks doesn't
+drag the line, and the Ranged, after it.
 
 **Team colors you can read at a glance** (`feel.json`): every animal in
 battle has a bold band in its team's color round its dark outline, blue
@@ -175,8 +188,7 @@ range shows.
 
 You can blow the **War Horn** once (one tap: the whole army surges, biting
 harder, attacking faster and moving faster for a few seconds, with a horn
-and a banner) and use **each tool once a fight**; tools stay in your belt
-for the next fight. The camera frames the whole battle line, easing in as
+and a banner). The camera frames the whole battle line, easing in as
 the armies close. The army that outlasts the other wins the round; at the
 bell (40 seconds), the one with more of itself left. Everyone marches,
 shoots and charges in unison; small random differences are kept only for
@@ -244,22 +256,22 @@ empty for you to fill, and banned animals are crossed out. START (once all
 8 slots are full) saves it and begins the match, so it's one tap if nothing
 changes.
 Round 1 offers exactly those 8, and you pick 3 to start. From round 2 the
-options are 4 animals from your deck's 8 and 2 of the tools you own (the
-computer gets the same). Every card
+options are 4 animals from your deck's 8 (the computer gets the same).
+Every card
 fights at its level. The computer opponent builds its own deck of 8 from the
 animals unlocked up to its arena (topped up to 8 from the starting cards in
 the first arenas), leaning toward its favorite class
 (`deck_favorite`) with at least one of each class (`DraftBot.build_deck`),
 and its cards are leveled like yours on average.
 
-New players start with 8 animals across all five classes plus two tools;
-the animals are also their first deck: Brown Bear and Snapping Turtle
-(Tank), Wolf Pack and Wild Boar (Tank Destroyer), Gray Squirrel and Striped
-Skunk (Ranged), Peregrine Falcon (Air), Red Fox (Specialist), and the Net
-and the Air Horn (`starting_cards` in `game/data/progression.json`). A save
-with too few animals for a deck gets all the starting cards, then the first
-arena's animals if it still needs more; one with fewer than 2 tools gets the
-starting tools it's missing. Deck size is `deck_size` in
+New players start with 8 animals across all five classes, which are also
+their first deck: Brown Bear and Snapping Turtle (Tank), Wolf Pack and Wild
+Boar (Tank Destroyer), Gray Squirrel and Striped Skunk (Ranged), Peregrine
+Falcon (Air), Red Fox (Specialist) (`starting_cards` in
+`game/data/progression.json`; the Net and the Air Horn too, when Ranger
+tools are on). A save with too few animals for a deck gets all the
+starting cards, then the first arena's animals if it still needs more.
+Deck size is `deck_size` in
 `game/data/draft_rules.json`.
 
 **Tuning** is in `game/data/draft_rules.json` (wins needed, picks, deck
@@ -283,9 +295,11 @@ bites, which sets how long fights take). Three bot-vs-bot reports:
 
 To tune the classes the squad shares were set first (Tanks 150% health and
 130% bite with armor against everyone but Tank Destroyers, which do +200% to
-them; Tank Destroyers 2 x 66%; Ranged 3 x 28% / 27%; Air 2 x 55%; elite
-Specialists 140% / 135% with stronger traits; a Mythic hero a whole squad of
-its class in one animal), then each animal's own health and bite.
+them; Tank Destroyers 2 x 66%; Ranged 3 x 35% / 32%; Air 2 x 55%;
+Specialists 140% / 135%), then each animal's own health and bite. Since
+every card became a group sized by its animal's build (November 2026), a
+card's animals share those same totals, and `groups.tune` in
+`classes.json` holds the cards a bigger group changed the worth of.
 
 **Removed:** the shop, Acorns (costs, rerolls, interest, win streak and loss
 bonuses), hearts, manual placement, habitat synergies, per-animal abilities
@@ -814,7 +828,7 @@ disabled buttons are solid gray and light up in their color when they can
 be pressed.
 
 **On screen** there's only the score, the armies (a banner with its class
-icon over each squad, health bars on hurt animals), the War Horn and the tool buttons; no
+icon over each group, health bars on hurt animals) and the War Horn; no
 words float up over the field. After a fight the new score pops up big over
 the field and flies into the score bar.
 
@@ -822,15 +836,26 @@ the field and flies into the score bar.
 The fight engine is deterministic: the same herds, seed and actions always
 play out the same way, which online play will rely on.
 
-**The pace:** every fight plays 1.25 times as fast as the rules run it
+**The pace:** every fight plays 1.35 times as fast as the rules run it
 (`feel.json` "choreography" `fight_speed`): the march, every step, swing
 and shot, the effects and the camera alike, so nothing in a fight changes
 but how long it takes to watch. The times in this document are the rules'
-own: the 40-second bell rings 32 seconds after the fight starts. A fight's
+own: the 40-second bell rings 30 seconds after the fight starts. A fight's
 opening beat and its ending (the last knockout, the celebration) keep
-their own pace.
+their own pace. (It was 1.25 before every card became a group: a fight
+between whole groups runs about a tenth longer by the rules' clock, 26
+seconds on average, and 1.35 keeps it near 19 seconds on the screen.)
 
 ## Ranger tools
+
+**Switched off for now** (November 2026: `offer_tools` 0 in
+`game/data/draft_rules.json`). While they're off none are loaded, so
+nothing offers, drops, lists or shows one: Draft Duel offers animals only,
+cages hold animals only, the collection and the trophy road show none, and
+the computer has none. The tools a player already owns are kept aside in
+their save (`archived_cards`) and come back, at their levels, when
+`offer_tools` is 2 again. What they do is still in the game and tested
+(`scripts/battle/tool_effects.gd`), as it was:
 
 Picked like animals, kept on your tool belt (2 at most) and used once each
 fight, anywhere on the field:

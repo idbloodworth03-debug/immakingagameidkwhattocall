@@ -67,8 +67,8 @@ static func _squad_power(id: String, at_level: int) -> Dictionary:
 	var bite := float(CardRules.stat_at_level(float(stats.get("damage", 1)), at_level, start, growth))
 	var units := float(squad.units)
 	return {
-		"health": hp * float(squad.hp_pct) / 100.0 * units,
-		"damage": bite * float(squad.damage_pct) / 100.0 * units / maxf(0.1, float(stats.get("hit_speed", 1.0))),
+		"health": hp * float(squad.hp_share) / 10000.0 * units,
+		"damage": bite * float(squad.damage_share) / 10000.0 * units / maxf(0.1, float(stats.get("hit_speed", 1.0))),
 	}
 
 

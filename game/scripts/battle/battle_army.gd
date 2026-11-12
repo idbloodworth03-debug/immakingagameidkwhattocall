@@ -4,12 +4,17 @@ extends RefCounted
 ## the army moves and fights as one. Numbers: classes.json "squads" and
 ## "formation", battle_rules.json "army".
 ##
-## Formation: from the front, the Tank wall (shoulder to shoulder, a second
-## line if it's too long), the Tank Destroyer line, Air hovering over the
-## middle, then the Ranged ranks (every other line shifted half a place).
-## Specialists stand on the flanks of their trait's rank; a Mythic hero
-## stands in the middle of its rank. Each place is kept as an offset from
-## the army's front line (memory.slot: x across, y back from the front).
+## Every card brings a group of its animal, sized by the animal's build
+## (classes.json "groups": a bunch of small ones, a few big ones), sharing
+## what its class's squad carries.
+##
+## Formation: one block across the field. From the front, the Tank wall
+## (shoulder to shoulder, a second line if it's too long), the Tank
+## Destroyer line, Air hovering over it, then the Ranged ranks (every
+## other line shifted half a place). Each group stands together; the
+## Specialists' at the outer ends of their trait's rank, a Mythic's heroes
+## in the middle of theirs. Each place is kept as an offset from the army's
+## front line (memory.slot: x across, y back from the front).
 ##
 ## The fight, in phases:
 ##   March: the front line moves at one pace for the whole army; everyone
@@ -23,12 +28,13 @@ extends RefCounted
 ##     and go back to their places once no enemy Tanks are left.
 ##   All-out war: once the lines have clashed (or a front has been held up
 ##     by a fight for a moment), nobody keeps its place or waits for a fight
-##     to come to it. Every animal goes for an enemy anywhere on the field:
-##     fighters take a slot round one (see below) and walk around teammates
-##     and other enemies in the way, round the flanks if they must; shooters
-##     close in until they're in reach and shoot over everyone. (Before it,
-##     each animal only goes for what's in front of its own place, within
-##     its leash.)
+##     to come to it. Every animal charges whichever enemy is best for it,
+##     anywhere on the field (there are no lanes): fighters take a slot
+##     round one (see below) and walk around teammates and other enemies in
+##     the way, round the flanks if they must; shooters close in until
+##     they're in reach and shoot over everyone, from behind the battle
+##     line. (Before it, each animal only goes for what's in front of its
+##     own place, within its leash.)
 ##
 ## Engagement slots (battle_rules.json "engagement"): only so many fighters
 ## (reach under shooter_reach) may attack one enemy at once, its class's
@@ -85,7 +91,7 @@ var first_volley_ticks := 10
 var charge_ticks := 16
 var charge_pct := 160
 var repack_ticks := 12
-var lane_pct := 120
+var side_pct := 120
 var contact := 0
 var war_hold := 20
 var avoid_look := 1200
@@ -107,23 +113,18 @@ var shooter_reach := 1500
 ## Every animal's bite, as a share of its card's (battle_rules.json
 ## "army" damage_pct).
 var bite_pct := 100
-## Lanes and the battle line (battle_rules.json "lanes"): how close to its
-## lane an enemy still counts as in it, how much further one in another
-## lane counts (a fighter's, a shooter's), how far past the line a fighter
-## goes (and how much further one beyond counts), how far behind it Ranged
-## stay, how fast it moves, and who roams free of it all.
-var lane_slack := 800
-var fighter_lane_cost := 50000
-var shooter_lane_cost := 3000
-var line_reach := 1500
-var line_cost := 50000
+## The battle line (battle_rules.json "line"): how far behind it Ranged
+## stay (and how much further an enemy they couldn't hit from there
+## counts), how fast it moves, and who isn't counted as an army's front (a
+## flanker, off on its own).
 var ranged_gap := 1200
+var beyond_cost := 50000
 var line_pace := 75
 var flankers := {}
 var air_over := true
-## Where the battle line is in each lane, left to right (y, field units;
-## -1: no line there, one side has nobody on the ground in that lane).
-var line := [-1, -1, -1]
+## Where the battle line is (y, field units; -1: no line, one side has
+## nobody on the ground).
+var line := -1
 
 
 func _init(rules: Dictionary = {}, tps := 20) -> void:
@@ -136,7 +137,7 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	charge_ticks = roundi(float(a.get("charge_after_seconds", 0.8)) * tps)
 	charge_pct = int(a.get("charge_speed_pct", 160))
 	repack_ticks = maxi(1, roundi(float(a.get("repack_seconds", 0.6)) * tps))
-	lane_pct = int(a.get("lane_pct", 120))
+	side_pct = int(a.get("side_pct", 120))
 	contact = roundi(float(a.get("contact_gap", 1.6)) * T)
 	var w: Dictionary = a.get("war", {})
 	war_hold = roundi(float(w.get("after_hold_seconds", 1.0)) * tps)
@@ -156,14 +157,10 @@ func _init(rules: Dictionary = {}, tps := 20) -> void:
 	detour_ticks = maxi(1, roundi(float(w.get("detour_seconds", 0.4)) * tps))
 	shooter_reach = roundi(float(w.get("shooter_reach", 1.5)) * T)
 	bite_pct = int(a.get("damage_pct", 100))
-	var l: Dictionary = rules.get("lanes", GameData.battle_rules.get("lanes", {}))
-	lane_slack = roundi(float(l.get("slack", 0.8)) * T)
-	fighter_lane_cost = roundi(float(l.get("fighter_lane_cost", 50.0)) * T)
-	shooter_lane_cost = roundi(float(l.get("shooter_lane_cost", 3.0)) * T)
-	line_reach = roundi(float(l.get("line_reach", 1.5)) * T)
-	line_cost = roundi(float(l.get("line_cost", 50.0)) * T)
+	var l: Dictionary = rules.get("line", GameData.battle_rules.get("line", {}))
 	ranged_gap = roundi(float(l.get("ranged_gap", 1.2)) * T)
-	line_pace = maxi(1, roundi(float(l.get("line_pace", 90)) * T / (60.0 * tps)))
+	beyond_cost = roundi(float(l.get("beyond_cost", 50.0)) * T)
+	line_pace = maxi(1, roundi(float(l.get("pace", 90)) * T / (60.0 * tps)))
 	for id in l.get("flankers", []):
 		flankers[String(id)] = true
 	air_over = bool(l.get("air_flies_over", true))
@@ -180,9 +177,12 @@ func copy() -> BattleArmy:
 
 # --- Squads ----------------------------------------------------------------
 
-## What one card brings to the army: classes.json "squads" for its class (a
-## Mythic's own numbers on top), with its rank and whether it's a flanker or
-## a hero. Distances in field units.
+## What one card brings to the army: a group of its animal, as many as its
+## build brings (classes.json "groups"), sharing what its class's squad
+## carries (classes.json "squads") equally, with its rank and whether it
+## stands at its rank's ends (a Specialist) or is a hero (a Mythic).
+## Distances in field units; hp_share and damage_share: each animal's part
+## of the card's health and bite, in hundredths of a percent.
 static func squad_of(card_id: String) -> Dictionary:
 	var card := GameData.get_card(card_id)
 	var squads: Dictionary = GameData.class_rules.get("squads", {})
@@ -190,16 +190,14 @@ static func squad_of(card_id: String) -> Dictionary:
 	var cls := String(card.get("class", ""))
 	var def: Dictionary = squads.get(cls, {}).duplicate()
 	var hero := String(card.get("rarity", "")) == "mythic"
+	var whole := maxi(1, int(def.get("units", 1)))
+	var units := group_units(card_id, whole)
+	var tune := int(GameData.class_rules.get("groups", {}).get("tune", {}).get(GameData.plays_as(card_id), 100))
+	var hp_share := int(def.get("hp_pct", 100)) * whole * tune / units
+	var damage_share := int(def.get("damage_pct", 100)) * whole * tune / units
 	if hero:
-		# One big hero with (a share of) a whole squad's health and bite.
-		var whole := maxi(1, int(def.get("units", 1)))
-		var mythic: Dictionary = squads.get("mythic", {})
-		var share := int(mythic.get("share_pct", 100))
-		var hp_pct := int(def.get("hp_pct", 100)) * whole * share / 100
-		var damage_pct := int(def.get("damage_pct", 100)) * whole * share / 100
-		def.merge(mythic, true)
-		def.hp_pct = hp_pct
-		def.damage_pct = damage_pct
+		# (A hero's room in the line.)
+		def.merge(squads.get("mythic", {}), true)
 	var rank := String(form.get("rank_of_class", {}).get(cls, ""))
 	# A long reach (its card's, or its style's) stands at the very back of
 	# its rank, so it shows (classes.json formation back_reach).
@@ -211,23 +209,35 @@ static func squad_of(card_id: String) -> Dictionary:
 	if flank:
 		rank = String(form.get("rank_of_row", {}).get(DraftMatch.row_of(card_id), "td"))
 	return {
-		"units": maxi(1, int(def.get("units", 1))),
-		"hp_pct": int(def.get("hp_pct", 100)),
-		"damage_pct": int(def.get("damage_pct", 100)),
+		"units": units,
+		"hp_share": hp_share,
+		"damage_share": damage_share,
 		"radius": roundi(float(def.get("radius", 0.45)) * T),
 		"spacing": roundi(float(def.get("spacing", 1.0)) * T),
 		"line_max": maxi(1, int(def.get("line_max", 8))),
 		"leash": roundi(float(def.get("leash", 1.5)) * T),
-		"rank": rank, "flank": flank, "hero": hero, "elite": bool(def.get("elite", false)), "back": back,
+		"rank": rank, "flank": flank, "hero": hero, "back": back,
 	}
+
+
+## How many animals one card of `card_id` brings: its build's group
+## (classes.json "groups"; `fallback` with no groups in the data).
+static func group_units(card_id: String, fallback := 1) -> int:
+	var groups: Dictionary = GameData.class_rules.get("groups", {})
+	var by_build: Dictionary = groups.get("by_build", {})
+	if by_build.is_empty():
+		return maxi(1, fallback)
+	# (An art test stands in for an animal: as many as that one.)
+	var build := String(groups.get("builds", {}).get(GameData.plays_as(card_id), groups.get("default", "")))
+	return maxi(1, int(by_build.get(build, fallback)))
 
 
 ## Gives one animal of a squad its share of the card's health and bite
 ## (and its army's bite_pct on top), and its squad's room on the field.
 static func apply_share(f: BattleSim.Fighter, squad: Dictionary, bite: int) -> void:
-	f.max_hp = maxi(1, f.max_hp * int(squad.hp_pct) / 100)
+	f.max_hp = maxi(1, f.max_hp * int(squad.hp_share) / 10000)
 	f.hp = f.max_hp
-	f.damage = maxi(1, f.damage * int(squad.damage_pct) * bite / 10000)
+	f.damage = maxi(1, f.damage * int(squad.damage_share) * bite / 1000000)
 	# (Its room is its body's, bodies.json footprint: BattleSim.unit_radius.)
 	f.memory.squad_units = int(squad.units)
 
@@ -246,7 +256,6 @@ func spawn_squad(sim: BattleSim, team: int, card_id: String, order: int) -> Arra
 		f.memory.flank = squad.flank
 		f.memory.hero = squad.hero
 		f.memory.back = squad.back
-		f.memory.elite = squad.elite
 		# Room in the line for its body (its class's spacing, or its footprint
 		# and a gap, battle_rules.json spacing formation_gap, if that's more).
 		f.memory.spacing = maxi(int(squad.spacing), 2 * BattleSim.side_room(f) + formation_gap)
@@ -264,47 +273,29 @@ func spawn_squad(sim: BattleSim, team: int, card_id: String, order: int) -> Arra
 # --- Formation -------------------------------------------------------------
 
 ## Places for a list of animals ({rank, flank, hero, back, radius,
-## spacing, line_max, group, lane}, in army order; `back`: in a line of its
-## own behind the rest of its rank; `group`: its squad; `lane`: a lane it
-## already has, kept), with the field `lane_w` wide a lane: {"slots":
-## [Vector2i(x across, y back from the front line)], "lanes": [-1 left, 0
-## center, 1 right, as the army sees it], "depth": the back line, "width": from the leftmost to
-## the rightmost, "block": the widest any lane's lines get, "front": the
-## first rank}, in field units. `side_first`: the side lane taken first on
-## a tie (-1 left, 1 right; as the army sees it).
+## spacing, line_max, group}, in army order; `flank`: at its rank's outer
+## ends (a Specialist); `back`: in a line of its own behind the rest of its
+## rank; `group`: its card's group), on a field `width` across: {"slots":
+## [Vector2i(x across from the army's middle, y back from the front line)],
+## "depth": the back line, "width": from the leftmost to the rightmost,
+## "block": the longest line, "front": the first rank}, in field units.
 ##
-## Lanes (battle_rules.json "lanes"): each rank's squads are spread over the
-## three lanes, the center one first, then the emptier side (so an army
-## with one squad of a class keeps one column in the middle, and a big one
-## lines up in three), each lane with its own lines of that rank (at most
-## as many as fit in the lane) at the rank's depth. A Mythic hero stands in
-## the middle of the center lane's first line, a flanker at the outer end
-## of its lane's first line, a long reach in a line of its own at the back.
-static func plan(units: Array, lane_w: int = BattleSim.WIDTH / 3, side_first := -1) -> Dictionary:
+## One block: each rank has its own lines at its depth, at most line_max
+## in a line (and as many as fit across the field). A group stands
+## together: the first in the middle of the line, the next ones to its
+## right and left in turn, the Specialists' groups after their rank's own
+## (so at its outer ends, or in the next line); a Mythic's heroes in the
+## middle of the first line, a long reach in a line of its own at the back.
+static func plan(units: Array, width: int = BattleSim.WIDTH) -> Dictionary:
 	var form: Dictionary = GameData.class_rules.get("formation", {})
 	var rank_gap := roundi(float(form.get("rank_gap", 0.45)) * T)
 	var line_gap := roundi(float(form.get("line_gap", 0.3)) * T)
-	var margin := roundi(float(form.get("lane_margin", 0.6)) * T)
+	var margin := roundi(float(form.get("edge_margin", 0.6)) * T)
 	var stagger: Array = form.get("stagger", [])
 	var over: Dictionary = form.get("over", {})
 	var over_offset := roundi(float(form.get("over_offset", 0.35)) * T)
-	# Each rank's squads, in army order.
-	var squads_of := {}
-	var squad_at := {}
-	for i in units.size():
-		var u: Dictionary = units[i]
-		var rank := String(u.rank)
-		var key := "%s/%s" % [rank, u.get("group", "u%d" % i)]
-		if not squad_at.has(key):
-			var squad := {"members": [], "hero": bool(u.hero), "flank": bool(u.flank), "lane": u.get("lane")}
-			squad_at[key] = squad
-			(squads_of.get_or_add(rank, []) as Array).append(squad)
-		squad_at[key].members.append(i)
 	var slots := []
 	slots.resize(units.size())
-	var lanes := []
-	lanes.resize(units.size())
-	var lane_load := {-1: 0, 0: 0, 1: 0}
 	var depth := 0
 	var left := 1 << 30
 	var right := -(1 << 30)
@@ -313,13 +304,30 @@ static func plan(units: Array, lane_w: int = BattleSim.WIDTH / 3, side_first := 
 	var last_radius := -1
 	var rank_depth := {}
 	for rank in form.get("ranks", ["wall", "td", "air", "ranged"]):
-		if not squads_of.has(rank):
-			continue
-		var squads: Array = squads_of[rank]
+		# The rank's animals, in army order: its heroes, its own, the
+		# Specialists that stand with it, and the long reaches.
+		var heroes := []
+		var main := []
+		var flank := []
+		var back := []
 		var radius := 0
-		for sq in squads:
-			for i in sq.members:
-				radius = maxi(radius, int(units[i].radius))
+		var widest := 1
+		for i in units.size():
+			var u: Dictionary = units[i]
+			if String(u.rank) != rank:
+				continue
+			radius = maxi(radius, int(u.radius))
+			widest = maxi(widest, int(u.spacing))
+			if u.hero:
+				heroes.append(i)
+			elif u.get("back", false):
+				back.append(i)
+			elif u.flank:
+				flank.append(i)
+			else:
+				main.append(i)
+		if heroes.is_empty() and main.is_empty() and flank.is_empty() and back.is_empty():
+			continue
 		# A rank drawn over another (Air over the Tank Destroyers) takes no
 		# room of its own: it hovers just behind that rank's first line.
 		var hover := String(over.get(rank, ""))
@@ -335,113 +343,73 @@ static func plan(units: Array, lane_w: int = BattleSim.WIDTH / 3, side_first := 
 			last_radius = radius
 		var rank_front := depth
 		rank_depth[rank] = depth
-		# Its squads over the lanes: the emptiest for this rank, the middle
-		# first, then the side with fewer animals so far.
-		var rank_load := {-1: 0, 0: 0, 1: 0}
-		# The rank's own squads take their lanes first; Specialists on its
-		# flanks join after (a Fox listed first doesn't push the Tank off
-		# the middle).
-		var in_order: Array = squads.filter(func(sq): return not sq.flank) + squads.filter(func(sq): return sq.flank)
-		for sq in in_order:
-			var lane := 0
-			if sq.lane != null:
-				lane = int(sq.lane)
-			elif not sq.hero:
-				var best := 1 << 60
-				for l in [0, side_first, -side_first]:
-					var key: int = int(rank_load[l]) * 1000000 + (0 if l == 0 else 100000) + int(lane_load[l])
-					if key < best:
-						best = key
-						lane = l
-			sq.lane = lane
-			rank_load[lane] += sq.members.size()
-			lane_load[lane] += sq.members.size()
-			for i in sq.members:
-				lanes[i] = lane
-		var rank_lines := 1
-		for lane in [-1, 0, 1]:
-			var heroes := []
-			var main := []
-			var flank := []
-			var back := []
-			for sq in squads:
-				if int(sq.lane) != lane:
-					continue
-				for i in sq.members:
-					if units[i].hero:
-						heroes.append(i)
-					elif units[i].flank:
-						flank.append(i)
-					elif units[i].get("back", false):
-						back.append(i)
-					else:
-						main.append(i)
-			if heroes.is_empty() and main.is_empty() and flank.is_empty() and back.is_empty():
-				continue
-			# Lines of at most line_max (and as many as fit in the lane), the
-			# heroes in the middle of the first; the long reaches behind.
-			var line_max := 1 << 20
-			for i in main + back + flank:
-				var fit := maxi(1, (lane_w - 2 * margin) / maxi(1, int(units[i].spacing)))
-				line_max = mini(int(units[i].line_max), fit)
-				break
-			# The first line: the heroes in the middle, the others either side
-			# of them (right, left, right...), flankers at the outer ends (a
-			# side lane's own outer end; in the middle lane, the shorter side).
-			var room := maxi(1, line_max - heroes.size() - flank.size())
-			var firsts: Array = main.slice(0, room)
+		# Lines of at most line_max (and as many as fit across the field).
+		var line_max := 1 << 20
+		for i in main + flank + back + heroes:
+			line_max = mini(int(units[i].line_max), maxi(1, (width - 2 * margin) / widest))
+			break
+		var ordered: Array = main + flank
+		var room := maxi(1, line_max - heroes.size())
+		var lines := [{"middle": heroes, "rest": ordered.slice(0, room)}]
+		var at := mini(room, ordered.size())
+		while at < ordered.size():
+			lines.append({"middle": [], "rest": ordered.slice(at, at + line_max)})
+			at += line_max
+		at = 0
+		while at < back.size():
+			lines.append({"middle": [], "rest": back.slice(at, at + line_max)})
+			at += line_max
+		for li in lines.size():
+			# Each group as one block: the first in the middle (or beside
+			# the heroes), the next to the right and to the left in turn,
+			# whichever side is shorter.
 			var to_left := []
 			var to_right := []
-			for k in firsts.size():
-				if k % 2 == 0:
-					to_right.append(firsts[k])
+			var left_w := 0
+			var right_w := 0
+			var middle: Array = lines[li].middle
+			var blocks := []
+			for i in lines[li].rest:
+				var g: Variant = units[i].get("group", "u%d" % i)
+				if blocks.is_empty() or blocks[-1].group != g:
+					blocks.append({"group": g, "members": [], "wide": 0})
+				blocks[-1].members.append(i)
+				blocks[-1].wide += int(units[i].spacing)
+			for k in blocks.size():
+				var blk: Dictionary = blocks[k]
+				if k == 0 and middle.is_empty():
+					middle = blk.members
+				elif right_w <= left_w:
+					to_right.append_array(blk.members)
+					right_w += int(blk.wide)
 				else:
-					to_left.push_front(firsts[k])
-			for i in flank:
-				if lane == -1 or (lane == 0 and to_left.size() < to_right.size()):
-					to_left.push_front(i)
-				else:
-					to_right.append(i)
-			var lines := [to_left + heroes + to_right]
-			var at := firsts.size()
-			while at < main.size():
-				lines.append(main.slice(at, at + line_max))
-				at += line_max
-			at = 0
-			while at < back.size():
-				lines.append(back.slice(at, at + line_max))
-				at += line_max
-			var middle: int = int(lane) * lane_w
-			for li in lines.size():
-				var line: Array = lines[li]
-				var y := rank_front + li * (2 * radius + line_gap)
-				var total := 0
-				for i in line:
-					total += int(units[i].spacing)
-				var x: int = middle - total / 2
-				if li == 0 and not heroes.is_empty():
-					# Centered on the heroes.
-					x = middle
-					for i in to_left:
-						x -= int(units[i].spacing)
-					for i in heroes:
-						x -= int(units[i].spacing) / 2
-				if stagger.has(rank) and li % 2 == 1 and not line.is_empty():
-					x += int(units[line[0]].spacing) / 2
-				for i in line:
-					var w := int(units[i].spacing)
-					slots[i] = Vector2i(x + w / 2, y)
-					x += w
-				block = maxi(block, total)
-			rank_lines = maxi(rank_lines, lines.size())
+					to_left = blk.members + to_left
+					left_w += int(blk.wide)
+			var line: Array = to_left + middle + to_right
+			var y := rank_front + li * (2 * radius + line_gap)
+			var total := 0
+			for i in line:
+				total += int(units[i].spacing)
+			# The line across the army's middle: the heroes (or the first
+			# group) in it, the others either side.
+			var x := -total / 2
+			if stagger.has(rank) and li % 2 == 1 and not line.is_empty():
+				x += int(units[line[0]].spacing) / 2
+			for i in line:
+				var w := int(units[i].spacing)
+				slots[i] = Vector2i(x + w / 2, y)
+				x += w
+			block = maxi(block, total)
 		for i in units.size():
 			if slots[i] != null and String(units[i].rank) == rank:
 				left = mini(left, int(slots[i].x) - int(units[i].spacing) / 2)
 				right = maxi(right, int(slots[i].x) + int(units[i].spacing) / 2)
-		depth = rank_front + (rank_lines - 1) * (2 * radius + line_gap)
+		depth = rank_front + (lines.size() - 1) * (2 * radius + line_gap)
 		if hovering:
-			depth = saved_depth
-	return {"slots": slots, "lanes": lanes, "depth": depth, "width": maxi(0, right - left), "block": block, "front": first}
+			# (No room of its own, unless it has more lines than the rank it
+			# hovers over: the ranks behind stand clear of those too.)
+			depth = maxi(saved_depth, int(rank_depth[hover]) + (lines.size() - 1) * (2 * radius + line_gap))
+	return {"slots": slots, "depth": depth, "width": maxi(0, right - left), "block": block, "front": first}
 
 
 ## The room one of `card_id`'s animals takes in a line, as spawn_squad()
@@ -493,15 +461,15 @@ static func field_scale_for(herds: Array, field: Dictionary) -> float:
 		var units := herd_units(herd)
 		if units.is_empty():
 			continue
-		var p := plan(units, base.x / 3)
+		var p := plan(units, base.x)
 		var biggest := 0
 		for u in units:
 			biggest = maxi(biggest, int(u.radius))
 		var deep := float(a.get("start_gap", 3.2)) * T + int(p.depth) + biggest + float(a.get("edge", 0.8)) * T
-		# Every lane's lines fit in a third of the field.
+		# Its longest line fits across the field.
 		var form: Dictionary = GameData.class_rules.get("formation", {})
-		var wide := int(p.block) + 2 * roundi(float(form.get("lane_margin", 0.6)) * T)
-		need = maxf(need, maxf(deep / (base.y / 2.0), float(wide) / (base.x / 3.0)))
+		var wide := int(p.width) + 2 * roundi(float(form.get("edge_margin", 0.6)) * T)
+		need = maxf(need, maxf(deep / (base.y / 2.0), float(wide) / float(base.x)))
 	return minf(ceilf(need * 20.0) / 20.0, float(field.get("max_scale", 1.5)))
 
 
@@ -519,19 +487,14 @@ func set_up(sim: BattleSim) -> void:
 func layout(sim: BattleSim, team: int, snap := false) -> void:
 	var members: Array = sim.units(team).filter(func(f): return f.memory.has("slot") and not f.memory.get("free", false))
 	members.sort_custom(func(a, b): return int(a.memory.order) < int(b.memory.order))
-	var side := 1 if team == 0 else -1
 	var units := members.map(func(f): return {"rank": f.memory.rank, "flank": f.memory.flank, "hero": f.memory.hero,
 		"back": f.memory.get("back", false), "radius": f.radius, "spacing": f.memory.spacing, "line_max": f.memory.line_max,
-		"group": int(f.memory.get("group", f.uid)), "lane": (int(f.memory.lane) * side) if f.memory.has("lane") else null})
-	# Lanes are the field's (left is the left of the screen for both armies;
-	# the far army faces the other way), so each fills the same side first.
-	var p := plan(units, sim.width / 3, -side)
+		"group": int(f.memory.get("group", f.uid))})
+	var p := plan(units, sim.width)
 	front_rank[team] = p.front
 	for i in members.size():
 		var f: BattleSim.Fighter = members[i]
 		f.memory.slot = p.slots[i]
-		# A squad keeps its lane the whole fight.
-		f.memory.lane = int(p.lanes[i]) * side
 		if snap:
 			var at := place_of(f)
 			f.x = clampi(at.x, f.radius, sim.width - f.radius)
@@ -615,9 +578,9 @@ func before_tick(sim: BattleSim) -> void:
 			var room: int = (int(front[team]) - int(front[1 - team])) * -dir - contact
 			moved = clampi(room, 0, moved)
 			if room <= 0:
-				# The fronts have met, even if their animals are in other
-				# lanes and nobody's in reach yet: that holds it up too (so
-				# the war starts after_hold_seconds on).
+				# The fronts have met, even if their animals stand apart
+				# across the field and nobody's in reach yet: that holds it
+				# up too (so the war starts after_hold_seconds on).
 				holding[team] = true
 		front[team] = clampi(front[team] + moved * dir, 0, sim.height)
 		marched[team] += moved
@@ -694,10 +657,11 @@ func before_tick(sim: BattleSim) -> void:
 func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 	if f.memory.get("dig_in", false):
 		# A burrower dives as the march starts and fights on its own after.
+		# (Its place at the end of its rank stays empty until the ranks next
+		# close up: nobody shuffles forward the moment the march starts.)
 		f.memory.dig_in = false
 		f.memory.burrowing = true
 		f.memory.free = true
-		repack_at[f.team] = sim.tick
 		return
 	var place := place_of(f)
 	var charging := bool(f.memory.get("charging", false))
@@ -763,9 +727,8 @@ func update_unit(sim: BattleSim, f: BattleSim.Fighter) -> void:
 		elif (free or war) and t.is_unit() and not crosses(f):
 			# A shooter closes in, but stays behind the battle line (when it
 			# can hit its target from there).
-			var at_line := int(line[lane_at(sim, goal.x) + 1])
-			if at_line >= 0 and past_line(sim, f.team, t) + ranged_gap <= f.attack_range + BattleSim.reach_to(f, t):
-				goal.y = maxi(goal.y, at_line + ranged_gap) if f.team == 0 else mini(goal.y, at_line - ranged_gap)
+			if line >= 0 and past_line(f.team, t) + ranged_gap <= f.attack_range + BattleSim.reach_to(f, t):
+				goal.y = maxi(goal.y, line + ranged_gap) if f.team == 0 else mini(goal.y, line - ranged_gap)
 		if charging:
 			speed = speed * charge_pct / 100
 			goal = _around_own_wall(sim, f, goal)
@@ -939,92 +902,69 @@ func _wait_spot(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> V
 	return Vector2i(clampi(t.x + dx * ring / d, f.radius, sim.width - f.radius), clampi(t.y + dy * ring / d, f.radius, sim.height - f.radius))
 
 
-## Whether any enemy Tank in `f`'s lane has a slot free for it (a charging
-## Tank Destroyer settles for another enemy only while none has).
+## Whether any enemy Tank has a slot free for `f` (a charging Tank
+## Destroyer settles for another enemy only while none has).
 func _free_tank(sim: BattleSim, f: BattleSim.Fighter) -> bool:
 	for e: BattleSim.Fighter in sim.fighters:
-		if e.team != f.team and e.alive and e.cls == "tank" and sim.can_target(f, e) and room(sim, f, e) \
-				and (roams(f) or lane_steps(sim, f, e) == 0):
+		if e.team != f.team and e.alive and e.cls == "tank" and sim.can_target(f, e) and room(sim, f, e):
 			return true
 	return false
 
 
 ## How far `t` counts as for `f`: its distance; before the war, enemies
-## off to the side of its place count as further away; in the war, enemies
-## in another lane (unless `f` roams) and past the battle line (unless `f`
-## crosses it) count as a lot further (battle_rules.json "lanes").
-func _score(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, place: Vector2i, free: bool) -> int:
+## off to the side of its place count as further away; in the war a
+## fighter goes for whichever is closest, anywhere on the field, and a
+## shooter for one it can hit from behind the battle line (one it would
+## have to cross the line for counts as a lot further: battle_rules.json
+## "line").
+func _score(_sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter, place: Vector2i, free: bool) -> int:
 	var score := BattleSim.edge_distance(f, t)
 	if not free:
-		return score + absi(t.x - place.x) * lane_pct / 100
-	var fighter := f.attack_range < shooter_reach
-	if not roams(f):
-		score += lane_steps(sim, f, t) * (fighter_lane_cost if fighter else shooter_lane_cost)
-	if not crosses(f) and t.is_unit():
-		var past := past_line(sim, f.team, t)
-		if (fighter and past > line_reach) or (not fighter and past + ranged_gap > f.attack_range + BattleSim.reach_to(f, t)):
-			score += line_cost
+		return score + absi(t.x - place.x) * side_pct / 100
+	if f.attack_range >= shooter_reach and not crosses(f) and t.is_unit() \
+			and past_line(f.team, t) + ranged_gap > f.attack_range + BattleSim.reach_to(f, t):
+		score += beyond_cost
 	return score
 
 
-# --- Lanes and the battle line ---------------------------------------------
+# --- The battle line ---------------------------------------------------------
 
-## The lane a point across the field is in: -1 left, 0 middle, 1 right.
-static func lane_at(sim: BattleSim, x: int) -> int:
-	return clampi(x * 3 / maxi(1, sim.width), 0, 2) - 1
-
-
-## How many lanes away from `f`'s own lane `t` is (0: in it, or within
-## slack of it).
-func lane_steps(sim: BattleSim, f: BattleSim.Fighter, t: BattleSim.Fighter) -> int:
-	var own := int(f.memory.get("lane", 0))
-	var start := (own + 1) * sim.width / 3
-	var end := (own + 2) * sim.width / 3
-	if t.x >= start - lane_slack and t.x <= end + lane_slack:
-		return 0
-	return absi(lane_at(sim, t.x) - own)
-
-
-## Whether `f` roams free of the lanes and the battle line (a flanker).
+## Whether `f` isn't counted as its army's front (a flanker, off on its
+## own).
 func roams(f: BattleSim.Fighter) -> bool:
-	return flankers.has(String(f.card.get("id", "")))
+	return flankers.has(GameData.plays_as(String(f.card.get("id", ""))))
 
 
-## Whether `f` may go past the battle line (a flanker; Air flies over it).
+## Whether `f` may go past the battle line: every fighter, and a shooter
+## that flies over it.
 func crosses(f: BattleSim.Fighter) -> bool:
-	return roams(f) or (air_over and f.is_flying())
+	return f.attack_range < shooter_reach or (air_over and f.is_flying())
 
 
-## How far `t` stands past the battle line in its lane, seen from `team`'s
-## side (field units: 0 or less on `team`'s side; 0 with no line there).
-func past_line(sim: BattleSim, team: int, t: BattleSim.Fighter) -> int:
-	var y := int(line[lane_at(sim, t.x) + 1])
-	if y < 0:
+## How far `t` stands past the battle line, seen from `team`'s side (field
+## units: 0 or less on `team`'s side; 0 with no line).
+func past_line(team: int, t: BattleSim.Fighter) -> int:
+	if line < 0:
 		return 0
-	return y - t.y if team == 0 else t.y - y
+	return line - t.y if team == 0 else t.y - line
 
 
-## The battle line in each lane: halfway between the two sides' front
-## animals on the ground there (flankers aside), moving at most line_pace a
-## tick, so it pushes back and forth as one side wins ground.
+## The battle line: halfway between the two sides' front animals on the
+## ground (flankers aside), moving at most line_pace a tick, so it pushes
+## back and forth as one side wins ground.
 func _move_line(sim: BattleSim) -> void:
-	var fronts := [[-1, -1, -1], [-1, -1, -1]]
+	var fronts := [-1, -1]
 	for f: BattleSim.Fighter in sim.fighters:
 		if not f.alive or not f.is_unit() or f.is_flying() or not f.memory.has("slot") or roams(f) or f.memory.get("burrowing", false):
 			continue
-		var l := lane_at(sim, f.x) + 1
-		var at: int = fronts[f.team][l]
+		var at: int = fronts[f.team]
 		if at < 0 or (f.team == 0 and f.y < at) or (f.team == 1 and f.y > at):
-			fronts[f.team][l] = f.y
-	for l in 3:
-		if int(fronts[0][l]) < 0 or int(fronts[1][l]) < 0:
-			line[l] = -1
-			continue
-		var want: int = (int(fronts[0][l]) + int(fronts[1][l])) / 2
-		if int(line[l]) < 0:
-			line[l] = want
-		else:
-			line[l] = int(line[l]) + clampi(want - int(line[l]), -line_pace, line_pace)
+			fronts[f.team] = f.y
+	if int(fronts[0]) < 0 or int(fronts[1]) < 0:
+		line = -1
+		return
+	var want: int = (int(fronts[0]) + int(fronts[1])) / 2
+	line = want if line < 0 else line + clampi(want - line, -line_pace, line_pace)
 
 
 func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, free: bool, charging: bool) -> BattleSim.Fighter:
@@ -1033,10 +973,8 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 	var wanted := "tank" if charging else String(prefer.get("class", ""))
 	var best: BattleSim.Fighter = null
 	var best_score := 1 << 40
-	var best_steps := 0
 	var liked: BattleSim.Fighter = null
 	var liked_score := 1 << 40
-	var liked_steps := 0
 	# The closest with no free slot, for when every enemy is full.
 	var spare: BattleSim.Fighter = null
 	var spare_score := 1 << 40
@@ -1081,21 +1019,18 @@ func _find(sim: BattleSim, f: BattleSim.Fighter, place: Vector2i, leash: int, fr
 		if score < best_score:
 			best = t
 			best_score = score
-			best_steps = lane_steps(sim, f, t) if free and not roams(f) else 0
 		if wanted != "" and t.cls == wanted and score < liked_score:
 			# In the war, what its class goes after only within its
 			# class's reach (classes.json "prefer").
 			if not war or BattleSim.edge_distance(f, t) <= prefer_reach:
 				liked = t
 				liked_score = score
-				liked_steps = lane_steps(sim, f, t) if free and not roams(f) else 0
 	# Its style may have its own idea (the biggest enemy, a Tank to charge...).
 	var picked := BattleStyles.prefer_target(sim, f)
 	if picked != null and (free or _reachable(f, picked, place, leash)) and room(sim, f, picked):
 		return picked
-	# What its class goes after (a charge: the Tanks), if it's no further out
-	# of its lane than the best.
-	if liked != null and liked_steps <= best_steps:
+	# What its class goes after (a charge: the Tanks).
+	if liked != null:
 		return liked
 	return best if best != null else spare
 

@@ -184,6 +184,8 @@ func test_personalities() -> void:
 	var trainer := DraftBot.new(m, 1, 1, 0.5, {"stars": 0.95})
 	var casual := DraftBot.new(m, 1, 1, 0.5, {"stars": 0.1})
 	check(trainer._star_value(0) > casual._star_value(0), "a star-chaser values stars more")
+	# (With Ranger tools on: they're switched off for now.)
+	turn_tools_on()
 	m.tools[1] = ["net"]
 	var tinkerer := DraftBot.new(m, 1, 1, 0.5, {"tools": 0.95})
 	var plain := DraftBot.new(m, 1, 1, 0.5)

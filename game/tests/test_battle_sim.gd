@@ -35,9 +35,12 @@ func test_open_field_and_halves() -> void:
 
 func test_nothing_to_fight_means_standing_still() -> void:
 	var sim := _sim()
-	var fox: BattleSim.Fighter = _ready_now(sim.spawn(0, "red_fox", 8 * T, 15 * T))[0]
+	var foxes: Array = _ready_now(sim.spawn(0, "red_fox", 8 * T, 15 * T))
+	# (The group first gives each other a little room.)
+	_run(sim, 2)
+	var stood: Array = foxes.map(func(f): return Vector2i(f.x, f.y))
 	_run(sim, 3)
-	check_eq(Vector2i(fox.x, fox.y), Vector2i(8 * T, 15 * T), "no enemies, no walking")
+	check_eq(foxes.map(func(f): return Vector2i(f.x, f.y)), stood, "no enemies, no walking: the whole group stays where it stands")
 
 
 func test_animals_find_the_nearest_enemy_and_fight() -> void:
@@ -94,11 +97,15 @@ func test_levels_make_animals_stronger() -> void:
 
 func test_herd_value_counts_health_left() -> void:
 	var sim := _sim()
-	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T, 15 * T)[0]
+	var bears: Array = sim.spawn(0, "brown_bear", 8 * T, 15 * T)
 	var cost := int(GameData.get_card("brown_bear").cost)
-	check_eq(sim.herd_value(0), cost * 1000, "a fresh bear counts its whole cost")
-	bear.hp = bear.max_hp / 2
+	check(absi(sim.herd_value(0) - cost * 1000) <= bears.size(), "a fresh group of bears counts its card's whole cost (%d)" % sim.herd_value(0))
+	for bear: BattleSim.Fighter in bears:
+		bear.hp = bear.max_hp / 2
 	check(absi(sim.herd_value(0) - cost * 500) <= cost * 5, "half its health, half its value (%d of %d, give or take rounding)" % [sim.herd_value(0), cost * 500])
+	bears[0].hp = 0
+	bears[0].alive = false
+	check(sim.herd_value(0) < cost * 500, "one of them down: less still (%d)" % sim.herd_value(0))
 	check_eq(sim.herd_value(1), 0, "an empty herd is worth nothing")
 
 
@@ -182,18 +189,18 @@ func test_tank_destroyers_go_for_tanks() -> void:
 	var sim := _sim()
 	var lion: BattleSim.Fighter = _ready_now(sim.spawn(0, "lion", 8 * T, 13 * T))[0]
 	_ready_now(sim.spawn(1, "wild_boar", 8 * T, 9 * T))
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 10 * T, 7 * T))[0]
+	_ready_now(sim.spawn(1, "brown_bear", 10 * T, 7 * T))
 	_run(sim, 0.1)
-	check(lion.target == bear, "a Tank in reach comes first, even if something's closer")
+	check(lion.target != null and lion.target.card.id == "brown_bear", "a Tank in reach comes first, even if something's closer")
 
 
 func test_ranged_go_for_air() -> void:
 	var sim := _sim()
 	var squirrel: BattleSim.Fighter = _ready_now(sim.spawn(0, "gray_squirrel", 8 * T, 14 * T))[0]
 	_ready_now(sim.spawn(1, "brown_bear", 8 * T, 10 * T))
-	var falcon: BattleSim.Fighter = _ready_now(sim.spawn(1, "peregrine_falcon", 11 * T, 9 * T))[0]
+	_ready_now(sim.spawn(1, "peregrine_falcon", 11 * T, 9 * T))
 	_run(sim, 0.1)
-	check(squirrel.target == falcon, "Air in reach comes first")
+	check(squirrel.target != null and squirrel.target.card.id == "peregrine_falcon", "Air in reach comes first")
 
 
 # Who animals go for, and when they switch: tests/test_targeting.gd.
@@ -239,23 +246,47 @@ func test_splash_stun_and_slow() -> void:
 	check(beside.slow > 0 and beside.slow_pct == int(GameData.traits.slow.pct), "Slow slows")
 
 
-func test_a_card_brings_its_squad() -> void:
+## Every card brings a group of its animal: a bunch of small ones, a few
+## big ones (classes.json "groups"), sharing the card's health between them.
+func test_a_card_brings_its_group() -> void:
 	var sim := _sim()
-	check_eq(sim.spawn(0, "wolf_pack", 8 * T, 15 * T).size(), 2, "a Tank Destroyer card: two")
-	check_eq(sim.spawn(0, "gray_squirrel", 4 * T, 15 * T).size(), 3, "a Ranged card: three")
-	check_eq(sim.spawn(1, "brown_bear", 8 * T, 5 * T).size(), 1, "a Tank card: one")
+	var squirrels: Array = sim.spawn(0, "gray_squirrel", 4 * T, 15 * T)
+	var wolves: Array = sim.spawn(0, "wolf_pack", 8 * T, 15 * T)
+	var bears: Array = sim.spawn(1, "brown_bear", 8 * T, 5 * T)
+	var elephants: Array = sim.spawn(1, "asian_elephant", 4 * T, 5 * T)
+	check_eq([squirrels.size(), wolves.size(), bears.size(), elephants.size()], [6, 4, 3, 2], "small animals come as a bunch, big ones as a few")
+	for id in GameData.card_order:
+		check(BattleSim.group_size(GameData.get_card(id)) >= 2, "every card brings a group: %s" % id)
+	# The group shares what its class's squad carries: a Tank's 150% of the
+	# card's health, however many they are (times the card's own tuning
+	# percent in classes.json "groups", where it has one).
+	var pandas: Array = sim.spawn(1, "giant_panda", 10 * T, 5 * T)
+	var tank: Dictionary = GameData.class_rules.squads.tank
+	var whole := int(tank.hp_pct) * int(tank.units)
+	var tune: Dictionary = GameData.class_rules.groups.get("tune", {})
+	for group: Array in [pandas, elephants, bears]:
+		var id: String = group[0].card.id
+		var percent := int(tune.get(id, 100))
+		var one := BattleSim.new([{}, {}], 1).spawn_units(0, id, 1, 0, 0)[0] as BattleSim.Fighter
+		var total := 0
+		for f: BattleSim.Fighter in group:
+			total += f.max_hp
+		var expected := one.max_hp * whole * percent / 10000
+		check(absi(total - expected) <= group.size(), "%d %ss share a Tank's health between them (%d of %d, tuned %d%%)" % [group.size(), id, total, expected, percent])
 
 
 # --- Ranger tools ----------------------------------------------------------
 
+## (Ranger tools are switched off for now: what they do is still tested.)
 func _use(sim: BattleSim, tool_id: String, x: int, y: int) -> void:
+	borrow_tools()
 	var card := GameData.get_card(tool_id)
 	ToolEffects.use(sim, 0, card, GameData.start_level(card.rarity), x, y)
 
 
 func test_net_stuns() -> void:
 	var sim := _sim()
-	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 6 * T)[0]
+	var bear: BattleSim.Fighter = sim.spawn_units(1, "brown_bear", 1, 8 * T, 6 * T)[0]
 	_use(sim, "net", 8 * T, 6 * T)
 	check(bear.stun > 0, "stuck in the net")
 	check(bear.hp < bear.max_hp, "and slightly hurt")
@@ -263,9 +294,9 @@ func test_net_stuns() -> void:
 
 func test_air_horn_damages_and_knocks_back() -> void:
 	var sim := _sim()
-	var rat: BattleSim.Fighter = sim.spawn(1, "gray_squirrel", 8 * T, 6 * T)[0]
-	var bear: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T + 800, 6 * T)[0]
-	var ally: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T - 800, 6 * T)[0]
+	var rat: BattleSim.Fighter = sim.spawn_units(1, "gray_squirrel", 1, 8 * T, 6 * T)[0]
+	var bear: BattleSim.Fighter = sim.spawn_units(1, "brown_bear", 1, 8 * T + 800, 6 * T)[0]
+	var ally: BattleSim.Fighter = sim.spawn_units(0, "brown_bear", 1, 8 * T - 800, 6 * T)[0]
 	rat.hp = 1  # nearly beaten: the blast finishes it off
 	_use(sim, "air_horn", 8 * T, 6 * T)
 	check(not rat.alive, "a nearly beaten squirrel can't take the blast")
@@ -275,7 +306,7 @@ func test_air_horn_damages_and_knocks_back() -> void:
 
 func test_medkit_heals_allies() -> void:
 	var sim := _sim()
-	var bear: BattleSim.Fighter = sim.spawn(0, "brown_bear", 8 * T, 15 * T)[0]
+	var bear: BattleSim.Fighter = sim.spawn_units(0, "brown_bear", 1, 8 * T, 15 * T)[0]
 	bear.hp = 100
 	_use(sim, "medkit", 8 * T, 15 * T)
 	var heal := int(GameData.get_card("medkit").stats.heal)
@@ -297,8 +328,8 @@ func test_food_bait_lures_enemies() -> void:
 
 func test_tranq_dart_puts_the_closest_to_sleep() -> void:
 	var sim := _sim()
-	var near: BattleSim.Fighter = sim.spawn(1, "brown_bear", 8 * T, 6 * T)[0]
-	var far: BattleSim.Fighter = sim.spawn(1, "black_rhino", 12 * T, 6 * T)[0]
+	var near: BattleSim.Fighter = sim.spawn_units(1, "brown_bear", 1, 8 * T, 6 * T)[0]
+	var far: BattleSim.Fighter = sim.spawn_units(1, "black_rhino", 1, 12 * T, 6 * T)[0]
 	_use(sim, "tranq_dart", 8 * T, 6 * T)
 	check(near.stun > 0, "closest is asleep")
 	check_eq(far.stun, 0, "only one target")

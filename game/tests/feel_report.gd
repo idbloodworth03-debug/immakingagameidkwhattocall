@@ -21,10 +21,10 @@ extends Node
 ## one's radius), every tick; pile-ups the most melee attackers fighting one
 ## enemy at once (in reach of it), the worst moment and on average over the
 ## ticks with a fight; spread how the fighting (melee pairs in reach, and
-## shots) is shared across the field's three lanes, left, center and right,
-## with an evenness score (1 = perfectly even, 0 = all in one lane); how
-## much of the fighting is in each animal's own lane, and how often Ranged
-## stand in front of their battle line (battle_rules.json "lanes"). Target
+## shots) is shared across the field's left, middle and right thirds, with
+## an evenness score (1 = perfectly even, 0 = all in one third); and how
+## often Ranged stand in front of the battle line (battle_rules.json
+## "line"). Target
 ## switches (the targeting rules, scripts/battle/targeting.gd): per animal
 ## per minute, in each third of the fights (steady or bunched?), why (its
 ## target fell, slipped away, was out of reach, had no way in to it, a
@@ -159,7 +159,7 @@ func _reset_stats() -> void:
 		"volley_first": 0, "charge_after_clash": 0,
 		"war_ticks": 0, "idle_ticks": 0, "fighting_ticks": 0, "idle_no_target": 0,
 		"war_by_class": {}, "idle_by_class": {}, "idle_why": {}, "idle_waiting": 0,
-		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0, "ranged_ticks": 0, "ranged_past": 0, "lane_checks": 0, "own_lane": 0,
+		"unit_ticks": 0, "overlap_units": 0, "pile_max": 0, "pile_sum": 0, "pile_ticks": 0, "pile_over": 0, "ranged_ticks": 0, "ranged_past": 0,
 		"lane_fights": [0, 0, 0], "quick_switches": 0, "alerts": 0,
 		"third_switches": [0, 0, 0], "third_ticks": [0, 0, 0], "busy_numbers": 0, "spark_frames": 0, "new_numbers_busy": 0, "new_numbers_calm": 0, "new_sparks": 0, "switch_why": {}, "quick_choice": 0, "back_and_forth": 0, "bnf_why": {},
 		"size_sum": 0.0, "size_n": 0, "size_war_sum": 0.0, "size_war_n": 0, "size_by_id": {}, "size_by_class": {}, "size_n_by_class": {}, "size_over": 0, "zoom_sum": 0.0, "zoom_n": 0, "ppu_max": 0.0,
@@ -264,7 +264,8 @@ func _before_step() -> void:
 
 
 ## Readability, every tick: overlapping bodies, pile-ups on one enemy, and
-## which lanes the fighting is in.
+## where across the field the fighting is (its left, middle and right
+## thirds).
 func _watch_crowding() -> void:
 	var sim := duel.sim
 	var units: Array = sim.fighters.filter(func(f): return f.alive and f.is_unit() and not f.memory.get("burrowing", false))
@@ -281,10 +282,10 @@ func _watch_crowding() -> void:
 			if dx * dx + dy * dy < need * need:
 				stats.overlap_units += 1
 				break
-		var lined: bool = sim.army != null and sim.army.has_method("lane_steps") and sim.army.at_war()
+		var lined: bool = sim.army != null and sim.army.at_war()
 		if lined and f.cls == "ranged" and not sim.army.crosses(f) and f.memory.has("slot"):
-			# Ranged in front of their lane's battle line.
-			var y := int(sim.army.line[clampi(f.x * 3 / maxi(1, sim.width), 0, 2)])
+			# Ranged in front of the battle line.
+			var y := int(sim.army.line)
 			stats.ranged_ticks += 1
 			if y >= 0 and (y - f.y if f.team == 0 else f.y - y) > 0:
 				stats.ranged_past += 1
@@ -293,10 +294,6 @@ func _watch_crowding() -> void:
 			continue
 		var lane := clampi(int(float(t.x) / lane_w), 0, 2)
 		stats.lane_fights[lane] += 1
-		if lined and f.memory.has("slot") and not sim.army.roams(f):
-			stats.lane_checks += 1
-			if sim.army.lane_steps(sim, f, t) == 0:
-				stats.own_lane += 1
 		# An attacker: a fighter allowed to strike it (one waiting for a slot
 		# isn't, even standing close).
 		if f.attack_range < 1500 and (sim.army == null or not sim.army.has_method("has_slot") or sim.army.has_slot(f, t)):
@@ -1086,8 +1083,8 @@ func _report() -> void:
 		"Readability",
 		"  overlap               %.1f%% of animals overlap another one" % [100.0 * stats.overlap_units / maxf(1, stats.unit_ticks)],
 		"  pile-ups              at most %d melee attackers on one enemy at once; %.1f on average (the busiest enemy, each tick with a fight); %.1f%% of those ticks have an enemy with more in reach than its slots" % [stats.pile_max, float(stats.pile_sum) / maxf(1, stats.pile_ticks), 100.0 * stats.pile_over / maxf(1, stats.pile_ticks)],
-		"  spread                left %.0f%% / center %.0f%% / right %.0f%% of the fighting; evenness %.2f" % [100.0 * lanes[0] / lane_total, 100.0 * lanes[1] / lane_total, 100.0 * lanes[2] / lane_total, entropy / log(3.0)],
-		"  lanes and the line    %.0f%% of the fighting (flankers aside) in an animal's own lane; Ranged in front of their battle line %.1f%% of the time" % [100.0 * stats.own_lane / maxf(1, stats.lane_checks), 100.0 * stats.ranged_past / maxf(1, stats.ranged_ticks)],
+		"  spread                left %.0f%% / center %.0f%% / right %.0f%% of the fighting (the field's thirds); evenness %.2f" % [100.0 * lanes[0] / lane_total, 100.0 * lanes[1] / lane_total, 100.0 * lanes[2] / lane_total, entropy / log(3.0)],
+		"  the battle line       Ranged in front of it %.1f%% of the time" % [100.0 * stats.ranged_past / maxf(1, stats.ranged_ticks)],
 	])
 	lines.append_array([
 		"Army checks",

@@ -155,6 +155,8 @@ func test_the_sorts_in_detail() -> void:
 
 
 func test_tools_come_after_the_animals() -> void:
+	# (With Ranger tools on: they're switched off for now.)
+	turn_tools_on()
 	var levels := _levels()
 	levels["net"] = 3
 	for key in AnimalSort.KEYS:

@@ -40,8 +40,7 @@ var body_half_width := 300.0
 var flying := false
 var swarm := false
 ## In an army (Draft Duel): it has a place in a formation, marches in step
-## with it and is drawn at its squad's size (size_k: smaller in a squad of
-## several, bigger for an elite Specialist or a Mythic hero).
+## with it and is drawn at its body's size (bodies.json).
 var army := false
 var size_k := 1.0
 ## Field position (thousandths of a tile): where the fight has it now.
@@ -369,13 +368,11 @@ static func make(owner_field: BattleField, f: BattleSim.Fighter, view_key: Varia
 
 
 ## How much bigger (or smaller) than its natural size an animal is drawn:
-## its size in bodies.json (its longest side in tiles; an elite Specialist
-## feel.json army elite_scale bigger) over its model's natural longest side.
+## its size in bodies.json (its longest side in tiles) over its model's
+## natural longest side.
 static func draw_k(f: BattleSim.Fighter) -> float:
 	var id := String(f.card.id)
 	var size := float(GameData.bodies.get("animals", {}).get(id, {}).get("size", 1.0))
-	if f.memory.get("elite", false):
-		size *= Feel.num("army", "elite_scale", 1.14)
 	return size / maxf(0.05, float(ModelStage.natural_box(id).longest))
 
 
@@ -1723,8 +1720,8 @@ func draw_ground(canvas: CanvasItem, badges: Array) -> void:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 3, t.team_ring_flat, Color("#9fd8ff", fade))
 		if f.invulnerable > 0:
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 6, t.team_ring_flat, Color.WHITE)
-		if army and (f.memory.get("hero", false) or f.memory.get("elite", false)):
-			# An elite Specialist or a Mythic hero: a gold ring, set apart.
+		if army and f.memory.get("hero", false):
+			# A Mythic hero: a gold ring, set apart.
 			var gold := Color("#ffd24a", fade)
 			GroundArt.draw_ring(canvas, GroundArt.Cell.RING, at, ring + 5, t.team_ring_flat, gold)
 			GroundArt.draw_ring(canvas, GroundArt.Cell.LINE, at, ring + 9, t.team_ring_flat, Color(gold, 0.5 * fade))

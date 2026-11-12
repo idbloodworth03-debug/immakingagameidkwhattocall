@@ -1,12 +1,12 @@
 {
-  "_note": "Draft Duel: best of 7 (the first to win wins_needed rounds wins; at most max_rounds, then most wins, or a draw). Before a match each player has a deck of deck_size animals from their collection. Each round, both players make picks_per_round picks: in round 1, starting animals from their deck; after that, from offer_animals animals from their deck and offer_tools of the tools they own, shown as two groups (rarer cards come up less, by rarity_weights). A pick takes an offered animal (one already in the army adds another squad of it), takes an offered tool (at most tools_max; a third replaces one), or upgrades an animal in the army (a star for all its squads). Stars go up to star_max; each star after the first adds star_bonus_pct to health and bite. An army holds at most army_max_units animals. Tools can be used once in every fight. Times are in seconds, distances in tiles; the fighting itself is tuned in battle_rules.json and classes.json.",
+  "_note": "Draft Duel: best of 7 (the first to win wins_needed rounds wins; at most max_rounds, then most wins, or a draw). Before a match each player has a deck of deck_size animals from their collection. Each round, both players make picks_per_round picks: in round 1, starting animals from their deck; after that, from offer_animals animals from their deck and offer_tools of the tools they own, shown as two groups (rarer cards come up less, by rarity_weights). A pick takes an offered animal (one already in the army adds another squad of it), takes an offered tool (at most tools_max; a third replaces one), or upgrades an animal in the army (a star for all its squads). Stars go up to star_max; each star after the first adds star_bonus_pct to health and bite. An army holds at most army_max_units animals. Tools can be used once in every fight. Ranger tools are switched off for now (offer_tools 0): none are loaded, offered, found in cages or shown, and the ones players own are kept aside in their saves; set offer_tools to 2 to bring them back. Times are in seconds, distances in tiles; the fighting itself is tuned in battle_rules.json and classes.json.",
   "wins_needed": 4,
   "max_rounds": 7,
   "picks_per_round": 3,
   "deck_size": 8,
   "army_max_units": 40,
   "offer_animals": 4,
-  "offer_tools": 2,
+  "offer_tools": 0,
   "bans": {
     "_note": "Before a match, once a player owns at least unlock_owned animals (a deck plus the rival's bans, so a deck can always be filled): a coin flip decides who bans first, then the two take turns until each has banned per_player animals. Nobody can use a banned animal that match. A ban of one of your own animals is refused if it could leave you fewer than a deck's worth once the rival's bans are in. The computer bans your animals that beat its favorite class (threats: favorite class -> the classes that beat it) at threat, your animals at owned (plus level for each level above the rarity's start), each point of power (cost) at power, never likes banning its favorite class (favorite, negative), and bans at most most_mythic of your Mythics a match; a weaker rival adds more luck (luck_easy to luck_hard).",
     "per_player": 3,
@@ -59,7 +59,7 @@
     "new_class": 1.5
   },
   "field": {
-    "_note": "The field: width_tiles across and height_tiles long at its smallest (scale 1; a small field keeps the armies close and big on the screen). It grows for big herds, keeping its shape, when an army's lines wouldn't fit otherwise (battle_rules.json \"army\" start_gap from the middle and edge from the back; each lane a third of the field's width), up to max_scale, and the camera zooms out to show it: max_scale is its zoom limit, so animals stay readable on a phone. The arena pictures (tools/creatures/arena.py) and the life round them (arena_life.json) are made for the smallest field.",
+    "_note": "The field: width_tiles across and height_tiles long at its smallest (scale 1; a small field keeps the armies close and big on the screen). It grows for big herds, keeping its shape, when an army's lines wouldn't fit otherwise (battle_rules.json \"army\" start_gap from the middle and edge from the back; its longest line across the field), up to max_scale, and the camera zooms out to show it: max_scale is its zoom limit, so animals stay readable on a phone. The arena pictures (tools/creatures/arena.py) and the life round them (arena_life.json) are made for the smallest field.",
     "width_tiles": 12,
     "height_tiles": 16,
     "max_scale": 2.0

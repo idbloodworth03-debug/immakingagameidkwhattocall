@@ -40,7 +40,7 @@ func _init(draft_match: DraftMatch, bot_team: int, seed_value: int, bot_difficul
 static func build_deck(available: Array, bot_style: Dictionary, rng: RandomNumberGenerator, difficulty := 0.5, size := 8) -> Array:
 	var weights: Dictionary = GameData.draft_rules.get("bot", {})
 	var favorite := String(bot_style.get("favorite", ""))
-	var animals: Array = available.filter(func(id): return not GameData.is_tool(id))
+	var animals: Array = available.filter(func(id): return GameData.cards.has(id) and not GameData.is_tool(id))
 	var score := func(id: String) -> float:
 		return float(GameData.get_card(id).get("cost", 4)) * difficulty + rng.randf() * 3.0
 	var by_class := {}

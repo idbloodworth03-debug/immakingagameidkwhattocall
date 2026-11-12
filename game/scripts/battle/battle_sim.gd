@@ -968,11 +968,11 @@ func allies_near(team: int, px: int, py: int, radius: int) -> Array:
 
 # --- Creating fighters -----------------------------------------------------
 
-## Puts one card's squad on the field around (x, y): as many animals as
-## its class brings (classes.json "squads": Tank 1, Tank Destroyer 2,
-## Ranged 3, Air 2, Specialist 1, Mythic 1), each with its share of the
-## card's health and bite. (Draft Duel's armies go through BattleArmy,
-## which does the same and gives each a place in the formation.)
+## Puts one card's group on the field around (x, y): as many animals as
+## its build brings (classes.json "groups": a bunch of small ones, a few
+## big ones), each with its share of the card's health and bite. (Draft
+## Duel's armies go through BattleArmy, which does the same and gives each
+## a place in the formation.)
 func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	var squad := BattleArmy.squad_of(card_id)
 	var count := int(squad.units)
@@ -981,10 +981,12 @@ func spawn(team: int, card_id: String, x: int, y: int) -> Array:
 	for i in made.size():
 		var f: Fighter = made[i]
 		var offset := formation(i, count)
-		# (Wider for big bodies, so a group's animals stand clear of each other.)
+		# (Wider for big bodies, and deeper for long ones, so a group's
+		# animals stand clear of each other.)
 		var room := maxf(1.0, float(2 * side_room(f) + TILE / 10) / 800.0)
+		var deep := maxf(room, float(2 * f.radius + TILE / 10) / 800.0)
 		f.x = clampi(x + roundi(offset.x * room), f.radius, width - f.radius)
-		f.y = clampi(y + roundi(offset.y * room), f.radius, height - f.radius)
+		f.y = clampi(y + roundi(offset.y * deep), f.radius, height - f.radius)
 		f.prev_x = f.x
 		f.prev_y = f.y
 		BattleArmy.apply_share(f, squad, bite)
@@ -1141,8 +1143,8 @@ static func _copy_fields(from: Object, to: Object) -> Object:
 	return to
 
 
-## How many animals a card brings: its class's squad (classes.json
-## "squads").
+## How many animals a card brings: its build's group (classes.json
+## "groups").
 static func group_size(card: Dictionary) -> int:
 	return int(BattleArmy.squad_of(String(card.get("id", ""))).units)
 
@@ -1194,7 +1196,13 @@ static func formation(index: int, count: int) -> Vector2i:
 			return [Vector2i(0, -400), Vector2i(-420, 300), Vector2i(420, 300)][index]
 		4:
 			return [Vector2i(-380, -380), Vector2i(380, -380), Vector2i(-380, 380), Vector2i(380, 380)][index]
-	return Vector2i.ZERO
+	if count <= 1:
+		return Vector2i.ZERO
+	# A bigger group: rows of three, centered on its spot.
+	var rows := (count + 2) / 3
+	var row := index / 3
+	var in_row := mini(3, count - row * 3)
+	return Vector2i((index % 3 * 2 - (in_row - 1)) * 420, (row * 2 - (rows - 1)) * 400)
 
 
 # --- Geometry --------------------------------------------------------------

@@ -12,10 +12,19 @@ func _slot(m: DraftMatch, team: int, id: String) -> int:
 	return -1
 
 
+## Draft Duel's rules with Ranger tools on (they're switched off for now:
+## draft_rules.json offer_tools), the tools back in the game for this test.
+func _rules_with_tools() -> Dictionary:
+	borrow_tools()
+	var rules: Dictionary = GameData.draft_rules.duplicate(true)
+	rules.offer_tools = 2
+	return rules
+
+
 ## A match past round 1, each team starting with these animals.
-func _after_starters(seed_value: int, starters_0: Array, starters_1: Array, pool: Array = []) -> DraftMatch:
+func _after_starters(seed_value: int, starters_0: Array, starters_1: Array, pool: Array = [], rules: Dictionary = {}) -> DraftMatch:
 	var setup := {} if pool.is_empty() else {"pool": pool}
-	var m := DraftMatch.new(seed_value, setup)
+	var m := DraftMatch.new(seed_value, setup, rules)
 	for team in 2:
 		for id in [starters_0, starters_1][team]:
 			m.pick(team, _slot(m, team, id))
@@ -56,7 +65,7 @@ func test_round_one_is_three_starting_animals() -> void:
 func test_a_deck_is_what_you_pick_from() -> void:
 	var deck := ["brown_bear", "snapping_turtle", "wolf_pack", "wild_boar", "gray_squirrel", "striped_skunk", "peregrine_falcon", "red_fox"]
 	var theirs := ["giant_panda", "lion", "raccoon", "barn_owl", "harbor_seal", "hippopotamus", "tiger", "king_cobra", "air_horn"]
-	var m := DraftMatch.new(12, {"pools": [deck + ["net"], theirs]})
+	var m := DraftMatch.new(12, {"pools": [deck + ["net"], theirs]}, _rules_with_tools())
 	check_eq(m.offers[0].map(func(o): return o.id), deck, "round 1: your 8 to start with")
 	for id in ["brown_bear", "wild_boar", "gray_squirrel"]:
 		m.pick(0, _slot(m, 0, id))
@@ -76,30 +85,81 @@ func test_a_deck_is_what_you_pick_from() -> void:
 		m.picks_left = [0, 0]
 
 
-func test_later_rounds_offer_four_animals_and_two_tools() -> void:
+## Ranger tools are switched off for now: none in the game, none offered.
+func test_later_rounds_offer_four_animals() -> void:
+	check_eq(int(GameData.draft_rules.offer_tools), 0, "no tools are offered")
+	check(not GameData.tools_on(), "tools are off")
+	check(GameData.card_order.all(func(id): return not GameData.is_tool(id)), "and none are in the game")
 	var m := _after_starters(2, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
 	var offers: Array = m.offers[0]
-	var tools := offers.filter(func(o): return GameData.is_tool(o.id)).size()
-	check_eq(offers.size() - tools, int(GameData.draft_rules.offer_animals), "four animals")
-	check_eq(tools, int(GameData.draft_rules.offer_tools), "two tools")
+	check_eq(offers.size(), int(GameData.draft_rules.offer_animals), "four animals")
 	var ids := offers.map(func(o): return o.id)
 	for id in ids:
 		check(ids.count(id) == 1, "%s offered once" % id)
+	check(m.tools[0].is_empty() and m.tools[1].is_empty(), "nobody has a tool")
 
 
-func test_picking_an_owned_animal_adds_a_squad() -> void:
-	var pool := ["brown_bear", "lion", "gray_squirrel", "net"]
+## What they did, and will do again: with tools on, two are offered too.
+func test_with_tools_on_later_rounds_offer_two_tools_too() -> void:
+	var rules := _rules_with_tools()
+	var pool: Array = GameData.card_order + ["net", "air_horn", "medkit"]
+	var m := _after_starters(2, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"], pool, rules)
+	var offers: Array = m.offers[0]
+	var tools := offers.filter(func(o): return GameData.is_tool(o.id)).size()
+	check_eq(offers.size() - tools, int(rules.offer_animals), "four animals")
+	check_eq(tools, 2, "two tools")
+
+
+## An offered animal you already have: add more of it...
+func test_picking_an_owned_animal_adds_a_group() -> void:
+	var pool := ["brown_bear", "lion", "gray_squirrel"]
 	var m := _after_starters(3, ["brown_bear", "lion", "gray_squirrel"], ["brown_bear", "lion", "gray_squirrel"], pool)
 	var slot := _slot(m, 0, "lion")
 	check(slot >= 0, "the lion is offered again")
 	check(m.pick(0, slot), "picked")
 	var entry: Dictionary = m.herds[0][m.herd_index(0, "lion")]
 	check_eq(m.herds[0].size(), 3, "still three kinds of animal")
-	check_eq(int(entry.squads), 2, "another squad of lions")
+	check_eq(int(entry.squads), 2, "another group of lions")
 	check_eq(int(entry.stars), 1, "no star")
 	var lions: Array = m.sim.units(0).filter(func(f): return f.card.id == "lion")
-	check_eq(lions.size(), 2 * DraftMatch.squad_units("lion"), "two squads on the field")
+	check_eq(lions.size(), 2 * DraftMatch.squad_units("lion"), "two groups on the field")
 	check_eq(m.picks_made[0][-1].kind, "squad", "the pick says so")
+
+
+## ...or upgrade it instead: a star for every group of it, and no more of
+## them. The same pick, the other choice.
+func test_picking_an_owned_animal_can_upgrade_it_instead() -> void:
+	var pool := ["brown_bear", "lion", "gray_squirrel"]
+	var m := _after_starters(3, ["brown_bear", "lion", "gray_squirrel"], ["brown_bear", "lion", "gray_squirrel"], pool)
+	var slot := _slot(m, 0, "lion")
+	check_eq(m.can_pick(0, slot), "", "more lions can join")
+	check_eq(m.can_pick_upgrade(0, slot), "", "or the lions can be upgraded")
+	var before: int = m.sim.units(0).filter(func(f): return f.card.id == "lion").size()
+	check(m.pick(0, slot, -1, true), "upgraded")
+	var entry: Dictionary = m.herds[0][m.herd_index(0, "lion")]
+	check_eq(int(entry.stars), 2, "a star")
+	check_eq(int(entry.get("squads", 1)), 1, "no more lions")
+	check_eq(m.sim.units(0).filter(func(f): return f.card.id == "lion").size(), before, "as many on the field as before")
+	check(m.offers[0][slot].taken, "the card is taken")
+	check_eq(m.picks_made[0][-1].kind, "star", "the pick says so")
+	check_eq(m.picks_left[0], int(GameData.draft_rules.picks_per_round) - 1, "one pick used")
+	check_eq(m.can_pick(0, slot), "Already picked", "not twice")
+	check(m.undo(0), "taken back")
+	check_eq(int(m.herds[0][m.herd_index(0, "lion")].stars), 1, "the star is gone")
+	check(not m.offers[0][slot].taken, "and the card is back")
+	# Only an animal already in the army, and not in round 1.
+	var fresh := DraftMatch.new(4)
+	check(fresh.can_pick_upgrade(0, _slot(fresh, 0, "brown_bear")) != "", "nothing to upgrade in round 1")
+	# A fully trained animal can still get more of itself; a full army can
+	# still upgrade.
+	m.herds[0][m.herd_index(0, "lion")].stars = int(GameData.draft_rules.star_max)
+	check_eq(m.can_pick_upgrade(0, slot), "Fully trained", "three stars is the most")
+	check_eq(m.can_pick(0, slot), "", "but more can join")
+	m.herds[0][m.herd_index(0, "lion")].stars = 1
+	m.herds[0][m.herd_index(0, "gray_squirrel")].squads = 6
+	check_eq(m.can_pick(0, slot), "Army full", "no room for more lions")
+	check_eq(m.can_pick_upgrade(0, slot), "", "an upgrade still works")
+	check(m.has_any_pick(0), "so there's still something to pick")
 
 
 func test_an_upgrade_stars_every_squad() -> void:
@@ -145,7 +205,7 @@ func test_undo_takes_a_pick_back() -> void:
 
 func test_two_tools_at_most() -> void:
 	var pool := ["brown_bear", "lion", "gray_squirrel", "net", "air_horn", "medkit"]
-	var m := _after_starters(6, ["brown_bear", "lion", "gray_squirrel"], ["brown_bear", "lion", "gray_squirrel"], pool)
+	var m := _after_starters(6, ["brown_bear", "lion", "gray_squirrel"], ["brown_bear", "lion", "gray_squirrel"], pool, _rules_with_tools())
 	m.tools[0] = ["net", "air_horn"]
 	m.offers[0] = [{"id": "medkit", "taken": false}]
 	check(m.needs_tool_swap(0, 0), "a third tool needs a swap")
@@ -180,10 +240,16 @@ func test_classes_take_their_rows() -> void:
 
 
 ## A herd of `count` squads of these ids, in turn.
-func _big_herd(count: int, ids: Array) -> Array:
+## A herd of `count` groups, of these animals in turn (or, with `full`, as
+## many groups as an army holds: draft_rules.json army_max_units).
+func _big_herd(count: int, ids: Array, full := false) -> Array:
 	var herd := []
+	var animals := 0
 	for i in count:
 		var id: String = ids[i % ids.size()]
+		if full and animals + DraftMatch.squad_units(id) > int(GameData.draft_rules.army_max_units):
+			break
+		animals += DraftMatch.squad_units(id)
 		var at := -1
 		for j in herd.size():
 			if herd[j].id == id:
@@ -224,11 +290,12 @@ func test_big_herds_grow_the_field_up_to_a_limit() -> void:
 func test_big_herds_line_up_without_overlapping() -> void:
 	var ids := ["brown_bear", "lion", "gray_squirrel", "peregrine_falcon", "electric_eel", "hippopotamus", "red_panda", "raccoon", "wild_boar", "tiger", "asian_elephant", "snapping_turtle"]
 	var m := DraftMatch.new(33)
-	m.herds = [_big_herd(24, ids), _big_herd(24, ids)]
+	m.herds = [_big_herd(24, ids, true), _big_herd(24, ids, true)]
 	m._lay_out_herds()
 	for team in 2:
 		var units := m.sim.units(team)
 		check_eq(units.size(), m.army_units(team), "team %d: everyone on the field" % team)
+		check(units.size() > 30 and units.size() <= int(GameData.draft_rules.army_max_units), "team %d: as big as an army gets (%d animals)" % [team, units.size()])
 		var squeezed := 0
 		for i in units.size():
 			for j in range(i + 1, units.size()):
@@ -244,7 +311,7 @@ func test_big_herds_line_up_without_overlapping() -> void:
 
 func test_rows_stay_in_order_in_big_herds() -> void:
 	var m := DraftMatch.new(34)
-	var herd := _big_herd(12, ["brown_bear"]) + _big_herd(12, ["lion"]) + _big_herd(6, ["peregrine_falcon"]) + _big_herd(6, ["gray_squirrel"])
+	var herd := _big_herd(3, ["brown_bear"]) + _big_herd(3, ["lion"]) + _big_herd(2, ["peregrine_falcon"]) + _big_herd(1, ["gray_squirrel"])
 	m.herds = [herd, herd.duplicate(true)]
 	m._lay_out_herds()
 	var deepest := {}
@@ -260,7 +327,7 @@ func test_rows_stay_in_order_in_big_herds() -> void:
 
 
 func test_tools_work_once_a_fight_and_stay() -> void:
-	var m := _after_starters(9, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"])
+	var m := _after_starters(9, ["brown_bear", "lion", "gray_squirrel"], ["giant_panda", "wild_boar", "raccoon"], [], _rules_with_tools())
 	m.tools[0] = ["net"]
 	m.picks_left = [0, 0]
 	m.set_ready(0)

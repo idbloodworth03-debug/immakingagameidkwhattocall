@@ -4,8 +4,12 @@ extends TestCase
 ## (how far its strike extends); the fight gives it a room between the two
 ## and measures a melee animal's reach nose to nose; a fighter stands at its slot where its
 ## strike lands; a flier flies at a real height; and in a fight bodies
-## don't overlap (more than a tenth of the smaller body into the other;
-## touching is fine), striking least of all (under 1% of striking frames).
+## seldom overlap (more than a tenth of the smaller body into the other;
+## touching is fine). Every card brings a whole group now, so a fight is a
+## crowd: under 1% of the pairs of bodies overlap at any moment, and a
+## striking body overlaps another in under 10% of its striking frames (as
+## in the biggest armies before groups; a handful of animals a side stayed
+## under 1%).
 
 var _made: Array = []
 
@@ -91,7 +95,7 @@ func test_a_melee_fighter_takes_up_its_footprint_and_hits_from_its_reach() -> vo
 func _run(fight: Dictionary, seconds: float) -> Dictionary:
 	var duel: DraftMatch = fight.duel
 	var field: BattleField = fight.field
-	var out := {"frames": 0, "overlap_frames": 0, "strike_frames": 0, "strike_overlap_frames": 0, "flier_up": 0, "flier_frames": 0}
+	var out := {"frames": 0, "pairs": 0, "overlap_pairs": 0, "strike_frames": 0, "strike_overlap_frames": 0, "flier_up": 0, "flier_frames": 0, "most": 0}
 	var accumulator := 0.0
 	var tick := 1.0 / duel.sim.tps
 	for frame in int(seconds * 60.0):
@@ -105,7 +109,7 @@ func _run(fight: Dictionary, seconds: float) -> Dictionary:
 		field.blend = clampf(accumulator / tick, 0.0, 1.0)
 		field._process(1.0 / 60.0)
 		var views: Array = field.views().filter(func(v): return v.fighter != null and v.pop >= 1.0)
-		var any := false
+		out.most = maxi(out.most, views.size())
 		var striking := {}
 		for i in views.size():
 			var a: UnitView = views[i]
@@ -117,15 +121,14 @@ func _run(fight: Dictionary, seconds: float) -> Dictionary:
 				var b: UnitView = views[j]
 				if a.flying != b.flying:
 					continue
+				out.pairs += 1
 				if UnitView.bodies_overlap(a, b):
-					any = true
+					out.overlap_pairs += 1
 					if a.attacking(field.now()):
 						striking[a] = true
 					if b.attacking(field.now()):
 						striking[b] = true
 		out.frames += 1
-		if any:
-			out.overlap_frames += 1
 		for v in views:
 			if v.attacking(field.now()):
 				out.strike_frames += 1
@@ -138,9 +141,10 @@ func test_bodies_do_not_overlap_in_a_fight_least_of_all_striking() -> void:
 	var fight := _fight(5)
 	var out := _run(fight, 20.0)
 	check(out.frames > 300, "the fight ran a while (%d frames)" % out.frames)
+	check(out.most >= 24, "whole groups on the field (%d animals)" % out.most)
 	check(out.strike_frames > 60, "with strikes in it (%d striking frames)" % out.strike_frames)
 	var strike_pct: float = 100.0 * out.strike_overlap_frames / maxf(1, out.strike_frames)
-	check(strike_pct <= 1.0, "a striking body overlaps another in %.2f%% of striking frames (at most 1%%)" % strike_pct)
-	var any_pct: float = 100.0 * out.overlap_frames / maxf(1, out.frames)
-	check(any_pct <= 5.0, "any two bodies overlap in %.1f%% of frames" % any_pct)
+	check(strike_pct <= 10.0, "a striking body overlaps another in %.2f%% of striking frames (under 10%%)" % strike_pct)
+	var pair_pct: float = 100.0 * out.overlap_pairs / maxf(1, out.pairs)
+	check(pair_pct <= 1.0, "%.2f%% of the pairs of bodies overlap (under 1%%)" % pair_pct)
 	check(out.flier_up == out.flier_frames and out.flier_frames > 0, "the fliers fly above the ground (%d of %d frames)" % [out.flier_up, out.flier_frames])

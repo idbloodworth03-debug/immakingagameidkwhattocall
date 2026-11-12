@@ -39,9 +39,9 @@ func test_the_closest_first_then_committed() -> void:
 	var recheck := _ticks(sim, "recheck_seconds")
 	# A bear that stays where it is (so only its choice changes), and
 	# enemies that do too.
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(spawn_squad(sim, 0, "brown_bear", 8 * T, 15 * T))[0]
 	bear.speed = 0
-	_ready_now(sim.spawn(1, "raccoon", 8 * T, 9 * T))
+	_ready_now(spawn_squad(sim, 1, "raccoon", 8 * T, 9 * T))
 	for f in sim.fighters:
 		if f.team == 1:
 			_statue(f)
@@ -51,14 +51,14 @@ func test_the_closest_first_then_committed() -> void:
 	var locked := sim.tick
 	# One a little closer (about 30%, not 40%) turns up: it keeps its target,
 	# however long.
-	for f in _ready_now(sim.spawn(1, "gray_squirrel", 11 * T, 11 * T + 600)):
+	for f in _ready_now(spawn_squad(sim, 1, "gray_squirrel", 11 * T, 11 * T + 600)):
 		_statue(f)
 	for i in commit * 2:
 		sim.step()
 	check(bear.target == first, "not for one only a little closer")
 	# One much closer turns up: it waits out the commit time, then switches
 	# on its turn to look around.
-	for f in _ready_now(sim.spawn(1, "wild_boar", 8 * T, 13 * T)):
+	for f in _ready_now(spawn_squad(sim, 1, "wild_boar", 8 * T, 13 * T)):
 		_statue(f)
 	locked = int(bear.memory.get("locked", locked))
 	var waited := sim.tick
@@ -79,10 +79,10 @@ func test_a_new_target_is_kept_for_the_commit_time() -> void:
 	# after doesn't take it off its new one before the commit time is up.
 	var sim := _sim()
 	var commit := _ticks(sim, "commit_seconds")
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 15 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(spawn_squad(sim, 0, "brown_bear", 8 * T, 15 * T))[0]
 	bear.speed = 0
-	var gone: BattleSim.Fighter = _ready_now(sim.spawn(1, "wild_boar", 8 * T, 12 * T))[0]
-	_ready_now(sim.spawn(1, "raccoon", 8 * T, 8 * T))
+	var gone: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "wild_boar", 8 * T, 12 * T))[0]
+	_ready_now(spawn_squad(sim, 1, "raccoon", 8 * T, 8 * T))
 	for f in sim.fighters:
 		if f.team == 1:
 			_statue(f)
@@ -95,7 +95,7 @@ func test_a_new_target_is_kept_for_the_commit_time() -> void:
 	sim.step()
 	check(bear.target != null and bear.target.card.id == "raccoon", "its target gone, it takes the next at once")
 	var second := bear.target
-	var near: BattleSim.Fighter = _ready_now(sim.spawn(1, "snapping_turtle", 8 * T, 13 * T))[0]
+	var near: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "snapping_turtle", 8 * T, 13 * T))[0]
 	_statue(near)  # (a Tank: a squad of one)
 	var kept := 0
 	while bear.target == second and kept < commit * 2:
@@ -113,7 +113,7 @@ func test_the_backline_turns_on_a_fox_in_its_midst() -> void:
 	# The enemy's backline: one squad of 3 Ranged, shooting at a Tank up
 	# front. (Made hardy here, so a Fox can't knock them out before they
 	# turn: this is about whom they fight.)
-	var shooters: Array = _ready_now(sim.spawn(1, "gray_squirrel", 8 * T, 4 * T))
+	var shooters: Array = _ready_now(spawn_squad(sim, 1, "gray_squirrel", 8 * T, 4 * T))
 	check_eq(shooters.size(), 3, "a backline of 3 Ranged")
 	# (Standing a little closer than a squad's usual spacing, shoulder to
 	# shoulder: a Fox popping up among them is in reach of more than one.)
@@ -129,13 +129,13 @@ func test_the_backline_turns_on_a_fox_in_its_midst() -> void:
 		s.hp = 1000000
 		s.max_hp = 1000000
 		s.speed = 0
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 9 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(spawn_squad(sim, 0, "brown_bear", 8 * T, 9 * T))[0]
 	_statue(bear)
 	sim.step()
 	for s: BattleSim.Fighter in shooters:
 		check(s.target == bear, "they shoot at the Tank up front")
 	# The Fox burrows in from its side of the field and pops up among them.
-	var fox: BattleSim.Fighter = _ready_now(sim.spawn(0, "red_fox", 9 * T, 14 * T))[0]
+	var fox: BattleSim.Fighter = _ready_now(spawn_squad(sim, 0, "red_fox", 9 * T, 14 * T))[0]
 	fox.hp = 1000000
 	fox.max_hp = 1000000
 	var first_bite := -1
@@ -195,15 +195,15 @@ func test_no_threat_turn_while_fighting_up_close() -> void:
 	# A Tank already in a scrap doesn't spin round to every enemy that bites
 	# it: its target is right there too.
 	var sim := _sim()
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(0, "brown_bear", 8 * T, 10 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(spawn_squad(sim, 0, "brown_bear", 8 * T, 10 * T))[0]
 	bear.hp = 1000000
 	bear.max_hp = 1000000
-	var first: BattleSim.Fighter = _ready_now(sim.spawn(1, "snapping_turtle", 8 * T, 9 * T))[0]
+	var first: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "snapping_turtle", 8 * T, 9 * T))[0]
 	first.hp = 1000000
 	first.max_hp = 1000000
 	sim.step()
 	check(bear.target == first, "it fights the one in front of it")
-	var biter: BattleSim.Fighter = _ready_now(sim.spawn(1, "wild_boar", 9 * T, 10 * T))[0]
+	var biter: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "wild_boar", 9 * T, 10 * T))[0]
 	biter.hp = 1000000
 	biter.max_hp = 1000000
 	for i in 5 * sim.tps:
@@ -217,15 +217,15 @@ func test_an_ability_pick_comes_first_and_falls_back_to_the_closest() -> void:
 	# closer Tank; and on its way, a closer enemy doesn't draw it off.
 	var sim := _sim()
 	var commit := _ticks(sim, "commit_seconds")
-	var owl: BattleSim.Fighter = _ready_now(sim.spawn(0, "barn_owl", 8 * T, 15 * T))[0]
+	var owl: BattleSim.Fighter = _ready_now(spawn_squad(sim, 0, "barn_owl", 8 * T, 15 * T))[0]
 	owl.hp = 1000000
 	owl.max_hp = 1000000
-	var tank: BattleSim.Fighter = _ready_now(sim.spawn(1, "snapping_turtle", 8 * T, 13 * T))[0]
+	var tank: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "snapping_turtle", 8 * T, 13 * T))[0]
 	_statue(tank)
 	sim.step()
 	check(owl.target == tank, "no Ranged about: the closest")
-	var shooter: BattleSim.Fighter = _ready_now(sim.spawn(1, "gray_squirrel", 4 * T, 5 * T))[0]
-	var bear: BattleSim.Fighter = _ready_now(sim.spawn(1, "brown_bear", 10 * T, 11 * T))[0]
+	var shooter: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "gray_squirrel", 4 * T, 5 * T))[0]
+	var bear: BattleSim.Fighter = _ready_now(spawn_squad(sim, 1, "brown_bear", 10 * T, 11 * T))[0]
 	for f in sim.fighters:
 		if f.team == 1:
 			_statue(f)
@@ -235,7 +235,7 @@ func test_an_ability_pick_comes_first_and_falls_back_to_the_closest() -> void:
 	sim.step()
 	check(owl.target != null and owl.target.card.id == "gray_squirrel", "its target gone: a Ranged, though a Tank's closer")
 	var prey := owl.target
-	for f in _ready_now(sim.spawn(1, "hippopotamus", owl.x, owl.y - T)):
+	for f in _ready_now(spawn_squad(sim, 1, "hippopotamus", owl.x, owl.y - T)):
 		_statue(f)
 	for i in commit * 2:
 		sim.step()

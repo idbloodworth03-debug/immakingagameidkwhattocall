@@ -127,7 +127,9 @@ func test_banned_animals_never_appear() -> void:
 		for team in 2:
 			for id in [deck, theirs][team]:
 				check(not banned.has(id), "match %d: team %d's deck has banned %s" % [match_index, team, id])
+		# (Tool ids in a pool while tools are switched off are passed over.)
 		var m := DraftMatch.new(1300 + match_index, {"pools": [deck + ["net", "air_horn"], theirs + ["net", "medkit"]], "banned": banned})
+		check(m.pools[0].all(func(id): return GameData.cards.has(id)) and m.pools[1].all(func(id): return GameData.cards.has(id)), "only cards in the game are drawn from")
 		var bots := [DraftBot.new(m, 0, match_index * 7 + 1, 0.6), DraftBot.new(m, 1, match_index * 7 + 2, 0.6)]
 		var guard := 0
 		var bad := []

@@ -2,8 +2,8 @@ class_name ArmyTest
 extends Control
 ## For testing (Profile > Developer tools > Big army test, with the animals
 ## as 3D models (ModelStage), and Big army test (sprites)): the biggest
-## armies there can be (40 animals a side: every class, elites, Mythic
-## heroes, 3-star squads) fight over and over on the real battle field, with
+## armies there can be (40 animals a side: every class, Mythic heroes,
+## 3-star groups) fight over and over on the real battle field, with
 ## the frame rate on screen. After each fight a line sums it up: frames a
 ## second on average, the slowest 1% of frames, how many frames missed 60 a
 ## second, and how long the game's own code took each frame (the rest is

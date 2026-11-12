@@ -2020,7 +2020,7 @@ func banners() -> Array:
 		var top := v.position + v.head()
 		if not squads.has(g):
 			squads[g] = {"x": 0.0, "n": 0, "top": top.y, "team": v.team, "cls": v.cls, "group": g,
-				"gold": v.fighter.memory.get("hero", false) or v.fighter.memory.get("elite", false)}
+				"gold": v.fighter.memory.get("hero", false)}
 		var sq: Dictionary = squads[g]
 		sq.x += top.x
 		sq.n += 1

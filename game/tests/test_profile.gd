@@ -47,6 +47,7 @@ func test_draw_changes_nothing() -> void:
 
 
 func test_repair_adds_new_starter_cards() -> void:
+	turn_tools_on()
 	profile.data.collection.erase("red_fox")
 	profile.data.collection.erase("net")
 	profile._repair()
@@ -159,11 +160,30 @@ func test_a_saved_deck_is_kept() -> void:
 	check(not after.has("tiger"), "with one you have")
 
 
+## Ranger tools are switched off for now (draft_rules.json offer_tools 0):
+## nobody has any, a save's own are kept aside, and they're back, as they
+## were, when tools are switched on again.
+func test_tools_are_kept_aside_while_they_are_off() -> void:
+	check_eq(profile.owned_tools(), [], "no tools while they're off")
+	check(profile.data.collection.keys().all(func(id): return GameData.cards.has(id)), "a new player's cards are all in the game")
+	profile.data.collection["net"] = {"level": 3, "copies": 2, "new": false}
+	profile._repair()
+	check(not profile.data.collection.has("net"), "a save's Net is out of its collection")
+	check_eq(int(profile.data.archived_cards.get("net", {}).get("level", 0)), 3, "kept aside, at its level")
+	turn_tools_on()
+	profile._repair()
+	check_eq(int(profile.data.collection.get("net", {}).get("level", 0)), 3, "and back when tools are on again")
+	check(profile.owned_tools().has("net"), "among the player's tools")
+
+
 func test_tools_come_with_any_deck() -> void:
+	turn_tools_on()
+	profile._repair()
 	check_eq(profile.owned_tools(), ["net", "air_horn"], "the Net and the Air Horn")
 
 
 func test_big_saves_are_left_alone() -> void:
+	turn_tools_on()
 	var owned := {}
 	for id in ["electric_eel", "raccoon", "red_fox", "wild_boar", "lion", "tiger", "brown_bear", "hippopotamus", "air_horn", "medkit"]:
 		owned[id] = {"level": 2, "copies": 0, "new": false}
@@ -173,6 +193,7 @@ func test_big_saves_are_left_alone() -> void:
 
 
 func test_a_save_with_one_tool_gets_a_second() -> void:
+	turn_tools_on()
 	var owned := {}
 	for id in ["electric_eel", "raccoon", "red_fox", "wild_boar", "lion", "tiger", "brown_bear", "hippopotamus", "air_horn"]:
 		owned[id] = {"level": 2, "copies": 0, "new": false}

@@ -1,23 +1,30 @@
 extends TestCase
 ## The three rules that make Draft Duel an army game, checked the way a
 ## match plays them:
-##   Squads: one card puts a whole squad on the field: Tank 1, Tank
-##     Destroyer 2, Ranged 3, Air 2, Specialist 1, Mythic 1. Written out
+##   Groups: one card puts a whole group of its animal on the field, sized
+##     by the animal's build: a bunch of small ones (6), fewer middling
+##     ones (4), a few big ones (3), a pair of the biggest (2). Written out
 ##     here on purpose (not read from classes.json), so a wrong data file
 ##     fails too.
 ##   Deck of 8: round 1 offers exactly your 8; later offers come only from
-##     your 8 and your tools, for you and for the computer.
-##   Upgrade or Reinforce: from round 2, an animal in your army can get a
-##     star (more stars, same animals) or another full squad (more animals).
+##     your 8 (and your tools, when Ranger tools are on), for you and for
+##     the computer.
+##   Upgrade or more: from round 2, an animal in your army can get a star
+##     (more stars, same animals) or another full group (more animals).
 
-const SQUAD := {"tank": 1, "tank_destroyer": 2, "ranged": 3, "air": 2, "specialist": 1}
-const MYTHIC := 1
+const GROUP := {
+	"gray_squirrel": 6, "striped_skunk": 6, "raccoon": 6, "king_cobra": 6, "peregrine_falcon": 6, "barn_owl": 6,
+	"hyacinth_macaw": 6, "honey_badger": 6, "red_fox": 6, "red_panda": 6, "sunda_pangolin": 6, "electric_eel": 6,
+	"wolf_pack": 4, "wild_boar": 4, "komodo_dragon": 4, "snapping_turtle": 4, "harpy_eagle": 4, "california_condor": 4,
+	"harbor_seal": 4, "pygmy_three_toed_sloth": 4,
+	"lion": 3, "tiger": 3, "cerberus": 3, "brown_bear": 3, "giant_panda": 3, "sumatran_orangutan": 3,
+	"wild_bactrian_camel": 3, "unicorn": 3, "mountain_gorilla": 3,
+	"asian_elephant": 2, "black_rhino": 2, "hippopotamus": 2, "yeti": 2, "dragon": 2, "kraken": 2,
+}
 
 
 func _expected(id: String) -> int:
-	if String(GameData.cards[id].rarity) == "mythic":
-		return MYTHIC
-	return int(SQUAD[GameData.class_of(id)])
+	return int(GROUP.get(id, -1))
 
 
 func _animals() -> Array:
@@ -45,8 +52,9 @@ func _finish_fight(m: DraftMatch) -> void:
 # --- Squads ------------------------------------------------------------------
 
 ## Every animal in the game, for the player and for the computer: one card,
-## and the field has exactly its squad.
-func test_every_card_brings_its_whole_squad() -> void:
+## and the field has exactly its group.
+func test_every_card_brings_its_whole_group() -> void:
+	check_eq(_animals().size(), GROUP.size(), "every animal has a group written out here")
 	for id in _animals():
 		var m := DraftMatch.new(3)
 		m.herds = [[{"id": id, "stars": 1, "squads": 1}], [{"id": id, "stars": 1, "squads": 1}]]
@@ -60,16 +68,16 @@ func test_every_card_brings_its_whole_squad() -> void:
 			uids[f.uid] = true
 			check(f.hp > 0 and f.hp == f.max_hp, "%s: each animal has its own full health" % id)
 		check_eq(uids.size(), squad.size(), "%s: separate animals" % id)
-		# The plain fight (no army) brings the same squad.
+		# The plain fight (no army) brings the same group.
 		var sim := BattleSim.new([{}, {}], 1)
 		check_eq(sim.spawn(0, id, 8000, 15000).size(), _expected(id), "%s spawned on its own" % id)
 
 
-## One card of each class, picked the way a player picks them: 1, 2, 3, 2,
-## 1 and 1 animals on the field.
+## One card of each class, picked the way a player picks them: each puts
+## its whole group on the field.
 func test_one_card_of_each_class_through_the_picks() -> void:
 	var deck := ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "red_fox", "yeti", "lion", "barn_owl"]
-	var m := DraftMatch.new(21, {"pools": [deck + ["net"], deck + ["net"]]})
+	var m := DraftMatch.new(21, {"pools": [deck, deck]})
 	for id in ["brown_bear", "wild_boar", "gray_squirrel"]:
 		check(m.pick(0, _slot(m, 0, id)), "round 1: %s" % id)
 	for id in ["lion", "barn_owl", "red_fox"]:
@@ -77,9 +85,9 @@ func test_one_card_of_each_class_through_the_picks() -> void:
 	m.set_ready(0)
 	m.set_ready(1)
 	check_eq(m.phase, "fight", "fighting")
-	check_eq(_on_field(m, 0, "brown_bear"), 1, "a Tank card: 1")
-	check_eq(_on_field(m, 0, "wild_boar"), 2, "a Tank Destroyer card: 2")
-	check_eq(_on_field(m, 0, "gray_squirrel"), 3, "a Ranged card: 3")
+	check_eq(_on_field(m, 0, "brown_bear"), 3, "a card of Bears: 3")
+	check_eq(_on_field(m, 0, "wild_boar"), 4, "a card of Boars: 4")
+	check_eq(_on_field(m, 0, "gray_squirrel"), 6, "a card of Squirrels: 6")
 	_finish_fight(m)
 	m.next_round()
 	# Round 2: the other three classes on offer.
@@ -90,10 +98,10 @@ func test_one_card_of_each_class_through_the_picks() -> void:
 	m.set_ready(0)
 	m.set_ready(1)
 	check_eq(m.phase, "fight", "fighting again")
-	check_eq(_on_field(m, 0, "peregrine_falcon"), 2, "an Air card: 2")
-	check_eq(_on_field(m, 0, "red_fox"), 1, "a Specialist card: 1")
-	check_eq(_on_field(m, 0, "yeti"), 1, "a Mythic card: 1")
-	check_eq(_on_field(m, 0, "gray_squirrel"), 3, "the Ranged card from round 1 still 3")
+	check_eq(_on_field(m, 0, "peregrine_falcon"), 6, "a card of Falcons: 6")
+	check_eq(_on_field(m, 0, "red_fox"), 6, "a card of Foxes: 6")
+	check_eq(_on_field(m, 0, "yeti"), 2, "a Mythic card of Yetis: 2")
+	check_eq(_on_field(m, 0, "gray_squirrel"), 6, "the Squirrels from round 1 still 6")
 
 
 # --- Deck of 8 ---------------------------------------------------------------
@@ -114,7 +122,8 @@ func test_no_animal_outside_the_deck_ever_appears() -> void:
 				shuffled[i] = shuffled[j]
 				shuffled[j] = swap
 			decks[team] = shuffled.slice(0, 8)
-		var tools := [["net", "air_horn"], ["medkit"]]
+		# (Ranger tools are off for now: a deck is all there is to pick from.)
+		var tools := [[], []]
 		var m := DraftMatch.new(500 + match_index, {"pools": [decks[0] + tools[0], decks[1] + tools[1]]})
 		var bots := [DraftBot.new(m, 0, match_index * 3 + 1, 0.7), DraftBot.new(m, 1, match_index * 3 + 2, 0.4)]
 		var guard := 0
@@ -150,17 +159,21 @@ func test_no_animal_outside_the_deck_ever_appears() -> void:
 
 
 ## Whole matches between computer players: from round 2 on, every player is
-## offered exactly 4 different animals from their deck and 2 different tools,
-## makes 3 picks every round, and can still upgrade and add squads.
+## offered exactly 4 different animals from their deck (and, with Ranger
+## tools on, 2 different tools: they're on for this test), makes 3 picks
+## every round, and can still upgrade and add groups.
 func test_later_rounds_offer_four_animals_and_two_tools() -> void:
+	borrow_tools()
+	var rules: Dictionary = GameData.draft_rules.duplicate(true)
+	rules.offer_tools = 2
 	var animals := _animals()
-	var want_animals := int(GameData.draft_rules.offer_animals)
-	var want_tools := int(GameData.draft_rules.offer_tools)
+	var want_animals := int(rules.offer_animals)
+	var want_tools := int(rules.offer_tools)
 	var kinds := {}
 	for match_index in 6:
 		var decks := [animals.slice(match_index * 3, match_index * 3 + 8), animals.slice(match_index * 4 + 1, match_index * 4 + 9)]
 		var tools := [["net", "air_horn", "medkit"], ["net", "food_bait"]]
-		var m := DraftMatch.new(700 + match_index, {"pools": [decks[0] + tools[0], decks[1] + tools[1]]})
+		var m := DraftMatch.new(700 + match_index, {"pools": [decks[0] + tools[0], decks[1] + tools[1]]}, rules)
 		var bots := [DraftBot.new(m, 0, match_index * 5 + 1, 0.7), DraftBot.new(m, 1, match_index * 5 + 2, 0.4)]
 		var guard := 0
 		var checked_round := 0
@@ -179,7 +192,7 @@ func test_later_rounds_offer_four_animals_and_two_tools() -> void:
 					check(offered_animals.all(func(id): return decks[team].has(id) and offered.count(id) == 1), "round %d, team %d: different animals from the deck" % [m.round_number, team])
 					check(offered_tools.all(func(id): return tools[team].has(id) and offered.count(id) == 1), "round %d, team %d: different tools of its own" % [m.round_number, team])
 					check(offered.slice(0, want_animals) == offered_animals, "animals first, then tools (two groups)")
-					check_eq(int(m.picks_left[team]), int(GameData.draft_rules.picks_per_round), "3 picks")
+					check_eq(int(m.picks_left[team]), int(rules.picks_per_round), "3 picks")
 			match m.phase:
 				"pick":
 					for b in bots:
@@ -231,7 +244,7 @@ func test_the_last_deck_is_kept() -> void:
 
 func _second_round(seed_value: int) -> DraftMatch:
 	var deck := ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "red_fox", "lion", "barn_owl", "raccoon"]
-	var m := DraftMatch.new(seed_value, {"pools": [deck + ["net"], deck + ["net"]]})
+	var m := DraftMatch.new(seed_value, {"pools": [deck, deck]})
 	for id in ["brown_bear", "wild_boar", "gray_squirrel"]:
 		m.pick(0, _slot(m, 0, id))
 	for id in ["lion", "barn_owl", "raccoon"]:
@@ -243,13 +256,14 @@ func _second_round(seed_value: int) -> DraftMatch:
 	return m
 
 
-## Reinforce a Ranged animal: 6 of it on the field in the next fight.
-func test_reinforce_adds_a_full_squad() -> void:
+## More of an animal you have: another full group of it (12 Squirrels) on
+## the field in the next fight.
+func test_reinforce_adds_a_full_group() -> void:
 	var m := _second_round(31)
 	var index := m.herd_index(0, "gray_squirrel")
-	check_eq(m.can_reinforce(0, index), "", "a pick can add a squad")
+	check_eq(m.can_reinforce(0, index), "", "a pick can add a group")
 	check(m.reinforce(0, index), "reinforced")
-	check_eq(int(m.herds[0][index].squads), 2, "two squads")
+	check_eq(int(m.herds[0][index].squads), 2, "two groups")
 	check_eq(int(m.herds[0][index].stars), 1, "no star")
 	check_eq(m.picks_left[0], int(GameData.draft_rules.picks_per_round) - 1, "it used one pick")
 	check_eq(m.picks_made[0][-1].kind, "squad", "the pick slot shows it")
@@ -257,7 +271,7 @@ func test_reinforce_adds_a_full_squad() -> void:
 	m.set_ready(0)
 	m.set_ready(1)
 	check_eq(m.phase, "fight", "fighting")
-	check_eq(_on_field(m, 0, "gray_squirrel"), 6, "6 Gray Squirrels on the field")
+	check_eq(_on_field(m, 0, "gray_squirrel"), 12, "12 Gray Squirrels on the field")
 
 
 ## Upgrade one: its stars go up and its animals don't.
@@ -266,18 +280,18 @@ func test_upgrade_adds_a_star_not_animals() -> void:
 	var index := m.herd_index(0, "gray_squirrel")
 	check(m.star(0, index), "upgraded")
 	check_eq(int(m.herds[0][index].stars), 2, "a star")
-	check_eq(int(m.herds[0][index].squads), 1, "still one squad")
+	check_eq(int(m.herds[0][index].squads), 1, "still one group")
 	m.picks_left = [0, 0]
 	m.set_ready(0)
 	m.set_ready(1)
 	var squirrels: Array = m.sim.units(0).filter(func(f): return f.card.id == "gray_squirrel")
-	check_eq(squirrels.size(), 3, "still 3 Gray Squirrels")
+	check_eq(squirrels.size(), 6, "still 6 Gray Squirrels")
 	for f in squirrels:
 		check_eq(int(f.memory.stars), 2, "each with the star")
 
 
 ## The rules around it: not in round 1, undo takes it back, and a full army
-## can't take another squad (it can still upgrade).
+## can't take another group (it can still upgrade).
 func test_reinforce_rules() -> void:
 	var deck := ["brown_bear", "wild_boar", "gray_squirrel", "peregrine_falcon", "red_fox", "lion", "barn_owl", "raccoon"]
 	var first := DraftMatch.new(33, {"pools": [deck, deck]})
@@ -287,9 +301,10 @@ func test_reinforce_rules() -> void:
 	var index := m.herd_index(0, "gray_squirrel")
 	m.reinforce(0, index)
 	check(m.undo(0), "taken back")
-	check_eq(int(m.herds[0][index].squads), 1, "one squad again")
-	m.herds[0][index].squads = 13
-	check_eq(m.can_reinforce(0, index), "Army full", "no room for 3 more")
+	check_eq(int(m.herds[0][index].squads), 1, "one group again")
+	m.herds[0][index].squads = 6
+	check(m.army_units(0) + 6 > int(GameData.draft_rules.army_max_units), "the army is full (%d animals)" % m.army_units(0))
+	check_eq(m.can_reinforce(0, index), "Army full", "no room for 6 more")
 	check_eq(m.can_star(0, index), "", "an upgrade still fits")
 
 

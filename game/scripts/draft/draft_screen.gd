@@ -535,8 +535,10 @@ func _build_options(pop := true) -> void:
 		var card := _size("start_card", Vector2(156, 176))
 		_options_holder.custom_minimum_size.y = ceilf(duel.offers[0].size() / 4.0) * (card.y + row_gap)
 	else:
+		# One tray of animals (and one of tools under it, when there are any).
 		var pad := Feel.num("pick", "tray_padding", 8.0)
-		_options_holder.custom_minimum_size.y = 2.0 * (_size("offer_card", Vector2(156, 184)).y + 2.0 * pad) + gap
+		var trays := 2.0 if duel.offers[0].any(func(o): return GameData.is_tool(o.id)) else 1.0
+		_options_holder.custom_minimum_size.y = trays * (_size("offer_card", Vector2(156, 184)).y + 2.0 * pad) + (trays - 1.0) * gap
 	if duel.is_first_round():
 		var scroll := ScrollContainer.new()
 		scroll.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -655,11 +657,12 @@ func _refresh_pick() -> void:
 		var card: GameCard = _option_cards[slot]
 		var item: Dictionary = duel.offers[0][slot]
 		var index := duel.herd_index(0, item.id)
-		var can := duel.can_pick(0, slot) == ""
-		# An animal already in your army: picking it adds another squad
-		# ("+3" on a Ranged card), its stars stay as they are.
+		var can_more := duel.can_pick(0, slot) == ""
+		var can := can_more or duel.can_pick_upgrade(0, slot) == ""
+		# An animal already in your army: picking it asks, more of it ("+6"
+		# on a Squirrel's card) or an upgrade; its stars show.
 		var owned := index >= 0 and can and not duel.is_first_round()
-		var tag := "+%d" % DraftMatch.squad_units(String(item.id)) if owned else ""
+		var tag := "+%d" % DraftMatch.squad_units(String(item.id)) if owned and can_more else ""
 		var stars := int(duel.herds[0][index].stars) if owned else 0
 		if stars != card.stars or tag != card.squad_tag:
 			card.stars = stars
@@ -812,10 +815,19 @@ func herd_row_order() -> Array:
 	return out
 
 
+## Tapping an offered card takes it. An animal already in your army asks
+## first: Upgrade it, or add more of it.
 func _tap_option(slot: int) -> void:
-	var problem := duel.can_pick(0, slot)
-	if problem != "":
+	var can_more: bool = duel.can_pick(0, slot) == ""
+	var can_up: bool = duel.can_pick_upgrade(0, slot) == ""
+	if not can_more and not can_up:
 		_nope(_option_cards[slot])
+		return
+	var id: String = duel.offers[0][slot].id
+	if not GameData.is_tool(id) and not duel.is_first_round() and duel.herd_index(0, id) >= 0:
+		_ask_upgrade_or_more(id, can_up, can_more,
+			func() -> void: _pick(slot, -1, true),
+			func() -> void: _pick(slot, -1))
 		return
 	if duel.needs_tool_swap(0, slot):
 		_ask_tool_swap(slot)
@@ -823,35 +835,36 @@ func _tap_option(slot: int) -> void:
 	_pick(slot, -1)
 
 
-func _pick(slot: int, replace: int) -> void:
+func _pick(slot: int, replace: int, upgrade := false) -> void:
 	var card: Control = _option_cards[slot]
 	var from := card.get_global_rect()
 	var into: int = duel.picks_made[0].size()
 	var id: String = duel.offers[0][slot].id
-	if not duel.pick(0, slot, replace):
+	if not duel.pick(0, slot, replace, upgrade):
 		_nope(card)
 		return
-	Sound.play("coin", -4.0)
+	if upgrade:
+		UIFx.stars(from.get_center(), 6)
+		Sound.play("upgrade")
+	else:
+		Sound.play("coin", -4.0)
 	_fly_to_slot(id, from, into)
 
 
-## Tapping an animal in your army: two big buttons, Upgrade (a star for
-## every squad of it) and +Squad (another full squad of it: "+3 Squad" for
-## Ranged), each one of your 3 picks. Nothing else.
-func _tap_herd(index: int) -> void:
-	if index < 0 or index >= duel.herds[0].size():
-		return
-	var card := _herd_card(index)
-	var can_up: bool = duel.can_star(0, index) == ""
-	var can_more: bool = duel.can_reinforce(0, index) == ""
-	if not can_up and not can_more:
-		_nope(card)
-		return
-	var id: String = duel.herds[0][index].id
+## The choice for an animal already in your army, as two big buttons:
+## Upgrade (a star for every group of it) or more of it (another full
+## group: "+6 More" for Squirrels). Each is one of your 3 picks; a tap
+## outside takes neither.
+func _ask_upgrade_or_more(id: String, can_up: bool, can_more: bool, on_up: Callable, on_more: Callable) -> void:
+	var box := UIStyle.vbox("m")
+	box.alignment = BoxContainer.ALIGNMENT_CENTER
+	# (Labels come outlined, so this reads over the dimmed screen.)
+	box.add_child(UIStyle.label("%s: upgrade, or add more?" % String(GameData.get_card(id).get("name", "")), "large", Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
 	var row := UIStyle.hbox("m")
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	var up := UIStyle.button("Upgrade", "gold" if can_up else "disabled", "star")
-	var more := UIStyle.button("+%d Squad" % DraftMatch.squad_units(id), "primary" if can_more else "disabled", "class_" + GameData.class_of(id))
+	box.add_child(row)
+	var up := UIStyle.button("Upgrade", "gold" if can_up else "disabled", "upgrade")
+	var more := UIStyle.button("+%d More" % DraftMatch.squad_units(id), "primary" if can_more else "disabled", "class_" + GameData.class_of(id))
 	var big := _size("choice_button", Vector2(236, 128))
 	for b: ChunkyButton in [up, more]:
 		b.min_width = big.x
@@ -859,17 +872,32 @@ func _tap_herd(index: int) -> void:
 		row.add_child(b)
 	up.disabled = not can_up
 	more.disabled = not can_more
-	var layer := _overlay(row, true)
+	var layer := _overlay(box, true)
 	layer.name = "ArmyChoice"
 	up.pressed.connect(func() -> void:
 		layer.queue_free()
-		_upgrade(index))
+		on_up.call())
 	more.pressed.connect(func() -> void:
 		layer.queue_free()
-		_reinforce(index))
+		on_more.call())
 
 
-## Upgrade: a star for every squad of herd animal `index` (one pick).
+## Tapping an animal in your army asks the same: Upgrade (a star for every
+## group of it) or more of it, each one of your 3 picks. Nothing else.
+func _tap_herd(index: int) -> void:
+	if index < 0 or index >= duel.herds[0].size():
+		return
+	var can_up: bool = duel.can_star(0, index) == ""
+	var can_more: bool = duel.can_reinforce(0, index) == ""
+	if not can_up and not can_more:
+		_nope(_herd_card(index))
+		return
+	_ask_upgrade_or_more(String(duel.herds[0][index].id), can_up, can_more,
+		func() -> void: _upgrade(index),
+		func() -> void: _reinforce(index))
+
+
+## Upgrade: a star for every group of herd animal `index` (one pick).
 func _upgrade(index: int) -> void:
 	var card := _herd_card(index)
 	var from := card.get_global_rect()
@@ -882,7 +910,7 @@ func _upgrade(index: int) -> void:
 		_fly_to_slot(String(duel.herds[0][index].id), from, into)
 
 
-## Reinforce: another full squad of herd animal `index` (one pick); it
+## Reinforce: another full group of herd animal `index` (one pick); it
 ## marches into the formation.
 func _reinforce(index: int) -> void:
 	var card := _herd_card(index)
@@ -895,8 +923,8 @@ func _reinforce(index: int) -> void:
 		_fly_to_slot(String(duel.herds[0][index].id), from, into)
 
 
-## A tap on your army: the animal nearest it offers Upgrade or +Squad (like
-## tapping its card in the row below).
+## A tap on your army: the animal nearest it offers Upgrade or more of it
+## (like tapping its card in the row below).
 func _on_army_tapped(at: Vector2i) -> void:
 	var best := -1
 	var best_d := 1 << 40
@@ -1017,7 +1045,7 @@ func _first_match_tip() -> void:
 		return
 	seen.append(key)
 	Profile.save()
-	var text := "Tap 3 animals" if key == "pick" else "Tap your animals: Upgrade or +Squad"
+	var text := "Tap 3 animals" if key == "pick" else "Pick an animal you have: Upgrade it, or add more"
 	# Round 2's goes above the army row's sort bar, not over it.
 	var anchor: Control = _options_holder if key == "pick" else (_army_sort as Control if _army_sort.visible else _herd_scroll)
 	_hide_tip()

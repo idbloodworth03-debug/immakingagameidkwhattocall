@@ -4,10 +4,10 @@ An attack is a short list of poses and the moment each is reached: the
 wind-up (the body going the other way first, held a beat), the strike (a
 couple of frames, landing on the clip's hit moment exactly), the
 follow-through (the blow carrying on past the hit) and the way back. This
-module blends between them, lets the loose parts (tail, ears, head) trail
-a little behind the body and wobble to a stop after the hit, and squashes
-and stretches the body. Every number is in strikes.json; tools/creatures/
-README.md ("Attacks") explains how to write one.
+module blends between them, lets the loose parts (a tail, ears, a trunk,
+wings) trail a little behind the body and wobble to a stop after the hit,
+and squashes and stretches the body. Every number is in strikes.json;
+tools/creatures/README.md ("Attacks") explains how to write one.
 
 A clip's length and its hit moment are motion.py's (ANIMATIONS, HIT_AT),
 as before: the game times its hits to them.
@@ -321,7 +321,6 @@ class Clip:
                 out[("rot", bone, axis)] = out.get(("rot", bone, axis), 0.0) + bump
         return out
 
-
     def keep(self, motion, c):
         """The reach rule for this clip: (where its front and its back end
         are as it starts, how far forward its front may be at the hit and
@@ -395,8 +394,9 @@ def play(motion, c, style, t):
     travels further than its reach allows (the reach rule, below)."""
     hit = motion.HIT_AT.get(style, 0.45)
     cl = clip(c, style, hit)
-    p = _pose(motion, c, cl.sample(t))
+    # (The rule first: it settles how far the clip's own steps go.)
     keep = cl.keep(motion, c)
+    p = _pose(motion, c, cl.sample(t))
     if keep is not None:
         slide = cl.held(c, p, t)
         if abs(slide) > 1e-9:
@@ -524,9 +524,9 @@ _RESTS = {}
 def _rests(c):
     """Each bone at rest in the rig's space, as scene._armature builds it:
     (4x4, its length)."""
-    key = id(c)
-    if key in _RESTS:
-        return _RESTS[key]
+    kept = _RESTS.get(id(c))
+    if kept is not None:
+        return kept[1]
     out = {}
     for b in c.bones:
         head = np.array(c.joints[b.head], float)
@@ -541,7 +541,9 @@ def _rests(c):
         m = np.eye(4)
         m[:3, 0], m[:3, 1], m[:3, 2], m[:3, 3] = np.cross(y, z), y, z, head
         out[b.name] = (m, length)
-    _RESTS[key] = out
+    # (Kept with the animal itself: an id is only its own while it lives,
+    # and several animals are built in one run.)
+    _RESTS[id(c)] = (c, out)
     return out
 
 

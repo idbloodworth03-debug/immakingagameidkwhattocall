@@ -43,8 +43,9 @@ mane grows with its face).
    or already rendered, a looping victory. The death pose is kept for
    previews (`python strip.py <id> death`) but isn't in the sheets: the
    game's knockouts are a cartoon poof. The attacks of the animals on the
-   roster of `strikes.json` are played from key poses instead (`strikes.py`:
-   see "Attacks" below); the ones written here stay as the cards' poses.
+   roster of `strikes.json` (all 35) are played from key poses instead
+   (`strikes.py`: see "Attacks" below); the ones written here stay as the
+   cards' poses.
 5. **Render** (`sprites.py`): the card portraits and the sprite sheets (the
    game shows its animals as 3D models now, from step 8; the sheets are its
    fallback, its timing data and the source of the crowd strips; the web
@@ -250,16 +251,12 @@ pose_allowance of how it stands (the camera makes room for no more).
     python strike_check.py                    # everyone on the roster
 
 **The roster** (`strikes.json` "roster"): the animals whose attacks are
-played from key poses. The sample was the Bear (swipe, slam), the Wolf
-(bite, pounce), the Squirrel (throw, lob), the Falcon (dive, rake) and
-the Cobra (spit); the Tanks followed (the Elephant's stomp, the Rhino's
-charge, the Panda's swipe, the Hippo's bite, the Turtle's bite and charge,
-the Yeti's pound), the Tank Destroyers and the Fox (bites, pounces, the
-Boar's charge, the Badger's swipe) and the other Ranged animals (the
-Raccoon's fling and lob, the Skunk's stomp and handstand, the Camel's
-spit, the Orangutan's throw, the Unicorn's charge) and the rest of the Air
-class (the Owl's dive and rake, the Eagle's, Macaw's and Condor's dives,
-the Dragon's); the Specialists follow.
+played from key poses: all 35 now (50 clips: every attack, second attack
+and Stun wind-up). The styles: swipe, slam, bite, pounce, charge, stomp,
+throw, lob, spit, handstand, dive, rake, and the upright animals' pound;
+with a body plan's own where its build asks for one (a snake's spit; the
+Eel's bite, ram and shock, flat on the ground; the apes' pound, throw and
+chest beat; the Dragon's dive).
 
 An animal gets its own version of a style where its build asks for one:
 the Hippo's bite is a yawn thrown open to the sky and brought down, the
@@ -267,10 +264,17 @@ Turtle's a neck shot out of the shell, the Komodo Dragon's winds up
 sideways in an S and whips straight (a lizard, and the best read there is
 from above), Cerberus twists as it rears so its three heads swing; the
 Camel swings its head out to the side with its cheeks full before it
-spits; the Unicorn's charge is a lance thrust, the horn level; the
-Elephant's stomp keeps its trunk from reaching past its feet. An animal
-that idles in a stance of its own starts and ends its attacks there (the
-Squirrel sitting up, the Raccoon hunched, the Skunk with its tail high).
+spits; the Unicorn's charge is a lance thrust, the horn level; the Kraken
+hauls a tentacle up and whips it forward; the Seal flings its flippers
+wide as it stands for its belly flop; the Red Panda stands with both arms
+up before it swipes; the Elephant's stomp keeps its trunk from reaching
+past its feet. An animal that idles in a stance of its own starts and ends
+its attacks there (the Squirrel sitting up, the Raccoon hunched, the Skunk
+with its tail high).
+
+Sprite sheets (the fallback, not in the web build) still show the old
+attacks until they are rendered again (`tools/packs/render.py <id> --only
+sprites`); their timing data (`sheet.json`) is unchanged and right.
 
 ## Running it
 

@@ -3,7 +3,7 @@
  "gape": 0.5,
  "limits": {"reach_at_hit": 0.6, "reach_most": 0.8, "flier_reach": 1.6, "shooter_ahead_tiles": 0.6, "back_tiles": 0.3},
  "standard": {"windup": 0.4, "swing": 0.5},
- "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti", "cerberus", "honey_badger", "komodo_dragon", "lion", "tiger", "wild_boar", "red_fox", "raccoon", "striped_skunk", "wild_bactrian_camel", "sumatran_orangutan", "unicorn", "barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon"],
+ "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti", "cerberus", "honey_badger", "komodo_dragon", "lion", "tiger", "wild_boar", "red_fox", "raccoon", "striped_skunk", "wild_bactrian_camel", "sumatran_orangutan", "unicorn", "barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon", "harbor_seal", "electric_eel", "red_panda", "mountain_gorilla", "sunda_pangolin", "pygmy_three_toed_sloth", "kraken"],
  "styles": {
   "swipe": {
    "keys": [
@@ -1579,6 +1579,90 @@
   },
   "barn_owl": {"rake": {"poses": {"windup": {"pitch": 0.4}, "strike": {"pitch": 0.5}, "between": {"pitch": 0.44}, "again": {"pitch": 0.5}}}},
   "harpy_eagle": {"dive": {"poses": {"windup": {"pitch": 0.24}, "stoop": {"pitch": -0.38}, "follow": {"pitch": 0.24}}}},
-  "california_condor": {"dive": {"poses": {"windup": {"pitch": 0.14}, "stoop": {"pitch": -0.24}, "follow": {"pitch": 0.14}}}}
+  "california_condor": {"dive": {"poses": {"windup": {"pitch": 0.14}, "stoop": {"pitch": -0.24}, "follow": {"pitch": 0.14}}}},
+  "kraken": {
+   "swipe": {
+    "poses": {
+     "windup": {
+      "replace": true,
+      "rear": 0.2,
+      "turn": -0.3,
+      "swell": 0.07,
+      "move": [0.0, -0.1, 0.02],
+      "bones": {
+       "chest": [0.1, 0.0, -0.15],
+       "neck": [0.15, 0.0, 0.25],
+       "head": [0.1, 0.0, 0.2],
+       "jaw": [-0.8, 0.0, 0.0],
+       "fl_upper.R": [0.95, 0.0, -0.5],
+       "fl_lower.R": [0.5, 0.0, 0.0],
+       "fl_foot.R": [0.6, 0.0, 0.0],
+       "fl_upper.L": [0.3, 0.0, 0.4],
+       "fl_lower.L": [0.2, 0.0, 0.0],
+       "hl_upper.L": [0.0, 0.0, 0.3],
+       "hl_upper.R": [0.0, 0.0, -0.3]
+      },
+      "scale": {"fl_upper.R": [1.0, 1.2, 1.0], "fl_foot.R": [1.3, 1.3, 1.3]},
+      "tail": [-0.4, 0.5]
+     },
+     "strike": {
+      "replace": true,
+      "dip": 0.04,
+      "turn": 0.15,
+      "move": [0.0, 0.25, 0.0],
+      "stretch": 0.06,
+      "bones": {
+       "chest": [-0.08, 0.0, 0.15],
+       "neck": [-0.1, 0.0, -0.15],
+       "head": [-0.05, 0.0, -0.1],
+       "jaw": [-0.3, 0.0, 0.0],
+       "fl_upper.R": [0.2, 0.0, 0.75],
+       "fl_lower.R": [0.05, 0.0, 0.05],
+       "fl_foot.R": [0.1, 0.0, 0.0],
+       "fl_upper.L": [0.0, 0.0, -0.2]
+      },
+      "scale": {"fl_upper.R": [1.0, 1.05, 1.0], "fl_foot.R": [1.4, 1.4, 1.4]},
+      "tail": [0.3, -0.4]
+     },
+     "follow": {
+      "replace": true,
+      "dip": 0.05,
+      "turn": 0.25,
+      "move": [0.0, 0.28, -0.02],
+      "squash": 0.1,
+      "bones": {
+       "chest": [-0.1, 0.0, 0.2],
+       "neck": [-0.12, 0.0, -0.2],
+       "head": [-0.05, 0.0, -0.12],
+       "fl_upper.R": [-0.05, 0.0, 1.2],
+       "fl_lower.R": [0.0, 0.0, 0.15],
+       "fl_foot.R": [0.0, 0.0, 0.1],
+       "fl_upper.L": [0.0, 0.0, -0.2]
+      },
+      "scale": {"fl_upper.R": [1.0, 1.0, 1.0], "fl_foot.R": [1.3, 1.3, 1.3]},
+      "tail": [0.4, -0.6]
+     }
+    }
+   }
+  },
+  "harbor_seal": {
+   "slam": {
+    "poses": {
+     "windup": {
+      "swell": 0.1,
+      "turn": -0.12,
+      "bones": {
+       "fl_upper.L": [0.9, 0.0, 0.9],
+       "fl_upper.R": [0.9, 0.0, -0.9],
+       "fl_lower.L": [0.0, 0.0, 0.0],
+       "fl_lower.R": [0.0, 0.0, 0.0],
+       "fl_foot.L": [0.0, 0.0, 0.0],
+       "fl_foot.R": [0.0, 0.0, 0.0]
+      },
+      "scale": {"fl_upper.L": [1.5, 1.5, 1.5], "fl_upper.R": [1.5, 1.5, 1.5], "fl_foot.L": [1.3, 1.3, 1.3], "fl_foot.R": [1.3, 1.3, 1.3]}
+     }
+    }
+   }
+  }
  }
 }

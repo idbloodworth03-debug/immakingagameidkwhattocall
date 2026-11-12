@@ -649,7 +649,7 @@ high, stubby wings (about a third of the real bird's span) and its legs
 dangling under it, where the bird it replaces flew stretched out flat.
 It is drawn as tall as before, well inside the old wingspan.
 
-## Attacks that read (November 2026, in progress)
+## Attacks that read (November 2026)
 
 The toys' attacks were the old models': a paw lifted and came down, a head
 leaned in. From the side that passed; from the game's camera, which looks
@@ -689,7 +689,7 @@ blow that changes it from there by at least 0.5, from behind and from the
 front). Clip lengths and hit moments are as they were, so fights play out
 exactly as before; the card portraits are as they were too.
 
-Done so far: the sample (the Brown Bear's swipe and body slam, the Wolf
+The sample came first (the Brown Bear's swipe and body slam, the Wolf
 Pack's bite and pounce, the Gray Squirrel's throw and overhead lob, the
 Peregrine Falcon's dive and talon rake, the King Cobra's spit) and the
 other Tanks: the Asian Elephant rears with its ears flared and its trunk
@@ -713,7 +713,20 @@ and thrusts. And the Air class: the Barn Owl, the Harpy Eagle, the
 Hyacinth Macaw and the California Condor climb with their wings up, stoop
 with them swept back and spread wings and talons wide on the hit, as the
 Falcon does (the Owl rakes with its talons too); the Dragon rears in the
-air with its wings up and its mouth open and dives claws first.
+air with its wings up and its mouth open and dives claws first. And the
+Specialists: the Harbor Seal rears its head back and darts, or stands up
+with its flippers flung wide and belly flops; the Electric Eel coils into
+an S and whips straight to bite, bunches up and rams, and for its Stun
+shock rises swollen and trembling before it lashes; the Red Panda stands
+tall with both arms up and swipes; the Mountain Gorilla hauls both fists
+overhead and pounds, and beats its chest first for its Stun blow; the
+Sunda Pangolin and the Pygmy Sloth rear and swipe (the Sloth with its long
+clawed arm); the Kraken hauls a tentacle up and whips it forward.
+
+All 35 animals play their attacks this way now: 50 clips (every attack,
+second attack and Stun wind-up), every one passing the standard. Still to
+do: the sprite sheets (the fallback, not in the web build) show the old
+attacks until they are rendered again.
 
 ## What's next for the art
 

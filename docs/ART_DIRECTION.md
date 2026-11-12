@@ -709,7 +709,11 @@ its tail fluffed, or goes up on its front paws and fans its tail out as it
 sprays; the Bactrian Camel rocks back with its cheeks full and its head
 swung out to the side, and whips it forward; the Orangutan twists with a
 long arm cocked high and throws; the Unicorn lowers its horn like a lance
-and thrusts.
+and thrusts. And the Air class: the Barn Owl, the Harpy Eagle, the
+Hyacinth Macaw and the California Condor climb with their wings up, stoop
+with them swept back and spread wings and talons wide on the hit, as the
+Falcon does (the Owl rakes with its talons too); the Dragon rears in the
+air with its wings up and its mouth open and dives claws first.
 
 ## What's next for the art
 

@@ -3,7 +3,7 @@
  "gape": 0.5,
  "limits": {"reach_at_hit": 0.6, "reach_most": 0.8, "flier_reach": 1.6, "shooter_ahead_tiles": 0.6, "back_tiles": 0.3},
  "standard": {"windup": 0.4, "swing": 0.5},
- "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti", "cerberus", "honey_badger", "komodo_dragon", "lion", "tiger", "wild_boar", "red_fox", "raccoon", "striped_skunk", "wild_bactrian_camel", "sumatran_orangutan", "unicorn"],
+ "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti", "cerberus", "honey_badger", "komodo_dragon", "lion", "tiger", "wild_boar", "red_fox", "raccoon", "striped_skunk", "wild_bactrian_camel", "sumatran_orangutan", "unicorn", "barn_owl", "harpy_eagle", "hyacinth_macaw", "california_condor", "dragon"],
  "styles": {
   "swipe": {
    "keys": [
@@ -1576,6 +1576,9 @@
      }
     }
    }
-  }
+  },
+  "barn_owl": {"rake": {"poses": {"windup": {"pitch": 0.4}, "strike": {"pitch": 0.5}, "between": {"pitch": 0.44}, "again": {"pitch": 0.5}}}},
+  "harpy_eagle": {"dive": {"poses": {"windup": {"pitch": 0.24}, "stoop": {"pitch": -0.38}, "follow": {"pitch": 0.24}}}},
+  "california_condor": {"dive": {"poses": {"windup": {"pitch": 0.14}, "stoop": {"pitch": -0.24}, "follow": {"pitch": 0.14}}}}
  }
 }

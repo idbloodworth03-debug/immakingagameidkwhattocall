@@ -134,7 +134,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.51,
-   "pose_up": 1.147
+   "pose_up": 1.193
   },
   "king_cobra": {
    "size": 1.98,
@@ -159,7 +159,7 @@
    "reach": 0.6,
    "shooter": false,
    "width": 0.71,
-   "pose_up": 1.129
+   "pose_up": 1.256
   },
   "hyacinth_macaw": {
    "size": 2.38,
@@ -183,7 +183,7 @@
    "reach": 0.7,
    "shooter": false,
    "width": 1.93,
-   "pose_up": 1.18
+   "pose_up": 1.198
   },
   "unicorn": {
    "size": 2.08,

@@ -257,8 +257,9 @@ charge, the Panda's swipe, the Hippo's bite, the Turtle's bite and charge,
 the Yeti's pound), the Tank Destroyers and the Fox (bites, pounces, the
 Boar's charge, the Badger's swipe) and the other Ranged animals (the
 Raccoon's fling and lob, the Skunk's stomp and handstand, the Camel's
-spit, the Orangutan's throw, the Unicorn's charge); the Air class and the
-Specialists follow.
+spit, the Orangutan's throw, the Unicorn's charge) and the rest of the Air
+class (the Owl's dive and rake, the Eagle's, Macaw's and Condor's dives,
+the Dragon's); the Specialists follow.
 
 An animal gets its own version of a style where its build asks for one:
 the Hippo's bite is a yawn thrown open to the sky and brought down, the

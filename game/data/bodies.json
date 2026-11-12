@@ -30,7 +30,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.3,
-   "pose_up": 1.068
+   "pose_up": 1.073
   },
   "peregrine_falcon": {
    "size": 2.24,
@@ -46,7 +46,7 @@
    "reach": 0.35,
    "shooter": false,
    "width": 0.52,
-   "pose_up": 1.067
+   "pose_up": 1.26
   },
   "wolf_pack": {
    "size": 1.86,
@@ -78,7 +78,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.48,
-   "pose_up": 1.078
+   "pose_up": 1.054
   },
   "tiger": {
    "size": 2.24,
@@ -110,7 +110,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.87,
-   "pose_up": 1.254
+   "pose_up": 1.214
   },
   "california_condor": {
    "size": 2.71,
@@ -207,7 +207,7 @@
    "reach": 0.35,
    "shooter": false,
    "width": 0.47,
-   "pose_up": 1.112
+   "pose_up": 1.164
   },
   "harbor_seal": {
    "size": 2.3,
@@ -240,7 +240,7 @@
    "reach": 0.45,
    "shooter": false,
    "width": 0.65,
-   "pose_up": 1.086
+   "pose_up": 1.178
   },
   "sunda_pangolin": {
    "size": 2.65,
@@ -281,7 +281,7 @@
    "reach": 0.55,
    "shooter": false,
    "width": 0.96,
-   "pose_up": 1.163
+   "pose_up": 1.229
   },
   "kraken": {
    "size": 2.56,

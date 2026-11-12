@@ -254,12 +254,15 @@ played from key poses. The sample was the Bear (swipe, slam), the Wolf
 (bite, pounce), the Squirrel (throw, lob), the Falcon (dive, rake) and
 the Cobra (spit); the Tanks followed (the Elephant's stomp, the Rhino's
 charge, the Panda's swipe, the Hippo's bite, the Turtle's bite and charge,
-the Yeti's pound); the other classes follow.
+the Yeti's pound) and the Tank Destroyers and the Fox (bites, pounces, the
+Boar's charge, the Badger's swipe); the other classes follow.
 
 An animal gets its own version of a style where its build asks for one:
 the Hippo's bite is a yawn thrown open to the sky and brought down, the
-Turtle's a neck shot out of the shell, the Elephant's stomp keeps its
-trunk from reaching past its feet.
+Turtle's a neck shot out of the shell, the Komodo Dragon's winds up
+sideways in an S and whips straight (a lizard, and the best read there is
+from above), Cerberus twists as it rears so its three heads swing; the
+Elephant's stomp keeps its trunk from reaching past its feet.
 
 ## Running it
 

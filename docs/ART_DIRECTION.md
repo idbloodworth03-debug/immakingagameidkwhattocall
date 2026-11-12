@@ -697,7 +697,13 @@ high and stomps; the Black Rhino hunkers down pawing the ground and tosses
 its horn up; the Giant Panda swipes like the Bear; the Hippopotamus throws
 its huge mouth open to the sky and chomps down; the Snapping Turtle shoots
 its neck out of its shell to bite and rams with its shell; the Yeti hauls
-both fists overhead and pounds the ground.
+both fists overhead and pounds the ground. And the Tank Destroyers:
+Cerberus rears with a twist and lunges with all three heads; the Honey
+Badger bristles up and bites, or swipes; the Komodo Dragon coils sideways
+into an S and whips straight; the Lion and the Tiger crouch flat, spring
+up with their paws spread and land on their prey; the Wild Boar hunkers
+and tosses its tusks up, or rears and bites; the Red Fox pounces like the
+cats.
 
 ## What's next for the art
 

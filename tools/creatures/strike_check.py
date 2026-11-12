@@ -137,7 +137,7 @@ def check(name, down):
             made = strikes.clip(c, style, hit)
             if made.keep(motion, c) is not None:
                 tile = float(strikes._BODIES["models"][name]["tile_scale"])
-                row["travel"] = {k: (v * tile if isinstance(v, float) and k not in ("gain", "slide") else v) for k, v in made.travel.items()}
+                row["travel"] = {k: (v * tile if isinstance(v, float) and k != "gain" else v) for k, v in made.travel.items()}
                 row["allowed"] = tuple(v * tile for v in made.travel["allowed"])
         rows.append(row)
     return rows
@@ -170,8 +170,8 @@ def main():
             if "travel" in row:
                 t = row["travel"]
                 line += "   ahead %.2f at the hit, %.2f at most (allowed %.2f, %.2f)" % (t["ahead_at_hit"], t["ahead_most"], row["allowed"][0], row["allowed"][1])
-                if t["gain"] < 1.0 or t["slide"] < 1.0:
-                    line += "; drawn in: its steps x%.2f%s" % (t["gain"], ", its body slid x%.2f" % t["slide"] if t["slide"] < 1.0 else "")
+                if t["gain"] != 1.0 or t["held"] > 0.005:
+                    line += "; its steps x%.2f%s" % (t["gain"], ", its body held back %.2f" % t["held"] if t["held"] > 0.005 else "")
             lines.append(line + ("   " + " ".join(marks) if marks else ""))
     print("%-24s %-8s %-12s outline change: wind-up (at least %.2f) / swing into the blow (at least %.2f); tallest (at most %.2f); travel in field tiles" % (
         "animal", "clip", "style", wind, swing, roof))

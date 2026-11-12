@@ -1,9 +1,9 @@
 {
- "_note": "Attacks as key poses, played by tools/creatures/strikes.py (see tools/creatures/README.md, Attacks). styles: an attack style's keys (when each pose is reached: a share of the clip, or the hit moment plus or minus one; then the pose; then how it is arrived at: out brakes into it, in speeds into it, inout both, linear neither) and its poses. A pose's numbers are turns in radians on top of the animal's stance: rear (nose up on the hind feet), dip (nose down on the front feet), pitch, turn (to its left) and roll of the whole body; move [right, forward, up] in shoulder heights; squash, stretch and swell of the whole body (shares); bones {bone: [x, y, z]} (x swings a bone forward or up, y twists it, z turns it sideways; a jaw's x is in the animal's own gapes); legs {fl.R: [upper, lower, foot, splay]}; wings [shoulder, elbow, hand, sweep, twist]; tail [curl, swing]; trunk [curl, swing]; ears [back, out]; scale {bone: [x, y, z]}; shift {bone: [x, y, z]} in shoulder heights along the bone's own axes. like and times build a pose on another. lag: how far behind the body a loose part runs (a share of the clip; a tail's bones each one more). wobble: a loose part springing to a stop after the hit [axis, radians, swings, how fast it dies]. mirror: led by the other side. limits: the reach rule (strikes.py): the share of its reach a clip may carry an animal's front at the hit and at most, a flier's allowance on top, how far a shooter may lean in and how far any back end may push back (field tiles). standard: what a clip must show to read in a fight (strike_check.py): how much its outline changes from the game's camera, from behind and from the front, as a share of its outline: in its wind-up against how it stood, and in its blow against its wind-up. roster: the animals whose attacks are played from here. bodies: a body plan's own version of a style (snakes, seals, birds). animals: an animal's own changes on top.",
+ "_note": "Attacks as key poses, played by tools/creatures/strikes.py (see tools/creatures/README.md, Attacks). styles: an attack style's keys (when each pose is reached: a share of the clip, or the hit moment plus or minus one; then the pose; then how it is arrived at: out brakes into it, in speeds into it, inout both, linear neither) and its poses. A pose's numbers are turns in radians on top of the animal's stance: rear (nose up on the hind feet), dip (nose down on the front feet), pitch, turn (to its left) and roll of the whole body; move [right, forward, up] in shoulder heights; squash, stretch and swell of the whole body (shares); bones {bone: [x, y, z]} (x swings a bone forward or up, y twists it, z turns it sideways; a jaw's x is in the animal's own gapes); legs {fl.R: [upper, lower, foot, splay]}; wings [shoulder, elbow, hand, sweep, twist]; tail [curl, swing]; trunk [curl, swing]; ears [back, out]; scale {bone: [x, y, z]}; shift {bone: [x, y, z]} in shoulder heights along the bone's own axes. like and times build a pose on another. lag: how far behind the body a loose part runs (a share of the clip; a tail's bones each one more). wobble: a loose part springing to a stop after the hit [axis, radians, swings, how fast it dies]. fill: a lunge, whose own steps forward are let out as far as the animal's reach allows (the reach rule), whatever its build. mirror: led by the other side. limits: the reach rule (strikes.py): the share of its reach a clip may carry an animal's front at the hit and at most, a flier's allowance on top, how far a shooter may lean in and how far any back end may push back (field tiles). standard: what a clip must show to read in a fight (strike_check.py): how much its outline changes from the game's camera, from behind and from the front, as a share of its outline: in its wind-up against how it stood, and in its blow against its wind-up. roster: the animals whose attacks are played from here. bodies: a body plan's own version of a style (snakes, seals, birds). animals: an animal's own changes on top.",
  "gape": 0.5,
  "limits": {"reach_at_hit": 0.6, "reach_most": 0.8, "flier_reach": 1.6, "shooter_ahead_tiles": 0.6, "back_tiles": 0.3},
  "standard": {"windup": 0.4, "swing": 0.5},
- "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra"],
+ "roster": ["brown_bear", "wolf_pack", "gray_squirrel", "peregrine_falcon", "king_cobra", "asian_elephant", "black_rhino", "giant_panda", "hippopotamus", "snapping_turtle", "yeti"],
  "styles": {
   "swipe": {
    "keys": [
@@ -83,7 +83,8 @@
     "recoil": {"like": "follow", "times": 0.35, "squash": 0.0, "scale": {}}
    },
    "lag": {"tail": 0.03, "ears": 0.04},
-   "wobble": {"tail": ["z", 0.25, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]}
+   "wobble": {"tail": ["z", 0.25, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]},
+   "fill": true
   },
   "bite": {
    "keys": [
@@ -110,7 +111,7 @@
     "strike": {
      "dip": 0.06,
      "move": [0.0, 0.4, -0.03],
-     "stretch": 0.14,
+     "stretch": 0.08,
      "bones": {"chest": [-0.05, 0.0, 0.0], "neck": [-0.2, 0.0, 0.0], "head": [0.08, 0.0, 0.0], "jaw": [0.0, 0.0, 0.0]},
      "shift": {"head": [0.0, 0.04, 0.0]},
      "legs": {"fl.L": [0.3, -0.1, -0.1], "fl.R": [0.3, -0.1, -0.1], "hl.L": [-0.55, 0.3, 0.1], "hl.R": [-0.55, 0.3, 0.1]},
@@ -137,7 +138,8 @@
     "recoil": {"move": [0.0, 0.06, 0.0], "bones": {"neck": [-0.08, 0.0, 0.05], "jaw": [-0.15, 0.0, 0.0]}, "tail": [-0.2, 0.1]}
    },
    "lag": {"tail": 0.03, "ears": 0.03},
-   "wobble": {"tail": ["z", 0.3, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]}
+   "wobble": {"tail": ["z", 0.3, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]},
+   "fill": true
   },
   "pounce_bite": {
    "keys": [
@@ -196,7 +198,8 @@
     }
    },
    "lag": {"tail": 0.03, "ears": 0.03},
-   "wobble": {"tail": ["x", 0.3, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]}
+   "wobble": {"tail": ["x", 0.3, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]},
+   "fill": true
   },
   "slam": {
    "keys": [
@@ -276,7 +279,8 @@
     "bounce": {"move": [0.0, 0.12, 0.07], "squash": -0.05, "bones": {"neck": [0.1, 0.0, 0.0], "head": [0.1, 0.0, 0.0]}, "tail": [0.3, 0.0]}
    },
    "lag": {"tail": 0.03, "ears": 0.04, "trunk": 0.02},
-   "wobble": {"tail": ["x", 0.25, 2.0, 2.5], "ears": ["x", 0.25, 2.5, 3.0]}
+   "wobble": {"tail": ["x", 0.25, 2.0, 2.5], "ears": ["x", 0.25, 2.5, 3.0]},
+   "fill": true
   },
   "throw": {
    "stance": {
@@ -486,7 +490,8 @@
     "up": {"pitch": 0.05, "move": [0.0, 0.1, -0.05], "wings": [0.6, 0.3, 0.2, 0.0, 0.0]}
    },
    "lag": {"wings": 0.012, "tail1": 0.03},
-   "wobble": {"tail1": ["x", 0.2, 2.0, 3.0]}
+   "wobble": {"tail1": ["x", 0.2, 2.0, 3.0]},
+   "fill": true
   },
   "rake": {
    "stance": {"bones": {"leg.L": [-0.9, 0.0, 0.0], "leg.R": [-0.9, 0.0, 0.0]}},
@@ -541,7 +546,222 @@
     }
    },
    "lag": {"wings": 0.012, "tail1": 0.03},
-   "wobble": {"tail1": ["x", 0.2, 2.0, 3.0]}
+   "wobble": {"tail1": ["x", 0.2, 2.0, 3.0]},
+   "fill": true
+  },
+  "stomp": {
+   "keys": [
+    [0.0, "rest"],
+    ["hit-0.28", "windup", "out"],
+    ["hit-0.1", "coiled", "linear"],
+    ["hit", "strike", "in"],
+    ["hit+0.06", "follow", "out"],
+    ["hit+0.2", "bounce", "inout"],
+    [1.0, "rest", "inout"]
+   ],
+   "poses": {
+    "windup": {
+     "rear": 0.56,
+     "move": [0.0, -0.04, 0.0],
+     "squash": -0.04,
+     "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.15, 0.0, 0.0], "head": [0.25, 0.0, 0.0], "jaw": [-0.9, 0.0, 0.0]},
+     "legs": {"fl.L": [0.75, -1.0, -0.2, 0.25], "fl.R": [0.75, -1.0, -0.2, -0.25], "hl.L": [-0.4, -0.3, 0.45], "hl.R": [-0.4, -0.3, 0.45]},
+     "scale": {"ear.L": [1.4, 1.4, 1.4], "ear.R": [1.4, 1.4, 1.4]},
+     "ears": [0.0, 0.9],
+     "tail": [-1.0, 0.0],
+     "trunk": [1.3, 0.0],
+     "swell": 0.04
+    },
+    "coiled": {"like": "windup", "times": 1.06},
+    "strike": {
+     "dip": 0.05,
+     "move": [0.0, 0.3, -0.02],
+     "stretch": 0.05,
+     "bones": {"chest": [-0.1, 0.0, 0.0], "neck": [-0.15, 0.0, 0.0], "head": [0.0, 0.0, 0.0], "jaw": [-0.2, 0.0, 0.0]},
+     "legs": {"fl.L": [0.3, 0.0, -0.1, 0.1], "fl.R": [0.3, 0.0, -0.1, -0.1], "hl.L": [-0.2, 0.1, 0.1], "hl.R": [-0.2, 0.1, 0.1]},
+     "scale": {"fl_foot.L": [1.35, 1.35, 1.35], "fl_foot.R": [1.35, 1.35, 1.35]},
+     "ears": [-0.4, -0.3],
+     "tail": [0.4, 0.0],
+     "trunk": [-0.6, 0.0]
+    },
+    "follow": {
+     "dip": 0.06,
+     "move": [0.0, 0.33, -0.05],
+     "squash": 0.16,
+     "bones": {"chest": [-0.1, 0.0, 0.0], "neck": [-0.2, 0.0, 0.0], "head": [0.1, 0.0, 0.0]},
+     "legs": {"fl.L": [0.25, -0.1, 0.0, 0.25], "fl.R": [0.25, -0.1, 0.0, -0.25], "hl.L": [0.0, -0.1, 0.05, 0.15], "hl.R": [0.0, -0.1, 0.05, -0.15]},
+     "ears": [0.3, 0.5],
+     "tail": [-0.6, 0.0],
+     "trunk": [-0.3, 0.3]
+    },
+    "bounce": {"move": [0.0, 0.1, 0.06], "squash": -0.04, "bones": {"neck": [0.08, 0.0, 0.0], "head": [0.1, 0.0, 0.0]}, "ears": [0.0, 0.3], "tail": [0.2, 0.0]}
+   },
+   "lag": {"tail": 0.03, "ears": 0.03, "trunk": 0.02},
+   "wobble": {"tail": ["x", 0.25, 2.0, 2.5], "ears": ["z", 0.3, 2.0, 2.5], "trunk": ["z", 0.2, 2.0, 2.5]},
+   "fill": true
+  },
+  "charge": {
+   "keys": [
+    [0.0, "rest"],
+    ["hit-0.25", "windup", "out"],
+    ["hit-0.1", "coiled", "linear"],
+    ["hit", "strike", "in"],
+    ["hit+0.07", "follow", "out"],
+    ["hit+0.26", "recoil", "inout"],
+    [1.0, "rest", "inout"]
+   ],
+   "poses": {
+    "windup": {
+     "dip": 0.2,
+     "move": [0.0, -0.3, -0.06],
+     "squash": 0.14,
+     "swell": 0.05,
+     "bones": {"chest": [-0.08, 0.0, 0.0], "neck": [-0.5, 0.0, 0.0], "head": [-0.35, 0.0, 0.0]},
+     "legs": {"fl.L": [0.1, -0.2, 0.0, 0.2], "fl.R": [0.6, -1.0, 0.2, -0.55], "hl.L": [0.2, -0.3, 0.2, 0.2], "hl.R": [0.2, -0.3, 0.2, -0.2]},
+     "ears": [-0.5, 0.3],
+     "tail": [-1.3, 0.0]
+    },
+    "coiled": {"like": "windup", "times": 1.08},
+    "strike": {
+     "rear": 0.1,
+     "move": [0.0, 0.42, 0.08],
+     "stretch": 0.18,
+     "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.5, 0.0, 0.0], "head": [0.5, 0.0, 0.0], "jaw": [-0.5, 0.0, 0.0]},
+     "legs": {"fl.L": [0.5, -0.3, -0.2, 0.15], "fl.R": [0.5, -0.3, -0.2, -0.15], "hl.L": [-0.65, 0.3, 0.2], "hl.R": [-0.65, 0.3, 0.2]},
+     "ears": [-0.8, 0.0],
+     "tail": [0.4, 0.0]
+    },
+    "follow": {
+     "rear": 0.15,
+     "move": [0.0, 0.46, 0.1],
+     "stretch": 0.05,
+     "bones": {"chest": [0.12, 0.0, 0.0], "neck": [0.6, 0.0, 0.0], "head": [0.6, 0.0, 0.0], "jaw": [-0.7, 0.0, 0.0]},
+     "legs": {"fl.L": [0.6, -0.45, -0.2, 0.2], "fl.R": [0.6, -0.45, -0.2, -0.2], "hl.L": [-0.5, 0.2, 0.3], "hl.R": [-0.5, 0.2, 0.3]},
+     "ears": [-0.5, 0.0],
+     "tail": [-0.8, 0.0]
+    },
+    "recoil": {
+     "move": [0.0, 0.14, 0.0],
+     "squash": 0.1,
+     "bones": {"neck": [-0.12, 0.0, 0.0], "head": [-0.05, 0.0, 0.0]},
+     "legs": {"fl.L": [0.1, -0.15, 0.0, 0.1], "fl.R": [0.1, -0.15, 0.0, -0.1]},
+     "tail": [-0.3, 0.0]
+    }
+   },
+   "lag": {"tail": 0.03, "ears": 0.03},
+   "shiver": {"fl_lower.R": ["x", 0.25, 2.0]},
+   "wobble": {"tail": ["x", 0.3, 2.0, 2.5], "ears": ["x", 0.2, 2.5, 3.0]},
+   "fill": true
+  },
+  "handstand": {
+   "keys": [
+    [0.0, "rest"],
+    ["hit-0.34", "crouch", "out"],
+    ["hit-0.14", "up", "inout"],
+    ["hit-0.04", "aim", "linear"],
+    ["hit", "strike", "in"],
+    ["hit+0.08", "follow", "out"],
+    ["hit+0.3", "down", "inout"],
+    [1.0, "rest", "inout"]
+   ],
+   "poses": {
+    "crouch": {
+     "dip": 0.2,
+     "move": [0.0, 0.0, -0.06],
+     "squash": 0.08,
+     "bones": {"neck": [0.2, 0.0, 0.0]},
+     "legs": {"fl.L": [-0.1, -0.4, 0.2], "fl.R": [-0.1, -0.4, 0.2]},
+     "tail": [-1.2, 0.0]
+    },
+    "up": {
+     "dip": 0.95,
+     "move": [0.0, -0.04, 0.0],
+     "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.6, 0.0, 0.0], "head": [0.45, 0.0, 0.0]},
+     "legs": {"fl.L": [-0.25, 0.0, 0.4], "fl.R": [-0.25, 0.0, 0.4], "hl.L": [0.6, 0.3, 0.0, 0.45], "hl.R": [0.6, 0.3, 0.0, -0.45]},
+     "scale": {"tail1": [1.25, 1.0, 1.25], "tail2": [1.3, 1.0, 1.3], "tail3": [1.3, 1.0, 1.3]},
+     "tail": [-2.2, 0.0]
+    },
+    "aim": {"like": "up", "times": 1.04},
+    "strike": {
+     "dip": 1.0,
+     "move": [0.0, 0.03, 0.0],
+     "squash": 0.1,
+     "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.6, 0.0, 0.0], "head": [0.45, 0.0, 0.0], "jaw": [-0.6, 0.0, 0.0]},
+     "legs": {"fl.L": [-0.25, -0.2, 0.4], "fl.R": [-0.25, -0.2, 0.4], "hl.L": [0.9, 0.3, 0.0, 0.6], "hl.R": [0.9, 0.3, 0.0, -0.6]},
+     "scale": {"tail1": [1.35, 1.0, 1.35], "tail2": [1.5, 1.0, 1.5], "tail3": [1.5, 1.0, 1.5]},
+     "tail": [-2.7, 0.0]
+    },
+    "follow": {
+     "dip": 0.95,
+     "move": [0.0, 0.0, 0.0],
+     "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.55, 0.0, 0.0], "head": [0.4, 0.0, 0.0], "jaw": [-0.3, 0.0, 0.0]},
+     "legs": {"fl.L": [-0.25, 0.0, 0.4], "fl.R": [-0.25, 0.0, 0.4], "hl.L": [0.7, 0.3, 0.0, 0.5], "hl.R": [0.7, 0.3, 0.0, -0.5]},
+     "scale": {"tail1": [1.25, 1.0, 1.25], "tail2": [1.3, 1.0, 1.3], "tail3": [1.3, 1.0, 1.3]},
+     "tail": [-2.3, 0.0]
+    },
+    "down": {"dip": 0.12, "move": [0.0, 0.0, -0.02], "squash": 0.06, "bones": {"neck": [0.15, 0.0, 0.0]}, "tail": [-1.0, 0.0]}
+   },
+   "lag": {"ears": 0.03},
+   "wobble": {"tail": ["z", 0.3, 2.5, 2.0], "ears": ["x", 0.2, 2.5, 3.0]}
+  },
+  "spit": {
+   "keys": [
+    [0.0, "rest"],
+    ["hit-0.3", "windup", "out"],
+    ["hit-0.1", "coiled", "linear"],
+    ["hit", "strike", "in"],
+    ["hit+0.07", "follow", "out"],
+    ["hit+0.25", "recoil", "inout"],
+    [1.0, "rest", "inout"]
+   ],
+   "poses": {
+    "windup": {
+     "rear": 0.06,
+     "move": [0.0, -0.1, 0.0],
+     "bones": {"chest": [0.05, 0.0, 0.0], "neck": [0.45, 0.0, 0.0], "head": [0.3, 0.0, 0.0]},
+     "scale": {"head": [1.2, 1.2, 1.2]},
+     "ears": [-0.5, 0.0],
+     "tail": [-0.5, 0.0]
+    },
+    "coiled": {"like": "windup", "times": 1.08},
+    "strike": {
+     "dip": 0.04,
+     "move": [0.0, 0.22, 0.0],
+     "stretch": 0.06,
+     "bones": {"chest": [-0.06, 0.0, 0.0], "neck": [-0.5, 0.0, 0.0], "head": [-0.1, 0.0, 0.0], "jaw": [-1.0, 0.0, 0.0]},
+     "scale": {"head": [0.95, 0.95, 0.95]},
+     "shift": {"head": [0.0, 0.12, 0.0]},
+     "legs": {"fl.L": [0.2, 0.0, 0.0], "fl.R": [0.2, 0.0, 0.0], "hl.L": [-0.25, 0.1, 0.1], "hl.R": [-0.25, 0.1, 0.1]},
+     "ears": [0.3, 0.2],
+     "tail": [0.4, 0.0]
+    },
+    "follow": {
+     "dip": 0.05,
+     "move": [0.0, 0.26, 0.0],
+     "squash": 0.05,
+     "bones": {"chest": [-0.08, 0.0, 0.0], "neck": [-0.6, 0.0, 0.0], "head": [0.1, 0.0, 0.0], "jaw": [-0.6, 0.0, 0.0]},
+     "shift": {"head": [0.0, 0.07, 0.0]},
+     "legs": {"fl.L": [0.15, 0.0, 0.0], "fl.R": [0.15, 0.0, 0.0]},
+     "ears": [0.1, 0.1],
+     "tail": [0.5, 0.0]
+    },
+    "recoil": {"move": [0.0, -0.02, 0.0], "bones": {"neck": [0.12, 0.0, 0.0], "head": [0.05, 0.0, 0.0], "jaw": [-0.1, 0.0, 0.0]}, "tail": [-0.2, 0.0]}
+   },
+   "lag": {"tail": 0.03, "ears": 0.03},
+   "shiver": {"jaw": ["x", 0.25, 3.0]},
+   "wobble": {"neck": ["x", 0.06, 2.0, 3.0], "tail": ["z", 0.25, 2.0, 2.5], "ears": ["x", 0.25, 2.5, 3.0]}
+  },
+  "pound": {
+   "like": "biped.stomp",
+   "keys": [
+    [0.0, "rest"],
+    ["hit-0.36", "windup", "out"],
+    ["hit-0.1", "coiled", "linear"],
+    ["hit", "strike", "in"],
+    ["hit+0.06", "follow", "out"],
+    ["hit+0.2", "bounce", "inout"],
+    [1.0, "rest", "inout"]
+   ]
   }
  },
  "bodies": {
@@ -589,9 +809,575 @@
     },
     "lag": {"tail": 0.03},
     "shiver": {"tail": ["z", 0.3, 5.0], "neck2": ["z", 0.06, 2.0]},
-    "wobble": {"neck": ["x", 0.08, 2.0, 3.0], "tail": ["z", 0.2, 2.0, 2.5]}
+    "wobble": {"neck": ["x", 0.08, 2.0, 3.0], "tail": ["z", 0.2, 2.0, 2.5]},
+    "replace": true
+   },
+   "bite": {
+    "replace": true,
+    "keys": [
+     [0.0, "rest"],
+     ["hit-0.24", "windup", "out"],
+     ["hit-0.1", "coiled", "linear"],
+     ["hit", "strike", "in"],
+     ["hit+0.06", "follow", "out"],
+     ["hit+0.15", "shake", "inout"],
+     ["hit+0.3", "recoil", "inout"],
+     [1.0, "rest", "inout"]
+    ],
+    "poses": {
+     "windup": {
+      "move": [0.0, -0.14, 0.0],
+      "stretch": -0.12,
+      "bones": {
+       "hips": [0.0, 0.0, 0.35],
+       "chest": [0.35, 0.0, -0.45],
+       "neck": [0.45, 0.0, 0.3],
+       "neck2": [0.25, 0.0, 0.1],
+       "head": [-0.75, 0.0, 0.0],
+       "jaw": [-1.0, 0.0, 0.0]
+      },
+      "tail": [0.0, 1.2]
+     },
+     "coiled": {"like": "windup", "times": 1.08},
+     "strike": {
+      "move": [0.0, 0.3, 0.0],
+      "stretch": 0.2,
+      "bones": {
+       "hips": [0.0, 0.0, -0.12],
+       "chest": [0.06, 0.0, 0.15],
+       "neck": [-0.02, 0.0, -0.05],
+       "neck2": [0.0, 0.0, 0.0],
+       "head": [0.0, 0.0, 0.0],
+       "jaw": [0.0, 0.0, 0.0]
+      },
+      "shift": {"head": [0.0, 0.08, 0.0]},
+      "tail": [0.0, -0.9]
+     },
+     "follow": {
+      "move": [0.0, 0.33, 0.0],
+      "squash": 0.06,
+      "bones": {"chest": [0.05, 0.0, 0.2], "neck": [0.0, 0.0, 0.3], "neck2": [0.0, 0.0, 0.25], "head": [0.0, 0.25, 0.2]},
+      "tail": [0.0, -1.1]
+     },
+     "shake": {
+      "move": [0.0, 0.26, 0.0],
+      "bones": {"chest": [0.05, 0.0, -0.2], "neck": [0.0, 0.0, -0.3], "neck2": [0.0, 0.0, -0.25], "head": [0.0, -0.25, -0.2], "jaw": [-0.15, 0.0, 0.0]},
+      "tail": [0.0, 0.5]
+     },
+     "recoil": {"move": [0.0, 0.05, 0.0], "bones": {"neck": [0.1, 0.0, 0.05], "jaw": [-0.15, 0.0, 0.0]}, "tail": [0.0, -0.2]}
+    },
+    "lag": {"tail": 0.03},
+    "wobble": {"tail": ["z", 0.3, 2.0, 2.5]},
+    "fill": true
+   },
+   "ram": {
+    "replace": true,
+    "keys": [
+     [0.0, "rest"],
+     ["hit-0.26", "windup", "out"],
+     ["hit-0.1", "coiled", "linear"],
+     ["hit", "strike", "in"],
+     ["hit+0.07", "follow", "out"],
+     ["hit+0.26", "recoil", "inout"],
+     [1.0, "rest", "inout"]
+    ],
+    "poses": {
+     "windup": {
+      "move": [0.0, -0.18, 0.0],
+      "stretch": -0.2,
+      "swell": 0.06,
+      "bones": {"hips": [0.0, 0.0, 0.55], "chest": [0.15, 0.0, -0.75], "neck": [0.2, 0.0, 0.6], "neck2": [0.1, 0.0, -0.3], "head": [-0.3, 0.0, 0.0]},
+      "tail": [0.0, 1.6]
+     },
+     "coiled": {"like": "windup", "times": 1.08},
+     "strike": {
+      "move": [0.0, 0.36, 0.04],
+      "stretch": 0.28,
+      "bones": {"hips": [0.0, 0.0, -0.1], "chest": [0.1, 0.0, 0.12], "neck": [0.05, 0.0, -0.05], "head": [-0.2, 0.0, 0.0], "jaw": [-0.3, 0.0, 0.0]},
+      "tail": [0.0, -0.6]
+     },
+     "follow": {
+      "move": [0.0, 0.4, 0.0],
+      "squash": 0.12,
+      "stretch": -0.06,
+      "bones": {"chest": [0.1, 0.0, 0.25], "neck": [0.1, 0.0, -0.3], "head": [-0.1, 0.0, 0.1]},
+      "tail": [0.0, -1.2]
+     },
+     "recoil": {"move": [0.0, 0.1, 0.0], "bones": {"hips": [0.0, 0.0, 0.1], "chest": [0.05, 0.0, -0.12], "neck": [0.05, 0.0, 0.1]}, "tail": [0.0, 0.4]}
+    },
+    "lag": {"tail": 0.03},
+    "wobble": {"tail": ["z", 0.3, 2.0, 2.5]},
+    "fill": true
+   },
+   "special": {
+    "replace": true,
+    "keys": [
+     [0.0, "rest"],
+     [0.14, "rise", "out"],
+     ["hit-0.14", "charged", "linear"],
+     ["hit-0.05", "coiled", "inout"],
+     ["hit", "strike", "in"],
+     ["hit+0.06", "follow", "out"],
+     ["hit+0.18", "recoil", "inout"],
+     [1.0, "rest", "inout"]
+    ],
+    "poses": {
+     "rise": {
+      "move": [0.0, -0.08, 0.0],
+      "swell": 0.06,
+      "stretch": -0.1,
+      "bones": {
+       "hips": [0.0, 0.0, 0.25],
+       "chest": [0.5, 0.0, -0.3],
+       "neck": [0.55, 0.0, 0.2],
+       "neck2": [0.3, 0.0, 0.0],
+       "head": [-1.0, 0.0, 0.0],
+       "jaw": [-0.8, 0.0, 0.0]
+      },
+      "tail": [0.0, 0.9]
+     },
+     "charged": {"like": "rise", "times": 1.1, "swell": 0.14},
+     "coiled": {"like": "rise", "times": 1.2, "swell": 0.16, "move": [0.0, -0.16, 0.0]},
+     "strike": {
+      "move": [0.0, 0.34, 0.0],
+      "stretch": 0.25,
+      "bones": {"hips": [0.0, 0.0, -0.1], "chest": [0.06, 0.0, 0.1], "neck": [0.0, 0.0, 0.0], "head": [0.0, 0.0, 0.0], "jaw": [-1.0, 0.0, 0.0]},
+      "shift": {"head": [0.0, 0.08, 0.0]},
+      "tail": [0.0, -0.8]
+     },
+     "follow": {
+      "move": [0.0, 0.38, 0.0],
+      "squash": 0.1,
+      "swell": 0.08,
+      "bones": {"chest": [0.05, 0.0, 0.2], "neck": [0.05, 0.0, -0.2], "jaw": [-0.5, 0.0, 0.0]},
+      "tail": [0.0, -1.2]
+     },
+     "recoil": {"move": [0.0, 0.08, 0.0], "bones": {"neck": [0.12, 0.0, 0.05], "jaw": [-0.15, 0.0, 0.0]}, "tail": [0.0, 0.3]}
+    },
+    "lag": {"tail": 0.03},
+    "shiver": {"tail": ["z", 0.35, 9.0], "chest": ["z", 0.08, 9.0], "neck": ["z", 0.1, 9.0], "head": ["y", 0.12, 9.0]},
+    "wobble": {"tail": ["z", 0.35, 3.0, 2.0]},
+    "fill": true
+   }
+  },
+  "biped": {
+   "stomp": {
+    "keys": [
+     [0.0, "rest"],
+     ["hit-0.3", "windup", "out"],
+     ["hit-0.1", "coiled", "linear"],
+     ["hit", "strike", "in"],
+     ["hit+0.06", "follow", "out"],
+     ["hit+0.2", "bounce", "inout"],
+     [1.0, "rest", "inout"]
+    ],
+    "poses": {
+     "windup": {
+      "move": [0.0, -0.04, 0.02],
+      "squash": -0.05,
+      "bones": {
+       "hips": [0.05, 0.0, 0.0],
+       "chest": [0.22, 0.0, 0.0],
+       "neck": [0.1, 0.0, 0.0],
+       "head": [0.25, 0.0, 0.0],
+       "jaw": [-1.0, 0.0, 0.0],
+       "fl_upper.L": [2.9, 0.0, -0.55],
+       "fl_upper.R": [2.9, 0.0, 0.55],
+       "fl_lower.L": [-0.6, 0.0, 0.0],
+       "fl_lower.R": [-0.6, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.1, -0.2, 0.1], "hl.R": [0.1, -0.2, 0.1]},
+      "scale": {"fl_foot.L": [1.4, 1.4, 1.4], "fl_foot.R": [1.4, 1.4, 1.4]},
+      "ears": [-0.3, 0.0]
+     },
+     "coiled": {"like": "windup", "times": 1.05},
+     "strike": {
+      "move": [0.0, 0.2, -0.14],
+      "stretch": 0.05,
+      "bones": {
+       "hips": [-0.12, 0.0, 0.0],
+       "chest": [-0.3, 0.0, 0.0],
+       "neck": [0.2, 0.0, 0.0],
+       "head": [0.3, 0.0, 0.0],
+       "jaw": [-0.2, 0.0, 0.0],
+       "fl_upper.L": [0.6, 0.0, 0.1],
+       "fl_upper.R": [0.6, 0.0, -0.1],
+       "fl_lower.L": [-0.05, 0.0, 0.0],
+       "fl_lower.R": [-0.05, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.5, -0.9, 0.4], "hl.R": [0.5, -0.9, 0.4]},
+      "scale": {"fl_foot.L": [1.6, 1.6, 1.6], "fl_foot.R": [1.6, 1.6, 1.6]},
+      "ears": [-0.6, 0.0]
+     },
+     "follow": {
+      "move": [0.0, 0.24, -0.2],
+      "squash": 0.15,
+      "bones": {
+       "hips": [-0.15, 0.0, 0.0],
+       "chest": [-0.3, 0.0, 0.0],
+       "neck": [0.15, 0.0, 0.0],
+       "head": [0.2, 0.0, 0.0],
+       "fl_upper.L": [0.5, 0.0, 0.3],
+       "fl_upper.R": [0.5, 0.0, -0.3],
+       "fl_lower.L": [-0.15, 0.0, 0.0],
+       "fl_lower.R": [-0.15, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.6, -1.1, 0.5], "hl.R": [0.6, -1.1, 0.5]},
+      "scale": {"fl_foot.L": [1.4, 1.4, 1.4], "fl_foot.R": [1.4, 1.4, 1.4]},
+      "ears": [-0.3, 0.0]
+     },
+     "bounce": {
+      "move": [0.0, 0.08, 0.03],
+      "squash": -0.03,
+      "bones": {"chest": [-0.15, 0.0, 0.0], "head": [0.1, 0.0, 0.0], "fl_upper.L": [0.4, 0.0, 0.0], "fl_upper.R": [0.4, 0.0, 0.0]},
+      "legs": {"hl.L": [0.15, -0.3, 0.15], "hl.R": [0.15, -0.3, 0.15]}
+     }
+    },
+    "lag": {"ears": 0.03},
+    "wobble": {"head": ["x", 0.06, 2.0, 3.0], "ears": ["x", 0.2, 2.5, 3.0]},
+    "replace": true,
+    "fill": true
+   },
+   "throw": {
+    "replace": true,
+    "keys": [
+     [0.0, "rest"],
+     ["hit-0.27", "windup", "out"],
+     ["hit-0.1", "coiled", "linear"],
+     ["hit", "strike", "in"],
+     ["hit+0.07", "follow", "out"],
+     ["hit+0.26", "recoil", "inout"],
+     [1.0, "rest", "inout"]
+    ],
+    "poses": {
+     "windup": {
+      "turn": -0.45,
+      "move": [0.0, -0.05, 0.0],
+      "bones": {
+       "chest": [0.15, -0.4, 0.0],
+       "neck": [0.0, 0.5, 0.0],
+       "head": [0.0, 0.0, 0.3],
+       "jaw": [-0.5, 0.0, 0.0],
+       "fl_upper.R": [2.9, 0.0, 0.45],
+       "fl_lower.R": [-0.8, 0.0, 0.0],
+       "fl_upper.L": [1.0, 0.0, 0.0],
+       "fl_lower.L": [-0.05, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.25, -0.2, 0.0], "hl.R": [-0.15, -0.2, 0.2]},
+      "scale": {"fl_foot.R": [1.6, 1.6, 1.6]}
+     },
+     "coiled": {"like": "windup", "times": 1.06},
+     "strike": {
+      "turn": 0.3,
+      "move": [0.0, 0.14, 0.06],
+      "stretch": 0.05,
+      "bones": {
+       "chest": [-0.3, 0.4, 0.0],
+       "neck": [0.15, -0.3, 0.0],
+       "head": [0.1, 0.0, -0.15],
+       "jaw": [-0.2, 0.0, 0.0],
+       "fl_upper.R": [1.1, -0.15, 0.0],
+       "fl_lower.R": [0.0, 0.0, 0.0],
+       "fl_upper.L": [-0.6, 0.0, 0.0],
+       "fl_lower.L": [-0.3, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.4, -0.5, 0.2], "hl.R": [-0.3, 0.1, 0.3]},
+      "scale": {"fl_foot.R": [1.5, 1.5, 1.5]}
+     },
+     "follow": {
+      "turn": 0.42,
+      "move": [0.0, 0.18, -0.04],
+      "squash": 0.08,
+      "bones": {
+       "chest": [-0.45, 0.5, 0.0],
+       "neck": [0.25, -0.4, 0.0],
+       "head": [0.15, 0.0, -0.2],
+       "fl_upper.R": [0.5, -0.7, 0.0],
+       "fl_lower.R": [-0.2, 0.0, 0.0],
+       "fl_upper.L": [-0.5, 0.0, 0.0],
+       "fl_lower.L": [-0.3, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.45, -0.6, 0.25], "hl.R": [-0.2, 0.0, 0.2]},
+      "scale": {"fl_foot.R": [1.3, 1.3, 1.3]}
+     },
+     "recoil": {"like": "follow", "times": 0.3, "squash": 0.0, "scale": {}}
+    },
+    "wobble": {"head": ["z", 0.05, 2.0, 3.0]}
+   },
+   "special": {
+    "replace": true,
+    "keys": [
+     [0.0, "rest"],
+     [0.1, "puff", "out"],
+     [0.18, "beat_l", "inout"],
+     [0.26, "beat_r", "inout"],
+     [0.34, "beat_l", "inout"],
+     [0.42, "beat_r", "inout"],
+     [0.5, "beat_l", "inout"],
+     ["hit-0.12", "windup", "out"],
+     ["hit-0.05", "coiled", "linear"],
+     ["hit", "strike", "in"],
+     ["hit+0.06", "follow", "out"],
+     ["hit+0.18", "bounce", "inout"],
+     [1.0, "rest", "inout"]
+    ],
+    "poses": {
+     "windup": {
+      "move": [0.0, -0.04, 0.02],
+      "squash": -0.05,
+      "bones": {
+       "hips": [0.05, 0.0, 0.0],
+       "chest": [0.22, 0.0, 0.0],
+       "neck": [0.1, 0.0, 0.0],
+       "head": [0.25, 0.0, 0.0],
+       "jaw": [-1.0, 0.0, 0.0],
+       "fl_upper.L": [2.9, 0.0, -0.55],
+       "fl_upper.R": [2.9, 0.0, 0.55],
+       "fl_lower.L": [-0.6, 0.0, 0.0],
+       "fl_lower.R": [-0.6, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.1, -0.2, 0.1], "hl.R": [0.1, -0.2, 0.1]},
+      "scale": {"fl_foot.L": [1.4, 1.4, 1.4], "fl_foot.R": [1.4, 1.4, 1.4]},
+      "ears": [-0.3, 0.0]
+     },
+     "coiled": {"like": "windup", "times": 1.05},
+     "strike": {
+      "move": [0.0, 0.2, -0.14],
+      "stretch": 0.05,
+      "bones": {
+       "hips": [-0.12, 0.0, 0.0],
+       "chest": [-0.3, 0.0, 0.0],
+       "neck": [0.2, 0.0, 0.0],
+       "head": [0.3, 0.0, 0.0],
+       "jaw": [-0.2, 0.0, 0.0],
+       "fl_upper.L": [0.6, 0.0, 0.1],
+       "fl_upper.R": [0.6, 0.0, -0.1],
+       "fl_lower.L": [-0.05, 0.0, 0.0],
+       "fl_lower.R": [-0.05, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.5, -0.9, 0.4], "hl.R": [0.5, -0.9, 0.4]},
+      "scale": {"fl_foot.L": [1.6, 1.6, 1.6], "fl_foot.R": [1.6, 1.6, 1.6]},
+      "ears": [-0.6, 0.0]
+     },
+     "follow": {
+      "move": [0.0, 0.24, -0.2],
+      "squash": 0.15,
+      "bones": {
+       "hips": [-0.15, 0.0, 0.0],
+       "chest": [-0.3, 0.0, 0.0],
+       "neck": [0.15, 0.0, 0.0],
+       "head": [0.2, 0.0, 0.0],
+       "fl_upper.L": [0.5, 0.0, 0.3],
+       "fl_upper.R": [0.5, 0.0, -0.3],
+       "fl_lower.L": [-0.15, 0.0, 0.0],
+       "fl_lower.R": [-0.15, 0.0, 0.0]
+      },
+      "legs": {"hl.L": [0.6, -1.1, 0.5], "hl.R": [0.6, -1.1, 0.5]},
+      "scale": {"fl_foot.L": [1.4, 1.4, 1.4], "fl_foot.R": [1.4, 1.4, 1.4]},
+      "ears": [-0.3, 0.0]
+     },
+     "bounce": {
+      "move": [0.0, 0.08, 0.03],
+      "squash": -0.03,
+      "bones": {"chest": [-0.15, 0.0, 0.0], "head": [0.1, 0.0, 0.0], "fl_upper.L": [0.4, 0.0, 0.0], "fl_upper.R": [0.4, 0.0, 0.0]},
+      "legs": {"hl.L": [0.15, -0.3, 0.15], "hl.R": [0.15, -0.3, 0.15]}
+     },
+     "puff": {
+      "swell": 0.06,
+      "squash": -0.04,
+      "bones": {
+       "chest": [0.15, 0.0, 0.0],
+       "head": [0.3, 0.0, 0.0],
+       "jaw": [-1.0, 0.0, 0.0],
+       "fl_upper.L": [0.9, 0.0, -0.5],
+       "fl_upper.R": [0.9, 0.0, 0.5],
+       "fl_lower.L": [-1.9, 0.0, 0.0],
+       "fl_lower.R": [-1.9, 0.0, 0.0]
+      }
+     },
+     "beat_l": {
+      "swell": 0.08,
+      "squash": -0.04,
+      "bones": {
+       "chest": [0.18, 0.12, 0.0],
+       "head": [0.35, 0.0, 0.1],
+       "jaw": [-1.0, 0.0, 0.0],
+       "fl_upper.L": [1.15, 0.0, 0.25],
+       "fl_lower.L": [-2.1, 0.0, 0.0],
+       "fl_upper.R": [0.7, 0.0, 0.9],
+       "fl_lower.R": [-1.5, 0.0, 0.0]
+      },
+      "scale": {"fl_foot.L": [1.3, 1.3, 1.3], "fl_foot.R": [1.3, 1.3, 1.3]}
+     },
+     "beat_r": {
+      "swell": 0.08,
+      "squash": -0.04,
+      "bones": {
+       "chest": [0.18, -0.12, 0.0],
+       "head": [0.35, 0.0, -0.1],
+       "jaw": [-1.0, 0.0, 0.0],
+       "fl_upper.R": [1.15, 0.0, -0.25],
+       "fl_lower.R": [-2.1, 0.0, 0.0],
+       "fl_upper.L": [0.7, 0.0, -0.9],
+       "fl_lower.L": [-1.5, 0.0, 0.0]
+      },
+      "scale": {"fl_foot.L": [1.3, 1.3, 1.3], "fl_foot.R": [1.3, 1.3, 1.3]}
+     }
+    },
+    "wobble": {"head": ["x", 0.06, 2.0, 3.0]},
+    "fill": true
+   }
+  },
+  "winged": {
+   "winged_dive": {
+    "replace": true,
+    "like": "dive",
+    "stance": {
+     "legs": {"fl.L": [0.7, -1.2, -0.6], "fl.R": [0.7, -1.2, -0.6], "hl.L": [-0.6, 0.3, 0.4], "hl.R": [-0.6, 0.3, 0.4]},
+     "bones": {"neck": [0.1, 0.0, 0.0]},
+     "tail": [-0.3, 0.0]
+    },
+    "poses": {
+     "windup": {
+      "legs": {"fl.L": [0.3, -0.3, 0.0, 0.3], "fl.R": [0.3, -0.3, 0.0, -0.3]},
+      "bones": {"neck": [-0.3, 0.0, 0.0], "head": [0.3, 0.0, 0.0], "jaw": [-1.0, 0.0, 0.0]},
+      "tail": [-0.6, 0.0]
+     },
+     "stoop": {
+      "legs": {"fl.L": [0.2, 0.2, 0.0], "fl.R": [0.2, 0.2, 0.0], "hl.L": [-0.4, 0.2, 0.0], "hl.R": [-0.4, 0.2, 0.0]},
+      "tail": [0.5, 0.0]
+     },
+     "strike": {
+      "legs": {"fl.L": [0.85, 1.0, 0.4, 0.3], "fl.R": [0.85, 1.0, 0.4, -0.3]},
+      "scale": {"fl_foot.L": [1.5, 1.5, 1.5], "fl_foot.R": [1.5, 1.5, 1.5]},
+      "bones": {"neck": [-0.2, 0.0, 0.0], "jaw": [-1.0, 0.0, 0.0]},
+      "tail": [0.6, 0.0]
+     },
+     "follow": {
+      "legs": {"fl.L": [0.9, 1.1, 0.4, 0.4], "fl.R": [0.9, 1.1, 0.4, -0.4]},
+      "scale": {"fl_foot.L": [1.5, 1.5, 1.5], "fl_foot.R": [1.5, 1.5, 1.5]},
+      "bones": {"neck": [-0.4, 0.0, 0.0], "jaw": [-0.5, 0.0, 0.0]},
+      "tail": [0.8, 0.0]
+     },
+     "lift": {"legs": {"fl.L": [0.4, 0.5, 0.2], "fl.R": [0.4, 0.5, 0.2]}, "tail": [-0.3, 0.0]}
+    },
+    "lag": {"wings": 0.012, "tail": 0.03},
+    "wobble": {"tail": ["x", 0.25, 2.0, 2.5]},
+    "fill": true
    }
   }
  },
- "animals": {}
+ "animals": {
+  "asian_elephant": {"stomp": {"lag": {"trunk": 0.008}, "poses": {"strike": {"trunk": [-0.25, 0.0]}, "follow": {"trunk": [-0.1, 0.3]}}}},
+  "pygmy_three_toed_sloth": {
+   "swipe": {
+    "poses": {
+     "windup": {"scale": {"fl_upper.R": [1.0, 1.0, 1.0], "fl_foot.R": [1.3, 1.3, 1.3]}},
+     "strike": {"scale": {"fl_upper.R": [1.0, 1.0, 1.0], "fl_foot.R": [1.4, 1.4, 1.4]}, "bones": {"fl_upper.R": [0.9, -0.3, 0.0]}},
+     "follow": {"scale": {"fl_upper.R": [1.0, 1.0, 1.0], "fl_foot.R": [1.25, 1.25, 1.25]}, "bones": {"fl_upper.R": [0.7, -1.0, 0.0]}}
+    }
+   }
+  },
+  "raccoon": {
+   "lob": {
+    "stance": {
+     "replace": true,
+     "rear": 0.3,
+     "move": [0.0, 0.0, -0.12],
+     "legs": {"hl.L": [0.45, -0.6, 0.3], "hl.R": [0.45, -0.6, 0.3], "fl.L": [0.9, -1.2, -0.3, 0.1], "fl.R": [0.9, -1.2, -0.3, -0.1]},
+     "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.1, 0.0, 0.0], "tail1": [-0.1, 0.0, 0.0], "tail2": [-0.1, 0.0, 0.0], "tail3": [-0.1, 0.0, 0.0]}
+    },
+    "poses": {
+     "windup": {
+      "bones": {"fl_upper.L": [1.75, 0.0, -0.75], "fl_upper.R": [1.75, 0.0, 0.75], "fl_lower.L": [1.2, 0.0, 0.0], "fl_lower.R": [1.2, 0.0, 0.0]},
+      "scale": {"fl_upper.L": [1.0, 1.5, 1.0], "fl_upper.R": [1.0, 1.5, 1.0], "fl_foot.L": [1.6, 1.6, 1.6], "fl_foot.R": [1.6, 1.6, 1.6]}
+     },
+     "strike": {
+      "bones": {"fl_upper.L": [0.2, 0.0, 0.0], "fl_upper.R": [0.2, 0.0, 0.0], "fl_lower.L": [1.1, 0.0, 0.0], "fl_lower.R": [1.1, 0.0, 0.0]},
+      "legs": {"hl.L": [-0.2, 0.3, -0.1], "hl.R": [-0.2, 0.3, -0.1]},
+      "scale": {"fl_upper.L": [1.0, 1.3, 1.0], "fl_upper.R": [1.0, 1.3, 1.0], "fl_foot.L": [1.4, 1.4, 1.4], "fl_foot.R": [1.4, 1.4, 1.4]}
+     },
+     "follow": {
+      "bones": {"fl_upper.L": [-0.25, 0.0, -0.3], "fl_upper.R": [-0.25, 0.0, 0.3], "fl_lower.L": [0.9, 0.0, 0.0], "fl_lower.R": [0.9, 0.0, 0.0]},
+      "scale": {"fl_upper.L": [1.0, 1.2, 1.0], "fl_upper.R": [1.0, 1.2, 1.0]}
+     }
+    }
+   }
+  },
+  "giant_panda": {"swipe": {"poses": {"windup": {"rear": 0.54}}}},
+  "hippopotamus": {
+   "bite": {
+    "poses": {
+     "windup": {
+      "rear": 0.5,
+      "swell": 0.08,
+      "move": [0.0, -0.14, -0.02],
+      "bones": {"chest": [0.1, 0.0, 0.0], "neck": [0.3, 0.0, 0.0], "head": [0.5, 0.0, 0.0], "jaw": [-1.0, 0.0, 0.0]},
+      "legs": {"fl.L": [0.5, -0.7, 0.0, 0.2], "fl.R": [0.5, -0.7, 0.0, -0.2], "hl.L": [-0.3, -0.3, 0.4], "hl.R": [-0.3, -0.3, 0.4]}
+     },
+     "strike": {
+      "dip": 0.08,
+      "stretch": 0.06,
+      "bones": {"chest": [-0.08, 0.0, 0.0], "neck": [-0.25, 0.0, 0.0], "head": [-0.1, 0.0, 0.0], "jaw": [0.0, 0.0, 0.0]}
+     }
+    }
+   }
+  },
+  "snapping_turtle": {
+   "bite": {
+    "poses": {
+     "windup": {
+      "replace": true,
+      "squash": 0.1,
+      "swell": 0.1,
+      "move": [0.0, -0.14, 0.0],
+      "bones": {"neck": [0.25, 0.0, 0.0], "head": [0.3, 0.0, 0.0], "jaw": [-0.7, 0.0, 0.0]},
+      "shift": {"head": [0.0, -0.22, 0.0]},
+      "scale": {"head": [0.85, 0.85, 0.85]},
+      "legs": {"fl.L": [0.5, -0.7, 0.0, 0.35], "fl.R": [0.5, -0.7, 0.0, -0.35], "hl.L": [-0.2, -0.2, 0.3, 0.3], "hl.R": [-0.2, -0.2, 0.3, -0.3]},
+      "tail": [0.0, 0.5],
+      "rear": 0.38
+     },
+     "coiled": {"replace": true, "like": "windup", "times": 1.08, "bones": {"neck": [0.27, 0.0, 0.0], "head": [0.32, 0.0, 0.0], "jaw": [-1.0, 0.0, 0.0]}},
+     "strike": {
+      "replace": true,
+      "squash": 0.0,
+      "stretch": 0.14,
+      "move": [0.0, 0.3, 0.04],
+      "bones": {"neck": [-0.1, 0.0, 0.0], "head": [0.05, 0.0, 0.0], "jaw": [0.0, 0.0, 0.0]},
+      "shift": {"head": [0.0, 0.3, 0.0]},
+      "scale": {"head": [1.25, 1.25, 1.25]},
+      "legs": {"fl.L": [0.3, 0.0, 0.0, 0.1], "fl.R": [0.3, 0.0, 0.0, -0.1], "hl.L": [-0.4, 0.2, 0.1], "hl.R": [-0.4, 0.2, 0.1]},
+      "tail": [0.2, -0.4],
+      "dip": 0.1
+     },
+     "follow": {
+      "replace": true,
+      "squash": 0.1,
+      "move": [0.0, 0.33, 0.0],
+      "bones": {"neck": [-0.1, 0.0, 0.3], "head": [0.05, 0.3, 0.25], "jaw": [0.0, 0.0, 0.0]},
+      "shift": {"head": [0.0, 0.26, 0.0]},
+      "scale": {"head": [1.1, 1.1, 1.1]},
+      "tail": [0.0, -0.6],
+      "dip": 0.1
+     },
+     "shake": {
+      "replace": true,
+      "move": [0.0, 0.25, 0.0],
+      "bones": {"neck": [-0.08, 0.0, -0.3], "head": [0.05, -0.3, -0.25], "jaw": [-0.1, 0.0, 0.0]},
+      "shift": {"head": [0.0, 0.2, 0.0]},
+      "tail": [0.0, 0.4]
+     },
+     "recoil": {"replace": true, "move": [0.0, 0.05, 0.0], "squash": 0.05, "shift": {"head": [0.0, 0.05, 0.0]}, "bones": {"jaw": [-0.15, 0.0, 0.0]}}
+    }
+   },
+   "charge": {
+    "poses": {
+     "windup": {"squash": 0.24, "shift": {"head": [0.0, -0.18, 0.0]}, "dip": 0.08, "swell": 0.1},
+     "strike": {"rear": 0.12, "shift": {"head": [0.0, -0.1, 0.0]}, "bones": {"neck": [0.12, 0.0, 0.0], "head": [0.1, 0.0, 0.0], "jaw": [-0.3, 0.0, 0.0]}},
+     "follow": {"rear": 0.16, "shift": {"head": [0.0, 0.05, 0.0]}, "bones": {"neck": [0.2, 0.0, 0.0], "head": [0.15, 0.0, 0.0], "jaw": [-0.6, 0.0, 0.0]}}
+    }
+   }
+  }
+ }
 }

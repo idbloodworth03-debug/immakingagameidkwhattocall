@@ -70,7 +70,23 @@ def spec_of(c, style):
     own = DATA.get("animals", {}).get(c.name, {}).get(style)
     if own is not None:
         spec = own if spec is None else _merge(spec, own)
-    return spec
+    return _whole(spec)
+
+
+def _whole(spec, depth=0):
+    """A style built on another ("like": its name, or "body.style" for a
+    body plan's), with its own keys and poses laid on top."""
+    if spec is None or "like" not in spec or depth > 4:
+        return spec
+    name = spec["like"]
+    if "." in name:
+        body, style = name.split(".", 1)
+        base = DATA.get("bodies", {}).get(body, {}).get(style)
+    else:
+        base = DATA["styles"].get(name)
+    if base is None:
+        raise KeyError(f"strikes.json: no style '{name}' to build on")
+    return _merge(_whole(base, depth + 1), {k: v for k, v in spec.items() if k != "like"})
 
 
 def has(c, style):
@@ -254,7 +270,7 @@ class Clip:
         self.wobbles = _wobbles(spec)
         self.shivers = _shivers(spec)
         # The held beat: from the first pose reached to the hit.
-        self.held = self.keys[1][0] if len(self.keys) > 1 else 0.0
+        self.beat = self.keys[1][0] if len(self.keys) > 1 else 0.0
         if mirror:
             flip = lambda bone: bone[:-2] + (".R" if bone.endswith(".L") else ".L") if bone[-2:] in (".L", ".R") else bone
             self.lags = {flip(b): v for b, v in self.lags.items()}
@@ -288,12 +304,12 @@ class Clip:
                 # Trailing behind, and caught up by the end of the clip.
                 when = max(0.0, t - lag * min(1.0, (1.0 - t) / 0.12))
             v = self.value(channel, when)
-            if self.gain < 1.0 and ((channel == ("move", "y") and v > 0.0) or channel[0] == "shift"):
-                # (The reach rule: its own travel forward, drawn in.)
+            if self.gain != 1.0 and ((channel == ("move", "y") and v > 0.0) or (channel[0] == "shift" and self.gain < 1.0)):
+                # (The reach rule: its own travel forward, drawn in or let out.)
                 v *= self.gain
             out[channel] = self.stance.get(channel, 0.0) + v
-        if self.shivers and self.held * 0.5 < t < self.hit:
-            u = (t - self.held * 0.5) / max(1e-6, self.hit - self.held * 0.5)
+        if self.shivers and self.beat * 0.5 < t < self.hit:
+            u = (t - self.beat * 0.5) / max(1e-6, self.hit - self.beat * 0.5)
             for bone, (axis, size, shakes, late) in self.shivers.items():
                 bump = size * math.sin(math.tau * (u * shakes - late)) * math.sin(math.pi * u) ** 0.6
                 out[("rot", bone, axis)] = out.get(("rot", bone, axis), 0.0) + bump
@@ -308,10 +324,11 @@ class Clip:
 
     def keep(self, motion, c):
         """The reach rule for this clip: (where its front and its back end
-        are as it starts, the share of its travel forward it keeps, the
-        share of its travel backward), or None when it has no reach to
-        keep to. Its own steps forward and its bones' slides are drawn in
-        first (self.gain); what is still too far, by sliding the body."""
+        are as it starts, how far forward its front may be at the hit and
+        at most, how far back its back end), or None when it has no reach
+        to keep to. Its own steps forward and its bones' slides are drawn
+        in (or, for a lunge, let out) to fit: self.gain; where a pose
+        would still pass the mark, the body is held at it (held())."""
         if not hasattr(self, "_keep"):
             self._keep = None
             allowed = _reach(c)
@@ -328,17 +345,37 @@ class Clip:
 
                 far, hit, behind = travel()
                 first = (far, hit)
-                for gain in (1.0, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0.0):
+                # A lunge ("fill") steps as far as its reach allows, whatever
+                # the animal's build; any other clip only ever steps less.
+                # (A shooter stands off and has nothing to step up to.)
+                shooter = bool(_BODIES["bodies"].get(c.name, {}).get("shooter"))
+                more = (4.0, 3.0, 2.5, 2.0, 1.7, 1.45, 1.2) if self.spec.get("fill") and not shooter else ()
+                for gain in more + (1.0, 0.85, 0.7, 0.55, 0.4, 0.25, 0.1, 0.0):
                     self.gain = gain
                     far, hit, behind = travel()
                     if far <= most * 1.001 and hit <= at_hit * 1.001:
                         break
-                forward = min(1.0, most / far if far > 1e-9 else 1.0, at_hit / hit if hit > 1e-9 else 1.0)
-                back = min(1.0, backward / behind if behind > 1e-9 else 1.0)
-                self._keep = (front0, back0, forward, back)
-                self.travel = {"asked_most": first[0], "asked_at_hit": first[1], "gain": self.gain, "ahead_at_hit": hit * forward,
-                               "ahead_most": far * forward, "behind": behind * back, "slide": forward, "allowed": (at_hit, most, backward)}
+                self._keep = (front0, back0, at_hit, most, backward)
+                self.travel = {"asked_most": first[0], "asked_at_hit": first[1], "gain": self.gain, "ahead_at_hit": min(hit, at_hit),
+                               "ahead_most": min(far, most), "behind": min(behind, backward),
+                               "held": max(0.0, hit - at_hit, far - most), "allowed": (at_hit, most, backward)}
         return self._keep
+
+    def held(self, c, p, t):
+        """How far to slide the body in a pose so that its front is no
+        further forward than the rule allows at this moment (its mark at
+        the hit, easing out to its furthest just after), nor its back end
+        further back: like meeting a wall, it stops there and the rest of
+        the pose carries on."""
+        front0, back0, at_hit, most, backward = self._keep
+        front, back = _ends(c, p)
+        mark = at_hit + (most - at_hit) * min(1.0, max(0.0, (t - self.hit) / 0.05))
+        slide = 0.0
+        if front - front0 > mark:
+            slide -= front - front0 - mark
+        if back0 - back > backward:
+            slide += back0 - back - backward
+        return slide
 
 
 _CLIPS = {}
@@ -361,13 +398,7 @@ def play(motion, c, style, t):
     p = _pose(motion, c, cl.sample(t))
     keep = cl.keep(motion, c)
     if keep is not None:
-        front0, back0, forward, backward = keep
-        front, back = _ends(c, p)
-        slide = 0.0
-        if front > front0:
-            slide -= (front - front0) * (1.0 - forward)
-        if back < back0:
-            slide += (back0 - back) * (1.0 - backward)
+        slide = cl.held(c, p, t)
         if abs(slide) > 1e-9:
             p.move(y=slide)
     return p
@@ -475,8 +506,9 @@ def _toe(c, which):
 # shooter, which stands far off, and a flier, which is over its target,
 # have their own allowances; nor does its back end push further back than
 # "back_tiles" into whoever stands behind (strikes.json "limits"). A clip
-# that would go further is drawn in by that much: its poses keep their
-# shape and the body simply travels less.
+# that would go further has its own steps forward drawn in; and where a
+# pose still passes the mark (a long arm, a bowing head), the body is held
+# there as if it met a wall, while the pose carries on.
 
 def _euler(rx, ry, rz):
     cx, sx, cy, sy, cz, sz = math.cos(rx), math.sin(rx), math.cos(ry), math.sin(ry), math.cos(rz), math.sin(rz)

@@ -228,13 +228,16 @@ and the game's own lunge carries it part of the way. So a clip may bring
 the animal's front (its nose, a paw) forward by at most `reach_at_hit` of
 its reach at the hit and `reach_most` at any time (`strikes.json`
 "limits"; a shooter and a flier have their own allowance), and its back
-end back by at most `back_tiles`. A clip that asks for more is drawn in:
-first its own steps forward and its bones' slides are scaled down, then
-the body is slid back by what is left. Write poses whose limbs reach only
-a little past the nose and put the lunge in `move`: the rule then fits
-the same style to every animal's reach. (It reads `bodies.json` and the
-battle models' scale, so an animal whose reach or size changes wants its
-clips built again.)
+end back by at most `back_tiles`. A clip that asks for more has its own
+steps forward and its bones' slides scaled down to fit; a lunge (`fill`)
+has them let out instead, as far as the reach allows, so a low-slung
+animal lunges as far as a tall one. Where a pose still passes the mark (a
+long arm, a head bowing), the body is held there as if it met a wall while
+the pose carries on. Write poses whose limbs reach only a little past the
+nose and put the lunge in `move`: the rule then fits the same style to
+every animal's reach. (It reads `bodies.json` and the battle models'
+scale, so an animal whose reach or size changes wants its clips built
+again.)
 
 **The standard** (`strikes.json` "standard"; `strike_check.py` marks a
 clip under it "low"): from behind and from the front, the wind-up changes
@@ -247,9 +250,16 @@ pose_allowance of how it stands (the camera makes room for no more).
     python strike_check.py                    # everyone on the roster
 
 **The roster** (`strikes.json` "roster"): the animals whose attacks are
-played from key poses. The sample is the Bear (swipe, slam), the Wolf
+played from key poses. The sample was the Bear (swipe, slam), the Wolf
 (bite, pounce), the Squirrel (throw, lob), the Falcon (dive, rake) and
-the Cobra (spit); the others follow style by style.
+the Cobra (spit); the Tanks followed (the Elephant's stomp, the Rhino's
+charge, the Panda's swipe, the Hippo's bite, the Turtle's bite and charge,
+the Yeti's pound); the other classes follow.
+
+An animal gets its own version of a style where its build asks for one:
+the Hippo's bite is a yawn thrown open to the sky and brought down, the
+Turtle's a neck shot out of the shell, the Elephant's stomp keeps its
+trunk from reaching past its feet.
 
 ## Running it
 

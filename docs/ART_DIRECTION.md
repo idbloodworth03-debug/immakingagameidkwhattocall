@@ -689,9 +689,15 @@ blow that changes it from there by at least 0.5, from behind and from the
 front). Clip lengths and hit moments are as they were, so fights play out
 exactly as before; the card portraits are as they were too.
 
-Done so far, as a sample: the Brown Bear (swipe, body slam), the Wolf Pack
-(bite, pounce), the Gray Squirrel (throw, overhead lob), the Peregrine
-Falcon (dive, talon rake) and the King Cobra (spit).
+Done so far: the sample (the Brown Bear's swipe and body slam, the Wolf
+Pack's bite and pounce, the Gray Squirrel's throw and overhead lob, the
+Peregrine Falcon's dive and talon rake, the King Cobra's spit) and the
+other Tanks: the Asian Elephant rears with its ears flared and its trunk
+high and stomps; the Black Rhino hunkers down pawing the ground and tosses
+its horn up; the Giant Panda swipes like the Bear; the Hippopotamus throws
+its huge mouth open to the sky and chomps down; the Snapping Turtle shoots
+its neck out of its shell to bite and rams with its shell; the Yeti hauls
+both fists overhead and pounds the ground.
 
 ## What's next for the art
 

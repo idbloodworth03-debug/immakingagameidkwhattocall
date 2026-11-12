@@ -70,7 +70,7 @@
    "reach": 0.45,
    "shooter": false,
    "width": 1.0,
-   "pose_up": 1.148
+   "pose_up": 1.298
   },
   "lion": {
    "size": 1.84,
@@ -94,7 +94,7 @@
    "reach": 0.55,
    "shooter": false,
    "width": 1.12,
-   "pose_up": 1.248
+   "pose_up": 1.318
   },
   "red_panda": {
    "size": 1.84,
@@ -110,7 +110,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.87,
-   "pose_up": 1.122
+   "pose_up": 1.254
   },
   "california_condor": {
    "size": 2.71,
@@ -199,7 +199,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 1.05,
-   "pose_up": 1.118
+   "pose_up": 1.292
   },
   "honey_badger": {
    "size": 2.39,
@@ -223,7 +223,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.77,
-   "pose_up": 1.043
+   "pose_up": 1.146
   },
   "mountain_gorilla": {
    "size": 2.33,
@@ -272,7 +272,7 @@
    "reach": 0.55,
    "shooter": false,
    "width": 0.87,
-   "pose_up": 0.92,
+   "pose_up": 0.831,
    "across": true
   },
   "cerberus": {

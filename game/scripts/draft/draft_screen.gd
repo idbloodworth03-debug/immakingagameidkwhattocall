@@ -856,30 +856,44 @@ func _pick(slot: int, replace: int, upgrade := false) -> void:
 ## group: "+6 More" for Squirrels). Each is one of your 3 picks; a tap
 ## outside takes neither.
 func _ask_upgrade_or_more(id: String, can_up: bool, can_more: bool, on_up: Callable, on_more: Callable) -> void:
+	var choice := _army_choice(id, can_up, can_more)
+	var layer := _overlay(choice.box, true)
+	layer.name = "ArmyChoice"
+	(choice.up as ChunkyButton).pressed.connect(func() -> void:
+		layer.queue_free()
+		on_up.call())
+	(choice.more as ChunkyButton).pressed.connect(func() -> void:
+		layer.queue_free()
+		on_more.call())
+
+
+## What that choice shows: the animal's name, the question, and the two
+## buttons ({"box", "up", "more"}). The lines wrap inside the buttons'
+## width, so the panel fits the screen whatever the animal is called.
+func _army_choice(id: String, can_up: bool, can_more: bool) -> Dictionary:
+	var big := _size("choice_button", Vector2(236, 128))
 	var box := UIStyle.vbox("m")
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	# (Labels come outlined, so this reads over the dimmed screen.)
-	box.add_child(UIStyle.label("%s: upgrade, or add more?" % String(GameData.get_card(id).get("name", "")), "large", Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER))
+	var lines := UIStyle.vbox("xs")
+	box.add_child(lines)
+	# (Labels come outlined, so these read on the panel.)
+	for line: Array in [[String(GameData.get_card(id).get("name", "")), "large"], ["Upgrade it, or add more?", "body"]]:
+		var label := UIStyle.label(String(line[0]), String(line[1]), Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER)
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		label.custom_minimum_size.x = 2.0 * big.x
+		lines.add_child(label)
 	var row := UIStyle.hbox("m")
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	box.add_child(row)
 	var up := UIStyle.button("Upgrade", "gold" if can_up else "disabled", "upgrade")
 	var more := UIStyle.button("+%d More" % DraftMatch.squad_units(id), "primary" if can_more else "disabled", "class_" + GameData.class_of(id))
-	var big := _size("choice_button", Vector2(236, 128))
 	for b: ChunkyButton in [up, more]:
 		b.min_width = big.x
 		b.min_height = big.y
 		row.add_child(b)
 	up.disabled = not can_up
 	more.disabled = not can_more
-	var layer := _overlay(box, true)
-	layer.name = "ArmyChoice"
-	up.pressed.connect(func() -> void:
-		layer.queue_free()
-		on_up.call())
-	more.pressed.connect(func() -> void:
-		layer.queue_free()
-		on_more.call())
+	return {"box": box, "up": up, "more": more}
 
 
 ## Tapping an animal in your army asks the same: Upgrade (a star for every

@@ -52,13 +52,14 @@ def but(field, *others):
 def card_pose(t=0.3, jaw=-0.3, turn=0.25, lean=0.0, head=(0.0, 0.0), clip="attack"):
     """A card pose of the toy's own, where the old model's hides what the
     toy is known by (a face turned down, a mouth agape): a moment `t` of
-    one of its animations (`clip`: its attack unless given), mirrored so
+    one of its animations (`clip`: its attack unless given; an attack as
+    the cards know it, motion.CARD_CLIPS, not as the game plays it), mirrored so
     its near side leads on the card's camera, the body turned `turn`
     toward us (radians; below 0: side on the other way) and leaning
     `lean`, the head tipped and turned (`head`: up, toward us), the jaw
     open by `jaw`. Give it to Design.toy(hero=...)."""
     def pose(c):
-        p = motion._mirror_pose(motion.ANIMATIONS[clip][0](c, t))
+        p = motion._mirror_pose(motion.CARD_CLIPS.get(clip, motion.ANIMATIONS[clip][0])(c, t))
         rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
         p["root_rot"] = (rx + lean, ry, rz + turn)
         p.rot("head", x=head[0], z=head[1])

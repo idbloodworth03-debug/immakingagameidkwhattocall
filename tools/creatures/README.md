@@ -42,7 +42,9 @@ mane grows with its face).
    beat, a hiss, a roar); and, only where asked for (`motion["victory_render"]`)
    or already rendered, a looping victory. The death pose is kept for
    previews (`python strip.py <id> death`) but isn't in the sheets: the
-   game's knockouts are a cartoon poof.
+   game's knockouts are a cartoon poof. The attacks of the animals on the
+   roster of `strikes.json` are played from key poses instead (`strikes.py`:
+   see "Attacks" below); the ones written here stay as the cards' poses.
 5. **Render** (`sprites.py`): the card portraits and the sprite sheets (the
    game shows its animals as 3D models now, from step 8; the sheets are its
    fallback, its timing data and the source of the crowd strips; the web
@@ -154,6 +156,100 @@ dolphins and whales belly-slide, shrimp scuttle, winged animals fly with
 their legs tucked. Attacks for them: `spit` (a shot from the mouth),
 `snap` (a shrimp's claw), `flutter_dive` and `winged_dive`; upright animals
 walk with the `biped` gait and lizards add `wiggle`.
+
+## Attacks
+
+An attack has to read in a fight: from the game's camera, which looks down
+on an animal from behind (your own) or from the front (the enemy's), on a
+phone, in a crowd. The attacks written as curves in `motion.py` didn't: a
+paw lifted and came down, and from the game's camera the animal's outline
+hardly changed.
+
+**What we measured** (November 2026; `strike_check.py` does it). For a
+clip, seen from behind and from the front as the game sees it: how much of
+the animal's outline is newly covered or uncovered against how it stood
+(a share of the outline's area), at the wind-up and from the wind-up into
+the blow.
+
+| Clips | Outline change from behind |
+| --- | --- |
+| Our attacks as they were: Bear swipe, Wolf bite, Cobra spit | 0.23, 0.18, 0.18 |
+| A toy-style pack's attacks (Quirky Series free sample: snake, monkey, bird, squid, deer, muskrat, gecko) | 0.24 to 0.85, half of them over 0.4 |
+| A low-poly pack's attacks (Quaternius, CC0: wolf, fox, yeti, dragon) | 0.29 to 0.68 |
+
+The packs' clips are reference only: watched frame by frame and measured,
+nothing of theirs is in ours. What the good ones share:
+
+* **The wind-up goes the other way first, with the whole body**: it rears
+  or pulls back, the head and the striking limb with it, and holds for a
+  beat.
+* **The strike takes a frame or two** and carries the whole body through
+  where it stood: low and long where the wind-up was tall and gathered.
+* **Loose parts trail and overshoot**: the tail flips up after the body
+  has stopped, ears lay back and spring up.
+* **From above, sideways and turning motion shows; motion toward the
+  target hardly does.** A paw flung out to the side, a body twisting, wings
+  opening, a hood spreading, a jump: these change the outline. A paw
+  brought straight down in front of the chest is hidden by the body.
+
+**How an attack is written** (`strikes.json`, played by `strikes.py`). A
+style is a short list of keys, each a moment and a pose and how the pose
+is arrived at:
+
+    "keys": [[0.0, "rest"], ["hit-0.24", "windup", "out"], ["hit-0.09", "coiled", "linear"],
+             ["hit", "strike", "in"], ["hit+0.07", "follow", "out"], ["hit+0.24", "recoil", "inout"], [1.0, "rest", "inout"]]
+
+Moments are shares of the clip, or the clip's hit moment plus or minus one
+(`motion.HIT_AT`, unchanged: the game lands its hits on it, and a clip's
+length is unchanged too). `out` brakes into a pose (a wind-up settling),
+`in` speeds into it (a blow landing at full speed), `linear` creeps (the
+held beat: "coiled" is the wind-up a little further).
+
+A pose is turns in radians on top of the animal's stance: of the whole
+body (`rear` nose-up on the hind feet, `dip` nose-down on the front feet,
+`pitch`, `turn`, `roll`), `move` [right, forward, up] in shoulder heights
+(field tiles for a flier), `squash`, `stretch` and `swell` of the whole
+body, `bones` {bone: [x, y, z]}, and shorthands for `legs`, `wings`,
+`tail`, `trunk` and `ears`. `scale` resizes a bone (a paw grown for the
+blow, a hood spread wide, a short toy arm stretched so it shows) and
+`shift` slides one along itself (a head thrust out on its neck): these
+are new with the key poses, and go through the bake (`export_gltf.bake`),
+the pack converter and the game as bone sizes and positions. `lag` lets a
+tail or the ears run a little behind the body, `wobble` springs them to a
+stop after the hit, `shiver` trembles them through the held beat (a
+rattling tail). A `stance` is the pose the clip starts and ends in where
+that isn't the rest pose (the Squirrel sits up to throw, as it idles).
+`bodies` holds a body plan's own version of a style (a snake's spit) and
+`animals` an animal's own changes on top.
+
+**The reach rule** (`strikes.py`). In a fight a melee animal stands its
+reach from its target (`bodies.json`: a quarter of its length, typically),
+and the game's own lunge carries it part of the way. So a clip may bring
+the animal's front (its nose, a paw) forward by at most `reach_at_hit` of
+its reach at the hit and `reach_most` at any time (`strikes.json`
+"limits"; a shooter and a flier have their own allowance), and its back
+end back by at most `back_tiles`. A clip that asks for more is drawn in:
+first its own steps forward and its bones' slides are scaled down, then
+the body is slid back by what is left. Write poses whose limbs reach only
+a little past the nose and put the lunge in `move`: the rule then fits
+the same style to every animal's reach. (It reads `bodies.json` and the
+battle models' scale, so an animal whose reach or size changes wants its
+clips built again.)
+
+**The standard** (`strikes.json` "standard"; `strike_check.py` marks a
+clip under it "low"): from behind and from the front, the wind-up changes
+the outline by at least 0.4 and the blow changes it from the wind-up by at
+least 0.5; the tallest moment stays within `bodies.json` "limits"
+pose_allowance of how it stands (the camera makes room for no more).
+
+    python ../toys/build.py brown_bear        # the model, with its clips
+    python strike_check.py brown_bear         # the numbers
+    python strike_check.py                    # everyone on the roster
+
+**The roster** (`strikes.json` "roster"): the animals whose attacks are
+played from key poses. The sample is the Bear (swipe, slam), the Wolf
+(bite, pounce), the Squirrel (throw, lob), the Falcon (dive, rake) and
+the Cobra (spit); the others follow style by style.
 
 ## Running it
 

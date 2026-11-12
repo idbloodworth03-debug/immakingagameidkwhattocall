@@ -383,9 +383,12 @@ def bake(creature, arm):
         action.use_fake_user = True
         arm.animation_data.action = action
         prev = {}
-        for i in range(keys + 1):
-            t = i / keys
-            pose = fn(creature, 0.0 if (loops and i == keys) else t)
+        poses = [fn(creature, 0.0 if (loops and i == keys) else i / keys) for i in range(keys + 1)]
+        # Bones a pose of this clip resizes or slides (strikes.py): keyed
+        # through the whole clip, so they are plain again where it doesn't.
+        sized = {name for pose in poses for name in pose.get("scale", {})}
+        slid = {name for pose in poses for name in pose.get("shift", {})}
+        for i, pose in enumerate(poses):
             motion.apply(arm, pose)
             arm.location = arm["rest_offset"]
             arm.rotation_euler = (0, 0, 0)
@@ -401,9 +404,15 @@ def bake(creature, arm):
                 pb.rotation_quaternion = rot
                 pb.keyframe_insert("location", frame=i)
                 pb.keyframe_insert("rotation_quaternion", frame=i)
+                if pb.name in sized:
+                    pb.keyframe_insert("scale", frame=i)
             for pb in arm.pose.bones:
                 if pb.parent is not None:
                     pb.keyframe_insert("rotation_euler", frame=i)
+                    if pb.name in sized:
+                        pb.keyframe_insert("scale", frame=i)
+                    if pb.name in slid:
+                        pb.keyframe_insert("location", frame=i)
     arm.animation_data.action = None
     _rest(arm)
     for pb in roots:

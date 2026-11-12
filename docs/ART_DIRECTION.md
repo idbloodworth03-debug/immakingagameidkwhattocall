@@ -649,6 +649,50 @@ high, stubby wings (about a third of the real bird's span) and its legs
 dangling under it, where the bird it replaces flew stretched out flat.
 It is drawn as tall as before, well inside the old wingspan.
 
+## Attacks that read (November 2026, in progress)
+
+The toys' attacks were the old models': a paw lifted and came down, a head
+leaned in. From the side that passed; from the game's camera, which looks
+down on an animal from behind or from the front, the Bear's outline hardly
+changed through its swipe.
+
+We measured it (`tools/creatures/strike_check.py`): the share of an
+animal's outline that changes through its attack, seen as the game sees
+it. Ours changed about a fifth (the Bear 0.23, the Wolf 0.18, the Cobra
+0.18 from behind). The attack clips of two art packs, taken as reference
+and watched frame by frame (nothing of theirs is in ours), change theirs
+by 0.24 to 0.85: half of the toy-style pack's by over 0.4.
+
+What those do, and ours now do too:
+
+* **The wind-up goes the other way first, with the whole body**, and holds
+  a beat: the Bear rears with a paw flung out and roars; the Wolf throws
+  its head back; the Squirrel twists round with its arm cocked; the
+  Falcon climbs with its wings up; the Cobra rears and spreads its hood.
+* **The strike takes a frame or two** and lands exactly on the hit: long
+  and low where the wind-up was tall and gathered.
+* **The blow carries on past the hit and settles**: the Bear's paw sweeps
+  across, the Wolf worries its bite side to side, the Falcon flares its
+  wings; tails and ears trail behind and spring to a stop.
+* **Squash and stretch, and rubber limbs where a toy's are too short to
+  show**: a paw swells for the blow, a stubby arm stretches, a body
+  flattens as it lands.
+* **Nobody travels further than its reach**: in a fight animals stand a
+  quarter of a body apart, so the lunge comes from pulling back first and
+  striking through where it stood, not from running into the enemy.
+
+Each attack is a short list of key poses in a data file
+(`tools/creatures/strikes.json`): `tools/creatures/README.md`, "Attacks",
+has how to write one, the reach rule, and the standard every clip is
+checked against (a wind-up that changes the outline by at least 0.4 and a
+blow that changes it from there by at least 0.5, from behind and from the
+front). Clip lengths and hit moments are as they were, so fights play out
+exactly as before; the card portraits are as they were too.
+
+Done so far, as a sample: the Brown Bear (swipe, body slam), the Wolf Pack
+(bite, pounce), the Gray Squirrel (throw, overhead lob), the Peregrine
+Falcon (dive, talon rake) and the King Cobra (spit).
+
 ## What's next for the art
 
 1. **Play with the 20 animals and react:** which ones don't look right, which

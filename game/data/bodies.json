@@ -22,7 +22,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.38,
-   "pose_up": 1.388
+   "pose_up": 1.19
   },
   "red_fox": {
    "size": 1.93,
@@ -38,7 +38,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.62,
-   "pose_up": 1.173
+   "pose_up": 1.226
   },
   "wild_boar": {
    "size": 2.17,
@@ -54,7 +54,7 @@
    "reach": 0.4,
    "shooter": false,
    "width": 0.35,
-   "pose_up": 1.06
+   "pose_up": 1.074
   },
   "brown_bear": {
    "size": 2.02,
@@ -62,7 +62,7 @@
    "reach": 0.5,
    "shooter": false,
    "width": 0.78,
-   "pose_up": 1.051
+   "pose_up": 1.091
   },
   "hippopotamus": {
    "size": 2.62,
@@ -142,7 +142,7 @@
    "reach": 7.0,
    "shooter": true,
    "width": 0.59,
-   "pose_up": 1.076
+   "pose_up": 1.056
   },
   "sumatran_orangutan": {
    "size": 2.3,

@@ -65,11 +65,15 @@ accepted from single previews; it was taken out again.
   attacks, and its persona's idle, fidget and victory. A pack's clips are
   generic; ours are made for each animal's fighting style, and a toy plays
   them as they are, so its swings land on the game's hit moments with
-  nothing retimed.
+  nothing retimed. (Its attacks are being rewritten as key poses,
+  `tools/creatures/strikes.json`, so they read from the game's camera; a
+  toy plays those the same way: `tools/creatures/README.md`, "Attacks".)
 * **Its card pose** (the "hero" clip its portrait is rendered from): the
   old model's, unless that hides what the toy is known by; then its design
   gives its own (`kit.card_pose`: a moment of its attack, turned and
-  tipped as wanted: `d.toy(hero=card_pose(...))`).
+  tipped as wanted: `d.toy(hero=card_pose(...))`). A card pose is taken
+  from the attack as the cards know it (`motion.CARD_CLIPS`), so the
+  portraits stay as they are whatever the game's attacks become.
 * **Its height on screen**: `sizes.py` draws it as tall as the model it
   replaces. Its body's room in a fight (`bodies.json` footprint, width,
   reach) is gameplay and doesn't change, so a toy is designed compact: about

@@ -12,6 +12,8 @@ import math
 
 import numpy as np
 
+import strikes
+
 TAU = 2 * math.pi
 LEGS = ["fl.L", "fl.R", "hl.L", "hl.R"]
 
@@ -169,8 +171,24 @@ def walk(c, t):
 
 
 def attack(c, t):
+    """The attack the game plays: from its key poses (strikes.py) where the
+    style has them, else the older one below."""
     style = c.motion.get("attack", "bite")
+    if strikes.has(c, style):
+        return strikes.play(_this(), c, style, t)
     return ATTACKS[style](c, t)
+
+
+def card_attack(c, t):
+    """The attack as the cards know it: the poses the card portraits were
+    made from (portrait_pose, a toy's card_pose) stay as they were drawn,
+    whatever the game's attacks become."""
+    return ATTACKS[c.motion.get("attack", "bite")](c, t)
+
+
+def _this():
+    import sys
+    return sys.modules[__name__]
 
 
 # The frame (0-1) where each attack lands; the game times hits to it.
@@ -993,6 +1011,13 @@ def special(c, t):
     """A Stun animal's big wind-up before the blow that stuns: primates beat
     their chest and roar, snakes rear up and hiss with the tail rattling,
     others rear and roar. The blow lands late (HIT_AT "special")."""
+    if strikes.has(c, "special"):
+        return strikes.play(_this(), c, "special", t)
+    return card_special(c, t)
+
+
+def card_special(c, t):
+    """The Stun wind-up as it was (the cards' poses)."""
     body = c.motion.get("body")
     strike = float(keys(t, [(0, 0), (0.62, 0), (0.72, 1), (0.85, 0.5), (1, 0)]))
     show = float(keys(t, [(0, 0), (0.12, 1), (0.6, 1), (0.72, 0), (1, 0)]))
@@ -1027,6 +1052,13 @@ def special(c, t):
 
 def attack2(c, t):
     """The second attack (common animals alternate two)."""
+    style = c.motion["attack2"]
+    if strikes.has(c, style):
+        return strikes.play(_this(), c, style, t)
+    return ATTACKS[style](c, t)
+
+
+def card_attack2(c, t):
     return ATTACKS[c.motion["attack2"]](c, t)
 
 
@@ -2417,7 +2449,7 @@ def _hero_from_attack(c, t, jaw=-0.3, turn=0.25, lean=0.0, head=(0.0, 0.0)):
     """A card pose from its own attack at moment `t` (mirrored, so the near
     side leads on the card's camera), the body turned `turn` toward us and
     leaning `lean`, the head turned and tipped (`head`: x, z), the jaw open."""
-    p = _mirror_pose(attack(c, t))
+    p = _mirror_pose(card_attack(c, t))
     rx, ry, rz = p.get("root_rot", (0.0, 0.0, 0.0))
     p["root_rot"] = (rx + lean, ry, rz + turn)
     p.rot("head", x=head[0], z=head[1])
@@ -3432,6 +3464,9 @@ ANIMATIONS = {
     # without it otherwise); motion["victory_render"] renders it.
     "victory": (victory, 10, 10, True),
 }
+# The same clips as the cards know them (card_attack): what a card pose is
+# taken from (tools/toys/kit.py card_pose).
+CARD_CLIPS = {"attack": card_attack, "attack2": card_attack2, "special": card_special}
 # Not in sheets any more (the game's knockouts are a cartoon poof), but kept
 # for previews: python strip.py <id> death
 EXTRA = {"death": (death, 6, 10, False)}
@@ -3468,9 +3503,14 @@ def apply(arm, pose):
     """Poses the armature. Root offsets and the death roll move the armature
     object itself, which sits inside the "facing" empty, so they stay in the
     animal's own frame whichever way it faces."""
+    scale = pose.get("scale", {})
+    shift = pose.get("shift", {})
     for pb in arm.pose.bones:
         pb.rotation_euler = pose.get(pb.name, (0.0, 0.0, 0.0))
-        pb.location = (0, 0, 0)
+        # A bone's slide along its own axes and its size (strikes.py: a
+        # head thrust out, a body squashed), plain otherwise.
+        pb.location = shift.get(pb.name, (0.0, 0.0, 0.0))
+        pb.scale = scale.get(pb.name, (1.0, 1.0, 1.0))
     rest = arm.get("rest_offset", (0.0, 0.0, 0.0))
     loc = pose.get("root_loc", (0.0, 0.0, 0.0))
     arm.location = (rest[0] + loc[0], rest[1] + loc[1], rest[2] + loc[2])

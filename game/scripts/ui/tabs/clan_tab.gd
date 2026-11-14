@@ -25,7 +25,7 @@ func _ready() -> void:
 	margin.add_child(column)
 
 	column.add_child(ComingSoon.hero("tab_clan", UIKit.BLUE, "Clans",
-			"Join a clan with your friends to chat, trade animals, battle each other and take on other clans. Clans arrive with online play."))
+			"Join a clan with your friends to chat, trade animals, battle each other and take on other clans. Clans arrive with online play.", "tab_clan"))
 	var row := UIKit.hbox(14)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	column.add_child(row)

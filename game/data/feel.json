@@ -291,6 +291,100 @@
   "stagger_seconds": 0.05,
   "fade_seconds": 0.15
  },
+ "menu": {
+  "_note": "The main menu (scripts/ui/main_menu.gd, backdrop.gd, squad_stage.gd, tabs/). Behind every tab, cloud_count clouds drift across the top cloud_band of the sky at about cloud_speed pixels a second, over a faint pattern of paw prints (paw_alpha, paw_size pixels each, paw_step apart). The bar at the bottom: each tab's toy icon is tab_icon pixels (tab_icon_picked for the tab you are on, which stands tab_lift pixels proud of the bar and shows its name); picking one bounces it over tab_bounce_seconds; the bar is tab_height tall. The bar at the top: each counter is bar_counter_width wide, a slot of dark wood bar_slot_height tall with a toy coin or gem bar_icon pixels over its left end. The home tab: the game's name on a sign logo_height tall in letters logo_size big, swinging logo_swing_degrees either way every logo_swing_seconds; each cage slot slot_height tall. Opening a cage: the rays of light behind it are reveal_rays times as strong as on a dark screen (the sky behind is bright).",
+  "cloud_count": 5,
+  "cloud_speed": 7.0,
+  "cloud_band": 0.1,
+  "paw_alpha": 0.07,
+  "paw_size": 46.0,
+  "paw_step": 120.0,
+  "tab_icon": 62.0,
+  "tab_icon_picked": 84.0,
+  "tab_lift": 14.0,
+  "tab_height": 104.0,
+  "tab_bounce_seconds": 0.3,
+  "bar_icon": 58.0,
+  "bar_counter_width": 196.0,
+  "bar_slot_height": 48.0,
+  "logo_height": 84.0,
+  "logo_size": 58.0,
+  "logo_swing_degrees": 1.4,
+  "logo_swing_seconds": 3.2,
+  "slot_height": 178.0,
+  "reveal_rays": 2.6,
+  "squad": {
+   "_note": "The home screen's squad (scripts/ui/squad_stage.gd): your deck's animals as live 3D toys on your arena's stage (arenas.json \"stage\": a habitat scene of the 3D viewer, viewer.json), in rows, the biggest at the back, each turned turn_degrees toward the middle. rows: how many stand in each row, back to front, by how many walk (neighboring rows differ by one, so a face in front stands between two behind it; more animals than the table has: rows of row_most). sizes: how long an animal's longest side stands, by its build (classes.json groups: small, medium, large, huge; a Mythic at least hero_size), in stage units before the squad is shrunk to fit width across the stage; each takes across of its measured width in its row with gap between neighbors (under 1: shoulders overlap a little), row_gap between the rows; the squad is never drawn bigger than fit_most of its sizes. Fliers hover behind the others, hover of the back row's tallest up. The camera: fov, looking down pitch degrees from distance away (at a square window; further for a narrower one) at target of the squad's height, target_z toward the camera. Each pops in pop_seconds, stagger seconds after the one before, fidgets every fidget_every seconds and blinks as in the viewer; a tap within tap_pixels of one makes it hop (tap_hop of its size, tap_seconds) and celebrate. render_scale_max caps how sharp the scene is drawn. The scene costs about what a 48-animal fight costs to draw (measured: 240,000 triangles a frame); light_models true stands the fights' lighter models there instead (a third of the triangles), should a phone need it.",
+   "sizes": {
+    "small": 0.8,
+    "medium": 0.95,
+    "large": 1.1,
+    "huge": 1.26
+   },
+   "hero_size": 1.3,
+   "rows": {
+    "1": [
+     1
+    ],
+    "2": [
+     2
+    ],
+    "3": [
+     1,
+     2
+    ],
+    "4": [
+     1,
+     2,
+     1
+    ],
+    "5": [
+     2,
+     3
+    ],
+    "6": [
+     3,
+     2,
+     1
+    ],
+    "7": [
+     2,
+     3,
+     2
+    ],
+    "8": [
+     3,
+     2,
+     3
+    ]
+   },
+   "width": 2.05,
+   "gap": 0.04,
+   "row_gap": 0.66,
+   "turn_degrees": 26.0,
+   "hover": 0.9,
+   "fov": 30.0,
+   "pitch": 23.0,
+   "distance": 3.8,
+   "target": 0.26,
+   "pop_seconds": 0.4,
+   "stagger": 0.07,
+   "fidget_every": [
+    5.0,
+    12.0
+   ],
+   "tap_hop": 0.22,
+   "tap_seconds": 0.36,
+   "tap_pixels": 110.0,
+   "render_scale_max": 2.0,
+   "light_models": false,
+   "msaa": 4,
+   "row_most": 3,
+   "across": 0.86,
+   "fit_most": 1.0,
+   "target_z": 0.16
+  }
+ },
  "pick": {
   "_note": "The Pick 3 screen. Card sizes are [width, height] in game pixels: offer_card for the options after round 1 (four animals in one tray, animal_tray, and, when Ranger tools are on, two tools in another below it, tool_tray, each tray tray_padding pixels round its cards), start_card for round 1's collection grid, herd_card for your army row; choice_button for the two buttons you get by picking an animal you already have (an offered card, or one in your army): Upgrade, or more of it; army_height: how tall your army in formation is drawn while picking at least (it takes the room the options leave; framed with army_margin_tiles around it, at least army_min_tiles across, zoomed in up to army_max_zoom); slot_size for the three pick slots, undo_badge for the back arrow on your latest pick. Holding a card shows its info (see info). After a fight, the result shows for result_seconds before the next round's picks. The opponent takes between the two bot_pick_seconds over each pick.",
   "offer_card": [

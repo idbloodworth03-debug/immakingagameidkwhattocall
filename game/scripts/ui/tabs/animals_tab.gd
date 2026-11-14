@@ -53,7 +53,8 @@ func _rebuild() -> void:
 	_content.add_child(intro)
 	var intro_row := UIKit.hbox(14)
 	intro.add_child(intro_row)
-	var watering_hole := UIKit.icon_rect(GameData.ui_icon("paw"), UIKit.GREEN, 64)
+	var watering_hole := MenuArt.rect("tab_animals", 76) if MenuArt.has("tab_animals") else UIKit.icon_rect(GameData.ui_icon("paw"), UIKit.GREEN, 64)
+	watering_hole.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	intro_row.add_child(watering_hole)
 	var plays := "Your deck of 8 animals (change it from the Battle tab) and every tool you've found turn up" if GameData.tools_on() else "Your deck of 8 animals (change it from the Battle tab) turns up"
 	var text := UIKit.paragraph("%s in your Draft Duel picks, each at its level. Find more in cages, and level them up with copies and gold." % plays, 21, UIKit.TEXT)

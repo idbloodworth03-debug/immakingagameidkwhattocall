@@ -38,7 +38,7 @@ func _rebuild() -> void:
 	_content.add_child(gems)
 	var gem_row := UIKit.hbox(14)
 	gems.add_child(gem_row)
-	gem_row.add_child(UIKit.icon_rect(GameData.ui_icon("gems"), UIKit.GEMS, 64))
+	gem_row.add_child(MenuArt.rect("gems_pile", 96) if MenuArt.has("gems_pile") else UIKit.icon_rect(GameData.ui_icon("gems"), UIKit.GEMS, 64))
 	var note := UIKit.paragraph("Gem packs will be real-money purchases through the App Store and Google Play. They come when the store accounts are set up.", 20)
 	note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gem_row.add_child(note)
@@ -101,7 +101,7 @@ func _add_cages() -> void:
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
 		info.add_child(UIKit.label(cage.name, 26))
-		info.add_child(UIKit.paragraph(CageInfo.summary(cage_id, arena), 19))
+		info.add_child(UIKit.paragraph(CageInfo.summary(cage_id, arena), 20))
 		var buttons := UIKit.vbox(8)
 		row.add_child(buttons)
 		var odds := UIKit.button("Odds", UIKit.BLUE, 20, Vector2(160, 52))
@@ -138,13 +138,11 @@ func _add_gold_packs() -> void:
 		row.add_child(cell)
 		var column := UIKit.vbox(8)
 		cell.add_child(column)
-		# Bigger coins for a bigger pack.
-		var coins := UIKit.icon_rect(GameData.ui_icon("gold"), UIKit.GOLD, 64 + i * 16)
-		coins.custom_minimum_size = Vector2(96, 96)
+		# A bigger heap for a bigger pack: a few coins, a pile, a chest.
+		var heaps: Array = GameData.art.get("menu", {}).get("gold_packs", [])
+		var heap := String(heaps[mini(i, heaps.size() - 1)]) if not heaps.is_empty() else ""
+		var coins := MenuArt.rect(heap, 132) if MenuArt.has(heap) else UIKit.icon_rect(GameData.ui_icon("gold"), UIKit.GOLD, 96)
 		coins.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		var shrink := (64.0 + i * 16) / 96.0
-		coins.scale = Vector2(shrink, shrink)
-		coins.pivot_offset = Vector2(48, 96)
 		column.add_child(coins)
 		column.add_child(UIKit.label(UIKit.format_number(int(pack.gold)), 28, UIKit.GOLD, HORIZONTAL_ALIGNMENT_CENTER))
 		var buy := UIKit.price_button(UIKit.format_number(int(pack.gems)), "gems", UIKit.GREEN, 22)
@@ -186,7 +184,7 @@ func _add_cosmetics() -> void:
 		info.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(info)
 		info.add_child(UIKit.label(item.name, 24))
-		info.add_child(UIKit.label(("Emote: \"%s\"" % item.caption) if is_emote else "Player banner", 19, UIKit.TEXT_DIM))
+		info.add_child(UIKit.label(("Emote: \"%s\"" % item.caption) if is_emote else "Player banner", 20, UIKit.TEXT_DIM))
 		var owned := Profile.is_unlocked(item)
 		var buy := UIKit.button("Owned", UIKit.GREY, 20, Vector2(150, 60)) if owned else \
 				UIKit.price_button(str(int(item.unlock.gems)), "gems", UIKit.GREEN, 22, Vector2(150, 60))

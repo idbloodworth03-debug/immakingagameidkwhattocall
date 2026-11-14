@@ -53,7 +53,7 @@ func _build() -> void:
 		level_box.add_child(UIKit.progress(float(ranger.xp) / float(ranger.xp_needed), "%s / %s XP" % [UIKit.format_number(ranger.xp), UIKit.format_number(ranger.xp_needed)], UIKit.GREEN))
 	else:
 		level_box.add_child(UIKit.label("Max level!", 22))
-	level_box.add_child(UIKit.paragraph("Earn XP by upgrading animals and playing battles. Higher levels unlock banners, icons and emotes.", 19))
+	level_box.add_child(UIKit.paragraph("Earn XP by upgrading animals and playing battles. Higher levels unlock banners, icons and emotes.", 20))
 
 	# Stats
 	var stats_well := UIKit.well(14)
@@ -121,9 +121,10 @@ func _picker(items: Array, selected: String, make_swatch: Callable, equip: Calla
 		var unlocked := Profile.is_unlocked(item)
 		var cell := UIKit.panel(UIKit.PANEL_DARK, 6, 12)
 		if item.id == selected:
-			var style := UIKit.box(UIKit.PANEL_DARK, 12, 6)
-			style.set_border_width_all(4)
-			style.border_color = UIKit.YELLOW
+			# The one you wear: a bright ring round its tile.
+			var style := UIKit.raised(UIKit.PANEL_LIGHT, 12, 6)
+			style.set_border_width_all(5)
+			style.border_color = UIStyle.color("selected")
 			cell.add_theme_stylebox_override("panel", style)
 		cell.custom_minimum_size = Vector2(140, 0)
 		var column := UIKit.vbox(4)
@@ -131,7 +132,7 @@ func _picker(items: Array, selected: String, make_swatch: Callable, equip: Calla
 		cell.add_child(column)
 		var swatch: Control = make_swatch.call(item, unlocked)
 		column.add_child(swatch)
-		var caption := UIKit.label(item.name if unlocked else Profile.unlock_hint(item), 15, UIKit.TEXT if unlocked else UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
+		var caption := UIKit.label(item.name if unlocked else Profile.unlock_hint(item), 17, UIKit.TEXT if unlocked else UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER)
 		caption.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		caption.add_theme_constant_override("outline_size", 3)
 		column.add_child(caption)

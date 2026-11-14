@@ -26,15 +26,14 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 
+	# The menus' own sunny sky, with rays of light turning behind the cage
+	# (bright: nothing dimmed).
 	var background := Backdrop.new()
+	background.pattern_alpha = 0.0
 	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(background)
-	var shade := ColorRect.new()
-	shade.color = Color(UIKit.INK, 0.55)
-	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(shade)
 	_rays = LightRays.new()
+	_rays.strength = Feel.num("menu", "reveal_rays", 2.6)
 	_rays.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(_rays)
 
@@ -110,10 +109,10 @@ func _show_step(step: Dictionary) -> void:
 	var item: Control
 	match step.kind:
 		"gold":
-			item = _big_reward(GameData.ui_icon("gold"), UIKit.GOLD, "+%s Gold" % UIKit.format_number(int(rewards.gold)), UIKit.GOLD)
+			item = _big_reward("coins_medium", GameData.ui_icon("gold"), UIKit.GOLD, "+%s Gold" % UIKit.format_number(int(rewards.gold)), UIKit.GOLD)
 			Sound.play("coin")
 		"gems":
-			item = _big_reward(GameData.ui_icon("gems"), UIKit.GEMS, "+%d Gems" % int(rewards.gems), UIKit.GEMS)
+			item = _big_reward("gems_pile", GameData.ui_icon("gems"), UIKit.GEMS, "+%d Gems" % int(rewards.gems), UIKit.GEMS)
 			Sound.play("coin")
 		"card":
 			item = _card_reward(step.stack)
@@ -123,10 +122,12 @@ func _show_step(step: Dictionary) -> void:
 	_pop_in(item)
 
 
-func _big_reward(icon_name: String, color: Color, text: String, text_color: Color) -> Control:
+## A heap of gold or gems as a toy (`prop`: MenuArt; the line icon without
+## one), and how much.
+func _big_reward(prop: String, icon_name: String, color: Color, text: String, text_color: Color) -> Control:
 	var box := UIKit.vbox(16)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var icon := UIKit.icon_rect(icon_name, color, 200)
+	var icon := MenuArt.rect(prop, 300) if MenuArt.has(prop) else UIKit.icon_rect(icon_name, color, 200)
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	box.add_child(icon)
 	box.add_child(UIKit.label(text, 44, text_color, HORIZONTAL_ALIGNMENT_CENTER))

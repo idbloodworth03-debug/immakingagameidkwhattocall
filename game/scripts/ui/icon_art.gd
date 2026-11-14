@@ -1,8 +1,9 @@
 class_name IconArt
 extends Control
-## Card and button art: a colored shape (circle, rounded square or cage) with
+## Card and button art: a colored shape (circle or rounded square) with
 ## either a rendered portrait of the animal, a white icon from
-## game-icons.net, or (with neither) a few letters.
+## game-icons.net, or (with neither) a few letters; or a cage: the toy cage
+## of that color (MenuArt).
 
 enum Shape { CIRCLE, ROUNDED, CAGE }
 
@@ -52,6 +53,8 @@ static func make(icon_name: String, background: Color, art_shape := Shape.CIRCLE
 
 func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# (A toy cage is drawn far smaller than its picture: shrunk smoothly.)
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
 func _notification(what: int) -> void:
@@ -79,23 +82,19 @@ func _draw() -> void:
 			var sheen := Rect2(inner.position, Vector2(inner.size.x, inner.size.y * 0.45))
 			draw_style_box(UIKit.box(Color(1, 1, 1, 0.08), int(short_side * 0.15)), sheen)
 		Shape.CAGE:
-			# A glowing cage standing on its shadow, outlined like the cards.
-			var cage := icon if icon != null else UIKit.icon(GameData.ui_icon("cage"))
+			# The toy cage of this color (tools/props; an empty slot's gray
+			# one when dimmed), a soft glow of its color behind it.
+			var cage := MenuArt.cage("" if dimmed else MenuArt.cage_for_color(color))
 			if cage == null:
 				return
 			var glow := AnimalCard._spot_texture()
-			var glow_side := short_side * 1.1
-			draw_texture_rect(glow, Rect2(center - Vector2(glow_side, glow_side) / 2.0, Vector2(glow_side, glow_side)), false,
-					Color(fill.lightened(0.3), 0.3 if dimmed else 0.55))
-			draw_set_transform(center + Vector2(0, short_side * 0.4), 0.0, Vector2(1.0, 0.25))
-			draw_circle(Vector2.ZERO, short_side * 0.36, Color(UIKit.INK, 0.35))
-			draw_set_transform(Vector2.ZERO)
-			var side := short_side * 0.86
+			var glow_side := short_side * 1.15
+			if not dimmed:
+				draw_texture_rect(glow, Rect2(center - Vector2(glow_side, glow_side) / 2.0, Vector2(glow_side, glow_side)), false,
+						Color(color.lightened(0.45), 0.6))
+			var side := short_side * 1.04
 			var at := center - Vector2(side, side) / 2.0
-			var outline := maxf(2.0, short_side * 0.025)
-			for offset in [Vector2(-1, 0), Vector2(1, 0), Vector2(0, -1), Vector2(0, 1), Vector2(-0.7, -0.7), Vector2(0.7, 0.7), Vector2(-0.7, 0.7), Vector2(0.7, -0.7)]:
-				draw_texture_rect(cage, Rect2(at + offset * outline, Vector2(side, side)), false, UIKit.INK)
-			draw_texture_rect(cage, Rect2(at, Vector2(side, side)), false, fill.lightened(0.1))
+			draw_texture_rect(cage, Rect2(at, Vector2(side, side)), false)
 			return
 
 	if portrait != null:

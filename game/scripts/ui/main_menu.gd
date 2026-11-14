@@ -1,7 +1,10 @@
 extends Control
 ## The home screen, laid out like other mobile card battlers:
 ## top bar, five tabs and a bottom navigation bar
-## (Shop - Animals - Battle - Clan - Events), opening on Battle.
+## (Shop - Animals - Battle - Clan - Events), opening on Battle. It wears
+## the match's "Ranger Camp" look (docs/ART_DIRECTION.md): a sunny sky
+## behind, wooden planks for the bars, a toy for every icon
+## (tools/props; art.json "menu").
 
 const TABS := [
 	["Shop", preload("res://scripts/ui/tabs/shop_tab.gd"), "tab_shop"],
@@ -14,7 +17,7 @@ const BATTLE_TAB := 2
 const SHOP_TAB := 0
 
 var _pages: Array = []
-## Each tab in the bar: {"cell", "icon", "label"}.
+## Each tab in the bar: {"cell", "tile", "icon", "label"}.
 var _nav: Array = []
 var _animals_badge: Label
 var _current := -1
@@ -36,7 +39,7 @@ func _ready() -> void:
 	safe_area.add_child(column)
 	var top_bar: Control = preload("res://scripts/ui/top_bar.gd").new()
 	top_bar.shop_requested.connect(select_tab.bind(SHOP_TAB))
-	column.add_child(top_bar)
+	column.add_child(_inset(top_bar, 8, 6, 0))
 
 	var page_host := Control.new()
 	page_host.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -56,7 +59,7 @@ func _ready() -> void:
 	var version := BuildInfo.label()
 	version.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
 	version.grow_horizontal = Control.GROW_DIRECTION_BEGIN
-	version.position += Vector2(-12, 6)
+	version.position += Vector2(-14, 4)
 	page_host.add_child(version)
 
 	var popup_layer := Control.new()
@@ -85,6 +88,8 @@ func _ready() -> void:
 ## website opened with ?viewer=<animal id> goes straight to that animal's
 ## 3D viewer (&pose=attack:0.6 holds that animation at that point), and
 ## with ?showcase=<animal id> to its attack showcase (&slow=1 slowed down),
+## with ?tab=shop to that tab of the menu, with ?result=win to a sample of
+## the popup after a match (loss, draw, boss, arena),
 ## with ?arttest=1 to the art tests beside our animals (ArtTestScreen),
 ## with ?army=1 to the Big army test, and with ?fight=<seed> to a real
 ## Draft Duel the computer plays for you (&mine=, &theirs=, &sizes=1):
@@ -108,6 +113,14 @@ func _open_dev_shortcut() -> void:
 		ArmyTest.use_models = true
 		Transition.go.call_deferred("res://scenes/army_test.tscn")
 		return
+	# &result=win (loss, draw, boss, arena) shows a sample of the popup that
+	# follows a match.
+	if _query("result") != "":
+		_show_match_result.call_deferred(_sample_result(_query("result")))
+	# &tab=shop (animals, battle, clan, events) opens on that tab.
+	var tab := TABS.map(func(entry): return String(entry[0]).to_lower()).find(_query("tab").to_lower())
+	if tab >= 0:
+		select_tab(tab)
 	var fight := _query("fight")
 	if fight != "":
 		# A real Draft Duel against the computer, played for you by the
@@ -172,6 +185,24 @@ func _query(key: String) -> String:
 	return String(value) if value is String else ""
 
 
+## A made-up match result of `kind` ("win", "loss", "draw", "boss": a first
+## boss win with its reward, "arena": a win into the next arena), for
+## looking at the result popup without playing a match.
+func _sample_result(kind: String) -> Dictionary:
+	var arena := Profile.arena_index()
+	var rivals: Array = GameData.rivals_in_arena(arena, kind == "boss")
+	var outcome := kind if kind in ["win", "loss", "draw"] else "win"
+	var result := {"won": outcome == "win", "outcome": outcome, "score": [4, 2] if outcome == "win" else ([2, 4] if outcome == "loss" else [3, 3]),
+		"trophy_change": {"win": 30, "loss": -24, "draw": 0}[outcome], "trophies": Profile.get_trophies(),
+		"rival": String(rivals[0].id) if not rivals.is_empty() else "", "new_arena": kind == "arena",
+		"arena_index": mini(arena + 1, GameData.arenas.size() - 1) if kind == "arena" else arena,
+		"cage_id": "twig" if outcome == "win" else "", "slots_full": false}
+	if kind == "boss":
+		result["boss_beaten"] = true
+		result["boss_reward"] = {"gold": 500, "gems": 20, "cage_id": "golden"}
+	return result
+
+
 func _open_art_tests() -> void:
 	ArtTestScreen.open()
 
@@ -185,6 +216,9 @@ func select_tab(index: int) -> void:
 	if index == _current:
 		return
 	_current = index
+	var c := "menu"
+	var small := Feel.num(c, "tab_icon", 62.0)
+	var big := Feel.num(c, "tab_icon_picked", 84.0)
 	for i in _pages.size():
 		_pages[i].visible = i == index
 		if i == index:
@@ -193,66 +227,93 @@ func select_tab(index: int) -> void:
 			_pages[i].create_tween().tween_property(_pages[i], "modulate:a", 1.0, 0.15)
 		var selected: bool = i == index
 		var tab: Dictionary = _nav[i]
-		var cell: PanelContainer = tab.cell
-		if selected:
-			var style := UIKit.raised(UIKit.PANEL_LIGHT, 18, 4)
-			style.border_color = UIKit.PANEL_LIGHT.lightened(0.35)
-			style.shadow_offset = Vector2(0, 2)
-			cell.add_theme_stylebox_override("panel", style)
-		else:
-			cell.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
-		cell.size_flags_stretch_ratio = 1.45 if selected else 1.0
-		tab.icon.custom_minimum_size = Vector2(56, 56) if selected else Vector2(46, 46)
-		tab.icon.modulate = Color.WHITE if selected else UIKit.TEXT_DIM
+		var cell: Control = tab.cell
+		var tile: Panel = tab.tile
+		var icon: Control = tab.icon
+		tile.visible = selected
+		cell.size_flags_stretch_ratio = 1.5 if selected else 1.0
+		icon.custom_minimum_size = Vector2(big, big) if selected else Vector2(small, small)
 		tab.label.visible = selected
 		if selected:
-			# The chosen tab pops up a little.
-			tab.icon.pivot_offset = Vector2(28, 28)
-			tab.icon.scale = Vector2(0.8, 0.8)
-			tab.icon.create_tween().tween_property(tab.icon, "scale", Vector2.ONE, 0.25).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			# The chosen tab hops up.
+			icon.pivot_offset = Vector2(big, big) / 2.0
+			icon.scale = Vector2(0.7, 0.7)
+			var hop := icon.create_tween()
+			hop.tween_property(icon, "scale", Vector2.ONE, Feel.num(c, "tab_bounce_seconds", 0.3)).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		else:
+			icon.scale = Vector2.ONE
 
 
-## The tab bar at the bottom: an icon for each tab; the chosen one is raised
-## and shows its name.
+## The tab bar at the bottom: a wooden plank with a toy for each tab; the
+## chosen one stands on a raised tile, bigger, with its name.
 func _build_nav() -> Control:
+	var c := "menu"
 	var bar := PanelContainer.new()
-	var bar_style := UIKit.box(UIKit.DEEP, 0, 8)
-	bar_style.border_width_top = 2
-	bar_style.border_color = UIKit.PANEL
-	bar_style.shadow_color = Color(UIKit.INK, 0.4)
-	bar_style.shadow_size = 10
-	bar.add_theme_stylebox_override("panel", bar_style)
-	var row := UIKit.hbox(6)
+	var plank := SkinBox.make("sign", UIStyle.color("sign"))
+	plank.content_margin_left = 14
+	plank.content_margin_right = 14
+	plank.content_margin_top = 4
+	plank.content_margin_bottom = 10
+	bar.add_theme_stylebox_override("panel", plank)
+	var row := UIKit.hbox(4)
 	bar.add_child(row)
+	var props: Array = GameData.art.get("menu", {}).get("tabs", [])
+	var small := Feel.num(c, "tab_icon", 62.0)
 	for i in TABS.size():
-		var cell := PanelContainer.new()
-		cell.custom_minimum_size = Vector2(0, 96)
+		var cell := Control.new()
+		cell.custom_minimum_size = Vector2(0, Feel.num(c, "tab_height", 104.0))
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		var stack := UIKit.vbox(0)
+		# The raised tile under the chosen tab: light wood, standing proud
+		# of the bar.
+		var tile := Panel.new()
+		tile.add_theme_stylebox_override("panel", SkinBox.make("panel", UIKit.PANEL_LIGHT))
+		tile.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		tile.offset_top = -Feel.num(c, "tab_lift", 14.0)
+		tile.offset_bottom = -2.0
+		tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tile.visible = false
+		cell.add_child(tile)
+		var stack := UIKit.vbox(-6)
 		stack.alignment = BoxContainer.ALIGNMENT_CENTER
 		stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		stack.offset_top = -Feel.num(c, "tab_lift", 14.0)
 		cell.add_child(stack)
-		var icon := UIKit.icon_rect(GameData.ui_icon(TABS[i][2]), Color.WHITE, 46)
+		var prop := String(props[i]) if i < props.size() else ""
+		var icon: TextureRect = MenuArt.rect(prop, small) if MenuArt.has(prop) else UIKit.icon_rect(GameData.ui_icon(TABS[i][2]), Color.WHITE, int(small))
 		icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 		stack.add_child(icon)
-		var label := UIKit.label(TABS[i][0], 20, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		var label := UIKit.label(TABS[i][0], 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		stack.add_child(label)
 		UIKit.on_tap(cell, select_tab.bind(i))
 		row.add_child(cell)
-		_nav.append({"cell": cell, "icon": icon, "label": label})
+		_nav.append({"cell": cell, "tile": tile, "icon": icon, "label": label})
 
 	# A little "!" on the Animals tab when something can be upgraded or is new.
 	_animals_badge = UIKit.label("!", 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	var badge_style := UIKit.box(UIKit.RED, 15)
-	badge_style.set_border_width_all(2)
+	badge_style.set_border_width_all(3)
 	badge_style.border_color = UIKit.INK
 	_animals_badge.add_theme_stylebox_override("normal", badge_style)
-	_animals_badge.size = Vector2(30, 30)
-	_animals_badge.position = Vector2(30, -6)
+	_animals_badge.size = Vector2(32, 32)
+	_animals_badge.position = Vector2(small - 22.0, -4)
 	_animals_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# On the icon (not a container), so it keeps its own size and spot.
 	_nav[1].icon.add_child(_animals_badge)
-	return bar
+	return _inset(bar, 8, 0, 6)
+
+
+## A bar with a little air between it and the screen's edges (`side`),
+## above it (`top`) and under it (`bottom`).
+func _inset(bar: Control, side: int, top: int, bottom: int) -> MarginContainer:
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", side)
+	margin.add_theme_constant_override("margin_right", side)
+	margin.add_theme_constant_override("margin_top", top)
+	margin.add_theme_constant_override("margin_bottom", bottom)
+	margin.add_child(bar)
+	return margin
 
 
 func _update_badges() -> void:
@@ -332,6 +393,13 @@ func _show_match_result(result: Dictionary) -> void:
 			reward_box.add_child(UIKit.label("and a %s!" % GameData.cages[boss_reward.cage_id].name, 22, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 
 	if result.cage_id != "":
+		# The cage you won, as it will stand on your shelf.
+		var won := IconArt.new()
+		won.shape = IconArt.Shape.CAGE
+		won.color = Color(String(GameData.cages[result.cage_id].color))
+		won.custom_minimum_size = Vector2(150, 150)
+		won.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		box.add_child(won)
 		box.add_child(UIKit.label("You won a %s!" % GameData.cages[result.cage_id].name, 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	elif result.slots_full:
 		var full := UIKit.paragraph("Your cage slots are full, so no cage this time. Open some cages to make room!", 21, UIKit.TEXT)

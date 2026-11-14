@@ -450,8 +450,20 @@ you can't drop back below it. The top two arenas don't, to keep some stakes.
 | 11 | Coral Coast | 4,600 | no | Harbor Seal, Komodo Dragon (E), Kraken (M) |
 | 12 | Last Sanctuary | 5,300 | no | Black Rhino (L), Pygmy Three-toed Sloth (L), Sumatran Orangutan (L), Cerberus (M) |
 
-New players start with the 8 starting animals and the Net (see Draft Duel);
-the rest are found in cages.
+New players start with the 8 starting animals (see Draft Duel); the rest are
+found in cages.
+
+### The home screen
+
+The Battle tab is home. Your deck's animals stand together in your arena as
+live toys (tap one and it hops and celebrates); under them, the arena's name
+on a sign and your trophies toward the next arena (tap either for the Trophy
+Road; "Boss next" when a boss is waiting). Then the DRAFT DUEL button, and
+your four cage slots on a shelf: an empty slot, a cage waiting, one being
+unlocked (it rattles), one ready to open (it glows). The bar at the top has
+your banner (tap it for your profile), gold and gems; the bar at the bottom
+the five tabs: Shop, Animals, Battle, Clan, Events. How it looks is in
+ART_DIRECTION.md ("The menus: toys and painted wood").
 
 ### Ranking (with online play)
 
@@ -781,8 +793,8 @@ when the viewer opens and is freed when it closes
 data/journal.json).
 
 **3D animals:** the animals are real 3D models everywhere they move: in
-fights, the army while picking, and the arena previews on the home screen
-and Trophy Road. Light models (about 3,000 triangles each, every animation a
+fights, the army while picking, your squad on the home screen, and the arena
+previews on the Trophy Road. Light models (about 3,000 triangles each, every animation a
 fight plays) stand in one 3D layer whose camera looks down at the same 50
 degrees as the old sprites and follows the field's camera, so each stands
 exactly where its sprite would; the arena, rings, banners, effects and

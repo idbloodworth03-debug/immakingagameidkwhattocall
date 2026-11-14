@@ -4,32 +4,34 @@ extends RefCounted
 ## in code. Every screen uses these so the whole game looks consistent: most
 ## of the look can change in this one file.
 ##
-## The style: chunky cartoon buttons with a pressable edge and a gloss,
-## raised panels with a light rim and a soft shadow, sunken panels for lists,
-## and bold outlined text with a drop shadow.
+## The style is "Ranger Camp", as in a match (docs/ART_DIRECTION.md): the
+## same painted pieces drawn by tools/make_ui_art.py (SkinBox): wooden panels
+## with a lip and a soft shadow (KitBox), glossy painted buttons with a
+## pressable edge, sunken dark-wood wells for lists, wooden chips for
+## amounts, trail-sign planks for headings, and bold outlined text.
 
 ## The palette lives in data/ui_style.json ("kit_*"), like every color.
-## The home screen backdrop, top and bottom.
+## The menus' backdrop, top and bottom (a summer sky to sunshine).
 static var BG_TOP: Color:
 	get: return UIStyle.color("kit_bg_top")
 static var BG_BOTTOM: Color:
 	get: return UIStyle.color("kit_bg_bottom")
-## Panels: deep saturated blue with a bright rim (raised()), darker wells, lighter highlights.
+## Panels: painted wood (raised()), darker wood for wells and slots, light wood for highlights.
 static var PANEL: Color:
 	get: return UIStyle.color("kit_panel")
 static var PANEL_DARK: Color:
 	get: return UIStyle.color("kit_panel_dark")
 static var PANEL_LIGHT: Color:
 	get: return UIStyle.color("kit_panel_light")
-## The deep navy used for outlines and shadows instead of plain black.
+## The dark brown used for outlines and shadows instead of plain black.
 static var INK: Color:
 	get: return UIStyle.color("kit_ink")
 static var TEXT: Color:
 	get: return UIStyle.color("kit_text")
-## Secondary text: a solid, warm cream that reads clearly on the blues.
+## Secondary text: a solid, warm cream (outlined, so it reads on wood and sky).
 static var TEXT_DIM: Color:
 	get: return UIStyle.color("kit_text_dim")
-## A solid deep navy for tracks, pills, fields and bars.
+## Solid dark wood for tracks, pills, fields and bars.
 static var DEEP: Color:
 	get: return UIStyle.color("kit_deep")
 static var GOLD: Color:
@@ -90,22 +92,17 @@ static func build_theme() -> Theme:
 	theme.set_stylebox("normal", "Button", chunky(BLUE))
 	theme.set_stylebox("hover", "Button", chunky(BLUE.lightened(0.08)))
 	theme.set_stylebox("pressed", "Button", chunky(BLUE.darkened(0.1), true))
-	theme.set_stylebox("disabled", "Button", chunky(GREY.darkened(0.25)))
+	theme.set_stylebox("disabled", "Button", chunky(GREY))
 	theme.set_stylebox("focus", "Button", StyleBoxEmpty.new())
 
 	theme.set_stylebox("panel", "PanelContainer", raised(PANEL, 18, 14))
 	theme.set_stylebox("panel", "Panel", raised(PANEL, 18))
 
-	var field := box(DEEP, 14, 12)
-	field.set_border_width_all(3)
-	field.border_color = PANEL_LIGHT
+	var field := inset(DEEP, 14, 12)
 	theme.set_stylebox("normal", "LineEdit", field)
 	theme.set_stylebox("focus", "LineEdit", field)
 
-	var track := box(DEEP, 10)
-	track.set_border_width_all(2)
-	track.border_color = INK
-	theme.set_stylebox("background", "ProgressBar", track)
+	theme.set_stylebox("background", "ProgressBar", bar_track(10))
 	theme.set_stylebox("fill", "ProgressBar", bar_fill(BLUE, 10))
 
 	# Thin, rounded scroll bars.
@@ -129,25 +126,33 @@ static func box(color: Color, radius := 16, padding := 0) -> StyleBoxFlat:
 	return style
 
 
-## A raised panel: a lighter rim (brightest along the top) and a soft shadow
-## underneath, like a card lifted off the table.
-static func raised(color: Color, radius := 18, padding := 14) -> StyleBoxFlat:
-	var look: Dictionary = UIStyle.data().get("kit", {})
-	var style := box(color, radius, padding)
-	style.set_border_width_all(int(look.get("rim", 3)))
-	style.border_width_top = int(look.get("rim_top", 4))
-	style.border_color = color.lightened(float(look.get("rim_light", 0.34)))
-	style.border_blend = false
-	style.shadow_color = Color(INK, float(look.get("shadow_alpha", 0.45)))
-	style.shadow_size = int(look.get("shadow_size", 6))
-	style.shadow_offset = Vector2(0, float(look.get("shadow_offset", 4)))
+## A raised panel: painted wood in `color` with a thick dark outline, a
+## lip along the bottom and a soft shadow underneath (a KitBox; a short one
+## is drawn as a chip). `padding` is the room inside its outline.
+static func raised(color: Color, _radius := 18, padding := 14) -> KitBox:
+	var style := KitBox.new()
+	style.bg_color = color
+	var edge := UIStyle.num("kit", "edge", 3.0)
+	style.content_margin_left = padding + edge
+	style.content_margin_right = padding + edge
+	style.content_margin_top = padding + edge
+	style.content_margin_bottom = padding + edge + UIStyle.num("kit", "lip", 6.0)
 	return style
 
 
-## A sunken area inside a panel (lists, stat boxes): darker, with a dark rim.
-static func inset(color := PANEL_DARK, radius := 14, padding := 12) -> StyleBoxFlat:
-	var style := box(color.darkened(0.18), radius, padding)
-	style.set_border_width_all(2)
+## A sunken area inside a panel (lists, stat boxes): a well of darker wood.
+static func inset(color := PANEL_DARK, _radius := 14, padding := 12) -> KitBox:
+	var style := KitBox.new()
+	style.sunken = true
+	style.bg_color = color.darkened(UIStyle.num("kit", "well_dark", 0.12))
+	style.set_content_margin_all(padding + UIStyle.num("kit", "edge", 3.0))
+	return style
+
+
+## The track of a progress bar: a slot of dark wood with a dark outline.
+static func bar_track(radius := 10) -> StyleBoxFlat:
+	var style := box(DEEP, radius)
+	style.set_border_width_all(3)
 	style.border_color = INK
 	return style
 
@@ -160,17 +165,15 @@ static func bar_fill(color: Color, radius := 10) -> StyleBoxFlat:
 	return style
 
 
-## A plain button style with a thick darker bottom edge so it looks
-## pressable (for buttons not made with button()).
-static func chunky(color: Color, pressed := false) -> StyleBoxFlat:
-	var style := box(color, 16)
-	style.border_color = color.darkened(0.45)
-	style.set_border_width_all(2)
-	style.border_width_bottom = 2 if pressed else 7
-	style.content_margin_left = 14
-	style.content_margin_right = 14
-	style.content_margin_top = 12 if pressed else 8
-	style.content_margin_bottom = 8
+## A plain button face in `color` (for buttons not made with button()): the
+## painted button piece, sunk onto its edge when `pressed`.
+static func chunky(color: Color, pressed := false) -> SkinBox:
+	var style := SkinBox.make("button_pressed" if pressed else "button", color)
+	var lip := UIStyle.num("button", "lip", 8.0)
+	style.content_margin_left = 16
+	style.content_margin_right = 16
+	style.content_margin_top = 8 + (lip - 2.0 if pressed else 0.0)
+	style.content_margin_bottom = 8 + (2.0 if pressed else lip)
 	return style
 
 
@@ -209,21 +212,22 @@ static func fade_in(screen: Control, seconds := 0.25) -> void:
 ## A dark pill holding a control, for scores and clocks over the battle.
 static func hud_pill(content: Control) -> PanelContainer:
 	var p := PanelContainer.new()
-	var style := box(Color(INK, 0.6), 18, 4)
+	var style := box(DEEP, 18, 4)
 	style.content_margin_left = 14
 	style.content_margin_right = 14
-	style.set_border_width_all(2)
-	style.border_color = Color(1, 1, 1, 0.12)
+	style.set_border_width_all(3)
+	style.border_color = INK
 	p.add_theme_stylebox_override("panel", style)
 	p.add_child(content)
 	return p
 
 
-## A buy button: the price next to a gold or gem icon.
+## A buy button: the price next to a toy coin or gem (MenuArt).
 static func price_button(price_text: String, icon_key: String, color := GREEN, font_size := 22, min_size := Vector2(0, 62)) -> Button:
 	var b := button(price_text, color, font_size, min_size)
-	b.icon = icon(GameData.ui_icon(icon_key))
-	b.add_theme_constant_override("icon_max_width", int(font_size * 1.3))
+	b.icon = MenuArt.icon_texture(GameData.ui_icon(icon_key))
+	b.expand_icon = true
+	b.add_theme_constant_override("icon_max_width", int(font_size * 1.7))
 	b.add_theme_constant_override("h_separation", 6)
 	return b
 
@@ -308,10 +312,12 @@ static func paragraph(text: String, font_size := 22, color := TEXT_DIM) -> Label
 	var l := label(text, font_size, color)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.add_theme_font_override("font", body_font())
-	l.add_theme_constant_override("outline_size", 0)
+	# A thinner outline than the titles' (it reads on wood and on the sky
+	# alike), and no drop shadow.
+	l.add_theme_constant_override("outline_size", maxi(4, roundi(font_size * UIStyle.num("kit", "body_outline", 0.2))))
 	l.add_theme_constant_override("shadow_outline_size", 0)
-	l.add_theme_constant_override("shadow_offset_y", 2)
-	l.add_theme_color_override("font_shadow_color", Color(INK, 0.45))
+	l.add_theme_constant_override("shadow_offset_y", 0)
+	l.add_theme_color_override("font_shadow_color", Color(INK, 0.0))
 	l.custom_minimum_size.x = 100
 	return l
 
@@ -350,21 +356,22 @@ static func spacer() -> Control:
 	return c
 
 
-## A section heading: a yellow tab, the title, then a line fading out.
+## A section heading: the title on a wooden trail-sign plank, then a line
+## fading out.
 static func heading(text: String) -> Control:
 	var row := hbox(10)
-	var tab := ColorRect.new()
-	tab.color = YELLOW
-	tab.custom_minimum_size = Vector2(7, 26)
-	tab.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(tab)
+	var plank := PanelContainer.new()
+	plank.add_theme_stylebox_override("panel", UIStyle.sign_box())
+	plank.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := label(text, 30, TEXT)
-	row.add_child(l)
+	plank.add_child(l)
+	row.add_child(plank)
 	var line := TextureRect.new()
 	line.texture = _fade_texture()
+	line.modulate = INK
 	line.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	line.stretch_mode = TextureRect.STRETCH_SCALE
-	line.custom_minimum_size = Vector2(0, 3)
+	line.custom_minimum_size = Vector2(0, 5)
 	line.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(line)
@@ -386,20 +393,19 @@ static func _fade_texture() -> GradientTexture2D:
 	return _fade
 
 
-## A dark pill showing an amount, like the gold and gem counters, with the
+## A chip of dark wood showing an amount (trophies, a reward), with the
 ## icon on the left. `icon_name` is a file in res://art/icons/ (see
-## GameData.ui_icon).
+## GameData.ui_icon); the menu's toy props stand in for the ones they
+## replace (MenuArt).
 static func pill(icon_name: String, icon_color: Color, amount_text: String) -> PanelContainer:
 	var p := PanelContainer.new()
-	var style := box(DEEP, 24, 6)
-	style.content_margin_left = 8
+	var style := UIStyle.chip_box(DEEP)
+	style.content_margin_left = 10
 	style.content_margin_right = 18
-	style.set_border_width_all(2)
-	style.border_color = PANEL_LIGHT
 	p.add_theme_stylebox_override("panel", style)
 	var row := hbox(8)
 	p.add_child(row)
-	row.add_child(icon_rect(icon_name, icon_color, 36))
+	row.add_child(MenuArt.icon_or(icon_name, icon_color, 40))
 	var l := label(amount_text, 24)
 	l.name = "Amount"
 	row.add_child(l)
@@ -414,10 +420,7 @@ static func progress(ratio: float, text: String, fill := BLUE, height := 30) -> 
 	bar.value = clampf(ratio, 0.0, 1.0)
 	bar.custom_minimum_size = Vector2(0, height)
 	bar.add_theme_stylebox_override("fill", bar_fill(fill, int(height / 3.0)))
-	var track := box(DEEP, int(height / 3.0))
-	track.set_border_width_all(2)
-	track.border_color = INK
-	bar.add_theme_stylebox_override("background", track)
+	bar.add_theme_stylebox_override("background", bar_track(int(height / 3.0)))
 	var l := label(text, int(height * 0.7), TEXT, HORIZONTAL_ALIGNMENT_CENTER)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -452,7 +455,7 @@ static func on_tap(control: Control, callback: Callable) -> void:
 
 
 ## Draws `count` gold stars in a row centered on `center` (an animal's stars
-## in Draft Duel), each `radius` across, with a navy outline.
+## in Draft Duel), each `radius` across, with a dark outline.
 static func draw_stars(canvas: CanvasItem, center: Vector2, count: int, radius: float) -> void:
 	var gap := radius * 1.9
 	for i in count:
@@ -472,7 +475,7 @@ static func _star_points(center: Vector2, radius: float) -> PackedVector2Array:
 
 
 ## A habitat's badge: a round chip in the habitat's color with its icon, a
-## navy outline and a little shine. Used on cards, on the field and in the
+## dark outline and a little shine. Used on cards, on the field and in the
 ## synergy tracker.
 static func draw_habitat_badge(canvas: CanvasItem, center: Vector2, radius: float, habitat: String, alpha := 1.0) -> void:
 	var info: Dictionary = GameData.habitats.get(habitat, {})

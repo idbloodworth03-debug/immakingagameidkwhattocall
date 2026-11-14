@@ -70,7 +70,7 @@ func _build() -> void:
 	var name_label := UIKit.label(player_name, 24 if compact else 30)
 	name_label.clip_text = true
 	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_label.custom_minimum_size.x = 140 if compact else 260
+	name_label.custom_minimum_size.x = 132 if compact else 260
 	column.add_child(name_label)
 	var level_row := UIKit.hbox(6)
 	level_row.mouse_filter = Control.MOUSE_FILTER_IGNORE

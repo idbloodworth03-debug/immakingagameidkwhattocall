@@ -62,42 +62,38 @@ func _build(content: Control, title: String, width: float) -> void:
 	center.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(center)
 
+	# A board of painted wood, its title on a trail sign across the top.
 	var window := PanelContainer.new()
-	var frame := UIKit.raised(UIKit.PANEL, 26, 0)
-	frame.set_border_width_all(4)
-	frame.border_color = UIKit.PANEL_LIGHT.lightened(0.2)
-	frame.shadow_size = 18
-	frame.shadow_color = Color(UIKit.INK, 0.55)
-	window.add_theme_stylebox_override("panel", frame)
+	window.add_theme_stylebox_override("panel", UIKit.raised(UIKit.PANEL, 26, 2))
 	window.custom_minimum_size = Vector2(width, 0)
 	center.add_child(window)
 
 	var column := UIKit.vbox(0)
 	window.add_child(column)
 
-	# A colored band across the top with the title and a round close button.
-	var header := PanelContainer.new()
-	var band := UIKit.box(UIKit.PANEL_LIGHT, 22, 10)
-	band.corner_radius_bottom_left = 0
-	band.corner_radius_bottom_right = 0
-	band.content_margin_left = 22
-	band.border_width_bottom = 3
-	band.border_color = UIKit.INK
-	header.add_theme_stylebox_override("panel", band if title != "" else UIKit.box(Color(0, 0, 0, 0), 22, 10))
+	var header := MarginContainer.new()
+	header.add_theme_constant_override("margin_left", 12)
+	header.add_theme_constant_override("margin_right", 8)
+	header.add_theme_constant_override("margin_top", 8)
 	column.add_child(header)
 	var header_row := UIKit.hbox(8)
 	header.add_child(header_row)
-	var title_label := UIKit.label(title, 34)
-	title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header_row.add_child(title_label)
-	var close_button := UIKit.icon_button("close", UIKit.RED, 56)
+	if title != "":
+		var plank := PanelContainer.new()
+		plank.add_theme_stylebox_override("panel", UIStyle.sign_box())
+		plank.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		plank.add_child(UIKit.label(title, 34))
+		header_row.add_child(plank)
+	header_row.add_child(UIKit.spacer())
+	var close_button := UIKit.icon_button("close", UIKit.RED, 60)
+	close_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	close_button.pressed.connect(close)
 	header_row.add_child(close_button)
 
 	var margin := MarginContainer.new()
 	for side in ["left", "right", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
-	margin.add_theme_constant_override("margin_top", 6 if title == "" else 16)
+	margin.add_theme_constant_override("margin_top", 6 if title == "" else 12)
 	column.add_child(margin)
 	body = UIKit.vbox(16)
 	margin.add_child(body)
@@ -108,7 +104,11 @@ func _build(content: Control, title: String, width: float) -> void:
 	body.add_child(scroll)
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.add_child(content)
+	# As tall as its content (wrapped text only knows its height once it
+	# has its width, a frame on; and again whenever the content changes).
 	_fit_scroll.call_deferred(scroll, content)
+	content.minimum_size_changed.connect(_fit_scroll.bind(scroll, content))
+	content.resized.connect(_fit_scroll.bind(scroll, content))
 
 	# Pop in.
 	dim.modulate.a = 0.0
@@ -123,5 +123,9 @@ func _build(content: Control, title: String, width: float) -> void:
 
 ## Grow the scroll area to fit the content, up to 78% of the screen height.
 func _fit_scroll(scroll: ScrollContainer, content: Control) -> void:
+	if not is_instance_valid(scroll) or not is_instance_valid(content) or not is_inside_tree():
+		return
 	var limit := get_viewport_rect().size.y * 0.78 - 140.0
-	scroll.custom_minimum_size.y = minf(content.get_combined_minimum_size().y, limit)
+	var tall := minf(content.get_combined_minimum_size().y, limit)
+	if not is_equal_approx(scroll.custom_minimum_size.y, tall):
+		scroll.custom_minimum_size.y = tall

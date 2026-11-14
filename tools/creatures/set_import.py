@@ -1,5 +1,5 @@
 """Sets how Godot stores the animal sprite sheets, portraits, arena
-pictures and 3D viewer models (look.json "import"): each picture lossless,
+pictures, the menu's props and 3D viewer models (look.json "import"): each picture lossless,
 one lossy WebP pass or GPU-compressed Basis Universal, with or without
 mipmaps; the models without the extras a close-up, unlit animal doesn't use.
 
@@ -39,9 +39,11 @@ def _lossless(webp):
 
 for path in (glob.glob(os.path.join(ROOT, "units", "*", "*.webp.import"))
              + glob.glob(os.path.join(ROOT, "arenas", "*.webp.import"))
-             + glob.glob(os.path.join(ROOT, "arenas", "crowd", "*.webp.import"))):
+             + glob.glob(os.path.join(ROOT, "arenas", "crowd", "*.webp.import"))
+             + glob.glob(os.path.join(ROOT, "menu", "*.webp.import"))):
     name = os.path.basename(path)
     rule = LOOK["crowd"] if "crowd" in path else LOOK["arenas"] if "arenas" in path \
+        else LOOK["menu"] if os.path.basename(os.path.dirname(path)) == "menu" \
         else LOOK["sheets"] if name.startswith("sheet") else LOOK["portraits"]
     if rule is LOOK["arenas"] and not _lossless(path[:-len(".import")]):
         # Already compressed once when it was saved: keep it as it is.

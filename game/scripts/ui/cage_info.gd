@@ -68,9 +68,9 @@ static func show_odds(cage_id: String, arena_index: int) -> void:
 	if mythic > 0.0:
 		grid.add_child(UIKit.label("+1 Mythic", 24, GameData.rarity_color("mythic")))
 		grid.add_child(UIKit.label("%s%%" % _percent(mythic), 24))
-	box.add_child(UIKit.paragraph("Guaranteed animals are added on top of these rolls. Rarities you haven't unlocked yet pass their chance to the next rarity down.", 19))
+	box.add_child(UIKit.paragraph("Guaranteed animals are added on top of these rolls. Rarities you haven't unlocked yet pass their chance to the next rarity down.", 20))
 	if float(cage.get("mythic_chance", 0.0)) > 0.0:
-		box.add_child(UIKit.paragraph("The Mythic chance is rolled once per cage, once you've unlocked a Mythic.", 19))
+		box.add_child(UIKit.paragraph("The Mythic chance is rolled once per cage, once you've unlocked a Mythic.", 20))
 	Modal.open(box, cage.name + " odds", 600)
 
 

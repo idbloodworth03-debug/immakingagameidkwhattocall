@@ -488,8 +488,10 @@ static func outline_px(scale: float) -> float:
 ## A new model of an animal in the cartoon shading (viewer.json "look"), for
 ## any 3D layer: a pivot (at its feet), turned to face its way, holding the
 ## model. `manual`: its animation is posed by hand (seek), not played.
-static func new_model(id: String, outline_width: float, manual := false) -> Model:
-	var scene := _scene(id)
+## `from`: another scene of the same animal to dress instead of its battle
+## model (the viewer's finer one, for a close look).
+static func new_model(id: String, outline_width: float, manual := false, from: PackedScene = null) -> Model:
+	var scene := from if from != null else _scene(id)
 	if scene == null:
 		return null
 	var m := Model.new()

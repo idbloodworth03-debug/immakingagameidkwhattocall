@@ -24,7 +24,8 @@ func _build() -> void:
 		if i == current:
 			var style := UIKit.raised(color.darkened(0.1), 20, 12)
 			style.set_border_width_all(5)
-			style.border_color = UIKit.YELLOW
+			style.border_color = UIStyle.color("selected")
+			style.glow = true
 			row.add_theme_stylebox_override("panel", style)
 		add_child(row)
 		var line := UIKit.hbox(14)
@@ -50,7 +51,7 @@ func _build() -> void:
 		for id in GameData.cards_in_arena(i):
 			var animal := GameData.get_card(id)
 			var chip := UIKit.panel(UIKit.DEEP, 6, 12)
-			chip.add_child(UIKit.label(animal.name, 18, GameData.rarity_color(animal.rarity)))
+			chip.add_child(UIKit.label(animal.name, 20, GameData.rarity_color(animal.rarity)))
 			flow.add_child(chip)
 
 

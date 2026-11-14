@@ -259,7 +259,13 @@
       "light_baking": 0
     },
     "_models_note": "The 3D viewer's models (art/models/*.glb): no tangents (no normal maps), no LODs or shadow meshes (one animal, close up, no real lights), no light baking. Less to download and to keep in memory.",
-    "crowd": {
+    "menu": {
+   "mode": "lossy",
+   "quality": 0.92,
+   "mipmaps": true
+  },
+  "_menu_note": "The menu's toy props (art/menu/, tools/props): as the portraits, with mipmaps (a tab icon is drawn a sixth of its size).",
+  "crowd": {
       "mode": "lossy",
       "quality": 0.9,
       "mipmaps": true

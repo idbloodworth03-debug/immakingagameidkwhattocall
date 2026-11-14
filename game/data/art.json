@@ -225,6 +225,17 @@
       "delapouite/forest"
     ]
   },
+  "menu": {
+    "_note": "The menu's toy props (game/art/menu/, built by tools/props/props.py in the animals' flat toy style). props: which prop stands in for which line icon (the icon's file name in art/icons/) wherever the menus show it (scripts/ui/menu_art.gd). tabs: the prop on each tab of the bar at the bottom. gold_packs: the Shop's gold packs, smallest first.",
+    "props": {
+      "two-coins": "coin",
+      "cut-diamond": "gem",
+      "trophy-cup": "trophy",
+      "padlock": "lock"
+    },
+    "tabs": ["tab_shop", "tab_animals", "tab_battle", "tab_clan", "tab_events"],
+    "gold_packs": ["coins_small", "coins_medium", "coins_large"]
+  },
   "ui": {
     "gold": "delapouite/two-coins",
     "journal": "delapouite/notebook",

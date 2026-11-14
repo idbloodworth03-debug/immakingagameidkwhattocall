@@ -157,7 +157,7 @@ func _add_stat(grid: GridContainer, stat_name: String, value: String) -> void:
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var column := UIKit.vbox(0)
 	tile.add_child(column)
-	column.add_child(UIKit.label(stat_name, 17, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
+	column.add_child(UIKit.label(stat_name, 20, UIKit.TEXT_DIM, HORIZONTAL_ALIGNMENT_CENTER))
 	column.add_child(UIKit.label(value, 26, UIKit.TEXT, HORIZONTAL_ALIGNMENT_CENTER))
 	grid.add_child(tile)
 

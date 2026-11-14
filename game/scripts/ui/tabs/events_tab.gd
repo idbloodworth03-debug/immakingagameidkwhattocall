@@ -22,7 +22,7 @@ func _ready() -> void:
 	margin.add_child(column)
 
 	column.add_child(ComingSoon.hero("tab_events", UIKit.TROPHY.darkened(0.15), "Events",
-			"Special challenges, weekend tournaments and ranked seasons will show up here."))
+			"Special challenges, weekend tournaments and ranked seasons will show up here.", "trophy"))
 	column.add_child(UIKit.heading("On the way"))
 	for event in EVENTS:
 		column.add_child(ComingSoon.feature(event[0], event[1], event[2]))
